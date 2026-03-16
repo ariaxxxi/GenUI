@@ -73,7 +73,10 @@ body {
     height        var(--anim-h),
     border-radius var(--anim-br),
     transform     var(--anim-tx),
-    opacity       300ms ease;
+    opacity       300ms ease,
+    background    420ms ease,
+    box-shadow    520ms ease,
+    filter        520ms ease;
   will-change: transform, width, height, border-radius, opacity;
 }
 .drop::before {
@@ -158,7 +161,7 @@ body {
   font-family: 'DM Sans', sans-serif; font-weight: 600;
   color: rgba(255,255,255,0.90); white-space: nowrap; line-height: 1.1;
   transition:
-    transform var(--anim-t),
+    transform var(--content-move-t, var(--anim-t)),
     opacity var(--content-fade-ms, 260ms) ease,
     font-size var(--primary-size-anim-ms, var(--anim-t)),
     color 220ms ease;
@@ -168,7 +171,7 @@ body {
   font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
   color: rgba(255,255,255,0.48); white-space: nowrap; line-height: 1.2;
   transition:
-    transform var(--anim-t),
+    transform var(--content-move-t, var(--anim-t)),
     opacity var(--content-fade-ms, 260ms) ease,
     font-size var(--text-size-anim-ms, var(--anim-t)),
     color 220ms ease;
@@ -178,7 +181,7 @@ body {
   font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
   color: rgba(255,255,255,0.26); white-space: nowrap; line-height: 1.2;
   transition:
-    transform var(--anim-t),
+    transform var(--content-move-t, var(--anim-t)),
     opacity var(--detail-fade-ms, var(--content-fade-ms, 260ms)) ease,
     font-size var(--text-size-anim-ms, var(--anim-t)),
     color 220ms ease;
@@ -1532,6 +1535,16 @@ function cardDetailTextWidth(cardWidth) {
   return Math.max(120, cardWidth - CARD_P * 2);
 }
 
+function lineTextWidth(shape, width) {
+  if (shape === 'pill') {
+    return Math.max(120, width - TX - P);
+  }
+  if (shape === 'card') {
+    return Math.max(120, width - (CARD_P + 8) - CARD_P);
+  }
+  return null;
+}
+
 function cardMediaWidth(cardWidth) {
   return Math.max(120, cardWidth - CARD_P * 2);
 }
@@ -1701,6 +1714,60 @@ function previewScenario(scenario) {
   morphTo(scenario.shape, scenarioToRenderContent(scenario));
 }
 
+function previewScenarioInstant(scenario) {
+  if (!scenario) return;
+  if (flightUi.active) {
+    flightUi.active = false;
+    setFlightStep('idle', 0);
+  }
+  stopSiriOrb();
+  hideRich();
+  hideIntentHeader();
+  document.getElementById('stage').classList.remove('flow-active');
+  updateActive('');
+
+  const shape = scenario.shape;
+  const content = scenarioToRenderContent(scenario);
+  const geo = resolveGeometryForContent(shape, content, null);
+
+  const root = document.documentElement;
+  const prevSuppress = suppressDeformation;
+  suppressDeformation = true;
+  root.style.setProperty('--anim-w', '0ms linear');
+  root.style.setProperty('--anim-h', '0ms linear');
+  root.style.setProperty('--anim-br', '0ms linear');
+  root.style.setProperty('--anim-tx', '0ms linear');
+  root.style.setProperty('--anim-t', '0ms linear');
+  root.style.setProperty('--content-fade-ms', '0ms');
+  root.style.setProperty('--detail-fade-ms', '0ms');
+  root.style.setProperty('--media-fade-ms', '0ms');
+  root.style.setProperty('--content-move-t', '0ms linear');
+  root.style.setProperty('--primary-size-anim-ms', '0ms');
+  root.style.setProperty('--text-size-anim-ms', '0ms');
+
+  clearUiFadeTimers();
+  currentShape = shape;
+  applyGeometry(shape, geo);
+  DROPS.main.style.setProperty('--home-glow-delay', '0ms');
+  DROPS.main.classList.toggle('home-glow', shape === 'circle');
+  applyContent(content);
+  applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
+  updateActive(shape);
+
+  suppressDeformation = prevSuppress;
+  root.style.removeProperty('--anim-w');
+  root.style.removeProperty('--anim-h');
+  root.style.removeProperty('--anim-br');
+  root.style.removeProperty('--anim-tx');
+  root.style.removeProperty('--anim-t');
+  root.style.removeProperty('--content-fade-ms');
+  root.style.removeProperty('--detail-fade-ms');
+  root.style.removeProperty('--media-fade-ms');
+  root.style.removeProperty('--content-move-t');
+  root.style.removeProperty('--primary-size-anim-ms');
+  root.style.removeProperty('--text-size-anim-ms');
+}
+
 function selectScenario(id) {
   if (!scenarioLibrary.some(item => item.id === id)) return;
   selectedScenarioId = id;
@@ -1791,6 +1858,41 @@ function listPhaseTwoStartMs() {
 
 function thinkingBridgeMs() {
   return clamp(Math.round(animDur * 0.55), 220, 420);
+}
+
+function homeThinkingBridgeMs() {
+  return clamp(Math.round(animDur * 0.48), 180, 320);
+}
+
+function cardHeightForTransition(fromShape, toShape, fromGeo, toGeo) {
+  if (fromShape === 'card' && Number.isFinite(fromGeo?.h)) return fromGeo.h;
+  if (toShape === 'card' && Number.isFinite(toGeo?.main?.h)) return toGeo.main.h;
+  return SHAPES.card.main.h;
+}
+
+function cardDurationBonusMs(cardHeight) {
+  const h = Number.isFinite(cardHeight) ? cardHeight : SHAPES.card.main.h;
+  return clamp(Math.round((h / 580) * 200), 0, 360);
+}
+
+function transitionAnimMs(fromShape, toShape, baseMs = animDur, fromGeo = null, toGeo = null) {
+  const isDotPillPair = (
+    (fromShape === 'dot' && toShape === 'pill') ||
+    (fromShape === 'pill' && toShape === 'dot')
+  );
+  const isPillCardPair = (
+    (fromShape === 'pill' && toShape === 'card') ||
+    (fromShape === 'card' && toShape === 'pill')
+  );
+  const isDotCardPair = (
+    (fromShape === 'dot' && toShape === 'card') ||
+    (fromShape === 'card' && toShape === 'dot')
+  );
+  const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
+  if (isDotPillPair) return clamp(baseMs, 100, 1800);
+  if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
+  if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);
+  return clamp(baseMs, 100, 1800);
 }
 
 function clearSplitTimers() {
@@ -1953,6 +2055,38 @@ function bridgeFromThinkingToTarget(shape, contentData, customGeo) {
   }, thinkingBridgeMs());
 }
 
+function bridgeHomeToThinking(targetShape) {
+  if (thinkingBridgeTimer) {
+    clearTimeout(thinkingBridgeTimer);
+    thinkingBridgeTimer = null;
+  }
+  stopSiriOrb();
+  morphCore('circle', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+  C.thumb.style.opacity = '0';
+  updateActive(targetShape);
+  thinkingBridgeTimer = setTimeout(() => {
+    thinkingBridgeTimer = null;
+    morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+    if (targetShape === 'idle') {
+      showAiIdle();
+      updateActive('idle');
+      return;
+    }
+    startSiriOrb(true);
+    updateActive('ai');
+  }, homeThinkingBridgeMs());
+}
+
+function bridgeThinkingToHome(contentData = null, customGeo = null) {
+  if (thinkingBridgeTimer) {
+    clearTimeout(thinkingBridgeTimer);
+    thinkingBridgeTimer = null;
+  }
+  stopSiriOrb();
+  morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2));
+  updateActive('circle');
+}
+
 function getActiveEasing() {
   const sel = document.getElementById('ease-select');
   if (!sel) return 'cubic-bezier(0.22,1,0.36,1)';
@@ -2054,7 +2188,7 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
   relX = clamp(relX, 0.9, 1.14);
   relY = clamp(relY, 0.9, 1.14);
 
-  const totalMs = clamp(Math.round(animDur * 1.02), 340, 780);
+  const totalMs = clamp(Math.round(currentTransitionAnimMs * 1.02), 340, 980);
   const ease = getActiveEasing();
   const aEnd = 0.16;
   const bEnd = 0.74;
@@ -2123,6 +2257,7 @@ function clearUiFadeTimers() {
 let currentContentFadeMs = 260;
 let currentDetailFadeMs = 260;
 let currentMediaFadeMs = 260;
+let currentTransitionAnimMs = 450;
 
 function applyCardDetailLayout(cardWidth) {
   C.det.style.width = `${cardDetailTextWidth(cardWidth)}px`;
@@ -2249,44 +2384,47 @@ function applyOutgoingCardMediaLayout(imageValue, cardWidth) {
   return true;
 }
 
-function setUiMotionProfile(fromShape, toShape) {
+function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   const root = document.documentElement;
+  const transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
   let contentFadeMs = 260;
   let detailFadeMs = 260;
   let mediaFadeMs = 260;
-  let primarySizeAnimMs = animDur;
-  let textSizeAnimMs = animDur;
+  let contentMoveMs = transitionMs;
+  let primarySizeAnimMs = transitionMs;
+  let textSizeAnimMs = transitionMs;
   let secondaryInAdvanceMs = 0;
   let detailInAdvanceMs = 0;
 
   if ((fromShape === 'pill' && toShape === 'card') || (fromShape === 'card' && toShape === 'pill')) {
-    primarySizeAnimMs = clamp(Math.round(animDur * 1.2), 420, 700);
-    textSizeAnimMs = clamp(Math.round(animDur * 1.08), 360, 620);
+    primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900);
+    textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820);
   }
   if (fromShape === 'pill' && toShape === 'card') {
     secondaryInAdvanceMs = 60;
     detailInAdvanceMs = 200;
   }
-  if (
-    (fromShape === 'pill' && toShape === 'dot') ||
-    (fromShape === 'card' && toShape === 'dot')
-  ) {
-    contentFadeMs = 100;
-    detailFadeMs = 100;
-    mediaFadeMs = 100;
-  } else if (fromShape === 'card' && toShape === 'pill') {
-    contentFadeMs = 200;
-    detailFadeMs = animDur;
-    mediaFadeMs = animDur;
+  if (fromShape === 'dot' && toShape === 'card') {
+    contentMoveMs = 0;
+  }
+  if (fromShape === 'card' && toShape === 'pill') {
+    mediaFadeMs = transitionMs;
   }
 
   contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
   currentContentFadeMs = contentFadeMs;
   currentDetailFadeMs = detailFadeMs;
   currentMediaFadeMs = mediaFadeMs;
+  currentTransitionAnimMs = transitionMs;
+  root.style.setProperty('--anim-w', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-h', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-br', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-tx', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-t', `${transitionMs}ms var(--spring)`);
   root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`);
   root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`);
   root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`);
+  root.style.setProperty('--content-move-t', `${contentMoveMs}ms var(--spring)`);
   root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`);
   root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
 }
@@ -2310,13 +2448,37 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
   setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (contentDelayProfile.secondaryInAdvanceMs || 0)));
   setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (contentDelayProfile.detailInAdvanceMs || 0)));
   applyTypographyStyles(shape);
+  const mainLineWidth = lineTextWidth(shape, w);
+  if (mainLineWidth) {
+    C.prim.style.width = `${mainLineWidth}px`;
+    C.prim.style.maxWidth = `${mainLineWidth}px`;
+    C.sec.style.width = `${mainLineWidth}px`;
+    C.sec.style.maxWidth = `${mainLineWidth}px`;
+    C.prim.style.overflow = 'hidden';
+    C.sec.style.overflow = 'hidden';
+    C.prim.style.textOverflow = 'ellipsis';
+    C.sec.style.textOverflow = 'ellipsis';
+    C.prim.style.whiteSpace = 'nowrap';
+    C.sec.style.whiteSpace = 'nowrap';
+  } else {
+    C.prim.style.width = '';
+    C.prim.style.maxWidth = '';
+    C.sec.style.width = '';
+    C.sec.style.maxWidth = '';
+    C.prim.style.overflow = '';
+    C.sec.style.overflow = '';
+    C.prim.style.textOverflow = '';
+    C.sec.style.textOverflow = '';
+    C.prim.style.whiteSpace = '';
+    C.sec.style.whiteSpace = '';
+  }
   if (shape === 'card') {
     applyCardDetailLayout(w);
     applyCardMediaLayout(w);
   } else {
     if (fromShape === 'card') {
       applyCardDetailLayout(fromWidth);
-      if (shape === 'pill' && outgoingTypography) {
+      if (outgoingTypography) {
         const outgoingLayout = getCardLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia);
         C.det.style.transform = `translate(${CARD_P}px,${outgoingLayout.detailTop}px)`;
         C.det.style.fontSize = outgoingTypography.detail.size + 'px';
@@ -2380,18 +2542,20 @@ function hideRich() {
 function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null) {
   clearUiFadeTimers();
   const fromShape = currentShape;
-  setUiMotionProfile(fromShape, shape);
   const prevStageMedia = stageMediaState ? { ...stageMediaState } : null;
   const prevCardTypography = fromShape === 'card'
     ? normalizeTypography(contentTypographyState, 'card')
     : null;
   const prevGeo = getCurrentMainGeometry();
   const nextGeo = resolveGeometryForContent(shape, contentData, customGeo);
+  setUiMotionProfile(fromShape, shape, prevGeo, nextGeo);
   const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
   const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
   const autoInDelay = fromShape === 'dot' && shape === 'pill'
     ? 180
-    : (nextArea > prevArea * 1.08 ? 300 : 0);
+    : (fromShape === 'dot' && shape === 'card')
+      ? 0
+      : (nextArea > prevArea * 1.08 ? 300 : 0);
   const autoOutDelay = (
     (fromShape === 'pill' && shape === 'dot') ||
     (fromShape === 'card' && shape === 'dot') ||
@@ -2408,7 +2572,7 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   applyGeometry(shape, geo);
   const goingHome = shape === 'circle' && fromShape !== 'circle';
   if (goingHome) {
-    DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, animDur - 500)}ms`);
+    DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, currentTransitionAnimMs - 500)}ms`);
     DROPS.main.classList.remove('home-glow');
     void DROPS.main.offsetWidth;
     DROPS.main.classList.add('home-glow');
@@ -2437,7 +2601,7 @@ function morphTo(shape, contentData, customGeo) {
 
   if ((currentShape === 'ai' || currentShape === 'idle') && shape !== 'ai' && shape !== 'idle') {
     if (shape === 'circle') {
-      morphCore('circle', contentData, customGeo);
+      bridgeThinkingToHome(contentData, customGeo);
       return;
     }
     bridgeFromThinkingToTarget(shape, contentData, customGeo);
@@ -3086,6 +3250,10 @@ function manualShape(shape) {
     return;
   }
   if (shape === 'ai') {
+    if (currentShape === 'circle') {
+      bridgeHomeToThinking('ai');
+      return;
+    }
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
@@ -3095,6 +3263,10 @@ function manualShape(shape) {
     return;
   }
   if (shape === 'idle') {
+    if (currentShape === 'circle') {
+      bridgeHomeToThinking('idle');
+      return;
+    }
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
@@ -3475,7 +3647,7 @@ document.getElementById('bz-input').addEventListener('blur', function() {
 
 applyCanvasSettings();
 renderScenarioUi();
-previewScenario(selectedScenario());
+previewScenarioInstant(selectedScenario());
 rebuildAnim();
 
 [[8,12,.04,3.8,0],[18,76,.03,5.1,.8],[28,34,.05,4.2,.3],[38,88,.04,6.0,1.1],
