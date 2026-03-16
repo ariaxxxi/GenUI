@@ -73,7 +73,10 @@ body {
     height        var(--anim-h),
     border-radius var(--anim-br),
     transform     var(--anim-tx),
-    opacity       300ms ease;
+    opacity       300ms ease,
+    background    420ms ease,
+    box-shadow    520ms ease,
+    filter        520ms ease;
   will-change: transform, width, height, border-radius, opacity;
 }
 .drop::before {
@@ -119,6 +122,25 @@ body {
   background: transparent;
   border: none;
 }
+#c-thumb.thumb-image {
+  background: transparent;
+  border: none;
+}
+#c-thumb-img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}
+#c-thumb-label {
+  display: block;
+  line-height: 1;
+}
+#c-thumb.thumb-image #c-thumb-img {
+  display: block;
+}
 #home-glow-layer {
   position: absolute;
   inset: 0;
@@ -138,24 +160,49 @@ body {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-weight: 600;
   color: rgba(255,255,255,0.90); white-space: nowrap; line-height: 1.1;
-  transition: transform var(--anim-t), opacity 260ms ease;
+  transition:
+    transform var(--content-move-t, var(--anim-t)),
+    opacity var(--content-fade-ms, 260ms) ease,
+    font-size var(--primary-size-anim-ms, var(--anim-t)),
+    color 220ms ease;
 }
 #c-secondary {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
   color: rgba(255,255,255,0.48); white-space: nowrap; line-height: 1.2;
-  transition: transform var(--anim-t), opacity 260ms ease;
+  transition:
+    transform var(--content-move-t, var(--anim-t)),
+    opacity var(--content-fade-ms, 260ms) ease,
+    font-size var(--text-size-anim-ms, var(--anim-t)),
+    color 220ms ease;
 }
 #c-detail {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
   color: rgba(255,255,255,0.26); white-space: nowrap; line-height: 1.2;
-  transition: transform var(--anim-t), opacity 260ms ease;
+  transition:
+    transform var(--content-move-t, var(--anim-t)),
+    opacity var(--detail-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    font-size var(--text-size-anim-ms, var(--anim-t)),
+    color 220ms ease;
 }
 #c-divider {
   position: absolute; z-index: 3;
   height: 1px; background: rgba(255,255,255,0.08);
-  transition: transform var(--anim-t), width var(--anim-t), opacity 260ms ease;
+  transition: transform var(--anim-t), width var(--anim-t), opacity var(--content-fade-ms, 260ms) ease;
+}
+#c-media {
+  position: absolute;
+  z-index: 3;
+  display: none;
+  object-fit: cover;
+  border-radius: 18px;
+  opacity: 0;
+  transition:
+    transform var(--anim-t),
+    opacity var(--media-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    width var(--anim-w),
+    height var(--anim-h);
 }
 
 /* ── Rich content layer ── */
@@ -291,6 +338,7 @@ body {
   mix-blend-mode: screen;
   transition: height var(--anim-h);
 }
+body.bg-off #stage { mix-blend-mode: normal; }
 #stage.flow-active { animation-play-state: paused; }
 
 /* ── Input area ── */
@@ -300,6 +348,7 @@ body {
   display: flex; flex-direction: column; align-items: center;
   transition: opacity 300ms ease, transform 300ms ease;
 }
+body.manual-mode #input-area { display: none; }
 #input-area.hidden {
   opacity: 0; pointer-events: none; transform: translateY(8px);
 }
@@ -352,13 +401,14 @@ body {
 
 /* ── Sidebar ── */
 #sidebar {
-  width: 300px; height: 100%;
+  width: 360px; height: 100%;
   display: flex; flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 32px 24px;
   background: #0b0b0b;
   border-left: 1px solid rgba(255,255,255,0.06);
-  gap: 28px; flex-shrink: 0;
+  gap: 24px; flex-shrink: 0;
+  overflow-y: auto;
 }
 .sb-section { display: flex; flex-direction: column; gap: 14px; }
 .sb-heading {
@@ -369,6 +419,7 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 .sb-row { display: flex; flex-direction: column; gap: 6px; }
+.sb-row.tight { gap: 10px; }
 #sidebar .sb-row + .sb-row { margin-top: 14px; }
 .sb-lbl { font-size: 10px; letter-spacing: .10em; color: rgba(255,255,255,0.40); }
 .sb-val { font-size: 11px; color: rgba(255,255,255,0.55); min-width: 36px; }
@@ -385,6 +436,261 @@ body {
 .sb-shape-btn:active { transform: scale(.97); }
 .sb-shape-btn.active { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.92); }
 .sb-shape-num { opacity: .38; font-size: 9px; }
+.sb-body-copy {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.46);
+}
+.sb-btn-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.sb-mini-btn {
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.62);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .18s, color .18s, background .18s, transform .1s;
+}
+.sb-mini-btn:hover {
+  border-color: rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.88);
+}
+.sb-mini-btn:active { transform: scale(.97); }
+.sb-mini-btn[disabled] {
+  opacity: .4;
+  pointer-events: none;
+}
+.sb-input,
+.sb-textarea,
+.sb-select {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.82);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .15s, background .15s;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.sb-input:focus,
+.sb-textarea:focus,
+.sb-select:focus {
+  border-color: rgba(255,255,255,0.34);
+  background: rgba(255,255,255,0.08);
+}
+.sb-textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+.sb-select option { background: #111; }
+.sb-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+}
+.sb-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sb-toggle-copy strong {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.88);
+}
+.sb-toggle-copy span {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: rgba(255,255,255,0.46);
+}
+.sb-toggle-input {
+  appearance: none;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.10);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .2s, border-color .2s;
+}
+.sb-toggle-input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  transition: transform .2s ease;
+}
+.sb-toggle-input:checked {
+  background: rgba(255,255,255,0.30);
+  border-color: rgba(255,255,255,0.18);
+}
+.sb-toggle-input:checked::after {
+  transform: translateX(20px);
+}
+.scenario-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scenario-item {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.66);
+  cursor: pointer;
+  outline: none;
+  text-align: left;
+  transition: border-color .18s, color .18s, background .18s, transform .1s;
+}
+.scenario-item:hover {
+  border-color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.88);
+}
+.scenario-item:active { transform: scale(.98); }
+.scenario-item.active {
+  border-color: rgba(255,255,255,0.34);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.94);
+}
+.scenario-item-name {
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+}
+.scenario-item-meta {
+  display: block;
+  margin-top: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.36);
+}
+.shape-chip-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.shape-chip {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.58);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .10em;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .18s, color .18s, background .18s;
+}
+.shape-chip.active {
+  border-color: rgba(255,255,255,0.32);
+  background: rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.92);
+}
+.editor-field.hidden { display: none; }
+.media-upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.typo-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.typo-size {
+  min-width: 0;
+}
+.typo-color {
+  width: 42px;
+  height: 42px;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+}
+.typo-color::-webkit-color-swatch-wrapper { padding: 0; }
+.typo-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+.typo-color::-moz-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+.icon-upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.icon-mode-badge {
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.54);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.upload-btn {
+  position: relative;
+  overflow: hidden;
+}
+.upload-btn input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.editor-note {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: rgba(255,255,255,0.40);
+  line-height: 1.45;
+}
+.legacy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
 input[type=range] {
   -webkit-appearance: none; width: 100%; height: 2px;
   background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; cursor: pointer;
@@ -617,10 +923,11 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
   z-index:-1;
   pointer-events:none;
 }
+body.bg-off .bg-blur-image { opacity: 0; }
 
 </style>
 </head>
-<body>
+<body class="manual-mode">
 <div class="bg-blur-image"></div>
 
 <style id="anim-style">
@@ -652,11 +959,12 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
     <div id="stage">
       <div class="drop" id="drop-main">
         <div id="home-glow-layer"></div>
-        <div id="c-thumb"></div>
+        <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
         <div id="c-primary"></div>
         <div id="c-secondary"></div>
         <div id="c-divider"></div>
         <div id="c-detail"></div>
+        <img id="c-media" alt=""/>
         <div id="c-rich"></div>
         <div id="siri-orb"><canvas id="siri-canvas"></canvas></div>
       </div>
@@ -684,20 +992,87 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 
 <div id="sidebar">
   <div class="sb-section">
-    <div class="sb-heading">Shape</div>
-    <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
-    <button class="sb-shape-btn" data-shape="dot" onclick="manualShape('dot')"><span class="sb-shape-num">2</span> Dot</button>
-    <button class="sb-shape-btn" data-shape="pill" onclick="manualShape('pill')"><span class="sb-shape-num">3</span> Pill</button>
-    <button class="sb-shape-btn" data-shape="card" onclick="manualShape('card')"><span class="sb-shape-num">4</span> Card</button>
-    <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
-    <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking (Debug)</button>
-    <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
-    <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
-    <div id="shape-panel">
-      <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="number" value="280" min="60" max="420"/></div>
-      <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="number" value="140" min="60" max="280"/></div>
-      <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="number" value="24" min="0" max="140"/></div>
-      <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
+    <div class="sb-heading">Canvas</div>
+    <label class="sb-toggle" for="bg-toggle">
+      <div class="sb-toggle-copy">
+        <strong>Background image</strong>
+      </div>
+      <input id="bg-toggle" class="sb-toggle-input" type="checkbox" checked/>
+    </label>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-heading">Scenarios</div>
+    <div class="sb-btn-row">
+      <button id="scenario-add" class="sb-mini-btn" type="button">Add</button>
+      <button id="scenario-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
+      <button id="scenario-delete" class="sb-mini-btn" type="button">Delete</button>
+    </div>
+    <div id="scenario-list" class="scenario-list"></div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-heading">Scenario Editor</div>
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="scenario-name">Scenario name</label>
+      <input id="scenario-name" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+    </div>
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
+      <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
+    </div>
+    <div class="sb-row tight">
+      <span class="sb-lbl">Stage</span>
+      <div class="shape-chip-row">
+        <button class="shape-chip" data-scenario-shape="dot" type="button">Dot</button>
+        <button class="shape-chip" data-scenario-shape="pill" type="button">Pill</button>
+        <button class="shape-chip" data-scenario-shape="card" type="button">Card</button>
+      </div>
+    </div>
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
+      <div class="icon-upload-row">
+        <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
+        <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png"/></label>
+        <button id="scenario-icon-reset" class="sb-mini-btn" type="button">Reset</button>
+      </div>
+      <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
+      <div class="typo-controls">
+        <input id="scenario-icon-size" class="sb-input typo-size" type="number" min="12" max="96" step="1" placeholder="Icon size"/>
+        <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
+      </div>
+    </div>
+    <div id="editor-primary-field" class="sb-row tight editor-field">
+      <label class="sb-lbl" for="scenario-primary">Primary text</label>
+      <input id="scenario-primary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+      <div class="typo-controls">
+        <input id="scenario-primary-size" class="sb-input typo-size" type="number" min="12" max="96" step="1" placeholder="Primary size"/>
+        <input id="scenario-primary-color" class="typo-color" type="color" value="#ffffff"/>
+      </div>
+    </div>
+    <div id="editor-secondary-field" class="sb-row tight editor-field">
+      <label class="sb-lbl" for="scenario-secondary">Secondary text</label>
+      <input id="scenario-secondary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+      <div class="typo-controls">
+        <input id="scenario-secondary-size" class="sb-input typo-size" type="number" min="12" max="96" step="1" placeholder="Secondary size"/>
+        <input id="scenario-secondary-color" class="typo-color" type="color" value="#8a8a8a"/>
+      </div>
+    </div>
+    <div id="editor-detail-field" class="sb-row tight editor-field">
+      <label class="sb-lbl" for="scenario-detail">Detail text</label>
+      <input id="scenario-detail" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+      <div class="typo-controls">
+        <input id="scenario-detail-size" class="sb-input typo-size" type="number" min="12" max="96" step="1" placeholder="Detail size"/>
+        <input id="scenario-detail-color" class="typo-color" type="color" value="#5a5a5a"/>
+      </div>
+    </div>
+    <div id="editor-media-field" class="sb-row tight editor-field hidden">
+      <label class="sb-lbl" for="scenario-media-upload">Card image</label>
+      <div class="media-upload-row">
+        <label class="sb-mini-btn upload-btn" for="scenario-media-upload">PNG<input id="scenario-media-upload" type="file" accept="image/png"/></label>
+        <button id="scenario-media-reset" class="sb-mini-btn" type="button">Reset</button>
+      </div>
+      <div id="scenario-media-state" class="icon-mode-badge">empty</div>
     </div>
   </div>
 
@@ -714,7 +1089,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
       <span class="sb-lbl">Easing</span>
       <select id="ease-select">
         <option value="custom" selected>Custom bezier</option>
-        <option value="spring">Spring</option>
+        <option value="spring">Liquid feeling</option>
         <option value="ease">Ease</option>
         <option value="linear">Linear</option>
       </select>
@@ -722,20 +1097,38 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
     <div class="sb-row" id="bz-group">
       <span class="sb-lbl">Bezier</span>
       <div id="bz-row">
-        <input class="bz-inp" id="bz0" type="number" value="0.35" step="0.01" min="-2" max="2"/>
-        <span class="bz-sep">,</span>
-        <input class="bz-inp" id="bz1" type="number" value="0.23" step="0.01" min="-2" max="2"/>
-        <span class="bz-sep">,</span>
-        <input class="bz-inp" id="bz2" type="number" value="0.13" step="0.01" min="-2" max="2"/>
-        <span class="bz-sep">,</span>
-        <input class="bz-inp" id="bz3" type="number" value="0.98" step="0.01" min="-2" max="2"/>
+        <input class="bz-inp" id="bz-input" type="text" value="0.35, 0.23, 0.13, 0.98" autocomplete="off" spellcheck="false" placeholder="0.2, 0.2, 0.1, 1"/>
       </div>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-heading">Legacy / Debug</div>
+    <div class="legacy-grid">
+      <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
+      <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
+      <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
+      <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
+      <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
+    </div>
+    <div id="shape-panel">
+      <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="number" value="280" min="60" max="420"/></div>
+      <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="number" value="140" min="60" max="280"/></div>
+      <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="number" value="24" min="0" max="140"/></div>
+      <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
     </div>
   </div>
 </div>
 
 <script>
 const P   = 20;
+const CARD_P = 24;
+const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
+const CARD_DIVIDER_GAP = 10;
+const CARD_PRIMARY_GAP = 14;
+const CARD_PRIMARY_TO_SECONDARY_GAP = 8;
+const CARD_SECONDARY_TO_DETAIL_GAP = 8;
+const CARD_DETAIL_TO_MEDIA_GAP = 24;
 const TS  = 60;
 const TBR = '30px';
 const GAP = 16;
@@ -784,6 +1177,174 @@ const SHAPES = {
   },
 };
 
+const STORAGE_KEYS = {
+  scenarios: 'genui.scenarios.v1',
+  settings: 'genui.settings.v1',
+};
+const RESPONSE_MODE = Object.freeze({
+  MANUAL: 'manual',
+  AI: 'ai',
+});
+const ACTIVE_RESPONSE_MODE = RESPONSE_MODE.MANUAL;
+const SCENARIO_SHAPES = ['dot', 'pill', 'card'];
+const SCENARIO_VISIBLE_FIELDS = {
+  dot: [],
+  pill: ['primary', 'secondary'],
+  card: ['primary', 'secondary', 'detail'],
+};
+const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
+
+function defaultTypographyForShape(shape = 'pill') {
+  return {
+    icon: { size: shape === 'card' ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
+    primary: { size: shape === 'card' ? 40 : 28, color: '#ffffff' },
+    secondary: { size: 24, color: '#7a7a7a' },
+    detail: { size: 24, color: '#4a4a4a' },
+  };
+}
+
+function normalizeTypography(value = {}, shape = 'pill') {
+  const defaults = defaultTypographyForShape(shape);
+  const output = {};
+  TYPOGRAPHY_LAYERS.forEach((layer) => {
+    const src = value?.[layer] || {};
+    const fallback = defaults[layer];
+    const size = Number(src.size);
+    output[layer] = {
+      size: Number.isFinite(size) ? clamp(Math.round(size), 12, 96) : fallback.size,
+      color: /^#[0-9a-f]{6}$/i.test(String(src.color || '')) ? String(src.color) : fallback.color,
+    };
+  });
+  return output;
+}
+
+function normalizeTypographyByShape(value = {}, fallbackShape = 'pill') {
+  const legacyTypography = value && TYPOGRAPHY_LAYERS.some((layer) => value[layer]);
+  const output = {};
+  SCENARIO_SHAPES.forEach((shape) => {
+    const source = legacyTypography
+      ? (shape === fallbackShape ? value : {})
+      : (value?.[shape] || {});
+    output[shape] = normalizeTypography(source, shape);
+  });
+  return output;
+}
+
+function scenarioId() {
+  return 'scenario-' + Math.random().toString(36).slice(2, 10);
+}
+
+function createIcon(kind = 'none', value = '') {
+  return { kind, value: String(value || '') };
+}
+
+function normalizeStageImage(value) {
+  if (!value || typeof value !== 'object') return null;
+  const src = String(value.src || '').trim();
+  const width = Number(value.width);
+  const height = Number(value.height);
+  if (!src || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+  return { src, width, height };
+}
+
+function createScenario({
+  id = scenarioId(),
+  name = 'New Scenario',
+  shape = 'pill',
+  content = {},
+  triggers = [],
+} = {}) {
+  return {
+    id,
+    name,
+    shape: SCENARIO_SHAPES.includes(shape) ? shape : 'pill',
+    content: {
+      icon: normalizeIcon(content.icon),
+      primary: String(content.primary || ''),
+      secondary: String(content.secondary || ''),
+      detail: String(content.detail || ''),
+      image: normalizeStageImage(content.image),
+      typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
+    },
+    triggers: normalizeTriggers(triggers),
+  };
+}
+
+function normalizeTriggers(value) {
+  if (Array.isArray(value)) return value.map(v => String(v || '').trim()).filter(Boolean);
+  return String(value || '')
+    .split(/[\n,]/)
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function normalizeIcon(value) {
+  if (value && typeof value === 'object') {
+    const kind = ['emoji', 'image', 'none'].includes(value.kind) ? value.kind : 'none';
+    return createIcon(kind, value.value || '');
+  }
+  const text = String(value || '').trim();
+  return text ? createIcon('emoji', text) : createIcon('none', '');
+}
+
+function normalizeScenario(raw, index = 0) {
+  const fallbackNames = ['Weather', 'Message', 'QR Access'];
+  return createScenario({
+    id: raw?.id || scenarioId(),
+    name: raw?.name || fallbackNames[index] || `Scenario ${index + 1}`,
+    shape: raw?.shape || 'pill',
+    content: raw?.content || {},
+    triggers: raw?.triggers || [],
+  });
+}
+
+function defaultScenarioLibrary() {
+  return [
+    createScenario({
+      name: 'Weather Snapshot',
+      shape: 'pill',
+      content: {
+        icon: createIcon('emoji', '🌤'),
+        primary: '21° Sunny',
+        secondary: 'San Francisco',
+      },
+      triggers: ['weather', 'temperature', 'forecast'],
+    }),
+    createScenario({
+      name: 'Incoming Message',
+      shape: 'card',
+      content: {
+        icon: createIcon('emoji', '✉'),
+        primary: 'New Message',
+        secondary: 'Alice wants to meet',
+        detail: 'Unread · 2 mins ago',
+      },
+      triggers: ['message', 'text', 'notification'],
+    }),
+    createScenario({
+      name: 'QR Access Pass',
+      shape: 'card',
+      content: {
+        icon: createIcon('emoji', '▣'),
+        primary: 'Gate A12',
+        secondary: 'Show QR at entry',
+        detail: 'Boarding 18:40 · Seat 14C',
+      },
+      triggers: ['qr', 'boarding pass', 'ticket', 'check in'],
+    }),
+  ];
+}
+
+function readStoredJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 function contentPos(shape, w, h) {
   if (shape === 'circle' || shape === 'dot') return {
     thumb:  { x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 },
@@ -803,13 +1364,15 @@ function contentPos(shape, w, h) {
     };
   }
   if (shape === 'card') {
-    const divY=P+TS+10, pY=divY+14, sY=pY+52, dY=sY+36;
+    const typography = normalizeTypography(contentTypographyState, 'card');
+    const layout = getCardLayoutMetrics(w, typography, C.det.textContent, stageMediaState);
+    const cardTextX = CARD_P;
     return {
-      thumb:  { x:P, y:P, w:TS, h:TS, br:TBR, op:1 },
-      prim:   { x:P, y:pY, op:1, fs:40, cx:false },
-      sec:    { x:P, y:sY, op:1, fs:24, cx:false },
-      div:    { x:P, y:divY, dw:w-P*2, op:1 },
-      det:    { x:P, y:dY, op:1, fs:24, cx:false },
+      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:1 },
+      prim:   { x:cardTextX, y:layout.primaryTop, op:1, fs:typography.primary.size, cx:false },
+      sec:    { x:cardTextX, y:layout.secondaryTop, op:1, fs:typography.secondary.size, cx:false },
+      div:    { x:CARD_P, y:layout.dividerY, dw:w-CARD_P*2, op:1 },
+      det:    { x:CARD_P, y:layout.detailTop, op:1, fs:typography.detail.size, cx:false },
     };
   }
   return {
@@ -828,11 +1391,46 @@ const DROPS = {
 };
 const C = {
   thumb: document.getElementById('c-thumb'),
+  thumbLabel: document.getElementById('c-thumb-label'),
+  thumbImg: document.getElementById('c-thumb-img'),
   prim:  document.getElementById('c-primary'),
   sec:   document.getElementById('c-secondary'),
   div:   document.getElementById('c-divider'),
   det:   document.getElementById('c-detail'),
+  media: document.getElementById('c-media'),
   rich:  document.getElementById('c-rich'),
+};
+const UI = {
+  bgToggle: document.getElementById('bg-toggle'),
+  scenarioList: document.getElementById('scenario-list'),
+  scenarioAdd: document.getElementById('scenario-add'),
+  scenarioDuplicate: document.getElementById('scenario-duplicate'),
+  scenarioDelete: document.getElementById('scenario-delete'),
+  scenarioName: document.getElementById('scenario-name'),
+  scenarioTriggers: document.getElementById('scenario-triggers'),
+  scenarioIconInput: document.getElementById('scenario-icon-input'),
+  scenarioIconUpload: document.getElementById('scenario-icon-upload'),
+  scenarioIconReset: document.getElementById('scenario-icon-reset'),
+  scenarioIconMode: document.getElementById('scenario-icon-mode'),
+  scenarioIconSize: document.getElementById('scenario-icon-size'),
+  scenarioIconColor: document.getElementById('scenario-icon-color'),
+  scenarioPrimary: document.getElementById('scenario-primary'),
+  scenarioPrimarySize: document.getElementById('scenario-primary-size'),
+  scenarioPrimaryColor: document.getElementById('scenario-primary-color'),
+  scenarioSecondary: document.getElementById('scenario-secondary'),
+  scenarioSecondarySize: document.getElementById('scenario-secondary-size'),
+  scenarioSecondaryColor: document.getElementById('scenario-secondary-color'),
+  scenarioDetail: document.getElementById('scenario-detail'),
+  scenarioDetailSize: document.getElementById('scenario-detail-size'),
+  scenarioDetailColor: document.getElementById('scenario-detail-color'),
+  scenarioMediaUpload: document.getElementById('scenario-media-upload'),
+  scenarioMediaReset: document.getElementById('scenario-media-reset'),
+  scenarioMediaState: document.getElementById('scenario-media-state'),
+  editorPrimary: document.getElementById('editor-primary-field'),
+  editorSecondary: document.getElementById('editor-secondary-field'),
+  editorDetail: document.getElementById('editor-detail-field'),
+  editorMedia: document.getElementById('editor-media-field'),
+  scenarioShapeButtons: Array.from(document.querySelectorAll('[data-scenario-shape]')),
 };
 
 let currentShape = 'circle';
@@ -844,8 +1442,407 @@ let suppressDeformation = false;
 let splitBridgeTimer = null;
 let listBridgeTimer = null;
 let thinkingBridgeTimer = null;
+let thumbContentState = createIcon('none', '');
+let contentTypographyState = defaultTypographyForShape('pill');
+let contentDelayProfile = { secondaryInAdvanceMs: 0, detailInAdvanceMs: 0 };
+let stageMediaState = null;
+let canvasSettings = loadCanvasSettings();
+let scenarioLibrary = loadScenarioLibrary();
+let selectedScenarioId = scenarioLibrary[0]?.id || '';
+const detailMeasureEl = document.createElement('div');
+detailMeasureEl.style.position = 'fixed';
+detailMeasureEl.style.left = '-9999px';
+detailMeasureEl.style.top = '-9999px';
+detailMeasureEl.style.visibility = 'hidden';
+detailMeasureEl.style.pointerEvents = 'none';
+detailMeasureEl.style.whiteSpace = 'normal';
+detailMeasureEl.style.wordBreak = 'break-word';
+detailMeasureEl.style.fontFamily = "'DM Sans', sans-serif";
+detailMeasureEl.style.fontWeight = '300';
+document.body.appendChild(detailMeasureEl);
 
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function loadCanvasSettings() {
+  const stored = readStoredJson(STORAGE_KEYS.settings, null);
+  return {
+    backgroundEnabled: stored?.backgroundEnabled !== false,
+  };
+}
+
+function loadScenarioLibrary() {
+  const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
+  const scenarios = Array.isArray(stored) ? stored.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
+  return scenarios.length ? scenarios : defaultScenarioLibrary();
+}
+
+function persistScenarios() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.scenarios, JSON.stringify(scenarioLibrary));
+  } catch (err) {
+    console.warn('Unable to persist scenarios', err);
+  }
+}
+
+function persistCanvasSettings() {
+  try {
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(canvasSettings));
+  } catch (err) {
+    console.warn('Unable to persist canvas settings', err);
+  }
+}
+
+function selectedScenario() {
+  return scenarioLibrary.find(item => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
+}
+
+function setThumbContent(iconValue) {
+  thumbContentState = normalizeIcon(iconValue);
+  const isImage = thumbContentState.kind === 'image' && !!thumbContentState.value;
+  const isText = thumbContentState.kind === 'emoji' && !!thumbContentState.value;
+  C.thumb.classList.toggle('thumb-image', isImage);
+  C.thumbLabel.textContent = isText ? thumbContentState.value : '';
+  if (isImage) {
+    C.thumbImg.src = thumbContentState.value;
+  } else {
+    C.thumbImg.removeAttribute('src');
+  }
+}
+
+function setContentTypography(typographyValue, shape = currentShape) {
+  contentTypographyState = normalizeTypography(typographyValue, shape);
+}
+
+function setStageMedia(imageValue) {
+  stageMediaState = normalizeStageImage(imageValue);
+  if (stageMediaState) {
+    C.media.src = stageMediaState.src;
+  } else {
+    C.media.removeAttribute('src');
+  }
+}
+
+function getScenarioTypography(scenario, shape = scenario?.shape || currentShape) {
+  return normalizeTypography(
+    scenario?.content?.typographyByShape?.[shape],
+    shape
+  );
+}
+
+function cardDetailTextWidth(cardWidth) {
+  return Math.max(120, cardWidth - CARD_P * 2);
+}
+
+function lineTextWidth(shape, width) {
+  if (shape === 'pill') {
+    return Math.max(120, width - TX - P);
+  }
+  if (shape === 'card') {
+    return Math.max(120, width - CARD_P * 2);
+  }
+  return null;
+}
+
+function cardMediaWidth(cardWidth) {
+  return Math.max(120, cardWidth - CARD_P * 2);
+}
+
+function measureLineHeight(fontSize, lineHeight = 1.2) {
+  return Math.ceil(Number(fontSize || 0) * lineHeight);
+}
+
+function measureCardMediaHeight(imageValue, cardWidth) {
+  const image = normalizeStageImage(imageValue);
+  if (!image) return 0;
+  return Math.ceil(cardMediaWidth(cardWidth) * (image.height / image.width));
+}
+
+function measureCardDetailHeight(detailText, typography, cardWidth) {
+  const text = String(detailText || '').trim();
+  if (!text) return 0;
+  detailMeasureEl.style.width = `${cardDetailTextWidth(cardWidth)}px`;
+  detailMeasureEl.style.fontSize = `${typography.detail.size}px`;
+  detailMeasureEl.style.lineHeight = '1.2';
+  detailMeasureEl.style.whiteSpace = 'normal';
+  detailMeasureEl.style.wordBreak = 'break-word';
+  detailMeasureEl.textContent = text;
+  return Math.ceil(detailMeasureEl.getBoundingClientRect().height);
+}
+
+function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null) {
+  const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
+  const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
+  const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
+  const mediaHeight = measureCardMediaHeight(imageValue, cardWidth);
+  const dividerY = CARD_P + TS + CARD_DIVIDER_GAP;
+  const primaryTop = dividerY + CARD_PRIMARY_GAP;
+  const secondaryTop = primaryTop + primaryHeight + CARD_PRIMARY_TO_SECONDARY_GAP;
+  const detailTop = secondaryTop + secondaryHeight + CARD_SECONDARY_TO_DETAIL_GAP;
+  const mediaTop = detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP;
+  const contentBottom = mediaHeight > 0
+    ? mediaTop + mediaHeight
+    : (detailHeight > 0 ? detailTop + detailHeight : secondaryTop + secondaryHeight);
+  const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
+  return {
+    dividerY,
+    primaryTop,
+    secondaryTop,
+    detailTop,
+    detailHeight,
+    mediaTop,
+    mediaHeight,
+    neededHeight: contentBottom + bottomPadding,
+  };
+}
+
+function resolveGeometryForContent(shape, contentData, customGeo) {
+  const baseGeo = customGeo || SHAPES[shape] || SHAPES.card;
+  if (shape !== 'card' || customGeo) return baseGeo;
+
+  const detailText = contentData?.detail !== undefined ? contentData.detail : C.det.textContent;
+  const typography = normalizeTypography(contentData?.typography || contentTypographyState, 'card');
+  const mediaValue = contentData?.image !== undefined ? contentData.image : stageMediaState;
+  const layout = getCardLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue);
+  const baselineLayout = getCardLayoutMetrics(
+    baseGeo.main.w,
+    defaultTypographyForShape('card'),
+    detailText,
+    mediaValue
+  );
+  const neededHeight = Math.max(
+    Math.round(baseGeo.main.h + (layout.neededHeight - baselineLayout.neededHeight)),
+    Math.ceil(layout.neededHeight)
+  );
+  if (neededHeight === baseGeo.main.h) return baseGeo;
+
+  return {
+    ...baseGeo,
+    main: {
+      ...baseGeo.main,
+      h: neededHeight,
+      ty: -(neededHeight / 2),
+    },
+  };
+}
+
+function scenarioToRenderContent(scenario) {
+  return {
+    icon: scenario?.content?.icon || createIcon('none', ''),
+    primary: String(scenario?.content?.primary || ''),
+    secondary: String(scenario?.content?.secondary || ''),
+    detail: String(scenario?.content?.detail || ''),
+    image: scenario?.content?.image || null,
+    typography: getScenarioTypography(scenario, scenario?.shape || currentShape),
+  };
+}
+
+function applyCanvasSettings() {
+  document.body.classList.toggle('bg-off', !canvasSettings.backgroundEnabled);
+  if (UI.bgToggle) UI.bgToggle.checked = !!canvasSettings.backgroundEnabled;
+}
+
+function renderScenarioList() {
+  if (!UI.scenarioList) return;
+  UI.scenarioList.innerHTML = '';
+  scenarioLibrary.forEach((scenario) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'scenario-item' + (scenario.id === selectedScenarioId ? ' active' : '');
+    button.innerHTML = `
+      <span class="scenario-item-name">${scenario.name}</span>
+      <span class="scenario-item-meta">${scenario.shape}</span>
+    `;
+    button.addEventListener('click', () => selectScenario(scenario.id));
+    UI.scenarioList.appendChild(button);
+  });
+  if (UI.scenarioDuplicate) UI.scenarioDuplicate.disabled = !selectedScenario();
+  if (UI.scenarioDelete) UI.scenarioDelete.disabled = scenarioLibrary.length <= 1;
+}
+
+function renderScenarioEditor() {
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  UI.scenarioName.value = scenario.name;
+  UI.scenarioTriggers.value = scenario.triggers.join(', ');
+  UI.scenarioIconInput.value = scenario.content.icon.kind === 'emoji' ? scenario.content.icon.value : '';
+  UI.scenarioPrimary.value = scenario.content.primary;
+  UI.scenarioSecondary.value = scenario.content.secondary;
+  UI.scenarioDetail.value = scenario.content.detail;
+  const typography = getScenarioTypography(scenario, scenario.shape);
+  UI.scenarioIconSize.value = typography.icon.size;
+  UI.scenarioIconColor.value = typography.icon.color;
+  UI.scenarioPrimarySize.value = typography.primary.size;
+  UI.scenarioPrimaryColor.value = typography.primary.color;
+  UI.scenarioSecondarySize.value = typography.secondary.size;
+  UI.scenarioSecondaryColor.value = typography.secondary.color;
+  UI.scenarioDetailSize.value = typography.detail.size;
+  UI.scenarioDetailColor.value = typography.detail.color;
+  UI.scenarioMediaState.textContent = scenario.content.image ? 'loaded' : 'empty';
+  UI.scenarioIconMode.textContent = scenario.content.icon.kind === 'image' ? 'png' : (scenario.content.icon.kind === 'emoji' ? 'emoji' : 'empty');
+  const iconTextEditable = scenario.content.icon.kind !== 'image';
+  UI.scenarioIconInput.disabled = !iconTextEditable;
+  UI.scenarioIconColor.disabled = !iconTextEditable;
+  UI.scenarioIconInput.placeholder = iconTextEditable ? 'Emoji or glyph' : 'PNG icon active';
+  UI.scenarioShapeButtons.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.scenarioShape === scenario.shape);
+  });
+  const visibleFields = new Set(SCENARIO_VISIBLE_FIELDS[scenario.shape] || []);
+  UI.editorPrimary.classList.toggle('hidden', !visibleFields.has('primary'));
+  UI.editorSecondary.classList.toggle('hidden', !visibleFields.has('secondary'));
+  UI.editorDetail.classList.toggle('hidden', !visibleFields.has('detail'));
+  UI.editorMedia.classList.toggle('hidden', scenario.shape !== 'card');
+}
+
+function renderScenarioUi() {
+  renderScenarioList();
+  renderScenarioEditor();
+}
+
+function previewScenario(scenario) {
+  if (!scenario) return;
+  if (flightUi.active) {
+    flightUi.active = false;
+    setFlightStep('idle', 0);
+  }
+  stopSiriOrb();
+  hideRich();
+  hideIntentHeader();
+  document.getElementById('stage').classList.remove('flow-active');
+  updateActive('');
+  morphTo(scenario.shape, scenarioToRenderContent(scenario));
+}
+
+function previewScenarioInstant(scenario) {
+  if (!scenario) return;
+  if (flightUi.active) {
+    flightUi.active = false;
+    setFlightStep('idle', 0);
+  }
+  stopSiriOrb();
+  hideRich();
+  hideIntentHeader();
+  document.getElementById('stage').classList.remove('flow-active');
+  updateActive('');
+
+  const shape = scenario.shape;
+  const content = scenarioToRenderContent(scenario);
+  const geo = resolveGeometryForContent(shape, content, null);
+
+  const root = document.documentElement;
+  const prevSuppress = suppressDeformation;
+  suppressDeformation = true;
+  root.style.setProperty('--anim-w', '0ms linear');
+  root.style.setProperty('--anim-h', '0ms linear');
+  root.style.setProperty('--anim-br', '0ms linear');
+  root.style.setProperty('--anim-tx', '0ms linear');
+  root.style.setProperty('--anim-t', '0ms linear');
+  root.style.setProperty('--content-fade-ms', '0ms');
+  root.style.setProperty('--detail-fade-ms', '0ms');
+  root.style.setProperty('--media-fade-ms', '0ms');
+  root.style.setProperty('--content-move-t', '0ms linear');
+  root.style.setProperty('--primary-size-anim-ms', '0ms');
+  root.style.setProperty('--text-size-anim-ms', '0ms');
+
+  clearUiFadeTimers();
+  currentShape = shape;
+  applyGeometry(shape, geo);
+  DROPS.main.style.setProperty('--home-glow-delay', '0ms');
+  DROPS.main.classList.toggle('home-glow', shape === 'circle');
+  applyContent(content);
+  applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
+  updateActive(shape);
+
+  suppressDeformation = prevSuppress;
+  root.style.removeProperty('--anim-w');
+  root.style.removeProperty('--anim-h');
+  root.style.removeProperty('--anim-br');
+  root.style.removeProperty('--anim-tx');
+  root.style.removeProperty('--anim-t');
+  root.style.removeProperty('--content-fade-ms');
+  root.style.removeProperty('--detail-fade-ms');
+  root.style.removeProperty('--media-fade-ms');
+  root.style.removeProperty('--content-move-t');
+  root.style.removeProperty('--primary-size-anim-ms');
+  root.style.removeProperty('--text-size-anim-ms');
+}
+
+function selectScenario(id) {
+  if (!scenarioLibrary.some(item => item.id === id)) return;
+  selectedScenarioId = id;
+  renderScenarioUi();
+  previewScenario(selectedScenario());
+}
+
+function commitScenarioChange(mutator) {
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  mutator(scenario);
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(scenario);
+}
+
+function addScenario(shape = 'pill') {
+  const scenario = createScenario({
+    name: shape === 'card' ? 'New Card' : (shape === 'dot' ? 'New Dot' : 'New Pill'),
+    shape,
+    content: {
+      icon: createIcon('emoji', shape === 'dot' ? '•' : '◉'),
+      primary: '',
+      secondary: '',
+      detail: '',
+    },
+  });
+  scenarioLibrary.push(scenario);
+  selectedScenarioId = scenario.id;
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(scenario);
+}
+
+function duplicateScenario() {
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  const copy = createScenario({
+    name: `${scenario.name} Copy`,
+    shape: scenario.shape,
+    content: typeof structuredClone === 'function'
+      ? structuredClone(scenario.content)
+      : JSON.parse(JSON.stringify(scenario.content)),
+    triggers: [...scenario.triggers],
+  });
+  scenarioLibrary.push(copy);
+  selectedScenarioId = copy.id;
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(copy);
+}
+
+function deleteScenario() {
+  if (scenarioLibrary.length <= 1) return;
+  const idx = scenarioLibrary.findIndex(item => item.id === selectedScenarioId);
+  if (idx < 0) return;
+  scenarioLibrary.splice(idx, 1);
+  selectedScenarioId = scenarioLibrary[Math.max(0, idx - 1)]?.id || scenarioLibrary[0]?.id || '';
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(selectedScenario());
+}
+
+function scenarioMatchesText(scenario, text) {
+  const haystack = String(text || '').toLowerCase();
+  if (!haystack) return false;
+  if (scenario.name.toLowerCase().includes(haystack)) return true;
+  return scenario.triggers.some(trigger => haystack.includes(trigger.toLowerCase()));
+}
+
+function resolveScenario(inputText) {
+  if (ACTIVE_RESPONSE_MODE === RESPONSE_MODE.AI) return null;
+  const match = scenarioLibrary.find(item => scenarioMatchesText(item, inputText));
+  return match || selectedScenario();
+}
 
 function splitBridgeMs() {
   return clamp(Math.round(animDur * 0.62), 300, 460);
@@ -861,6 +1858,41 @@ function listPhaseTwoStartMs() {
 
 function thinkingBridgeMs() {
   return clamp(Math.round(animDur * 0.55), 220, 420);
+}
+
+function homeThinkingBridgeMs() {
+  return clamp(Math.round(animDur * 0.48), 180, 320);
+}
+
+function cardHeightForTransition(fromShape, toShape, fromGeo, toGeo) {
+  if (fromShape === 'card' && Number.isFinite(fromGeo?.h)) return fromGeo.h;
+  if (toShape === 'card' && Number.isFinite(toGeo?.main?.h)) return toGeo.main.h;
+  return SHAPES.card.main.h;
+}
+
+function cardDurationBonusMs(cardHeight) {
+  const h = Number.isFinite(cardHeight) ? cardHeight : SHAPES.card.main.h;
+  return clamp(Math.round((h / 580) * 200), 0, 360);
+}
+
+function transitionAnimMs(fromShape, toShape, baseMs = animDur, fromGeo = null, toGeo = null) {
+  const isDotPillPair = (
+    (fromShape === 'dot' && toShape === 'pill') ||
+    (fromShape === 'pill' && toShape === 'dot')
+  );
+  const isPillCardPair = (
+    (fromShape === 'pill' && toShape === 'card') ||
+    (fromShape === 'card' && toShape === 'pill')
+  );
+  const isDotCardPair = (
+    (fromShape === 'dot' && toShape === 'card') ||
+    (fromShape === 'card' && toShape === 'dot')
+  );
+  const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
+  if (isDotPillPair) return clamp(baseMs, 100, 1800);
+  if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
+  if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);
+  return clamp(baseMs, 100, 1800);
 }
 
 function clearSplitTimers() {
@@ -1023,6 +2055,38 @@ function bridgeFromThinkingToTarget(shape, contentData, customGeo) {
   }, thinkingBridgeMs());
 }
 
+function bridgeHomeToThinking(targetShape) {
+  if (thinkingBridgeTimer) {
+    clearTimeout(thinkingBridgeTimer);
+    thinkingBridgeTimer = null;
+  }
+  stopSiriOrb();
+  morphCore('circle', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+  C.thumb.style.opacity = '0';
+  updateActive(targetShape);
+  thinkingBridgeTimer = setTimeout(() => {
+    thinkingBridgeTimer = null;
+    morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+    if (targetShape === 'idle') {
+      showAiIdle();
+      updateActive('idle');
+      return;
+    }
+    startSiriOrb(true);
+    updateActive('ai');
+  }, homeThinkingBridgeMs());
+}
+
+function bridgeThinkingToHome(contentData = null, customGeo = null) {
+  if (thinkingBridgeTimer) {
+    clearTimeout(thinkingBridgeTimer);
+    thinkingBridgeTimer = null;
+  }
+  stopSiriOrb();
+  morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2));
+  updateActive('circle');
+}
+
 function getActiveEasing() {
   const sel = document.getElementById('ease-select');
   if (!sel) return 'cubic-bezier(0.22,1,0.36,1)';
@@ -1124,7 +2188,7 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
   relX = clamp(relX, 0.9, 1.14);
   relY = clamp(relY, 0.9, 1.14);
 
-  const totalMs = clamp(Math.round(animDur * 1.02), 340, 780);
+  const totalMs = clamp(Math.round(currentTransitionAnimMs * 1.02), 340, 980);
   const ease = getActiveEasing();
   const aEnd = 0.16;
   const bEnd = 0.74;
@@ -1169,8 +2233,8 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
   };
 }
 
-function applyGeometry(shape, customGeo) {
-  const geo = customGeo || SHAPES[shape] || SHAPES.card;
+function applyGeometry(shape, resolvedGeo) {
+  const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
   ['main','left','right'].forEach(k => {
     const el = DROPS[k], s = geo[k];
     el.style.width        = s.w + 'px';
@@ -1188,6 +2252,25 @@ function applyGeometry(shape, customGeo) {
 const uiFadeTimers = [];
 function clearUiFadeTimers() {
   while (uiFadeTimers.length) clearTimeout(uiFadeTimers.pop());
+}
+
+let currentContentFadeMs = 260;
+let currentDetailFadeMs = 260;
+let currentMediaFadeMs = 260;
+let currentTransitionAnimMs = 450;
+
+function applyCardDetailLayout(cardWidth) {
+  C.det.style.width = `${cardDetailTextWidth(cardWidth)}px`;
+  C.det.style.maxWidth = `${cardDetailTextWidth(cardWidth)}px`;
+  C.det.style.whiteSpace = 'normal';
+  C.det.style.wordBreak = 'break-word';
+}
+
+function resetDetailInlineLayout() {
+  C.det.style.width = '';
+  C.det.style.maxWidth = '';
+  C.det.style.whiteSpace = 'nowrap';
+  C.det.style.wordBreak = '';
 }
 
 function setOpacityWithDelay(el, targetOpacity, inDelayMs = 0, outDelayMs = 0) {
@@ -1223,14 +2306,17 @@ function setOpacityWithDelay(el, targetOpacity, inDelayMs = 0, outDelayMs = 0) {
 }
 
 function isIconOnlyThumb(shape) {
-  const icon = (C.thumb.textContent || '').trim();
+  if (thumbContentState.kind === 'image' && thumbContentState.value) {
+    return ['circle', 'dot', 'pill', 'card', 'card-form', 'card-list', 'custom'].includes(shape);
+  }
+  const icon = (C.thumbLabel.textContent || '').trim();
   if (!icon) return false;
   if (icon === '···') return false;
   return ['circle', 'dot', 'pill', 'card', 'card-form', 'card-list', 'custom'].includes(shape);
 }
 
 function applyThumbVisualMode(shape) {
-  const icon = (C.thumb.textContent || '').trim();
+  const icon = thumbContentState.kind === 'image' ? '__image__' : (C.thumbLabel.textContent || '').trim();
   const homeEmpty = shape === 'circle' && !icon;
   C.thumb.classList.toggle('thumb-empty', homeEmpty);
 
@@ -1238,6 +2324,7 @@ function applyThumbVisualMode(shape) {
   C.thumb.classList.toggle('thumb-plain-icon', plain && !homeEmpty);
   if (!plain || homeEmpty) {
     C.thumb.style.fontSize = '';
+    C.thumb.style.color = '';
     return;
   }
   const sizeByShape = {
@@ -1252,29 +2339,207 @@ function applyThumbVisualMode(shape) {
   C.thumb.style.fontSize = (sizeByShape[shape] || 40) + 'px';
 }
 
-function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0) {
+function applyTypographyStyles(shape) {
+  const typography = normalizeTypography(contentTypographyState, shape);
+  C.thumb.style.color = typography.icon.color;
+  if (thumbContentState.kind !== 'image') {
+    C.thumb.style.fontSize = typography.icon.size + 'px';
+  }
+  C.prim.style.fontSize = typography.primary.size + 'px';
+  C.prim.style.color = typography.primary.color;
+  C.sec.style.fontSize = typography.secondary.size + 'px';
+  C.sec.style.color = typography.secondary.color;
+  C.det.style.fontSize = typography.detail.size + 'px';
+  C.det.style.color = typography.detail.color;
+}
+
+function applyCardMediaLayout(cardWidth) {
+  const typography = normalizeTypography(contentTypographyState, 'card');
+  const layout = getCardLayoutMetrics(cardWidth, typography, C.det.textContent, stageMediaState);
+  if (!stageMediaState || !layout.mediaHeight) {
+    C.media.style.display = 'none';
+    C.media.style.opacity = '0';
+    C.media.style.width = '';
+    C.media.style.height = '';
+    C.media.style.transform = '';
+    return;
+  }
+  C.media.style.display = 'block';
+  C.media.style.width = `${cardMediaWidth(cardWidth)}px`;
+  C.media.style.height = `${layout.mediaHeight}px`;
+  C.media.style.transform = `translate(${CARD_P}px,${layout.mediaTop}px)`;
+  C.media.style.opacity = '1';
+}
+
+function applyOutgoingCardMediaLayout(imageValue, cardWidth) {
+  const typography = normalizeTypography(contentTypographyState, 'card');
+  const layout = getCardLayoutMetrics(cardWidth, typography, C.det.textContent, imageValue);
+  if (!imageValue || !layout.mediaHeight) return false;
+  C.media.src = imageValue.src;
+  C.media.style.display = 'block';
+  C.media.style.width = `${cardMediaWidth(cardWidth)}px`;
+  C.media.style.height = `${layout.mediaHeight}px`;
+  C.media.style.transform = `translate(${CARD_P}px,${layout.mediaTop}px)`;
+  C.media.style.opacity = '0';
+  return true;
+}
+
+function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
+  const root = document.documentElement;
+  const transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
+  let contentFadeMs = 260;
+  let detailFadeMs = 260;
+  let mediaFadeMs = 260;
+  let contentMoveMs = transitionMs;
+  let primarySizeAnimMs = transitionMs;
+  let textSizeAnimMs = transitionMs;
+  let secondaryInAdvanceMs = 0;
+  let detailInAdvanceMs = 0;
+
+  if ((fromShape === 'pill' && toShape === 'card') || (fromShape === 'card' && toShape === 'pill')) {
+    primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900);
+    textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820);
+  }
+  if (fromShape === 'pill' && toShape === 'card') {
+    secondaryInAdvanceMs = 60;
+    detailInAdvanceMs = 200;
+  }
+  if (fromShape === 'dot' && toShape === 'card') {
+    contentMoveMs = 0;
+  }
+  if (fromShape === 'card' && toShape === 'dot') {
+    contentFadeMs = 200;
+    detailFadeMs = 200;
+  }
+  if (fromShape === 'card' && toShape === 'pill') {
+    mediaFadeMs = transitionMs;
+  }
+
+  contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
+  currentContentFadeMs = contentFadeMs;
+  currentDetailFadeMs = detailFadeMs;
+  currentMediaFadeMs = mediaFadeMs;
+  currentTransitionAnimMs = transitionMs;
+  root.style.setProperty('--anim-w', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-h', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-br', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-tx', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-t', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`);
+  root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`);
+  root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`);
+  root.style.setProperty('--content-move-t', `${contentMoveMs}ms var(--spring)`);
+  root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`);
+  root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
+}
+
+function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
   const pos = contentPos(shape, w, h);
   C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
   applyThumbVisualMode(shape);
   let thumbOpacity = pos.thumb.op;
-  if (shape === 'circle' && !(C.thumb.textContent || '').trim()) thumbOpacity = 0;
+  if (shape === 'circle' && thumbContentState.kind === 'none') thumbOpacity = 0;
   setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
-  const setEl = (el, p) => {
-    el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
-    setOpacityWithDelay(el, p.op, fadeInDelayMs, fadeOutDelayMs);
+  const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
+    const finalTransform = p.cx
+      ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)`
+      : `translate(${p.x}px,${p.y}px)`;
+    el.style.transform = finalTransform;
+    setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs);
     if (p.fs) el.style.fontSize = p.fs + 'px';
   };
-  setEl(C.prim, pos.prim); setEl(C.sec, pos.sec); setEl(C.det, pos.det);
+  setEl(C.prim, pos.prim);
+  setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (contentDelayProfile.secondaryInAdvanceMs || 0)));
+  setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (contentDelayProfile.detailInAdvanceMs || 0)));
+  applyTypographyStyles(shape);
+  const mainLineWidth = lineTextWidth(shape, w);
+  if (mainLineWidth) {
+    C.prim.style.width = `${mainLineWidth}px`;
+    C.prim.style.maxWidth = `${mainLineWidth}px`;
+    C.sec.style.width = `${mainLineWidth}px`;
+    C.sec.style.maxWidth = `${mainLineWidth}px`;
+    C.prim.style.overflow = 'hidden';
+    C.sec.style.overflow = 'hidden';
+    C.prim.style.textOverflow = 'ellipsis';
+    C.sec.style.textOverflow = 'ellipsis';
+    C.prim.style.whiteSpace = 'nowrap';
+    C.sec.style.whiteSpace = 'nowrap';
+  } else {
+    C.prim.style.width = '';
+    C.prim.style.maxWidth = '';
+    C.sec.style.width = '';
+    C.sec.style.maxWidth = '';
+    C.prim.style.overflow = '';
+    C.sec.style.overflow = '';
+    C.prim.style.textOverflow = '';
+    C.sec.style.textOverflow = '';
+    C.prim.style.whiteSpace = '';
+    C.sec.style.whiteSpace = '';
+  }
+  if (shape === 'card') {
+    applyCardDetailLayout(w);
+    applyCardMediaLayout(w);
+  } else {
+    if (fromShape === 'card') {
+      applyCardDetailLayout(fromWidth);
+      const outgoingLayout = outgoingTypography
+        ? getCardLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia)
+        : null;
+      if (shape === 'dot' && outgoingTypography && outgoingLayout) {
+        const outgoingTextX = CARD_P;
+        const outgoingLineWidth = Math.max(120, fromWidth - CARD_P * 2);
+        C.prim.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.primaryTop}px)`;
+        C.sec.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.secondaryTop}px)`;
+        C.prim.style.fontSize = outgoingTypography.primary.size + 'px';
+        C.sec.style.fontSize = outgoingTypography.secondary.size + 'px';
+        C.prim.style.color = outgoingTypography.primary.color;
+        C.sec.style.color = outgoingTypography.secondary.color;
+        C.prim.style.width = `${outgoingLineWidth}px`;
+        C.prim.style.maxWidth = `${outgoingLineWidth}px`;
+        C.sec.style.width = `${outgoingLineWidth}px`;
+        C.sec.style.maxWidth = `${outgoingLineWidth}px`;
+      }
+      if (outgoingTypography && outgoingLayout) {
+        C.det.style.transform = `translate(${CARD_P}px,${outgoingLayout.detailTop}px)`;
+        C.det.style.fontSize = outgoingTypography.detail.size + 'px';
+        C.det.style.color = outgoingTypography.detail.color;
+      }
+      const id = setTimeout(() => {
+        resetDetailInlineLayout();
+      }, fadeOutDelayMs + currentDetailFadeMs);
+      uiFadeTimers.push(id);
+    } else {
+      resetDetailInlineLayout();
+    }
+    if (fromShape === 'card' && outgoingMedia && applyOutgoingCardMediaLayout(outgoingMedia, fromWidth)) {
+      const id = setTimeout(() => {
+        C.media.style.display = 'none';
+        C.media.style.width = '';
+        C.media.style.height = '';
+        C.media.style.transform = '';
+        if (!stageMediaState) C.media.removeAttribute('src');
+      }, fadeOutDelayMs + currentMediaFadeMs);
+      uiFadeTimers.push(id);
+    } else {
+      C.media.style.display = 'none';
+      C.media.style.opacity = '0';
+      C.media.style.width = '';
+      C.media.style.height = '';
+      C.media.style.transform = '';
+    }
+  }
   C.div.style.transform = `translate(${pos.div.x}px,${pos.div.y}px)`;
   C.div.style.width = (pos.div.dw||0) + 'px';
   setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
 }
 
 function applyContent(data) {
-  if (data.icon      !== undefined) C.thumb.textContent = data.icon;
+  if (data.icon      !== undefined) setThumbContent(data.icon);
   if (data.primary   !== undefined) C.prim.textContent  = data.primary;
   if (data.secondary !== undefined) C.sec.textContent   = data.secondary;
   if (data.detail    !== undefined) C.det.textContent   = data.detail;
+  if (data.image     !== undefined) setStageMedia(data.image);
+  if (data.typography !== undefined) setContentTypography(data.typography, currentShape);
 }
 
 function showRich(html) {
@@ -1297,22 +2562,37 @@ function hideRich() {
 function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null) {
   clearUiFadeTimers();
   const fromShape = currentShape;
+  const prevStageMedia = stageMediaState ? { ...stageMediaState } : null;
+  const prevCardTypography = fromShape === 'card'
+    ? normalizeTypography(contentTypographyState, 'card')
+    : null;
   const prevGeo = getCurrentMainGeometry();
-  const nextGeo = customGeo || SHAPES[shape] || SHAPES.card;
+  const nextGeo = resolveGeometryForContent(shape, contentData, customGeo);
+  setUiMotionProfile(fromShape, shape, prevGeo, nextGeo);
   const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
   const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
-  const autoInDelay = nextArea > prevArea * 1.08 ? 300 : 0;
-  const autoOutDelay = nextArea < prevArea * 0.92 ? 120 : 0;
+  const autoInDelay = fromShape === 'dot' && shape === 'pill'
+    ? 180
+    : (fromShape === 'dot' && shape === 'card')
+      ? 200
+      : (nextArea > prevArea * 1.08 ? 300 : 0);
+  const autoOutDelay = (
+    (fromShape === 'pill' && shape === 'dot') ||
+    (fromShape === 'card' && shape === 'dot') ||
+    (fromShape === 'card' && shape === 'pill')
+  )
+    ? 0
+    : (nextArea < prevArea * 0.92 ? 120 : 0);
   const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
   const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
 
   currentShape = shape;
   const geo = nextGeo;
   const mw = geo.main.w, mh = geo.main.h;
-  applyGeometry(shape, customGeo);
+  applyGeometry(shape, geo);
   const goingHome = shape === 'circle' && fromShape !== 'circle';
   if (goingHome) {
-    DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, animDur - 500)}ms`);
+    DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, currentTransitionAnimMs - 500)}ms`);
     DROPS.main.classList.remove('home-glow');
     void DROPS.main.offsetWidth;
     DROPS.main.classList.add('home-glow');
@@ -1321,7 +2601,7 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
     DROPS.main.classList.toggle('home-glow', shape === 'circle');
   }
   if (contentData) applyContent(contentData);
-  applyContentPositions(shape, mw, mh, fadeInDelayMs, fadeOutDelayMs);
+  applyContentPositions(shape, mw, mh, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
   if (!skipActiveUpdate) updateActive(shape);
 }
 
@@ -1341,7 +2621,7 @@ function morphTo(shape, contentData, customGeo) {
 
   if ((currentShape === 'ai' || currentShape === 'idle') && shape !== 'ai' && shape !== 'idle') {
     if (shape === 'circle') {
-      morphCore('circle', contentData, customGeo);
+      bridgeThinkingToHome(contentData, customGeo);
       return;
     }
     bridgeFromThinkingToTarget(shape, contentData, customGeo);
@@ -1757,159 +3037,47 @@ function selectFlight(idx) {
   }, 500);
 }
 
-const SYSTEM_PROMPT = `You are a generative UI router for a minimal smart ambient display.
-Rules: container max 420px, min font 24px, padding 20px. One piece of info at a time. Ultra-concise.
-Shape selection:
-- "drop": single icon. Use for: loading, confirmation, identity.
-- "pill": icon + two short lines. Use for: quick answer, status, simple fact.
-- "card": icon + primary stat + secondary + detail. Use for: weather, rich info.
-- "flight": special — triggers multi-step flight booking flow. Use when user asks to book a flight.
-Content rules (max chars): icon: 1 emoji. primary: 12. secondary: 28. detail: 36.
-Invent specific plausible real data. Be concrete.
-Respond ONLY with valid JSON, no markdown:
-{"shape":"drop"|"pill"|"card"|"flight","content":{"icon":"emoji","primary":"...","secondary":"...","detail":"..."}}`;
-
-const AI_API_CONFIG = {
-  provider: 'openai', // anthropic | openai | openai-compatible
-  useProxy: true,
-  apiKey: '',
-  model: 'gpt-4.1-mini',
-  endpoint: '/api/ai-route',
-  maxTokens: 300,
-  anthropicVersion: '2023-06-01',
+const FUTURE_ROUTE_ADAPTER = {
+  mode: ACTIVE_RESPONSE_MODE,
 };
 
-function getAiConfig() {
-  const runtime = (typeof window !== 'undefined' && window.GENUI_AI_CONFIG) ? window.GENUI_AI_CONFIG : {};
-  return { ...AI_API_CONFIG, ...runtime };
+function syncFlightDestinationFromText(userText) {
+  const destMatch = String(userText || '').match(/to\s+([a-zA-Z\s]+)/i);
+  if (!destMatch) return;
+  flightData.destCity = destMatch[1].trim();
+  const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
+  const key = flightData.destCity.toLowerCase();
+  const found = Object.keys(cityMap).find(k => key.includes(k));
+  if (found) flightData.dest = cityMap[found];
 }
 
-function stripCodeFence(text) {
-  return String(text || '').replace(/```json|```/g, '').trim();
-}
-
-function parseRouterJson(rawText) {
-  return JSON.parse(stripCodeFence(rawText || '{}'));
-}
-
-async function requestAiRoute(userText) {
-  const cfg = getAiConfig();
-  const provider = String(cfg.provider || '').toLowerCase();
-  const useProxy = !!cfg.useProxy || String(cfg.endpoint || '').startsWith('/api/');
-  if (useProxy) {
-    const res = await fetch(cfg.endpoint || '/api/ai-route', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        provider,
-        model: cfg.model,
-        maxTokens: cfg.maxTokens || 300,
-        userText,
-        systemPrompt: SYSTEM_PROMPT,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || data?.message || `Proxy ${res.status}`);
-    return data?.text || '{}';
-  }
-
-  const apiKey = String(cfg.apiKey || '').trim();
-  if (!apiKey) throw new Error('Missing API key (set AI_API_CONFIG.apiKey or window.GENUI_AI_CONFIG.apiKey)');
-
-  if (provider === 'anthropic') {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': cfg.anthropicVersion || '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: cfg.model || 'claude-sonnet-4-20250514',
-        max_tokens: cfg.maxTokens || 300,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userText }],
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error?.message || data?.error?.type || `API ${res.status}`);
-    return data.content?.find(b => b.type === 'text')?.text || '{}';
-  }
-
-  if (provider === 'openai' || provider === 'openai-compatible') {
-    const endpoint = cfg.endpoint || 'https://api.openai.com/v1/chat/completions';
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: cfg.model || 'gpt-4.1-mini',
-        max_tokens: cfg.maxTokens || 300,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userText },
-        ],
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error?.message || data?.error?.type || `API ${res.status}`);
-    return data?.choices?.[0]?.message?.content || '{}';
-  }
-
-  throw new Error(`Unsupported provider: ${cfg.provider}`);
-}
-
-async function processRequest(userText) {
+function processRequest(userText) {
   hideRich();
-  C.thumb.classList.add('loading');
-  C.thumb.style.fontSize = '18px';
-  C.thumb.style.color = 'rgba(255,255,255,0.85)';
-  C.thumb.style.letterSpacing = '4px';
-  morphTo('circle', { icon:'···', primary:'', secondary:'', detail:'' });
-
-  try {
-    const raw = await requestAiRoute(userText);
-    const dir = parseRouterJson(raw);
-
-    stopSiriOrb();
-
-    if (dir.shape === 'flight') {
-      const destMatch = userText.match(/to\s+([a-zA-Z\s]+)/i);
-      if (destMatch) {
-        flightData.destCity = destMatch[1].trim();
-        const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
-        const key = flightData.destCity.toLowerCase();
-        const found = Object.keys(cityMap).find(k => key.includes(k));
-        if (found) flightData.dest = cityMap[found];
-      }
-      startFlightFlow();
-    } else {
-      const c = dir.content || {};
-      const content = { icon: c.icon || '◉', primary: c.primary || '', secondary: c.secondary || '', detail: c.detail || '' };
-      if (document.getElementById('drop-main').classList.contains('ai-mode')) {
-        ambientFromAi(dir.shape || 'pill', content);
-      } else {
-        morphTo(dir.shape || 'pill', content);
-      }
-    }
-  } catch (err) {
-    stopSiriOrb();
-    morphTo('pill', { icon:'⚠', primary:'Error', secondary: String(err).slice(0,28), detail:'' });
-    console.error(err);
+  stopSiriOrb();
+  if (/flight|fly|book.*flight|ticket/i.test(userText)) {
+    syncFlightDestinationFromText(userText);
+    startFlightFlow();
+    return;
   }
+  const scenario = resolveScenario(userText);
+  if (scenario) {
+    selectedScenarioId = scenario.id;
+    renderScenarioUi();
+    previewScenario(scenario);
+    return;
+  }
+  morphTo('pill', {
+    icon: createIcon('emoji', '⚠'),
+    primary: 'No Match',
+    secondary: 'Create a scenario to preview this',
+    detail: '',
+  });
 }
 
 const DEMO = {
-  circle: { icon:'', primary:'', secondary:'', detail:'' },
-  dot:    { icon:'•', primary:'', secondary:'', detail:'' },
-  split:  { icon:'', primary:'', secondary:'', detail:'' },
-  ai:     { icon:'', primary:'', secondary:'', detail:'' },
-  pill:   { icon:'🌤', primary:'21°  Sunny', secondary:'San Francisco', detail:'' },
-  card:   { icon:'🌤', primary:'21°', secondary:'Partly Sunny', detail:'SF · Hi 24°  Lo 15°' },
+  circle: { icon:createIcon('none', ''), primary:'', secondary:'', detail:'' },
+  split:  { icon:createIcon('none', ''), primary:'', secondary:'', detail:'' },
+  ai:     { icon:createIcon('none', ''), primary:'', secondary:'', detail:'' },
 };
 
 function resetSplitState() {
@@ -2102,6 +3270,10 @@ function manualShape(shape) {
     return;
   }
   if (shape === 'ai') {
+    if (currentShape === 'circle') {
+      bridgeHomeToThinking('ai');
+      return;
+    }
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
@@ -2111,6 +3283,10 @@ function manualShape(shape) {
     return;
   }
   if (shape === 'idle') {
+    if (currentShape === 'circle') {
+      bridgeHomeToThinking('idle');
+      return;
+    }
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
@@ -2121,6 +3297,17 @@ function manualShape(shape) {
   }
 
   stopSiriOrb();
+  if (SCENARIO_SHAPES.includes(shape)) {
+    const scenario = selectedScenario();
+    const nextScenario = scenario ? createScenario({
+      ...scenario,
+      shape,
+      content: scenario.content,
+      triggers: scenario.triggers,
+    }) : createScenario({ shape });
+    previewScenario(nextScenario);
+    return;
+  }
   morphTo(shape, DEMO[shape] || {});
 }
 
@@ -2166,19 +3353,7 @@ function handleSend() {
   if (flightUi.active) cancelFlightFlow();
   input.value = '';
   sendBtn.classList.remove('active');
-  if (/flight|fly|book.*flight|ticket/i.test(text)) {
-    const destMatch = text.match(/to\s+([a-zA-Z\s]+)/i);
-    if (destMatch) {
-      flightData.destCity = destMatch[1].trim();
-      const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
-      const key = flightData.destCity.toLowerCase();
-      const found = Object.keys(cityMap).find(k => key.includes(k));
-      if (found) flightData.dest = cityMap[found];
-    }
-    startFlightFlow();
-  } else {
-    processRequest(text);
-  }
+  processRequest(text);
 }
 
 function fireChip(el) {
@@ -2189,24 +3364,12 @@ function fireChip(el) {
   setTimeout(() => {
     input.value = '';
     sendBtn.classList.remove('active');
-    if (/flight|fly|book.*flight/i.test(text)) {
-      const destMatch = text.match(/to\s+([a-zA-Z\s]+)/i);
-      if (destMatch) {
-        flightData.destCity = destMatch[1].trim();
-        const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
-        const key = flightData.destCity.toLowerCase();
-        const found = Object.keys(cityMap).find(k => key.includes(k));
-        if (found) flightData.dest = cityMap[found];
-      }
-      startFlightFlow();
-    } else {
-      processRequest(text);
-    }
+    processRequest(text);
   }, 120);
 }
 
 document.addEventListener('keydown', e => {
-  if (document.activeElement === input) return;
+  if (document.activeElement?.matches?.('input, textarea, select')) return;
 
   if (flightUi.active) {
     if (e.key === 'ArrowUp') {
@@ -2244,11 +3407,164 @@ document.addEventListener('keydown', e => {
     document.getElementById('stage').classList.remove('flow-active');
     document.getElementById('input-area').classList.remove('hidden');
     hideRich(); hideIntentHeader();
-    morphTo('circle', DEMO.circle);
+    previewScenario(selectedScenario());
   }
 });
 
-document.querySelectorAll('.bz-inp, .sp-inp').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
+document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
+
+function bindTypographyInputs(layer, sizeInput, colorInput) {
+  sizeInput.addEventListener('input', (e) => {
+    commitScenarioChange((scenario) => {
+      scenario.content.typographyByShape = normalizeTypographyByShape(
+        scenario.content.typographyByShape,
+        scenario.shape
+      );
+      scenario.content.typographyByShape[scenario.shape][layer].size = clamp(
+        parseInt(e.target.value, 10) || defaultTypographyForShape(scenario.shape)[layer].size,
+        12,
+        96
+      );
+    });
+  });
+  colorInput.addEventListener('input', (e) => {
+    commitScenarioChange((scenario) => {
+      scenario.content.typographyByShape = normalizeTypographyByShape(
+        scenario.content.typographyByShape,
+        scenario.shape
+      );
+      scenario.content.typographyByShape[scenario.shape][layer].color = e.target.value;
+    });
+  });
+}
+
+UI.bgToggle.addEventListener('change', () => {
+  canvasSettings.backgroundEnabled = UI.bgToggle.checked;
+  persistCanvasSettings();
+  applyCanvasSettings();
+});
+
+UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
+UI.scenarioDuplicate.addEventListener('click', duplicateScenario);
+UI.scenarioDelete.addEventListener('click', deleteScenario);
+
+UI.scenarioName.addEventListener('input', (e) => {
+  commitScenarioChange((scenario) => {
+    scenario.name = e.target.value.trim() || 'Untitled Scenario';
+  });
+});
+
+UI.scenarioTriggers.addEventListener('input', (e) => {
+  commitScenarioChange((scenario) => {
+    scenario.triggers = normalizeTriggers(e.target.value);
+  });
+});
+
+UI.scenarioIconInput.addEventListener('input', (e) => {
+  commitScenarioChange((scenario) => {
+    const value = String(e.target.value || '').trim();
+    scenario.content.icon = value ? createIcon('emoji', value) : createIcon('none', '');
+  });
+});
+
+UI.scenarioPrimary.addEventListener('input', (e) => {
+  commitScenarioChange((scenario) => {
+    scenario.content.primary = e.target.value;
+  });
+});
+
+UI.scenarioSecondary.addEventListener('input', (e) => {
+  commitScenarioChange((scenario) => {
+    scenario.content.secondary = e.target.value;
+  });
+});
+
+UI.scenarioDetail.addEventListener('input', (e) => {
+  commitScenarioChange((scenario) => {
+    scenario.content.detail = e.target.value;
+  });
+});
+
+UI.scenarioShapeButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const shape = button.dataset.scenarioShape;
+    commitScenarioChange((scenario) => {
+      scenario.shape = shape;
+      scenario.content.typographyByShape = normalizeTypographyByShape(
+        scenario.content.typographyByShape,
+        shape
+      );
+    });
+  });
+});
+
+UI.scenarioIconReset.addEventListener('click', () => {
+  commitScenarioChange((scenario) => {
+    scenario.content.icon = createIcon('none', '');
+  });
+  UI.scenarioIconUpload.value = '';
+});
+
+UI.scenarioIconUpload.addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.type !== 'image/png') {
+    e.target.value = '';
+    return;
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  }).catch(() => '');
+  if (!dataUrl) return;
+  commitScenarioChange((scenario) => {
+    scenario.content.icon = createIcon('image', dataUrl);
+  });
+});
+
+UI.scenarioMediaReset.addEventListener('click', () => {
+  commitScenarioChange((scenario) => {
+    scenario.content.image = null;
+  });
+  UI.scenarioMediaUpload.value = '';
+});
+
+UI.scenarioMediaUpload.addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.type !== 'image/png') {
+    e.target.value = '';
+    return;
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  }).catch(() => '');
+  if (!dataUrl) return;
+  const dimensions = await new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+  if (!dimensions?.width || !dimensions?.height) return;
+  commitScenarioChange((scenario) => {
+    scenario.content.image = {
+      src: dataUrl,
+      width: dimensions.width,
+      height: dimensions.height,
+    };
+  });
+});
+
+bindTypographyInputs('icon', UI.scenarioIconSize, UI.scenarioIconColor);
+bindTypographyInputs('primary', UI.scenarioPrimarySize, UI.scenarioPrimaryColor);
+bindTypographyInputs('secondary', UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
+bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
 
 let animDur = 450;
 const SPRING_WITH_ANTICIPATION = `linear(
@@ -2257,12 +3573,59 @@ const SPRING_WITH_ANTICIPATION = `linear(
   1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
   1.004 92%, 1.001 97%, 1
 )`;
+const DEFAULT_CUSTOM_BEZIER = [0.35, 0.23, 0.13, 0.98];
+
+function parseBezierInput(rawValue) {
+  const parts = String(rawValue || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+  if (parts.length !== 4) return null;
+  const values = parts.map(v => Number(v));
+  if (values.some(v => !Number.isFinite(v))) return null;
+  return values;
+}
+
+function getCustomBezierValues() {
+  const input = document.getElementById('bz-input');
+  const parsed = parseBezierInput(input?.value);
+  return parsed || DEFAULT_CUSTOM_BEZIER;
+}
+
+function formatBezierValues(values) {
+  return values.map(v => {
+    const rounded = Math.round(v * 1000) / 1000;
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  }).join(', ');
+}
+
 const EASING_FN = {
-  custom:  () => { const v=[0,1,2,3].map(i=>parseFloat(document.getElementById('bz'+i).value)||0); return `cubic-bezier(${v.join(',')})`; },
+  custom:  () => { const v = getCustomBezierValues(); return `cubic-bezier(${v.join(',')})`; },
   spring:  () => SPRING_WITH_ANTICIPATION,
   ease:    () => 'cubic-bezier(0.25,0.1,0.25,1)',
   linear:  () => 'linear',
 };
+
+function setAnimDuration(nextDuration) {
+  animDur = nextDuration;
+  const slider = document.getElementById('dur-sl');
+  const value = clamp(parseInt(nextDuration, 10) || animDur, 100, 1400);
+  if (slider) slider.value = String(value);
+  document.getElementById('dur-val').textContent = value + 'ms';
+  animDur = value;
+  rebuildAnim();
+}
+
+function applyEasingPresetDefaults(preset) {
+  if (preset === 'custom') {
+    setAnimDuration(450);
+    return;
+  }
+  if (preset === 'spring') {
+    setAnimDuration(900);
+  }
+}
+
 function rebuildAnim() {
   const curve  = document.getElementById('ease-select').value;
   const easing = EASING_FN[curve]();
@@ -2281,24 +3644,30 @@ function rebuildAnim() {
     }`;
 }
 document.getElementById('dur-sl').addEventListener('input', function() {
-  animDur = parseInt(this.value);
-  document.getElementById('dur-val').textContent = animDur + 'ms';
-  rebuildAnim();
+  setAnimDuration(parseInt(this.value, 10));
 });
 document.getElementById('ease-select').addEventListener('change', function() {
   const showBz = this.value === 'custom';
   document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
   document.getElementById('bz-row').classList.toggle('hidden', !showBz);
-  rebuildAnim();
+  applyEasingPresetDefaults(this.value);
+  if (this.value !== 'custom' && this.value !== 'spring') rebuildAnim();
 });
 document.querySelectorAll('.bz-inp').forEach(inp => inp.addEventListener('input', rebuildAnim));
+document.getElementById('bz-input').addEventListener('blur', function() {
+  const parsed = parseBezierInput(this.value);
+  this.value = formatBezierValues(parsed || DEFAULT_CUSTOM_BEZIER);
+});
 {
   const showBz = document.getElementById('ease-select').value === 'custom';
   document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
   document.getElementById('bz-row').classList.toggle('hidden', !showBz);
+  document.getElementById('bz-input').value = formatBezierValues(getCustomBezierValues());
 }
 
-morphTo('circle', DEMO.circle);
+applyCanvasSettings();
+renderScenarioUi();
+previewScenarioInstant(selectedScenario());
 rebuildAnim();
 
 [[8,12,.04,3.8,0],[18,76,.03,5.1,.8],[28,34,.05,4.2,.3],[38,88,.04,6.0,1.1],
