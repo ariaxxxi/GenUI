@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Water · Morph</title>
+<title>GenUI Sys</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style id="base-style">
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -946,7 +946,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
   }
 </style>
 
-<div id="wordmark">water · morph · gen ui</div>
+<div id="wordmark">genui sys</div>
 
 <div id="main-col">
   <div id="stage-wrap">
@@ -1572,6 +1572,7 @@ function measureCardDetailHeight(detailText, typography, cardWidth) {
 }
 
 function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null) {
+  const hasDetailText = String(detailText || '').trim().length > 0;
   const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
   const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
   const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
@@ -1580,7 +1581,9 @@ function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue
   const primaryTop = dividerY + CARD_PRIMARY_GAP;
   const secondaryTop = primaryTop + primaryHeight + CARD_PRIMARY_TO_SECONDARY_GAP;
   const detailTop = secondaryTop + secondaryHeight + CARD_SECONDARY_TO_DETAIL_GAP;
-  const mediaTop = detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP;
+  const mediaTop = hasDetailText
+    ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP
+    : secondaryTop + secondaryHeight + CARD_SECONDARY_TO_DETAIL_GAP;
   const contentBottom = mediaHeight > 0
     ? mediaTop + mediaHeight
     : (detailHeight > 0 ? detailTop + detailHeight : secondaryTop + secondaryHeight);
@@ -1605,16 +1608,20 @@ function resolveGeometryForContent(shape, contentData, customGeo) {
   const typography = normalizeTypography(contentData?.typography || contentTypographyState, 'card');
   const mediaValue = contentData?.image !== undefined ? contentData.image : stageMediaState;
   const layout = getCardLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue);
+  const hasDetailText = String(detailText || '').trim().length > 0;
+  const hasMedia = layout.mediaHeight > 0;
   const baselineLayout = getCardLayoutMetrics(
     baseGeo.main.w,
     defaultTypographyForShape('card'),
     detailText,
     mediaValue
   );
-  const neededHeight = Math.max(
-    Math.round(baseGeo.main.h + (layout.neededHeight - baselineLayout.neededHeight)),
-    Math.ceil(layout.neededHeight)
-  );
+  const neededHeight = (!hasDetailText && !hasMedia)
+    ? Math.ceil(layout.neededHeight)
+    : Math.max(
+      Math.round(baseGeo.main.h + (layout.neededHeight - baselineLayout.neededHeight)),
+      Math.ceil(layout.neededHeight)
+    );
   if (neededHeight === baseGeo.main.h) return baseGeo;
 
   return {
