@@ -1366,7 +1366,7 @@ function contentPos(shape, w, h) {
   if (shape === 'card') {
     const typography = normalizeTypography(contentTypographyState, 'card');
     const layout = getCardLayoutMetrics(w, typography, C.det.textContent, stageMediaState);
-    const cardTextX = CARD_P + 8;
+    const cardTextX = CARD_P;
     return {
       thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:1 },
       prim:   { x:cardTextX, y:layout.primaryTop, op:1, fs:typography.primary.size, cx:false },
@@ -1540,7 +1540,7 @@ function lineTextWidth(shape, width) {
     return Math.max(120, width - TX - P);
   }
   if (shape === 'card') {
-    return Math.max(120, width - (CARD_P + 8) - CARD_P);
+    return Math.max(120, width - CARD_P * 2);
   }
   return null;
 }
@@ -2407,6 +2407,10 @@ function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   if (fromShape === 'dot' && toShape === 'card') {
     contentMoveMs = 0;
   }
+  if (fromShape === 'card' && toShape === 'dot') {
+    contentFadeMs = 200;
+    detailFadeMs = 200;
+  }
   if (fromShape === 'card' && toShape === 'pill') {
     mediaFadeMs = transitionMs;
   }
@@ -2478,8 +2482,24 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
   } else {
     if (fromShape === 'card') {
       applyCardDetailLayout(fromWidth);
-      if (outgoingTypography) {
-        const outgoingLayout = getCardLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia);
+      const outgoingLayout = outgoingTypography
+        ? getCardLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia)
+        : null;
+      if (shape === 'dot' && outgoingTypography && outgoingLayout) {
+        const outgoingTextX = CARD_P;
+        const outgoingLineWidth = Math.max(120, fromWidth - CARD_P * 2);
+        C.prim.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.primaryTop}px)`;
+        C.sec.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.secondaryTop}px)`;
+        C.prim.style.fontSize = outgoingTypography.primary.size + 'px';
+        C.sec.style.fontSize = outgoingTypography.secondary.size + 'px';
+        C.prim.style.color = outgoingTypography.primary.color;
+        C.sec.style.color = outgoingTypography.secondary.color;
+        C.prim.style.width = `${outgoingLineWidth}px`;
+        C.prim.style.maxWidth = `${outgoingLineWidth}px`;
+        C.sec.style.width = `${outgoingLineWidth}px`;
+        C.sec.style.maxWidth = `${outgoingLineWidth}px`;
+      }
+      if (outgoingTypography && outgoingLayout) {
         C.det.style.transform = `translate(${CARD_P}px,${outgoingLayout.detailTop}px)`;
         C.det.style.fontSize = outgoingTypography.detail.size + 'px';
         C.det.style.color = outgoingTypography.detail.color;
@@ -2554,7 +2574,7 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   const autoInDelay = fromShape === 'dot' && shape === 'pill'
     ? 180
     : (fromShape === 'dot' && shape === 'card')
-      ? 0
+      ? 200
       : (nextArea > prevArea * 1.08 ? 300 : 0);
   const autoOutDelay = (
     (fromShape === 'pill' && shape === 'dot') ||
