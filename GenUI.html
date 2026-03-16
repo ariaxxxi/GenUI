@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Water · Morph</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style id="base-style">
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; user-select: none; }
+
+body {
+  display: flex; flex-direction: row;
+  align-items: center; justify-content: center;
+  background: #000; position: relative;
+  font-family: 'DM Mono', monospace;
+  height: 100%;
+}
+
+/* ── Two-column layout ── */
+#main-col {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex: 1; height: 100%;
+  overflow-y: auto;
+}
+
+/* ── Intent header ── */
+#stage-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; flex-shrink: 0;
+}
+
+#intent-header {
+  display: flex; align-items: center; gap: 10px;
+  height: 36px; margin-bottom: 12px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 360ms ease, transform 360ms ease;
+  pointer-events: none;
+}
+#intent-header.visible {
+  opacity: 1; transform: translateY(0);
+}
+#intent-label {
+  font-size: 9px; letter-spacing: .32em;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+}
+#intent-step-dot {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: rgba(255,255,255,0.22);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+#intent-step-dot.visible { opacity: 1; }
+#intent-step-lbl {
+  font-size: 9px; letter-spacing: .22em;
+  color: rgba(255,255,255,0.28);
+  text-transform: uppercase;
+  transition: opacity 200ms ease;
+}
+
+/* ── Drop shell ── */
+.drop {
+  position: absolute; left: 50%; top: 50%;
+  background: #000;
+  box-shadow: 0 0 40px rgba(255,255,255,0.02);
+  border: none; overflow: hidden;
+  transition:
+    width         var(--anim-w),
+    height        var(--anim-h),
+    border-radius var(--anim-br),
+    transform     var(--anim-tx),
+    opacity       300ms ease;
+  will-change: transform, width, height, border-radius, opacity;
+}
+.drop::before {
+  content: ''; position: absolute; inset: 0; z-index: 10;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.75) 0%,
+    rgba(180,180,180,0.20) 45%,
+    rgba(100,100,100,0.08) 75%,
+    rgba(255,255,255,0.12) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.drop::after {
+  content: ''; position: absolute; inset: 0; z-index: 9;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+.drop.metaball-prep {
+  will-change: transform, width, height, border-radius, opacity, filter;
+}
+
+/* ── Generic content elements ── */
+#c-thumb {
+  position: absolute; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; line-height: 1;
+  color: rgba(255,255,255,0.90);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: width var(--anim-w), height var(--anim-h), transform var(--anim-tx),
+              border-radius var(--anim-br), opacity 280ms ease;
+}
+#c-thumb.thumb-plain-icon {
+  background: transparent;
+  border: none;
+}
+#c-thumb.thumb-empty {
+  background: transparent;
+  border: none;
+}
+#home-glow-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+  box-shadow:
+    inset 0 0 20px rgba(255,255,255,0.5),
+    inset 0 0 34px rgba(255,255,255,0.30),
+    inset 0 0 82px rgba(210,230,255,0.22),
+    0 0 52px rgba(255,255,255,0.24),
+    0 0 120px rgba(210,230,255,0.20);
+  transition: opacity 500ms ease var(--home-glow-delay, 0ms);
+}
+#c-primary {
+  position: absolute; z-index: 3;
+  font-family: 'DM Sans', sans-serif; font-weight: 600;
+  color: rgba(255,255,255,0.90); white-space: nowrap; line-height: 1.1;
+  transition: transform var(--anim-t), opacity 260ms ease;
+}
+#c-secondary {
+  position: absolute; z-index: 3;
+  font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
+  color: rgba(255,255,255,0.48); white-space: nowrap; line-height: 1.2;
+  transition: transform var(--anim-t), opacity 260ms ease;
+}
+#c-detail {
+  position: absolute; z-index: 3;
+  font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
+  color: rgba(255,255,255,0.26); white-space: nowrap; line-height: 1.2;
+  transition: transform var(--anim-t), opacity 260ms ease;
+}
+#c-divider {
+  position: absolute; z-index: 3;
+  height: 1px; background: rgba(255,255,255,0.08);
+  transition: transform var(--anim-t), width var(--anim-t), opacity 260ms ease;
+}
+
+/* ── Rich content layer ── */
+#c-rich {
+  position: absolute; inset: 0; z-index: 5;
+  padding: 20px; overflow: hidden;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+  user-select: text; -webkit-user-select: text;
+  display: flex; flex-direction: column;
+}
+#c-rich.visible { opacity: 1; pointer-events: auto; }
+
+/* Rich: shared */
+.rich-divider {
+  width: 100%; height: 1px;
+  background: rgba(255,255,255,0.08);
+  flex-shrink: 0; margin: 0;
+}
+.rich-action-btn {
+  width: 100%; padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.80);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 400;
+  cursor: pointer; outline: none;
+  transition: background .18s, border-color .18s, color .18s;
+  margin-top: auto; flex-shrink: 0;
+}
+.rich-action-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.40); color: #fff; }
+.rich-action-btn:active { transform: scale(.98); }
+
+/* Rich: date form */
+.rich-route-row {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.rich-route-main {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 28px; font-weight: 600;
+  color: rgba(255,255,255,0.90);
+  letter-spacing: -.01em;
+}
+.rich-route-arrow {
+  font-size: 20px; color: rgba(255,255,255,0.28);
+  flex-shrink: 0;
+}
+.rich-route-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 300;
+  color: rgba(255,255,255,0.30);
+  margin-top: 4px; flex-shrink: 0;
+  letter-spacing: .01em;
+}
+.rich-date-field {
+  display: flex; flex-direction: column; gap: 4px;
+  cursor: pointer; padding: 10px 0; flex-shrink: 0;
+}
+.rich-date-lbl {
+  font-size: 10px; letter-spacing: .18em;
+  color: rgba(255,255,255,0.30);
+  text-transform: uppercase;
+}
+.rich-date-val {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px; font-weight: 400;
+  color: rgba(255,255,255,0.82);
+}
+.rich-date-input {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px; font-weight: 400;
+  color: rgba(255,255,255,0.90);
+  background: transparent; border: none; outline: none;
+  width: 100%; caret-color: rgba(255,255,255,0.7);
+}
+
+/* Rich: flight list */
+.rich-list-header {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 400;
+  color: rgba(255,255,255,0.38);
+  letter-spacing: .04em;
+  padding-bottom: 14px; flex-shrink: 0;
+}
+.rich-flight-row {
+  display: flex; align-items: center;
+  padding: 14px 0;
+  cursor: pointer;
+  transition: background .15s;
+  flex-shrink: 0;
+  border-radius: 8px;
+  margin: 0 -6px; padding-left: 6px; padding-right: 6px;
+}
+.rich-flight-row:hover { background: rgba(255,255,255,0.05); }
+.rich-flight-row.selected { background: rgba(255,255,255,0.08); }
+.rich-flight-left { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.rich-flight-airline {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 500;
+  color: rgba(255,255,255,0.85);
+}
+.rich-flight-times {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 300;
+  color: rgba(255,255,255,0.38);
+}
+.rich-flight-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.rich-flight-price {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px; font-weight: 600;
+  color: rgba(255,255,255,0.90);
+}
+.rich-flight-meta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px; font-weight: 300;
+  color: rgba(255,255,255,0.30);
+  letter-spacing: .03em;
+}
+
+/* ── Stage ── */
+@keyframes float {
+  0%,100% { transform: translateY(0px) rotate(0deg); }
+  33%     { transform: translateY(-8px) rotate(-0.3deg); }
+  66%     { transform: translateY(-3px) rotate(0.2deg); }
+}
+#stage {
+  position: relative; width: 420px;
+  animation: float 6s ease-in-out infinite;
+  flex-shrink: 0;
+  mix-blend-mode: screen;
+  transition: height var(--anim-h);
+}
+#stage.flow-active { animation-play-state: paused; }
+
+/* ── Input area ── */
+#input-area {
+  position: fixed; bottom: 36px; left: 0;
+  width: calc(100% - 300px);
+  display: flex; flex-direction: column; align-items: center;
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+#input-area.hidden {
+  opacity: 0; pointer-events: none; transform: translateY(8px);
+}
+#input-wrap { position: relative; width: 460px; }
+#user-input {
+  width: 100%; padding: 16px 56px 16px 20px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 28px;
+  color: rgba(255,255,255,0.80);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 300;
+  outline: none; caret-color: rgba(255,255,255,0.6);
+  transition: border-color .2s, background .2s;
+  user-select: text; -webkit-user-select: text;
+}
+#user-input::placeholder { color: rgba(255,255,255,0.30); }
+#user-input:focus { border-color: rgba(255,255,255,1); background: rgba(255,255,255,0.06); }
+#send-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.65);
+  font-size: 16px; cursor: pointer; outline: none;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, border-color .2s, color .2s, transform .1s;
+}
+#send-btn:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.80); color: rgba(255,255,255,1); }
+#send-btn:active { transform: translateY(-50%) scale(0.88); }
+#send-btn.active { border-color: rgba(255,255,255,0.90); background: rgba(255,255,255,0.14); color: rgba(255,255,255,1); }
+
+#example-chips {
+  display: flex; gap: 7px; flex-wrap: wrap;
+  justify-content: center; margin-top: 18px;
+  max-width: 460px;
+}
+.ex-chip {
+  padding: 7px 14px; border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: rgba(200,200,200,0.55);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 300;
+  cursor: pointer; outline: none; white-space: nowrap;
+  transition: border-color .18s, color .18s, background .18s, transform .1s;
+}
+.ex-chip:hover  { border-color: rgba(255,255,255,0.28); color: rgba(255,255,255,0.80); background: rgba(255,255,255,0.07); }
+.ex-chip:active { transform: scale(.93); }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 300px; height: 100%;
+  display: flex; flex-direction: column;
+  justify-content: center;
+  padding: 32px 24px;
+  background: #0b0b0b;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  gap: 28px; flex-shrink: 0;
+}
+.sb-section { display: flex; flex-direction: column; gap: 14px; }
+.sb-heading {
+  font-size: 8px; letter-spacing: .28em;
+  color: rgba(255,255,255,0.28);
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.sb-row { display: flex; flex-direction: column; gap: 6px; }
+#sidebar .sb-row + .sb-row { margin-top: 14px; }
+.sb-lbl { font-size: 10px; letter-spacing: .10em; color: rgba(255,255,255,0.40); }
+.sb-val { font-size: 11px; color: rgba(255,255,255,0.55); min-width: 36px; }
+.sb-shape-btn {
+  width: 100%; padding: 9px 14px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.10); background: transparent;
+  color: rgba(255,255,255,0.42); font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: .12em; cursor: pointer; outline: none;
+  text-align: left;
+  transition: border-color .18s, color .18s, background .18s, transform .1s;
+  display: flex; align-items: center; gap: 8px;
+}
+.sb-shape-btn:hover  { border-color: rgba(255,255,255,0.26); color: rgba(255,255,255,0.80); background: rgba(255,255,255,0.05); }
+.sb-shape-btn:active { transform: scale(.97); }
+.sb-shape-btn.active { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.92); }
+.sb-shape-num { opacity: .38; font-size: 9px; }
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 2px;
+  background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px; border-radius: 50%;
+  background: rgba(255,255,255,0.70); transition: background .15s;
+}
+input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
+#ease-select {
+  width: 100%;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 7px; color: rgba(255,255,255,0.65);
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  padding: 7px 10px; outline: none; cursor: pointer;
+}
+#ease-select option { background: #111; }
+.bz-inp {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 6px;
+  color: rgba(255,255,255,0.65); font-family: 'DM Mono', monospace;
+  font-size: 10px; text-align: center; padding: 6px 4px; outline: none;
+  transition: border-color .15s, color .15s; user-select: text; -webkit-user-select: text;
+}
+.bz-inp:focus { border-color: rgba(255,255,255,0.40); color: rgba(255,255,255,0.92); }
+.bz-inp::-webkit-outer-spin-button, .bz-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.bz-inp[type=number] { -moz-appearance: textfield; }
+#bz-row { display: flex; align-items: center; gap: 4px; }
+.bz-sep { color: rgba(255,255,255,0.22); font-size: 10px; }
+#bz-row.hidden { display: none; }
+#shape-panel {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 0; overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s, max-height .3s;
+}
+#shape-panel.visible { max-height: 200px; opacity: 1; pointer-events: auto; }
+.sp-group { display: flex; flex-direction: column; gap: 4px; }
+.sp-lbl { font-size: 9px; letter-spacing: .12em; color: rgba(255,255,255,0.38); }
+.sp-inp {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 7px; color: rgba(255,255,255,0.65); font-family: 'DM Mono', monospace;
+  font-size: 11px; padding: 7px 10px; outline: none;
+  transition: border-color .15s; user-select: text; -webkit-user-select: text;
+}
+.sp-inp:focus { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.90); }
+.sp-inp::-webkit-outer-spin-button,.sp-inp::-webkit-inner-spin-button { -webkit-appearance: none; }
+.sp-inp[type=number] { -moz-appearance: textfield; }
+#sp-apply {
+  padding: 8px 0; border-radius: 8px; width: 100%;
+  border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.55); font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: .14em; cursor: pointer; outline: none;
+  transition: border-color .15s, color .15s, background .15s;
+}
+#sp-apply:hover { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.09); }
+
+/* Control panel typography */
+#sidebar,
+#sidebar .sb-heading,
+#sidebar .sb-lbl,
+#sidebar .sb-val,
+#sidebar .sb-shape-btn,
+#sidebar .sb-shape-num,
+#sidebar #ease-select,
+#sidebar .bz-inp,
+#sidebar .sp-lbl,
+#sidebar .sp-inp,
+#sidebar #sp-apply {
+  font-size: 14px;
+}
+
+/* ── Wordmark ── */
+#wordmark { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.12); font-size: 9px; letter-spacing: .44em; text-transform: uppercase; }
+
+/* ── Stars ── */
+.star { position: absolute; border-radius: 50%; pointer-events: none; animation: star-pulse var(--sd,4s) ease-in-out infinite; animation-delay: var(--sdl,0s); }
+@keyframes star-pulse { 0%,100%{opacity:var(--op,.05)} 50%{opacity:calc(var(--op,.05)*3)} }
+
+/* ── Loading ── */
+/* ── Metaball orb ── */
+#siri-orb {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 8;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 500ms ease, filter 700ms ease;
+  pointer-events: none;
+  filter: blur(14px) contrast(22);
+  background: #000;
+}
+#siri-orb.visible { opacity: 1; }
+#siri-orb canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes morph {
+  0%, 100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    rotate: 0deg;
+  }
+  33% {
+    border-radius: 70% 30% 46% 54% / 30% 29% 71% 70%;
+    rotate: 5deg;
+  }
+  66% {
+    border-radius: 50% 50% 34% 66% / 56% 68% 32% 44%;
+    rotate: -5deg;
+  }
+}
+
+/* ── AI mode: liquid shell + inner glow, no inner white blob ── */
+#drop-main.ai-mode {
+  background: rgba(0,0,0,0.92) !important;
+  box-shadow: 0 0 44px rgba(255,255,255,0.08) !important;
+  animation: morph 3.4s ease-in-out infinite;
+  will-change: border-radius, rotate;
+}
+#drop-main.ai-mode::before { opacity: 0; }
+#drop-main.ai-mode::after  { opacity: 0; }
+#drop-main.home-glow #home-glow-layer { opacity: 1; }
+#drop-main.ai-mode #home-glow-layer {
+  opacity: 1 !important;
+  transition: opacity 280ms ease;
+  box-shadow:
+    inset 0 0 20px rgba(255,255,255,0.5),
+    inset 0 0 34px rgba(255,255,255,0.30),
+    inset 0 0 82px rgba(210,230,255,0.20),
+    0 0 52px rgba(255,255,255,0.16);
+}
+#drop-main.ai-mode #siri-orb { opacity: 0 !important; }
+#drop-main { z-index: 3; }
+#list-pills { z-index: 2; }
+
+/* ── List pills ── */
+#list-pills {
+  position: absolute;
+  left: 50%; top: 50%;
+  pointer-events: none;
+}
+.list-pill {
+  position: absolute;
+  width: 420px; height: 120px;
+  border-radius: 60px;
+  background: #000;
+  box-shadow: 0 0 40px rgba(255,255,255,0.02);
+  left: -210px;
+  display: flex; align-items: center;
+  gap: 0; overflow: hidden;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateY(0px);
+  opacity: 0;
+  transition:
+    transform var(--anim-t),
+    opacity   260ms ease;
+  will-change: transform, opacity;
+}
+.list-pill::before {
+  content: ''; position: absolute; inset: 0; z-index: 10;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.75)  0%,
+    rgba(180,180,180,0.20) 45%,
+    rgba(100,100,100,0.08) 75%,
+    rgba(255,255,255,0.12) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.list-pill::after {
+  content: ''; position: absolute; inset: 0; z-index: 9;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+.list-pill-thumb {
+  width: 60px; height: 60px; border-radius: 30px; flex-shrink: 0;
+  margin-left: 20px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: rgba(255,255,255,0.90);
+  position: relative; z-index: 3;
+}
+.list-pill-text {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-left: 16px;
+  position: relative; z-index: 3;
+}
+.list-pill-primary {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px; font-weight: 600;
+  color: rgba(255,255,255,0.90);
+  white-space: nowrap;
+}
+.list-pill-secondary {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 300;
+  color: rgba(255,255,255,0.42);
+  white-space: nowrap;
+}
+.list-pill:hover { background: rgba(255,255,255,0.03); }
+.list-pill.selected::before {
+  background: linear-gradient(135deg,
+    rgba(255,255,255,1.0)  0%,
+    rgba(200,200,255,0.50) 50%,
+    rgba(255,255,255,0.30) 100%);
+}
+.bg-blur-image{
+  position:fixed;
+  left:0;
+  top:0;
+  width:100vw;
+  height:100vh;
+  background-image:url('https://i.pinimg.com/736x/39/65/8b/39658ba96694f6c1a815e186c34107fb.jpg');
+  background-size:cover;
+  background-position:center;
+  filter:blur(40px) brightness(0.8);
+  opacity:1;
+  transform:scale(1.2);
+  z-index:-1;
+  pointer-events:none;
+}
+
+</style>
+</head>
+<body>
+<div class="bg-blur-image"></div>
+
+<style id="anim-style">
+  :root {
+    --spring: linear(
+      0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
+      0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
+      1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
+      1.004 92%, 1.001 97%, 1
+    );
+    --anim-w:  450ms var(--spring);
+    --anim-h:  450ms var(--spring);
+    --anim-br: 450ms var(--spring);
+    --anim-tx: 450ms var(--spring);
+    --anim-t:  450ms var(--spring);
+  }
+</style>
+
+<div id="wordmark">water · morph · gen ui</div>
+
+<div id="main-col">
+  <div id="stage-wrap">
+    <div id="intent-header">
+      <span id="intent-label">Book a Flight</span>
+      <div id="intent-step-dot"></div>
+      <span id="intent-step-lbl"></span>
+    </div>
+
+    <div id="stage">
+      <div class="drop" id="drop-main">
+        <div id="home-glow-layer"></div>
+        <div id="c-thumb"></div>
+        <div id="c-primary"></div>
+        <div id="c-secondary"></div>
+        <div id="c-divider"></div>
+        <div id="c-detail"></div>
+        <div id="c-rich"></div>
+        <div id="siri-orb"><canvas id="siri-canvas"></canvas></div>
+      </div>
+      <div class="drop" id="drop-left"></div>
+      <div class="drop" id="drop-right"></div>
+      <div id="list-pills"></div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div id="input-wrap">
+      <input id="user-input" type="text" autocomplete="off" spellcheck="false"
+        placeholder="What's the weather? · Book a flight · Send a message…"/>
+      <button id="send-btn" onclick="handleSend()">↑</button>
+    </div>
+    <div id="example-chips">
+      <button class="ex-chip" onclick="fireChip(this)">What's the weather?</button>
+      <button class="ex-chip" onclick="fireChip(this)">Book a flight to Tokyo</button>
+      <button class="ex-chip" onclick="fireChip(this)">Send a message to Alice</button>
+      <button class="ex-chip" onclick="fireChip(this)">Set a 10 min timer</button>
+      <button class="ex-chip" onclick="fireChip(this)">Call Mom</button>
+    </div>
+  </div>
+</div>
+
+<div id="sidebar">
+  <div class="sb-section">
+    <div class="sb-heading">Shape</div>
+    <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
+    <button class="sb-shape-btn" data-shape="dot" onclick="manualShape('dot')"><span class="sb-shape-num">2</span> Dot</button>
+    <button class="sb-shape-btn" data-shape="pill" onclick="manualShape('pill')"><span class="sb-shape-num">3</span> Pill</button>
+    <button class="sb-shape-btn" data-shape="card" onclick="manualShape('card')"><span class="sb-shape-num">4</span> Card</button>
+    <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
+    <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking (Debug)</button>
+    <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
+    <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
+    <div id="shape-panel">
+      <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="number" value="280" min="60" max="420"/></div>
+      <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="number" value="140" min="60" max="280"/></div>
+      <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="number" value="24" min="0" max="140"/></div>
+      <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-heading">Animation</div>
+    <div class="sb-row">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span class="sb-lbl">Duration</span>
+        <span class="sb-val" id="dur-val">450ms</span>
+      </div>
+      <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
+    </div>
+    <div class="sb-row">
+      <span class="sb-lbl">Easing</span>
+      <select id="ease-select">
+        <option value="custom" selected>Custom bezier</option>
+        <option value="spring">Spring</option>
+        <option value="ease">Ease</option>
+        <option value="linear">Linear</option>
+      </select>
+    </div>
+    <div class="sb-row" id="bz-group">
+      <span class="sb-lbl">Bezier</span>
+      <div id="bz-row">
+        <input class="bz-inp" id="bz0" type="number" value="0.35" step="0.01" min="-2" max="2"/>
+        <span class="bz-sep">,</span>
+        <input class="bz-inp" id="bz1" type="number" value="0.23" step="0.01" min="-2" max="2"/>
+        <span class="bz-sep">,</span>
+        <input class="bz-inp" id="bz2" type="number" value="0.13" step="0.01" min="-2" max="2"/>
+        <span class="bz-sep">,</span>
+        <input class="bz-inp" id="bz3" type="number" value="0.98" step="0.01" min="-2" max="2"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const P   = 20;
+const TS  = 60;
+const TBR = '30px';
+const GAP = 16;
+const TX  = P + TS + GAP;
+
+const SHAPES = {
+  circle: {
+    main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
+    right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
+  },
+  dot: {
+    main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
+    right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
+  },
+  pill: {
+    main:  { w:420, h:120, br:'60px', tx:-210, ty:-60,  op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
+    right: { w:100, h:100, br:'50px', tx:60,   ty:-50,  op:0 },
+  },
+  split: {
+    main:  { w:96, h:96, br:'48px', tx:-48, ty:-48, op:0 },
+    left:  { w:96, h:96, br:'48px', tx:-108, ty:-48, op:1 },
+    right: { w:96, h:96, br:'48px', tx:12, ty:-48, op:1 },
+  },
+  card: {
+    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
+    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
+  },
+  ai: {
+    main:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
+    right: { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
+  },
+  'card-form': {
+    main:  { w:420, h:400, br:'30px', tx:-210, ty:-200, op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
+    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
+  },
+  'card-list': {
+    main:  { w:420, h:360, br:'30px', tx:-210, ty:-180, op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
+    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
+  },
+};
+
+function contentPos(shape, w, h) {
+  if (shape === 'circle' || shape === 'dot') return {
+    thumb:  { x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 },
+    prim:   { x:w/2, y:h/2, op:0, fs:28, cx:true },
+    sec:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
+    div:    { x:P, y:h/2, dw:0, op:0 },
+    det:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
+  };
+  if (shape === 'pill') {
+    const tY = (h-TS)/2, bH = 28+6+24, bY = (h-bH)/2;
+    return {
+      thumb:  { x:P, y:tY, w:TS, h:TS, br:TBR, op:1 },
+      prim:   { x:TX, y:bY, op:1, fs:28, cx:false },
+      sec:    { x:TX, y:bY+34, op:1, fs:24, cx:false },
+      div:    { x:P, y:h/2, dw:0, op:0 },
+      det:    { x:TX, y:bY+34, op:0, fs:24, cx:false },
+    };
+  }
+  if (shape === 'card') {
+    const divY=P+TS+10, pY=divY+14, sY=pY+52, dY=sY+36;
+    return {
+      thumb:  { x:P, y:P, w:TS, h:TS, br:TBR, op:1 },
+      prim:   { x:P, y:pY, op:1, fs:40, cx:false },
+      sec:    { x:P, y:sY, op:1, fs:24, cx:false },
+      div:    { x:P, y:divY, dw:w-P*2, op:1 },
+      det:    { x:P, y:dY, op:1, fs:24, cx:false },
+    };
+  }
+  return {
+    thumb:  { x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 },
+    prim:   { x:P, y:P, op:0, fs:28, cx:false },
+    sec:    { x:P, y:P+40, op:0, fs:24, cx:false },
+    div:    { x:P, y:P+TS+8, dw:0, op:0 },
+    det:    { x:P, y:P+80, op:0, fs:24, cx:false },
+  };
+}
+
+const DROPS = {
+  main:  document.getElementById('drop-main'),
+  left:  document.getElementById('drop-left'),
+  right: document.getElementById('drop-right'),
+};
+const C = {
+  thumb: document.getElementById('c-thumb'),
+  prim:  document.getElementById('c-primary'),
+  sec:   document.getElementById('c-secondary'),
+  div:   document.getElementById('c-divider'),
+  det:   document.getElementById('c-detail'),
+  rich:  document.getElementById('c-rich'),
+};
+
+let currentShape = 'circle';
+let lastMainGeo = { ...SHAPES.circle.main };
+let mainDeformAnim = null;
+const splitTimers = [];
+let splitAnimStyleBackup = null;
+let suppressDeformation = false;
+let splitBridgeTimer = null;
+let listBridgeTimer = null;
+let thinkingBridgeTimer = null;
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function splitBridgeMs() {
+  return clamp(Math.round(animDur * 0.62), 300, 460);
+}
+
+function listBridgeMs() {
+  return 500;
+}
+
+function listPhaseTwoStartMs() {
+  return 500;
+}
+
+function thinkingBridgeMs() {
+  return clamp(Math.round(animDur * 0.55), 220, 420);
+}
+
+function clearSplitTimers() {
+  while (splitTimers.length) clearTimeout(splitTimers.pop());
+}
+
+function scheduleSplitTimer(ms, fn) {
+  const id = setTimeout(fn, ms);
+  splitTimers.push(id);
+  return id;
+}
+
+function clearSplitAnimationOverlays() {
+  const main = DROPS.main;
+  const left = DROPS.left;
+  const right = DROPS.right;
+  if (!main || !left || !right) return;
+
+  if (main._metaAnim) {
+    main._metaAnim.cancel();
+    main._metaAnim = null;
+  }
+  if (main._splitAnim) {
+    main._splitAnim.cancel();
+    main._splitAnim = null;
+  }
+  [left, right].forEach((el) => {
+    if (el._splitAnim) {
+      el._splitAnim.cancel();
+      el._splitAnim = null;
+    }
+  });
+
+  main.classList.remove('metaball-prep');
+  main.style.filter = '';
+}
+
+function bridgeFromSplitToTarget(shape, contentData, customGeo) {
+  clearSplitAnimationOverlays();
+  clearSplitTimers();
+
+  const easing = getActiveEasing();
+  const phaseMs = splitBridgeMs();
+  const main = DROPS.main;
+  const left = DROPS.left;
+  const right = DROPS.right;
+
+  if (!main || !left || !right) {
+    morphCore(shape, contentData, customGeo);
+    return;
+  }
+
+  main.style.width = '100px';
+  main.style.height = '100px';
+  main.style.borderRadius = '50px';
+  main.style.transform = 'translate(-50px,-50px)';
+  main.style.pointerEvents = 'auto';
+  main.style.opacity = '0';
+  main.style.scale = '1 1';
+
+  [left, right].forEach((el) => {
+    el.style.width = '96px';
+    el.style.height = '96px';
+    el.style.borderRadius = '48px';
+    el.style.opacity = '1';
+    el.style.pointerEvents = 'none';
+    el.style.scale = '1 1';
+  });
+  left.style.transform = 'translate(-108px,-48px)';
+  right.style.transform = 'translate(12px,-48px)';
+
+  main._splitAnim = main.animate([
+    { transform: 'translate(-50px,-50px) scale(1.1,0.92)', borderRadius: '42px', opacity: 0, filter: 'blur(0.3px)', offset: 0 },
+    { transform: 'translate(-50px,-50px) scale(1.05,0.97)', borderRadius: '46px', opacity: 0.58, filter: 'blur(0px)', offset: 0.58 },
+    { transform: 'translate(-50px,-50px) scale(1,1)', borderRadius: '50px', opacity: 1, filter: 'blur(0px)', offset: 1 },
+  ], { duration: phaseMs, easing, fill: 'forwards' });
+
+  left._splitAnim = left.animate([
+    { transform: 'translate(-108px,-48px) scale(1,1)', opacity: 1, offset: 0 },
+    { transform: 'translate(-76px,-48px) scale(1.02,0.98)', opacity: 0.68, offset: 0.56 },
+    { transform: 'translate(-48px,-48px) scale(0.94,1.04)', opacity: 0, offset: 1 },
+  ], { duration: phaseMs, easing, fill: 'forwards' });
+
+  right._splitAnim = right.animate([
+    { transform: 'translate(12px,-48px) scale(1,1)', opacity: 1, offset: 0 },
+    { transform: 'translate(-20px,-48px) scale(1.02,0.98)', opacity: 0.68, offset: 0.56 },
+    { transform: 'translate(-48px,-48px) scale(0.94,1.04)', opacity: 0, offset: 1 },
+  ], { duration: phaseMs, easing, fill: 'forwards' });
+
+  updateActive('split');
+  splitBridgeTimer = setTimeout(() => {
+    splitBridgeTimer = null;
+    clearSplitAnimationOverlays();
+
+    main.style.width = '100px';
+    main.style.height = '100px';
+    main.style.borderRadius = '50px';
+    main.style.transform = 'translate(-50px,-50px)';
+    main.style.opacity = '1';
+    main.style.pointerEvents = 'auto';
+    main.style.scale = '1 1';
+
+    left.style.transform = 'translate(-48px,-48px)';
+    right.style.transform = 'translate(-48px,-48px)';
+    left.style.opacity = '0';
+    right.style.opacity = '0';
+    left.style.pointerEvents = 'none';
+    right.style.pointerEvents = 'none';
+
+    currentShape = 'dot';
+    lastMainGeo = { ...SHAPES.dot.main };
+    applyContentPositions('dot', SHAPES.dot.main.w, SHAPES.dot.main.h);
+
+    if (shape === 'dot') {
+      if (contentData) applyContent(contentData);
+      updateActive('dot');
+      return;
+    }
+    // Commit centered dot first so phase 2 matches normal dot -> target motion.
+    void main.offsetWidth;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        morphCore(shape, contentData, customGeo);
+      });
+    });
+  }, phaseMs + 12);
+}
+
+function bridgeToSplitViaDot() {
+  clearSplitAnimationOverlays();
+  clearSplitTimers();
+
+  morphCore('dot', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+  splitBridgeTimer = setTimeout(() => {
+    splitBridgeTimer = null;
+    animateSplitMetaball();
+  }, splitBridgeMs());
+}
+
+function bridgeFromListToTarget(shape, contentData, customGeo) {
+  collapseListStack();
+  morphCore('pill', null, null, true);
+  updateActive('list');
+  listBridgeTimer = setTimeout(() => {
+    listBridgeTimer = null;
+    if (shape === 'pill') {
+      morphCore('pill', contentData, customGeo);
+      return;
+    }
+    morphTo(shape, contentData, customGeo);
+  }, listPhaseTwoStartMs());
+}
+
+function bridgeFromThinkingToTarget(shape, contentData, customGeo) {
+  morphCore('circle', null, null, true, 0);
+  updateActive('ai');
+  thinkingBridgeTimer = setTimeout(() => {
+    thinkingBridgeTimer = null;
+    morphTo(shape, contentData, customGeo);
+  }, thinkingBridgeMs());
+}
+
+function getActiveEasing() {
+  const sel = document.getElementById('ease-select');
+  if (!sel) return 'cubic-bezier(0.22,1,0.36,1)';
+  const pick = EASING_FN[sel.value];
+  return pick ? pick() : 'cubic-bezier(0.22,1,0.36,1)';
+}
+
+function getCurrentMainGeometry() {
+  const main = DROPS.main;
+  if (!main) return { ...lastMainGeo };
+  const cs = getComputedStyle(main);
+  const g = { ...lastMainGeo };
+
+  const w = parseFloat(cs.width);
+  const h = parseFloat(cs.height);
+  const op = parseFloat(cs.opacity);
+  if (Number.isFinite(w)) g.w = w;
+  if (Number.isFinite(h)) g.h = h;
+  if (Number.isFinite(op)) g.op = op;
+
+  if (cs.borderRadius) g.br = cs.borderRadius.split(' ')[0];
+
+  const t = cs.transform;
+  if (t && t !== 'none') {
+    const m2d = t.match(/^matrix\(([^)]+)\)$/);
+    if (m2d) {
+      const parts = m2d[1].split(',').map(v => parseFloat(v.trim()));
+      if (parts.length === 6 && Number.isFinite(parts[4]) && Number.isFinite(parts[5])) {
+        g.tx = parts[4];
+        g.ty = parts[5];
+      }
+    } else {
+      const m3d = t.match(/^matrix3d\(([^)]+)\)$/);
+      if (m3d) {
+        const parts = m3d[1].split(',').map(v => parseFloat(v.trim()));
+        if (parts.length === 16 && Number.isFinite(parts[12]) && Number.isFinite(parts[13])) {
+          g.tx = parts[12];
+          g.ty = parts[13];
+        }
+      }
+    }
+  }
+  return g;
+}
+
+function shouldUseStrongDeform(fromShape, toShape) {
+  const compact = new Set(['circle', 'pill', 'split']);
+  return compact.has(fromShape) && compact.has(toShape);
+}
+
+function deformationIntensity(fromShape, toShape, fromMain, toMain) {
+  const maxSide = Math.max(fromMain.w, fromMain.h, toMain.w, toMain.h);
+  if (shouldUseStrongDeform(fromShape, toShape)) return 1;
+  if (String(fromShape).startsWith('card') || String(toShape).startsWith('card')) return 0.35;
+  if (maxSide >= 320 || fromMain.h >= 220 || toMain.h >= 220) return 0.35;
+  if (maxSide <= 160) return 0.9;
+  return 0.6;
+}
+
+function runMainDeformation(fromShape, toShape, fromMain, toMain) {
+  const main = DROPS.main;
+  if (!main || !fromMain || !toMain) return;
+  if (suppressDeformation) return;
+  if (toShape === 'split') return;
+  if ((fromMain.op ?? 1) <= 0.01 || (toMain.op ?? 1) <= 0.01) return;
+
+  const dw = toMain.w - fromMain.w;
+  const dh = toMain.h - fromMain.h;
+  if (Math.abs(dw) < 2 && Math.abs(dh) < 2) return;
+
+  if (mainDeformAnim) {
+    mainDeformAnim.cancel();
+    mainDeformAnim = null;
+  }
+  main.style.scale = '1 1';
+
+  const intensity = deformationIntensity(fromShape, toShape, fromMain, toMain);
+  const horizontal = Math.abs(dw) >= Math.abs(dh);
+  const direction = horizontal ? (dw >= 0 ? 1 : -1) : (dh >= 0 ? 1 : -1);
+
+  const antMag = 0.04 * intensity;
+  const relMag = 0.06 * intensity;
+
+  let antX = 1, antY = 1, relX = 1, relY = 1;
+  if (horizontal) {
+    antX = 1 - direction * antMag;
+    antY = 1 + direction * antMag * 0.95;
+    relX = 1 + direction * relMag;
+    relY = 1 - direction * relMag * 0.8;
+  } else {
+    antX = 1 + direction * antMag * 0.95;
+    antY = 1 - direction * antMag;
+    relX = 1 - direction * relMag * 0.8;
+    relY = 1 + direction * relMag;
+  }
+
+  antX = clamp(antX, 0.93, 1.1);
+  antY = clamp(antY, 0.93, 1.1);
+  relX = clamp(relX, 0.9, 1.14);
+  relY = clamp(relY, 0.9, 1.14);
+
+  const totalMs = clamp(Math.round(animDur * 1.02), 340, 780);
+  const ease = getActiveEasing();
+  const aEnd = 0.16;
+  const bEnd = 0.74;
+
+  const anim = main.animate([
+    {
+      scale: '1 1',
+      offset: 0,
+      easing: ease,
+    },
+    {
+      scale: `${antX} ${antY}`,
+      offset: aEnd,
+      easing: ease,
+    },
+    {
+      scale: `${relX} ${relY}`,
+      offset: bEnd,
+      easing: ease,
+    },
+    {
+      scale: '1 1',
+      offset: 1,
+    },
+  ], {
+    duration: totalMs,
+    easing: 'linear',
+    fill: 'none',
+  });
+
+  mainDeformAnim = anim;
+  anim.onfinish = () => {
+    if (mainDeformAnim !== anim) return;
+    mainDeformAnim = null;
+    main.style.scale = '1 1';
+  };
+  anim.oncancel = () => {
+    if (mainDeformAnim === anim) {
+      mainDeformAnim = null;
+      main.style.scale = '1 1';
+    }
+  };
+}
+
+function applyGeometry(shape, customGeo) {
+  const geo = customGeo || SHAPES[shape] || SHAPES.card;
+  ['main','left','right'].forEach(k => {
+    const el = DROPS[k], s = geo[k];
+    el.style.width        = s.w + 'px';
+    el.style.height       = s.h + 'px';
+    el.style.borderRadius = s.br;
+    el.style.transform    = `translate(${s.tx}px,${s.ty}px)`;
+    el.style.opacity      = s.op;
+    el.style.pointerEvents = s.op > 0 ? 'auto' : 'none';
+  });
+  const stage = document.getElementById('stage');
+  if (stage) stage.style.height = geo.main.h + 'px';
+  lastMainGeo = { ...geo.main };
+}
+
+const uiFadeTimers = [];
+function clearUiFadeTimers() {
+  while (uiFadeTimers.length) clearTimeout(uiFadeTimers.pop());
+}
+
+function setOpacityWithDelay(el, targetOpacity, inDelayMs = 0, outDelayMs = 0) {
+  const target = Number(targetOpacity) || 0;
+  const current = parseFloat(getComputedStyle(el).opacity);
+
+  if (target <= 0) {
+    if (outDelayMs > 0 && Number.isFinite(current) && current > 0.02) {
+      const id = setTimeout(() => {
+        el.style.opacity = '0';
+      }, outDelayMs);
+      uiFadeTimers.push(id);
+      return;
+    }
+    el.style.opacity = '0';
+    return;
+  }
+
+  if (inDelayMs <= 0) {
+    el.style.opacity = String(target);
+    return;
+  }
+
+  if (Number.isFinite(current) && current <= 0.02) {
+    el.style.opacity = '0';
+    const id = setTimeout(() => {
+      el.style.opacity = String(target);
+    }, inDelayMs);
+    uiFadeTimers.push(id);
+    return;
+  }
+  el.style.opacity = String(target);
+}
+
+function isIconOnlyThumb(shape) {
+  const icon = (C.thumb.textContent || '').trim();
+  if (!icon) return false;
+  if (icon === '···') return false;
+  return ['circle', 'dot', 'pill', 'card', 'card-form', 'card-list', 'custom'].includes(shape);
+}
+
+function applyThumbVisualMode(shape) {
+  const icon = (C.thumb.textContent || '').trim();
+  const homeEmpty = shape === 'circle' && !icon;
+  C.thumb.classList.toggle('thumb-empty', homeEmpty);
+
+  const plain = isIconOnlyThumb(shape);
+  C.thumb.classList.toggle('thumb-plain-icon', plain && !homeEmpty);
+  if (!plain || homeEmpty) {
+    C.thumb.style.fontSize = '';
+    return;
+  }
+  const sizeByShape = {
+    circle: 42,
+    dot: 42,
+    pill: 40,
+    card: 48,
+    'card-form': 48,
+    'card-list': 48,
+    custom: 40,
+  };
+  C.thumb.style.fontSize = (sizeByShape[shape] || 40) + 'px';
+}
+
+function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0) {
+  const pos = contentPos(shape, w, h);
+  C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
+  applyThumbVisualMode(shape);
+  let thumbOpacity = pos.thumb.op;
+  if (shape === 'circle' && !(C.thumb.textContent || '').trim()) thumbOpacity = 0;
+  setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
+  const setEl = (el, p) => {
+    el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
+    setOpacityWithDelay(el, p.op, fadeInDelayMs, fadeOutDelayMs);
+    if (p.fs) el.style.fontSize = p.fs + 'px';
+  };
+  setEl(C.prim, pos.prim); setEl(C.sec, pos.sec); setEl(C.det, pos.det);
+  C.div.style.transform = `translate(${pos.div.x}px,${pos.div.y}px)`;
+  C.div.style.width = (pos.div.dw||0) + 'px';
+  setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
+}
+
+function applyContent(data) {
+  if (data.icon      !== undefined) C.thumb.textContent = data.icon;
+  if (data.primary   !== undefined) C.prim.textContent  = data.primary;
+  if (data.secondary !== undefined) C.sec.textContent   = data.secondary;
+  if (data.detail    !== undefined) C.det.textContent   = data.detail;
+}
+
+function showRich(html) {
+  C.rich.style.opacity = '0';
+  C.rich.innerHTML = html;
+  C.rich.classList.add('visible');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    C.rich.style.opacity = '1';
+  }));
+}
+
+function hideRich() {
+  C.rich.style.opacity = '0';
+  setTimeout(() => {
+    C.rich.classList.remove('visible');
+    C.rich.innerHTML = '';
+  }, 220);
+}
+
+function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null) {
+  clearUiFadeTimers();
+  const fromShape = currentShape;
+  const prevGeo = getCurrentMainGeometry();
+  const nextGeo = customGeo || SHAPES[shape] || SHAPES.card;
+  const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
+  const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
+  const autoInDelay = nextArea > prevArea * 1.08 ? 300 : 0;
+  const autoOutDelay = nextArea < prevArea * 0.92 ? 120 : 0;
+  const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
+  const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
+
+  currentShape = shape;
+  const geo = nextGeo;
+  const mw = geo.main.w, mh = geo.main.h;
+  applyGeometry(shape, customGeo);
+  const goingHome = shape === 'circle' && fromShape !== 'circle';
+  if (goingHome) {
+    DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, animDur - 500)}ms`);
+    DROPS.main.classList.remove('home-glow');
+    void DROPS.main.offsetWidth;
+    DROPS.main.classList.add('home-glow');
+  } else {
+    DROPS.main.style.setProperty('--home-glow-delay', '0ms');
+    DROPS.main.classList.toggle('home-glow', shape === 'circle');
+  }
+  if (contentData) applyContent(contentData);
+  applyContentPositions(shape, mw, mh, fadeInDelayMs, fadeOutDelayMs);
+  if (!skipActiveUpdate) updateActive(shape);
+}
+
+function morphTo(shape, contentData, customGeo) {
+  if (splitBridgeTimer) {
+    clearTimeout(splitBridgeTimer);
+    splitBridgeTimer = null;
+  }
+  if (listBridgeTimer) {
+    clearTimeout(listBridgeTimer);
+    listBridgeTimer = null;
+  }
+  if (thinkingBridgeTimer) {
+    clearTimeout(thinkingBridgeTimer);
+    thinkingBridgeTimer = null;
+  }
+
+  if ((currentShape === 'ai' || currentShape === 'idle') && shape !== 'ai' && shape !== 'idle') {
+    if (shape === 'circle') {
+      morphCore('circle', contentData, customGeo);
+      return;
+    }
+    bridgeFromThinkingToTarget(shape, contentData, customGeo);
+    return;
+  }
+
+  if (currentShape === 'split' && shape !== 'split') {
+    bridgeFromSplitToTarget(shape, contentData, customGeo);
+    return;
+  }
+
+  if (currentShape === 'list' && shape !== 'list') {
+    bridgeFromListToTarget(shape, contentData, customGeo);
+    return;
+  }
+
+  if (shape === 'split' && currentShape !== 'split') {
+    bridgeToSplitViaDot();
+    return;
+  }
+
+  morphCore(shape, contentData, customGeo);
+}
+
+function setIntentHeader(label, step) {
+  const hdr  = document.getElementById('intent-header');
+  const lbl  = document.getElementById('intent-label');
+  const dot  = document.getElementById('intent-step-dot');
+  const slbl = document.getElementById('intent-step-lbl');
+  lbl.textContent = label;
+  if (step) {
+    slbl.textContent = step;
+    dot.classList.add('visible');
+  } else {
+    slbl.textContent = '';
+    dot.classList.remove('visible');
+  }
+  hdr.classList.add('visible');
+}
+
+function hideIntentHeader() {
+  document.getElementById('intent-header').classList.remove('visible');
+}
+
+let siriRaf     = null;
+let orbT        = 0;
+let orbRamp     = 0;
+let orbTarget   = 0;
+const ORB_SPEED = 1/180;
+let orbCY = 0.5;
+let orbCYTarget = 0.5;
+const USE_THINKING_ORB = false;
+
+const _BLOBS = [
+  { r:0.32, speed:0.022, phase:0.00, ax:0.10, ay:0.08, freq:1.00 },
+  { r:0.28, speed:0.027, phase:2.10, ax:0.09, ay:0.11, freq:1.31 },
+  { r:0.26, speed:0.032, phase:4.20, ax:0.11, ay:0.07, freq:0.77 },
+  { r:0.24, speed:0.022, phase:1.05, ax:0.08, ay:0.09, freq:1.61 },
+];
+
+function ss(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
+
+function _ensureOrbLoop() {
+  if (!USE_THINKING_ORB) return;
+  if (siriRaf) return;
+  const orb    = document.getElementById('siri-orb');
+  const canvas = document.getElementById('siri-canvas');
+  orb.classList.add('visible');
+  const ctx = canvas.getContext('2d');
+
+  function draw() {
+    orbT += 1;
+    if (orbRamp < orbTarget) orbRamp = Math.min(orbTarget, orbRamp + ORB_SPEED);
+    if (orbRamp > orbTarget) orbRamp = Math.max(orbTarget, orbRamp - ORB_SPEED);
+
+    const dm = document.getElementById('drop-main');
+    const W = dm.offsetWidth  || 100;
+    const H = dm.offsetHeight || 100;
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width  = W;
+      canvas.height = H;
+    }
+
+    orbCY += (orbCYTarget - orbCY) * 0.03;
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    const r = ss(orbRamp);
+    for (const b of _BLOBS) {
+      const px = (0.5   + Math.sin(orbT * b.speed          + b.phase) * b.ax * r) * W;
+      const py = (orbCY + Math.cos(orbT * b.speed * b.freq + b.phase) * b.ay * r) * H;
+      const br = b.r * Math.min(W, H) * (1 + 0.06 * Math.sin(orbT * 0.027 + b.phase));
+      const col = (b === _BLOBS[1] || b === _BLOBS[3]) ? 'rgba(210,232,255,1)' : 'rgba(255,255,255,1)';
+      ctx.save();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(px, py, br, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    siriRaf = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function resetOrbStyle() {
+  const orb = document.getElementById('siri-orb');
+  if (!orb) return;
+  orb.style.transition = 'none';
+  orb.style.filter     = '';
+  orb.style.opacity    = '';
+  orb.style.zIndex     = '';
+  orbCYTarget = 0.5;
+}
+
+function showAiIdle() {
+  document.getElementById('drop-main').classList.add('ai-mode');
+  if (!USE_THINKING_ORB) {
+    const orb = document.getElementById('siri-orb');
+    if (orb) orb.classList.remove('visible');
+    orbRamp = 0;
+    orbTarget = 0;
+    return;
+  }
+  orbTarget = 0;
+  _ensureOrbLoop();
+}
+
+function startSiriOrb(instant) {
+  document.getElementById('drop-main').classList.add('ai-mode');
+  if (!USE_THINKING_ORB) {
+    const orb = document.getElementById('siri-orb');
+    if (orb) orb.classList.remove('visible');
+    orbRamp = 0;
+    orbTarget = 0;
+    return;
+  }
+  if (instant) { orbRamp = 1; }
+  orbTarget = 1;
+  _ensureOrbLoop();
+}
+
+function ambientFromAi(shape, contentData, customGeo) {
+  stopSiriOrb();
+  morphTo(shape, contentData, customGeo);
+}
+
+function stopSiriOrb() {
+  if (siriRaf) { cancelAnimationFrame(siriRaf); siriRaf = null; }
+  const orb = document.getElementById('siri-orb');
+  if (orb) orb.classList.remove('visible');
+  clearListPills();
+  document.getElementById('drop-main').classList.remove('ai-mode');
+  C.thumb.style.opacity = '';
+  C.thumb.style.fontSize = '';
+  orbRamp = 0; orbTarget = 0;
+}
+
+let flightData = { origin:'SFO', dest:'NRT', destCity:'Tokyo', depDate:'Mar 15, 2026', retDate:'Mar 22, 2026' };
+const flightUi = { active:false, step:'idle', highlight:0, depIdx:0, retIdx:0 };
+const FLIGHT_DEP_OPTIONS = ['Mar 15, 2026', 'Mar 16, 2026', 'Mar 17, 2026', 'Mar 18, 2026'];
+const FLIGHT_RET_OPTIONS = ['Mar 22, 2026', 'Mar 23, 2026', 'Mar 24, 2026', 'Mar 25, 2026'];
+
+const FLIGHTS = [
+  { airline:'ANA', code:'NH 7', dep:'10:30', arr:'14:30', day:'+1', stops:'Non-stop', duration:'13h 0m', price:'$899' },
+  { airline:'JAL', code:'JL 61', dep:'12:00', arr:'15:45', day:'+1', stops:'Non-stop', duration:'13h 45m', price:'$1,049' },
+  { airline:'United', code:'UA 837', dep:'13:45', arr:'17:20', day:'+1', stops:'1 stop', duration:'15h 35m', price:'$649' },
+];
+
+function setFlightStep(step, highlight = 0) {
+  flightUi.step = step;
+  flightUi.highlight = highlight;
+}
+
+function syncFlightDateIndexes() {
+  const dep = FLIGHT_DEP_OPTIONS.indexOf(flightData.depDate);
+  const ret = FLIGHT_RET_OPTIONS.indexOf(flightData.retDate);
+  flightUi.depIdx = dep >= 0 ? dep : 0;
+  flightUi.retIdx = ret >= 0 ? ret : 0;
+}
+
+function updateFlightDateHighlight() {
+  const ids = ['f-opt-dep', 'f-opt-ret', 'f-opt-search'];
+  ids.forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('selected', flightUi.highlight === idx);
+  });
+  const depVal = document.getElementById('f-dep-val');
+  const retVal = document.getElementById('f-ret-val');
+  if (depVal) depVal.textContent = flightData.depDate;
+  if (retVal) retVal.textContent = flightData.retDate;
+}
+
+function updateFlightResultHighlight() {
+  document.querySelectorAll('.rich-flight-row').forEach((r, i) => r.classList.toggle('selected', i === flightUi.highlight));
+}
+
+function cycleFlightDate(which) {
+  if (which === 'dep') {
+    flightUi.depIdx = (flightUi.depIdx + 1) % FLIGHT_DEP_OPTIONS.length;
+    flightData.depDate = FLIGHT_DEP_OPTIONS[flightUi.depIdx];
+  } else {
+    flightUi.retIdx = (flightUi.retIdx + 1) % FLIGHT_RET_OPTIONS.length;
+    flightData.retDate = FLIGHT_RET_OPTIONS[flightUi.retIdx];
+  }
+  updateFlightDateHighlight();
+}
+
+function moveFlightHighlight(dir) {
+  if (flightUi.step === 'dates') {
+    const max = 2;
+    flightUi.highlight = (flightUi.highlight + dir + max + 1) % (max + 1);
+    updateFlightDateHighlight();
+    return;
+  }
+  if (flightUi.step === 'results') {
+    const max = FLIGHTS.length - 1;
+    flightUi.highlight = (flightUi.highlight + dir + max + 1) % (max + 1);
+    updateFlightResultHighlight();
+  }
+}
+
+function confirmFlightStep() {
+  if (!flightUi.active) return;
+  if (flightUi.step === 'route') {
+    flowDateStep();
+    return;
+  }
+  if (flightUi.step === 'dates') {
+    if (flightUi.highlight === 0) {
+      cycleFlightDate('dep');
+      return;
+    }
+    if (flightUi.highlight === 1) {
+      cycleFlightDate('ret');
+      return;
+    }
+    submitDates();
+    return;
+  }
+  if (flightUi.step === 'results') {
+    selectFlight(flightUi.highlight);
+  }
+}
+
+function cancelFlightFlow() {
+  if (!flightUi.active) return;
+  setFlightStep('idle', 0);
+  flightUi.active = false;
+  stopSiriOrb();
+  hideRich();
+  hideIntentHeader();
+  morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
+  document.getElementById('stage').classList.remove('flow-active');
+  document.getElementById('input-area').classList.remove('hidden');
+}
+
+function startFlightFlow() {
+  syncFlightDateIndexes();
+  flightUi.active = true;
+  setFlightStep('confirming', 0);
+  document.getElementById('stage').classList.add('flow-active');
+  hideRich();
+  morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
+  C.thumb.style.opacity = '0';
+  startSiriOrb();
+  setIntentHeader('Book a Flight', 'Confirming');
+
+  setTimeout(() => {
+    stopSiriOrb();
+    morphTo('pill', {
+      icon: '✈',
+      primary: `${flightData.origin} → ${flightData.dest}`,
+      secondary: flightData.destCity + ', Japan',
+    });
+    setIntentHeader('Book a Flight', 'Route · Space to Continue');
+    setFlightStep('route', 0);
+  }, 1200);
+}
+
+function flowDateStep() {
+  setIntentHeader('Book a Flight', 'When?');
+  hideRich();
+  morphTo('card-form', null);
+  setFlightStep('dates', 0);
+
+  const html = `
+    <div class="rich-route-row" style="margin-bottom:6px;">
+      <span class="rich-route-main">${flightData.origin}</span>
+      <span class="rich-route-arrow">→</span>
+      <span class="rich-route-main">${flightData.dest}</span>
+    </div>
+    <div class="rich-route-sub" style="margin-bottom:14px;">San Francisco → Tokyo Narita · ↑/↓ move · Space confirm · X cancel</div>
+    <div class="rich-divider"></div>
+    <div class="rich-flight-row selected" id="f-opt-dep">
+      <div class="rich-flight-left">
+        <div class="rich-flight-airline">Departure</div>
+        <div class="rich-flight-times" id="f-dep-val">${flightData.depDate}</div>
+      </div>
+      <div class="rich-flight-right"><div class="rich-flight-meta">Space: cycle</div></div>
+    </div>
+    <div class="rich-divider"></div>
+    <div class="rich-flight-row" id="f-opt-ret">
+      <div class="rich-flight-left">
+        <div class="rich-flight-airline">Return</div>
+        <div class="rich-flight-times" id="f-ret-val">${flightData.retDate}</div>
+      </div>
+      <div class="rich-flight-right"><div class="rich-flight-meta">Space: cycle</div></div>
+    </div>
+    <div class="rich-divider"></div>
+    <div class="rich-flight-row" id="f-opt-search">
+      <div class="rich-flight-left">
+        <div class="rich-flight-airline">Search Flights</div>
+        <div class="rich-flight-times">${flightData.origin} → ${flightData.dest}</div>
+      </div>
+      <div class="rich-flight-right"><div class="rich-flight-price">Space</div></div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    showRich(html);
+    updateFlightDateHighlight();
+  }, 350);
+}
+
+function submitDates() {
+  flowSearchStep();
+}
+
+function flowSearchStep() {
+  setFlightStep('searching', 0);
+  setIntentHeader('Book a Flight', 'Searching');
+  hideRich();
+  morphTo('pill', {
+    icon: '',
+    primary: `${flightData.origin} → ${flightData.dest}`,
+    secondary: flightData.depDate,
+  });
+  C.thumb.style.opacity = '0';
+  startSiriOrb();
+
+  setTimeout(() => {
+    stopSiriOrb();
+    flowResultsStep();
+  }, 1800);
+}
+
+function flowResultsStep() {
+  setFlightStep('results', 0);
+  setIntentHeader('Book a Flight', 'Select');
+  hideRich();
+  morphTo('card-list', null);
+
+  const rows = FLIGHTS.map((f, i) => `
+    <div class="rich-flight-row ${i === flightUi.highlight ? 'selected' : ''}">
+      <div class="rich-flight-left">
+        <div class="rich-flight-airline">${f.airline} · ${f.dep} <span style="color:rgba(255,255,255,0.30);">→ ${f.arr}<sup style="font-size:10px;">${f.day}</sup></span></div>
+        <div class="rich-flight-times">${f.stops} · ${f.duration}</div>
+      </div>
+      <div class="rich-flight-right">
+        <div class="rich-flight-price">${f.price}</div>
+        <div class="rich-flight-meta">${f.code}</div>
+      </div>
+    </div>
+    ${i < FLIGHTS.length - 1 ? '<div class="rich-divider"></div>' : ''}
+  `).join('');
+
+  const html = `
+    <div class="rich-list-header">${flightData.origin} → ${flightData.dest} · ${flightData.depDate} · ↑/↓ select · Space confirm · X cancel</div>
+    <div class="rich-divider"></div>
+    <div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${rows}</div>
+  `;
+
+  setTimeout(() => {
+    showRich(html);
+    updateFlightResultHighlight();
+  }, 350);
+}
+
+function selectFlight(idx) {
+  if (!flightUi.active) return;
+  setFlightStep('confirm', idx);
+  flightUi.highlight = idx;
+  const f = FLIGHTS[idx];
+  updateFlightResultHighlight();
+
+  setTimeout(() => {
+    setIntentHeader('Book a Flight', 'Confirm');
+    hideRich();
+    morphTo('pill', {
+      icon: '✈',
+      primary: `${f.airline} · ${f.price}`,
+      secondary: `${flightData.depDate} · ${f.stops}`,
+    });
+
+    setTimeout(() => {
+      setIntentHeader('Book a Flight', 'Booked ✓');
+      setFlightStep('booked', 0);
+      morphTo('circle', { icon:'✓', primary:'', secondary:'', detail:'' });
+      C.thumb.style.fontSize = '26px';
+
+      setTimeout(() => {
+        flightUi.active = false;
+        setFlightStep('idle', 0);
+        hideIntentHeader();
+        morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
+        document.getElementById('stage').classList.remove('flow-active');
+        document.getElementById('input-area').classList.remove('hidden');
+      }, 3000);
+    }, 2000);
+  }, 500);
+}
+
+const SYSTEM_PROMPT = `You are a generative UI router for a minimal smart ambient display.
+Rules: container max 420px, min font 24px, padding 20px. One piece of info at a time. Ultra-concise.
+Shape selection:
+- "drop": single icon. Use for: loading, confirmation, identity.
+- "pill": icon + two short lines. Use for: quick answer, status, simple fact.
+- "card": icon + primary stat + secondary + detail. Use for: weather, rich info.
+- "flight": special — triggers multi-step flight booking flow. Use when user asks to book a flight.
+Content rules (max chars): icon: 1 emoji. primary: 12. secondary: 28. detail: 36.
+Invent specific plausible real data. Be concrete.
+Respond ONLY with valid JSON, no markdown:
+{"shape":"drop"|"pill"|"card"|"flight","content":{"icon":"emoji","primary":"...","secondary":"...","detail":"..."}}`;
+
+const AI_API_CONFIG = {
+  provider: 'openai', // anthropic | openai | openai-compatible
+  useProxy: true,
+  apiKey: '',
+  model: 'gpt-4.1-mini',
+  endpoint: '/api/ai-route',
+  maxTokens: 300,
+  anthropicVersion: '2023-06-01',
+};
+
+function getAiConfig() {
+  const runtime = (typeof window !== 'undefined' && window.GENUI_AI_CONFIG) ? window.GENUI_AI_CONFIG : {};
+  return { ...AI_API_CONFIG, ...runtime };
+}
+
+function stripCodeFence(text) {
+  return String(text || '').replace(/```json|```/g, '').trim();
+}
+
+function parseRouterJson(rawText) {
+  return JSON.parse(stripCodeFence(rawText || '{}'));
+}
+
+async function requestAiRoute(userText) {
+  const cfg = getAiConfig();
+  const provider = String(cfg.provider || '').toLowerCase();
+  const useProxy = !!cfg.useProxy || String(cfg.endpoint || '').startsWith('/api/');
+  if (useProxy) {
+    const res = await fetch(cfg.endpoint || '/api/ai-route', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        provider,
+        model: cfg.model,
+        maxTokens: cfg.maxTokens || 300,
+        userText,
+        systemPrompt: SYSTEM_PROMPT,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || data?.message || `Proxy ${res.status}`);
+    return data?.text || '{}';
+  }
+
+  const apiKey = String(cfg.apiKey || '').trim();
+  if (!apiKey) throw new Error('Missing API key (set AI_API_CONFIG.apiKey or window.GENUI_AI_CONFIG.apiKey)');
+
+  if (provider === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': cfg.anthropicVersion || '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: cfg.model || 'claude-sonnet-4-20250514',
+        max_tokens: cfg.maxTokens || 300,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userText }],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || data?.error?.type || `API ${res.status}`);
+    return data.content?.find(b => b.type === 'text')?.text || '{}';
+  }
+
+  if (provider === 'openai' || provider === 'openai-compatible') {
+    const endpoint = cfg.endpoint || 'https://api.openai.com/v1/chat/completions';
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.model || 'gpt-4.1-mini',
+        max_tokens: cfg.maxTokens || 300,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userText },
+        ],
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || data?.error?.type || `API ${res.status}`);
+    return data?.choices?.[0]?.message?.content || '{}';
+  }
+
+  throw new Error(`Unsupported provider: ${cfg.provider}`);
+}
+
+async function processRequest(userText) {
+  hideRich();
+  C.thumb.classList.add('loading');
+  C.thumb.style.fontSize = '18px';
+  C.thumb.style.color = 'rgba(255,255,255,0.85)';
+  C.thumb.style.letterSpacing = '4px';
+  morphTo('circle', { icon:'···', primary:'', secondary:'', detail:'' });
+
+  try {
+    const raw = await requestAiRoute(userText);
+    const dir = parseRouterJson(raw);
+
+    stopSiriOrb();
+
+    if (dir.shape === 'flight') {
+      const destMatch = userText.match(/to\s+([a-zA-Z\s]+)/i);
+      if (destMatch) {
+        flightData.destCity = destMatch[1].trim();
+        const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
+        const key = flightData.destCity.toLowerCase();
+        const found = Object.keys(cityMap).find(k => key.includes(k));
+        if (found) flightData.dest = cityMap[found];
+      }
+      startFlightFlow();
+    } else {
+      const c = dir.content || {};
+      const content = { icon: c.icon || '◉', primary: c.primary || '', secondary: c.secondary || '', detail: c.detail || '' };
+      if (document.getElementById('drop-main').classList.contains('ai-mode')) {
+        ambientFromAi(dir.shape || 'pill', content);
+      } else {
+        morphTo(dir.shape || 'pill', content);
+      }
+    }
+  } catch (err) {
+    stopSiriOrb();
+    morphTo('pill', { icon:'⚠', primary:'Error', secondary: String(err).slice(0,28), detail:'' });
+    console.error(err);
+  }
+}
+
+const DEMO = {
+  circle: { icon:'', primary:'', secondary:'', detail:'' },
+  dot:    { icon:'•', primary:'', secondary:'', detail:'' },
+  split:  { icon:'', primary:'', secondary:'', detail:'' },
+  ai:     { icon:'', primary:'', secondary:'', detail:'' },
+  pill:   { icon:'🌤', primary:'21°  Sunny', secondary:'San Francisco', detail:'' },
+  card:   { icon:'🌤', primary:'21°', secondary:'Partly Sunny', detail:'SF · Hi 24°  Lo 15°' },
+};
+
+function resetSplitState() {
+  clearSplitTimers();
+  if (splitBridgeTimer) {
+    clearTimeout(splitBridgeTimer);
+    splitBridgeTimer = null;
+  }
+  if (listBridgeTimer) {
+    clearTimeout(listBridgeTimer);
+    listBridgeTimer = null;
+  }
+  suppressDeformation = false;
+  if (splitAnimStyleBackup !== null) {
+    const animStyle = document.getElementById('anim-style');
+    if (animStyle) animStyle.textContent = splitAnimStyleBackup;
+    splitAnimStyleBackup = null;
+  }
+  const main = DROPS.main;
+  const left = DROPS.left;
+  const right = DROPS.right;
+
+  if (main._metaAnim) {
+    main._metaAnim.cancel();
+    main._metaAnim = null;
+  }
+  if (main._splitAnim) {
+    main._splitAnim.cancel();
+    main._splitAnim = null;
+  }
+  if (mainDeformAnim) {
+    mainDeformAnim.cancel();
+    mainDeformAnim = null;
+  }
+
+  const baseMain = lastMainGeo || SHAPES[currentShape]?.main || SHAPES.circle.main;
+  main.classList.remove('metaball-prep');
+  main.style.filter = '';
+  main.style.scale = '1 1';
+  main.style.width = baseMain.w + 'px';
+  main.style.height = baseMain.h + 'px';
+  main.style.borderRadius = baseMain.br;
+  main.style.transform = `translate(${baseMain.tx}px,${baseMain.ty}px)`;
+  main.style.opacity = String(baseMain.op);
+  main.style.pointerEvents = baseMain.op > 0 ? 'auto' : 'none';
+
+  [left, right].forEach((el) => {
+    if (el._splitAnim) {
+      el._splitAnim.cancel();
+      el._splitAnim = null;
+    }
+    el.style.width = '100px';
+    el.style.height = '100px';
+    el.style.borderRadius = '50px';
+    el.style.transform = 'translate(-50px,-50px)';
+    el.style.scale = '1 1';
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
+  });
+}
+
+function animateSplitMetaball() {
+  stopSiriOrb();
+  hideRich();
+  hideIntentHeader();
+  document.getElementById('drop-main').classList.remove('ai-mode');
+  clearListPills();
+  resetSplitState();
+
+  const easing = getActiveEasing();
+  const normalizeMs = 360;
+  const splitMs = 560;
+  const overlapMs = 90;
+  const splitStartMs = Math.max(40, normalizeMs - overlapMs);
+  const sideDelay = 70;
+
+  splitAnimStyleBackup = document.getElementById('anim-style').textContent;
+  const originalAnimCSS = splitAnimStyleBackup;
+  document.getElementById('anim-style').textContent = `
+    :root {
+      --spring: ${easing};
+      --anim-w:  ${normalizeMs}ms var(--spring);
+      --anim-h:  ${normalizeMs}ms var(--spring);
+      --anim-br: ${normalizeMs}ms var(--spring);
+      --anim-tx: ${normalizeMs}ms var(--spring);
+      --anim-t:  ${normalizeMs}ms var(--spring);
+    }`;
+
+  suppressDeformation = true;
+  morphTo('dot', { icon:'', primary:'', secondary:'', detail:'' });
+  C.thumb.style.opacity = '0';
+  C.prim.style.opacity = '0';
+  C.sec.style.opacity = '0';
+  C.det.style.opacity = '0';
+  C.div.style.opacity = '0';
+
+  const main = DROPS.main;
+  const left = DROPS.left;
+  const right = DROPS.right;
+
+  [left, right].forEach((el) => {
+    el.style.width = '96px';
+    el.style.height = '96px';
+    el.style.borderRadius = '48px';
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
+  });
+  left.style.transform = 'translate(-48px,-48px)';
+  right.style.transform = 'translate(-48px,-48px)';
+
+  scheduleSplitTimer(splitStartMs, () => {
+    main.classList.add('metaball-prep');
+    if (main._metaAnim) main._metaAnim.cancel();
+    main._metaAnim = main.animate([
+      { transform: 'translate(-50px,-50px) scale(1,1)', borderRadius: '50px', opacity: 1, filter: 'blur(0px)', offset: 0 },
+      { transform: 'translate(-50px,-50px) scale(1.08,0.95)', borderRadius: '46px', opacity: 1, filter: 'blur(0px)', offset: 0.18 },
+      { transform: 'translate(-50px,-50px) scale(1.16,0.89)', borderRadius: '40px', opacity: 0.94, filter: 'blur(0.4px)', offset: 0.68 },
+      { transform: 'translate(-50px,-50px) scale(1.1,0.92)', borderRadius: '42px', opacity: 0, filter: 'blur(0px)', offset: 1 },
+    ], { duration: splitMs, easing, fill: 'forwards' });
+
+    [left, right].forEach((el) => {
+      if (el._splitAnim) el._splitAnim.cancel();
+    });
+
+    left._splitAnim = left.animate([
+      { transform: 'translate(-48px,-48px) scale(0.92,1.04)', opacity: 0, offset: 0 },
+      { transform: 'translate(-76px,-48px) scale(1.02,0.98)', opacity: 0.72, offset: 0.5 },
+      { transform: 'translate(-114px,-48px) scale(1.04,0.96)', opacity: 1, offset: 0.84 },
+      { transform: 'translate(-108px,-48px) scale(1,1)', opacity: 1, offset: 1 },
+    ], { duration: splitMs - sideDelay, delay: sideDelay, easing, fill: 'forwards' });
+
+    right._splitAnim = right.animate([
+      { transform: 'translate(-48px,-48px) scale(0.92,1.04)', opacity: 0, offset: 0 },
+      { transform: 'translate(-20px,-48px) scale(1.02,0.98)', opacity: 0.72, offset: 0.5 },
+      { transform: 'translate(18px,-48px) scale(1.04,0.96)', opacity: 1, offset: 0.84 },
+      { transform: 'translate(12px,-48px) scale(1,1)', opacity: 1, offset: 1 },
+    ], { duration: splitMs - sideDelay, delay: sideDelay, easing, fill: 'forwards' });
+
+    scheduleSplitTimer(sideDelay, () => {
+      left.style.pointerEvents = 'auto';
+      right.style.pointerEvents = 'auto';
+    });
+
+    scheduleSplitTimer(splitMs + 12, () => {
+      main.style.width = '96px';
+      main.style.height = '96px';
+      main.style.borderRadius = '48px';
+      main.style.transform = 'translate(-48px,-48px)';
+      main.style.opacity = '0';
+      main.style.pointerEvents = 'none';
+
+      left.style.opacity = '1';
+      right.style.opacity = '1';
+      left.style.transform = 'translate(-108px,-48px)';
+      right.style.transform = 'translate(12px,-48px)';
+
+      currentShape = 'split';
+      lastMainGeo = { ...SHAPES.split.main };
+      updateActive('split');
+      main.classList.remove('metaball-prep');
+      main.style.filter = '';
+      document.getElementById('anim-style').textContent = originalAnimCSS;
+      splitAnimStyleBackup = null;
+      suppressDeformation = false;
+      clearSplitTimers();
+    });
+  });
+}
+
+function manualShape(shape) {
+  document.getElementById('shape-panel').classList.remove('visible');
+  hideRich();
+  hideIntentHeader();
+  document.getElementById('stage').classList.remove('flow-active');
+  document.getElementById('input-area').classList.remove('hidden');
+  const leavingSplit = currentShape === 'split' && shape !== 'split';
+  const leavingList = currentShape === 'list' && shape !== 'list';
+  if (!leavingList) clearListPills();
+
+  if (shape === 'split') {
+    morphTo('split', { icon:'', primary:'', secondary:'', detail:'' });
+    return;
+  }
+
+  if (!leavingSplit && currentShape === 'split') resetSplitState();
+
+  if (shape === 'list') {
+    morphToList(DEMO_LIST);
+    updateActive('list');
+    return;
+  }
+  if (shape === 'ai') {
+    stopSiriOrb();
+    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
+    C.thumb.style.opacity = '0';
+    document.getElementById('drop-main').classList.add('ai-mode');
+    startSiriOrb(true);
+    updateActive('ai');
+    return;
+  }
+  if (shape === 'idle') {
+    stopSiriOrb();
+    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
+    C.thumb.style.opacity = '0';
+    document.getElementById('drop-main').classList.add('ai-mode');
+    showAiIdle();
+    updateActive('idle');
+    return;
+  }
+
+  stopSiriOrb();
+  morphTo(shape, DEMO[shape] || {});
+}
+
+function updateActive(shape) {
+  document.querySelectorAll('.sb-shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
+}
+
+function openCustom() {
+  document.getElementById('shape-panel').classList.toggle('visible');
+  updateActive('custom');
+}
+
+function applyCustomShape() {
+  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+  const w = clamp(parseInt(document.getElementById('sp-w').value)||280, 60, 420);
+  const h = clamp(parseInt(document.getElementById('sp-h').value)||140, 60, 360);
+  const r = clamp(parseInt(document.getElementById('sp-r').value)||0, 0, Math.floor(Math.min(w,h)/2));
+  document.getElementById('sp-w').value = w;
+  document.getElementById('sp-h').value = h;
+  document.getElementById('sp-r').value = r;
+  const g = {
+    main:  { w, h, br:r+'px', tx:-(w/2), ty:-(h/2), op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-(w/2), ty:-50, op:0 },
+    right: { w:100, h:100, br:'50px', tx:(w/2)-100, ty:-50, op:0 },
+  };
+  hideRich();
+  morphTo('custom', null, g);
+  applyContentPositions('custom', w, h);
+}
+
+const input   = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+
+input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); handleSend(); }
+  e.stopPropagation();
+});
+
+function handleSend() {
+  const text = input.value.trim();
+  if (!text) return;
+  if (flightUi.active) cancelFlightFlow();
+  input.value = '';
+  sendBtn.classList.remove('active');
+  if (/flight|fly|book.*flight|ticket/i.test(text)) {
+    const destMatch = text.match(/to\s+([a-zA-Z\s]+)/i);
+    if (destMatch) {
+      flightData.destCity = destMatch[1].trim();
+      const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
+      const key = flightData.destCity.toLowerCase();
+      const found = Object.keys(cityMap).find(k => key.includes(k));
+      if (found) flightData.dest = cityMap[found];
+    }
+    startFlightFlow();
+  } else {
+    processRequest(text);
+  }
+}
+
+function fireChip(el) {
+  const text = el.textContent.trim();
+  if (flightUi.active) cancelFlightFlow();
+  input.value = text;
+  sendBtn.classList.add('active');
+  setTimeout(() => {
+    input.value = '';
+    sendBtn.classList.remove('active');
+    if (/flight|fly|book.*flight/i.test(text)) {
+      const destMatch = text.match(/to\s+([a-zA-Z\s]+)/i);
+      if (destMatch) {
+        flightData.destCity = destMatch[1].trim();
+        const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
+        const key = flightData.destCity.toLowerCase();
+        const found = Object.keys(cityMap).find(k => key.includes(k));
+        if (found) flightData.dest = cityMap[found];
+      }
+      startFlightFlow();
+    } else {
+      processRequest(text);
+    }
+  }, 120);
+}
+
+document.addEventListener('keydown', e => {
+  if (document.activeElement === input) return;
+
+  if (flightUi.active) {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveFlightHighlight(-1);
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveFlightHighlight(1);
+      return;
+    }
+    if (e.code === 'Space') {
+      e.preventDefault();
+      confirmFlightStep();
+      return;
+    }
+    if (e.key === 'x' || e.key === 'X') {
+      e.preventDefault();
+      cancelFlightFlow();
+      return;
+    }
+    return;
+  }
+
+  if (e.key === '1') manualShape('circle');
+  if (e.key === '2') manualShape('dot');
+  if (e.key === '3') manualShape('pill');
+  if (e.key === '4') manualShape('card');
+  if (e.key === '5') manualShape('list');
+  if (e.key === '8') manualShape('ai');
+  if (e.key === '6') manualShape('split');
+  if (e.key === '7') openCustom();
+  if (e.key === 'Escape') {
+    document.getElementById('stage').classList.remove('flow-active');
+    document.getElementById('input-area').classList.remove('hidden');
+    hideRich(); hideIntentHeader();
+    morphTo('circle', DEMO.circle);
+  }
+});
+
+document.querySelectorAll('.bz-inp, .sp-inp').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
+
+let animDur = 450;
+const SPRING_WITH_ANTICIPATION = `linear(
+  0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
+  0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
+  1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
+  1.004 92%, 1.001 97%, 1
+)`;
+const EASING_FN = {
+  custom:  () => { const v=[0,1,2,3].map(i=>parseFloat(document.getElementById('bz'+i).value)||0); return `cubic-bezier(${v.join(',')})`; },
+  spring:  () => SPRING_WITH_ANTICIPATION,
+  ease:    () => 'cubic-bezier(0.25,0.1,0.25,1)',
+  linear:  () => 'linear',
+};
+function rebuildAnim() {
+  const curve  = document.getElementById('ease-select').value;
+  const easing = EASING_FN[curve]();
+  const wDur   = animDur;
+  const hDur   = animDur;
+  const brDur  = animDur;
+  const txDur  = animDur;
+  document.getElementById('anim-style').textContent = `
+    :root {
+      --spring: ${easing};
+      --anim-w:  ${wDur}ms var(--spring);
+      --anim-h:  ${hDur}ms var(--spring);
+      --anim-br: ${brDur}ms var(--spring);
+      --anim-tx: ${txDur}ms var(--spring);
+      --anim-t:  ${txDur}ms var(--spring);
+    }`;
+}
+document.getElementById('dur-sl').addEventListener('input', function() {
+  animDur = parseInt(this.value);
+  document.getElementById('dur-val').textContent = animDur + 'ms';
+  rebuildAnim();
+});
+document.getElementById('ease-select').addEventListener('change', function() {
+  const showBz = this.value === 'custom';
+  document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
+  document.getElementById('bz-row').classList.toggle('hidden', !showBz);
+  rebuildAnim();
+});
+document.querySelectorAll('.bz-inp').forEach(inp => inp.addEventListener('input', rebuildAnim));
+{
+  const showBz = document.getElementById('ease-select').value === 'custom';
+  document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
+  document.getElementById('bz-row').classList.toggle('hidden', !showBz);
+}
+
+morphTo('circle', DEMO.circle);
+rebuildAnim();
+
+[[8,12,.04,3.8,0],[18,76,.03,5.1,.8],[28,34,.05,4.2,.3],[38,88,.04,6.0,1.1],
+ [48,22,.05,3.5,.5],[58,65,.03,4.8,.9],[68,42,.04,5.5,.2],[78,10,.04,4.0,.7],
+ [88,55,.05,3.2,1.3],[12,48,.03,5.8,.4],[22,90,.04,4.5,1.0],[32,18,.04,3.9,.6],
+ [42,72,.05,5.2,.1],[52,38,.03,4.1,.8],[62,82,.04,3.7,1.2],[72,28,.05,5.6,.3],
+ [82,60,.04,4.3,.9],[92,14,.05,3.4,.5],[5,55,.03,5.0,1.1],[15,25,.04,4.7,.2],
+ [25,70,.04,3.6,.7],[35,5,.05,5.3,1.4],[45,85,.03,4.0,.6],[55,45,.04,3.8,1.0],
+ [65,15,.04,5.1,.3],[75,75,.05,4.4,.8],[85,35,.03,3.5,1.3],[95,50,.04,4.9,.4]
+].forEach(([l,t,op,dur,delay]) => {
+  const s = document.createElement('div'); s.className = 'star';
+  const big = Math.round(l+t) % 9 === 0;
+  s.style.cssText = `left:${l}%;top:${t}%;width:${big?2:1}px;height:${big?2:1}px;background:rgba(255,255,255,1);--op:${op};--sd:${dur}s;--sdl:${delay}s;`;
+  document.body.appendChild(s);
+});
+
+const LIST_PILL_W = 420;
+const LIST_PILL_H = 120;
+const LIST_GAP    = 12;
+const LIST_STEP   = LIST_PILL_H + LIST_GAP;
+const LIST_TOP_Y  = -60;
+const LIST_OFF    = 140;
+const DEMO_LIST = [
+  { icon:'🌤', primary:'21°  Sunny', secondary:'San Francisco' },
+  { icon:'✉', primary:'New Message', secondary:'Alice · Want to meet?' },
+  { icon:'⏱', primary:'Timer', secondary:'10 minutes remaining' },
+];
+
+function clearListPills() {
+  const wrap = document.getElementById('list-pills');
+  wrap.innerHTML = '';
+  wrap.style.pointerEvents = 'none';
+  wrap.style.opacity = '';
+  wrap.style.transition = '';
+  wrap.dataset.collapsing = '';
+}
+
+function collapseListStack(ms = 220) {
+  const wrap = document.getElementById('list-pills');
+  if (!wrap) return;
+  if (!wrap.children.length) {
+    clearListPills();
+    return;
+  }
+  if (wrap.dataset.collapsing === '1') return;
+  wrap.dataset.collapsing = '1';
+  wrap.style.pointerEvents = 'none';
+  wrap.style.transition = `opacity ${ms}ms ease`;
+  wrap.style.opacity = '0';
+  setTimeout(() => {
+    clearListPills();
+  }, ms + 30);
+}
+
+function buildListPill(item, idx, items) {
+  const el = document.createElement('div');
+  el.className = 'list-pill';
+  el.style.zIndex = String(Math.max(1, items.length - idx));
+  el.innerHTML = `
+    <div class="list-pill-thumb">${item.icon || '◉'}</div>
+    <div class="list-pill-text">
+      <div class="list-pill-primary">${item.primary || ''}</div>
+      <div class="list-pill-secondary">${item.secondary || ''}</div>
+    </div>`;
+  el.addEventListener('click', () => selectListItem(el, idx, items));
+  return el;
+}
+
+function morphToList(items) {
+  stopSiriOrb();
+  hideRich();
+  document.getElementById('drop-main').classList.remove('ai-mode');
+  setIntentHeader('Demo', 'List');
+
+  if (currentShape === 'split') {
+    morphTo('dot', { icon:'', primary:'', secondary:'', detail:'' });
+    if (listBridgeTimer) clearTimeout(listBridgeTimer);
+    listBridgeTimer = setTimeout(() => {
+      listBridgeTimer = null;
+      morphToList(items);
+    }, splitBridgeMs() + 28);
+    return;
+  }
+
+  const phaseOneMs = 600;
+  const phaseTwoMs = 500;
+  const overlapMs = 220;
+  const phaseTwoStart = phaseOneMs - overlapMs;
+  const easing = EASING_FN[document.getElementById('ease-select').value]();
+
+  const originalAnimCSS = document.getElementById('anim-style').textContent;
+  document.getElementById('anim-style').textContent = `
+    :root {
+      --spring: ${easing};
+      --anim-w:  ${phaseOneMs}ms var(--spring);
+      --anim-h:  ${phaseOneMs}ms var(--spring);
+      --anim-br: ${phaseOneMs}ms var(--spring);
+      --anim-tx: ${phaseOneMs}ms var(--spring);
+      --anim-t:  ${phaseTwoMs}ms var(--spring);
+    }`;
+
+  morphTo('pill', {
+    icon: items[0]?.icon || '◉',
+    primary: items[0]?.primary || '',
+    secondary: items[0]?.secondary || '',
+    detail: ''
+  });
+
+  const stackHeight = items.length * LIST_PILL_H + (items.length - 1) * LIST_GAP;
+  const stackTop = -stackHeight / 2;
+  const firstPillY = stackTop;
+  const incomingPillY = firstPillY + 20;
+
+  const stage = document.getElementById('stage');
+  if (stage) stage.style.height = stackHeight + 'px';
+
+  const wrap = document.getElementById('list-pills');
+  clearListPills();
+  wrap.style.opacity = '1';
+  wrap.style.transition = 'none';
+  wrap.style.pointerEvents = 'none';
+
+  const dm = DROPS.main;
+  dm.style.transform = `translate(-210px, ${firstPillY}px)`;
+  currentShape = 'list';
+  lastMainGeo = { ...SHAPES.pill.main, ty: firstPillY };
+
+  setTimeout(() => {
+    items.slice(1).forEach((item, i) => {
+      const idx = i + 1;
+      const pill = buildListPill(item, idx, items);
+      const finalY = stackTop + idx * LIST_STEP;
+      pill.style.transition = `transform ${phaseTwoMs}ms ${easing}, opacity ${Math.max(220, phaseTwoMs - 80)}ms ${easing}`;
+      pill.style.transform = `translateY(${incomingPillY}px)`;
+      pill.style.opacity = '0.01';
+      wrap.appendChild(pill);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          pill.style.transform = `translateY(${finalY}px)`;
+          pill.style.opacity = '1';
+        });
+      });
+    });
+
+    wrap.style.pointerEvents = 'auto';
+    setTimeout(() => {
+      document.getElementById('anim-style').textContent = originalAnimCSS;
+    }, phaseTwoMs + overlapMs + 40);
+  }, phaseTwoStart);
+}
+
+function selectListItem(el, idx, items) {
+  document.querySelectorAll('.list-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+</script>
+</body>
+</html>
