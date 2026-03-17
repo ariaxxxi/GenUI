@@ -1141,12 +1141,14 @@ body.bg-off .bg-blur-image { opacity: 0; }
       </div>
       <div class="sb-row tight">
         <span class="sb-lbl">Stage</span>
-        <div class="shape-chip-row" id="scenario-shape-row">
-        </div>
-        <div class="sb-btn-row" style="margin-top:8px;">
-          <button id="stage-add" class="sb-mini-btn" type="button">Add Stage</button>
-        </div>
+      <div class="shape-chip-row" id="scenario-shape-row">
       </div>
+      <div class="sb-btn-row" style="margin-top:8px;">
+        <button id="stage-add" class="sb-mini-btn" type="button">Add Stage</button>
+        <button id="stage-delete" class="sb-mini-btn" type="button">Delete Stage</button>
+        <button id="stage-reset" class="sb-mini-btn" type="button">Reset Stage</button>
+      </div>
+    </div>
       <div id="stage-config-panel" class="sb-row tight">
         <label class="sb-lbl" for="stage-name-input">Stage name</label>
         <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
@@ -1266,6 +1268,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
 
 <script>
 const P   = 20;
+const PILL_NO_ICON_P = 32;
 const CARD_P = 24;
 const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
 const CARD_DIVIDER_GAP = 10;
@@ -1461,6 +1464,10 @@ function stageById(id) {
   return stageLibrary.find((stage) => stage.id === id) || stageLibrary.find((stage) => stage.id === 'pill') || stageLibrary[0];
 }
 
+function builtinStageById(id) {
+  return BUILTIN_STAGE_DEFS.find((stage) => stage.id === id) || null;
+}
+
 function renderShapeForStageId(id) {
   const stage = stageById(id);
   return stage?.renderShape || 'pill';
@@ -1650,6 +1657,8 @@ function contentPos(shape, w, h) {
   };
   if (shape === 'pill') {
     const typography = normalizeTypography(contentTypographyState, 'pill');
+    const hasIcon = hasIconContent(thumbContentState);
+    const textX = hasIcon ? TX : PILL_NO_ICON_P;
     const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
     const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
     const rowGap = 4;
@@ -1668,11 +1677,11 @@ function contentPos(shape, w, h) {
       pY = sY;
     }
     return {
-      thumb:  { x:P, y:tY, w:TS, h:TS, br:TBR, op:1 },
-      prim:   { x:TX, y:pY, op:1, fs:typography.primary.size, cx:false },
-      sec:    { x:TX, y:sY, op:1, fs:typography.secondary.size, cx:false },
+      thumb:  { x:P, y:tY, w:TS, h:TS, br:TBR, op:hasIcon ? 1 : 0 },
+      prim:   { x:textX, y:pY, op:1, fs:typography.primary.size, cx:false },
+      sec:    { x:textX, y:sY, op:1, fs:typography.secondary.size, cx:false },
       div:    { x:P, y:h/2, dw:0, op:0 },
-      det:    { x:TX, y:sY, op:0, fs:typography.detail.size, cx:false },
+      det:    { x:textX, y:sY, op:0, fs:typography.detail.size, cx:false },
     };
   }
   if (shape === 'card') {
@@ -1689,10 +1698,11 @@ function contentPos(shape, w, h) {
     const cardTextX = CARD_P;
     const hasPrimary = !!String(C.prim.textContent || '').trim();
     const hasSecondary = !!String(C.sec.textContent || '').trim();
+    const hasIcon = hasIconContent(thumbContentState);
     return {
-      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIconContent(thumbContentState) ? 1 : 0 },
-      prim:   { x:cardTextX, y:layout.primaryTop, op:layout.hasTopRow && hasPrimary ? 1 : 0, fs:typography.primary.size, cx:false },
-      sec:    { x:cardTextX, y:layout.secondaryTop, op:layout.hasTopRow && hasSecondary ? 1 : 0, fs:typography.secondary.size, cx:false },
+      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIcon ? 1 : 0 },
+      prim:   { x:cardTextX, y:layout.primaryTop, op:hasPrimary ? 1 : 0, fs:typography.primary.size, cx:false },
+      sec:    { x:cardTextX, y:layout.secondaryTop, op:hasSecondary ? 1 : 0, fs:typography.secondary.size, cx:false },
       div:    { x:CARD_P, y:layout.dividerY, dw:w-CARD_P*2, op:layout.hasTopRow ? 1 : 0 },
       det:    { x:CARD_P, y:layout.detailTop, op:String(C.det.textContent || '').trim() ? 1 : 0, fs:typography.detail.size, cx:false },
     };
@@ -1708,11 +1718,12 @@ function contentPos(shape, w, h) {
       C.sec.textContent,
       thumbContentState
     );
-    const textX = CARD_P + TS + GAP;
+    const hasIcon = hasIconContent(thumbContentState);
+    const textX = hasIcon ? (CARD_P + TS + GAP) : CARD_P;
     const hasPrimary = !!String(C.prim.textContent || '').trim();
     const hasSecondary = !!String(C.sec.textContent || '').trim();
     return {
-      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIconContent(thumbContentState) ? 1 : 0 },
+      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIcon ? 1 : 0 },
       prim:   { x:textX, y:layout.primaryTop, op:layout.hasTopRow && hasPrimary ? 1 : 0, fs:typography.primary.size, cx:false },
       sec:    { x:textX, y:layout.secondaryTop, op:layout.hasTopRow && hasSecondary ? 1 : 0, fs:typography.secondary.size, cx:false },
       div:    { x:CARD_P, y:layout.dividerY, dw:w-CARD_P*2, op:layout.hasTopRow ? 1 : 0 },
@@ -1763,6 +1774,8 @@ const UI = {
   scenarioDelete: document.getElementById('scenario-delete'),
   scenarioName: document.getElementById('scenario-name'),
   stageAdd: document.getElementById('stage-add'),
+  stageDelete: document.getElementById('stage-delete'),
+  stageReset: document.getElementById('stage-reset'),
   stageNameInput: document.getElementById('stage-name-input'),
   stageRadiusInput: document.getElementById('stage-radius-input'),
   stageComponentsPanel: document.getElementById('stage-components-panel'),
@@ -1923,14 +1936,17 @@ function cardDetailTextWidth(cardWidth) {
 }
 
 function lineTextWidth(shape, width) {
+  const hasIcon = hasIconContent(thumbContentState);
   if (shape === 'pill') {
-    return Math.max(120, width - TX - P);
+    const textX = hasIcon ? TX : PILL_NO_ICON_P;
+    return Math.max(120, width - textX - P);
   }
   if (shape === 'card') {
     return Math.max(120, width - CARD_P * 2);
   }
   if (shape === 'card-s') {
-    return Math.max(120, width - (CARD_P + TS + GAP) - CARD_P);
+    const textX = hasIcon ? (CARD_P + TS + GAP) : CARD_P;
+    return Math.max(120, width - textX - CARD_P);
   }
   return null;
 }
@@ -1980,7 +1996,7 @@ function hasIconContent(iconValue) {
 function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
   const hasPrimary = !!String(primaryText || '').trim();
   const hasSecondary = !!String(secondaryText || '').trim();
-  const hasTopRow = hasIconContent(iconValue) || hasPrimary || hasSecondary;
+  const hasTopRow = hasIconContent(iconValue);
   const hasDetailText = String(detailText || '').trim().length > 0;
   const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
   const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
@@ -1988,19 +2004,30 @@ function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue
   const mediaHeights = measureCardMediaHeights(imageValue, cardWidth);
   const mediaHeight = mediaStackHeight(mediaHeights);
   const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
-  const primaryTop = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
-  const secondaryTop = primaryTop + primaryHeight + CARD_PRIMARY_TO_SECONDARY_GAP;
-  const detailTop = hasTopRow
-    ? (secondaryTop + secondaryHeight + CARD_SECONDARY_TO_DETAIL_GAP)
-    : CARD_P;
+  const bodyStart = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
+  let cursorY = bodyStart;
+  let primaryTop = bodyStart;
+  let secondaryTop = bodyStart;
+  if (hasPrimary) {
+    primaryTop = cursorY;
+    cursorY += primaryHeight;
+  }
+  if (hasSecondary) {
+    if (hasPrimary) cursorY += CARD_PRIMARY_TO_SECONDARY_GAP;
+    secondaryTop = cursorY;
+    cursorY += secondaryHeight;
+  }
+  const detailTop = hasDetailText
+    ? ((hasPrimary || hasSecondary) ? (cursorY + CARD_SECONDARY_TO_DETAIL_GAP) : bodyStart)
+    : bodyStart;
   const mediaTop = hasDetailText
     ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP
-    : (hasTopRow ? (secondaryTop + secondaryHeight + CARD_SECONDARY_TO_DETAIL_GAP) : CARD_P);
+    : ((hasPrimary || hasSecondary) ? (cursorY + CARD_DETAIL_TO_MEDIA_GAP) : bodyStart);
   const contentBottom = mediaHeight > 0
     ? mediaTop + mediaHeight
     : (detailHeight > 0
       ? detailTop + detailHeight
-      : (hasTopRow ? (secondaryTop + secondaryHeight) : CARD_P));
+      : ((hasPrimary || hasSecondary) ? cursorY : bodyStart));
   const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
   return {
     hasTopRow,
@@ -2282,9 +2309,12 @@ function renderStageComponentControls(stage) {
 function renderStageConfigPanel() {
   const scenario = selectedScenario();
   const stage = stageById(scenario?.shape);
+  const builtin = builtinStageById(stage?.id);
   if (UI.stageNameInput) UI.stageNameInput.value = stage?.name || '';
   if (UI.stageRadiusInput) UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
   if (UI.stageComponentsPanel) UI.stageComponentsPanel.classList.remove('hidden');
+  if (UI.stageDelete) UI.stageDelete.disabled = !stage || !!stage.preset;
+  if (UI.stageReset) UI.stageReset.disabled = !stage || !builtin;
   renderStageComponentControls(stage);
 }
 
@@ -2476,6 +2506,47 @@ function addStage() {
       stage.id
     );
   });
+}
+
+function deleteCurrentStage() {
+  const scenario = selectedScenario();
+  const stage = stageById(scenario?.shape);
+  if (!stage || stage.preset) return;
+  const fallbackId = stageById('pill')?.id || stageLibrary.find((item) => item.id !== stage.id)?.id;
+  if (!fallbackId) return;
+  stageLibrary = stageLibrary.filter((item) => item.id !== stage.id);
+  scenarioLibrary = scenarioLibrary.map((item) => {
+    if (item.shape !== stage.id) return item;
+    return createScenario({
+      ...item,
+      shape: fallbackId,
+      content: item.content,
+      triggers: item.triggers,
+    });
+  });
+  if (scenario?.shape === stage.id) {
+    selectedScenarioId = scenario.id;
+  }
+  persistStageLibrary();
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(selectedScenario());
+}
+
+function resetCurrentStageToDefault() {
+  const scenario = selectedScenario();
+  const stage = stageById(scenario?.shape);
+  if (!stage) return;
+  const builtin = builtinStageById(stage.id);
+  if (!builtin) return;
+  const index = stageLibrary.findIndex((item) => item.id === stage.id);
+  if (index < 0) return;
+  stageLibrary[index] = normalizeStage(builtin, builtin);
+  persistStageLibrary();
+  scenarioLibrary = scenarioLibrary.map((item) => createScenario(item));
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(selectedScenario());
 }
 
 function addScenario(shape = 'pill') {
@@ -3278,9 +3349,14 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
           : getCardLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia, C.prim.textContent, C.sec.textContent, thumbContentState))
         : null;
       if (shape === 'dot' && outgoingTypography && outgoingLayout) {
-        const outgoingTextX = fromShape === 'card-s' ? (CARD_P + TS + GAP) : CARD_P;
+        const outgoingTextX = fromShape === 'card-s'
+          ? (hasIconContent(thumbContentState) ? (CARD_P + TS + GAP) : CARD_P)
+          : CARD_P;
         const outgoingLineWidth = fromShape === 'card-s'
-          ? Math.max(120, fromWidth - (CARD_P + TS + GAP) - CARD_P)
+          ? Math.max(
+            120,
+            fromWidth - (hasIconContent(thumbContentState) ? (CARD_P + TS + GAP) : CARD_P) - CARD_P
+          )
           : Math.max(120, fromWidth - CARD_P * 2);
         C.prim.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.primaryTop}px)`;
         C.sec.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.secondaryTop}px)`;
@@ -4426,6 +4502,12 @@ UI.scenarioShapeRow.addEventListener('click', (e) => {
 
 UI.stageAdd.addEventListener('click', () => {
   addStage();
+});
+UI.stageDelete.addEventListener('click', () => {
+  deleteCurrentStage();
+});
+UI.stageReset.addEventListener('click', () => {
+  resetCurrentStageToDefault();
 });
 
 UI.stageNameInput.addEventListener('input', (e) => {
