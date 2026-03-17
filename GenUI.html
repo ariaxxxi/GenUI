@@ -427,12 +427,45 @@ body.mode-manual .mode-ai-only { display: none !important; }
   overflow-y: auto;
 }
 .sb-section { display: flex; flex-direction: column; gap: 14px; }
+.sb-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0 0 8px;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  background: transparent;
+  cursor: pointer;
+}
 .sb-heading {
   font-size: 8px; letter-spacing: .28em;
   color: rgba(255,255,255,0.28);
   text-transform: uppercase;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 0;
+  border: none;
+  text-align: left;
+}
+.sb-chevron {
+  color: rgba(255,255,255,0.40);
+  font-size: 11px;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+.sb-section.collapsed .sb-chevron {
+  transform: rotate(-90deg);
+}
+.sb-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sb-section.collapsed .sb-section-body {
+  display: none;
+}
+.sb-section.mode-toggle-bottom .sb-section-toggle {
+  display: none;
 }
 .sb-row { display: flex; flex-direction: column; gap: 6px; }
 .sb-row.tight { gap: 10px; }
@@ -1053,153 +1086,181 @@ body.bg-off .bg-blur-image { opacity: 0; }
 </div>
 
 <div id="sidebar">
-  <div class="sb-section">
-    <div class="sb-heading">Canvas</div>
+  <div class="sb-section" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Canvas</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <label class="sb-toggle" for="bg-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Background image</strong>
+        </div>
+        <input id="bg-toggle" class="sb-toggle-input" type="checkbox" checked/>
+      </label>
+      <div class="sb-row tight mode-ai-only">
+        <span class="sb-lbl">Stage override</span>
+        <div class="shape-chip-row">
+          <button class="shape-chip" data-ai-stage="auto" type="button">Auto</button>
+          <button class="shape-chip" data-ai-stage="dot" type="button">Dot</button>
+          <button class="shape-chip" data-ai-stage="pill" type="button">Pill</button>
+          <button class="shape-chip" data-ai-stage="card" type="button">Card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section mode-manual-only" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Scenarios</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <div class="sb-btn-row">
+        <button id="scenario-add" class="sb-mini-btn" type="button">Add</button>
+        <button id="scenario-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
+        <button id="scenario-delete" class="sb-mini-btn" type="button">Delete</button>
+      </div>
+      <div id="scenario-list" class="scenario-list"></div>
+    </div>
+  </div>
+
+  <div class="sb-section mode-manual-only" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Scenario Editor</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <div class="sb-row tight">
+        <label class="sb-lbl" for="scenario-name">Scenario name</label>
+        <input id="scenario-name" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+      </div>
+      <div class="sb-row tight">
+        <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
+        <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
+      </div>
+      <div class="sb-row tight">
+        <span class="sb-lbl">Stage</span>
+        <div class="shape-chip-row" id="scenario-shape-row">
+        </div>
+        <div class="sb-btn-row" style="margin-top:8px;">
+          <button id="stage-add" class="sb-mini-btn" type="button">Add Stage</button>
+        </div>
+      </div>
+      <div id="stage-config-panel" class="sb-row tight">
+        <label class="sb-lbl" for="stage-name-input">Stage name</label>
+        <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+        <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
+        <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0-120"/>
+        <div id="stage-components-panel" class="sb-row tight hidden">
+          <span class="sb-lbl">Components</span>
+          <div id="stage-component-controls"></div>
+        </div>
+      </div>
+      <div class="sb-row tight">
+        <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
+        <div class="icon-upload-row">
+          <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
+          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png"/></label>
+          <button id="scenario-icon-reset" class="sb-mini-btn" type="button">Reset</button>
+        </div>
+        <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
+        <div class="typo-controls">
+          <input id="scenario-icon-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Icon size"/>
+          <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
+        </div>
+      </div>
+      <div id="editor-primary-field" class="sb-row tight editor-field">
+        <label class="sb-lbl" for="scenario-primary">Primary text</label>
+        <input id="scenario-primary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+        <div class="typo-controls">
+          <input id="scenario-primary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Primary size"/>
+          <input id="scenario-primary-color" class="typo-color" type="color" value="#ffffff"/>
+        </div>
+      </div>
+      <div id="editor-secondary-field" class="sb-row tight editor-field">
+        <label class="sb-lbl" for="scenario-secondary">Secondary text</label>
+        <input id="scenario-secondary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+        <div class="typo-controls">
+          <input id="scenario-secondary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Secondary size"/>
+          <input id="scenario-secondary-color" class="typo-color" type="color" value="#8a8a8a"/>
+        </div>
+      </div>
+      <div id="editor-detail-field" class="sb-row tight editor-field">
+        <label class="sb-lbl" for="scenario-detail">Detail text</label>
+        <input id="scenario-detail" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+        <div class="typo-controls">
+          <input id="scenario-detail-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Detail size"/>
+          <input id="scenario-detail-color" class="typo-color" type="color" value="#5a5a5a"/>
+        </div>
+      </div>
+      <div id="editor-media-field" class="sb-row tight editor-field hidden">
+        <label class="sb-lbl">Card image(s)</label>
+        <div id="scenario-media-list" class="media-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section mode-manual-only collapsed" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Animation</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <div class="sb-row">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span class="sb-lbl">Duration</span>
+          <span class="sb-val" id="dur-val">450ms</span>
+        </div>
+        <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
+      </div>
+      <div class="sb-row">
+        <span class="sb-lbl">Easing</span>
+        <select id="ease-select">
+          <option value="custom" selected>Custom bezier</option>
+          <option value="spring">Liquid feeling</option>
+          <option value="ease">Ease</option>
+          <option value="linear">Linear</option>
+        </select>
+      </div>
+      <div class="sb-row" id="bz-group">
+        <span class="sb-lbl">Bezier</span>
+        <div id="bz-row">
+          <input class="bz-inp" id="bz-input" type="text" value="0.35, 0.23, 0.13, 0.98" autocomplete="off" spellcheck="false" placeholder="0.2, 0.2, 0.1, 1"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section mode-manual-only collapsed" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Legacy / Debug</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <div class="legacy-grid">
+        <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
+        <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
+        <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
+        <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
+        <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
+      </div>
+      <div id="shape-panel">
+        <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="text" inputmode="numeric" value="280"/></div>
+        <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="text" inputmode="numeric" value="140"/></div>
+        <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="text" inputmode="numeric" value="24"/></div>
+        <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section mode-toggle-bottom">
     <label class="sb-toggle" for="mode-toggle">
       <div class="sb-toggle-copy">
         <strong>AI mode</strong>
       </div>
       <input id="mode-toggle" class="sb-toggle-input" type="checkbox"/>
     </label>
-    <label class="sb-toggle" for="bg-toggle">
-      <div class="sb-toggle-copy">
-        <strong>Background image</strong>
-      </div>
-      <input id="bg-toggle" class="sb-toggle-input" type="checkbox" checked/>
-    </label>
-    <div class="sb-row tight mode-ai-only">
-      <span class="sb-lbl">Stage override</span>
-      <div class="shape-chip-row">
-        <button class="shape-chip" data-ai-stage="auto" type="button">Auto</button>
-        <button class="shape-chip" data-ai-stage="dot" type="button">Dot</button>
-        <button class="shape-chip" data-ai-stage="pill" type="button">Pill</button>
-        <button class="shape-chip" data-ai-stage="card" type="button">Card</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="sb-section mode-manual-only">
-    <div class="sb-heading">Scenarios</div>
-    <div class="sb-btn-row">
-      <button id="scenario-add" class="sb-mini-btn" type="button">Add</button>
-      <button id="scenario-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
-      <button id="scenario-delete" class="sb-mini-btn" type="button">Delete</button>
-    </div>
-    <div id="scenario-list" class="scenario-list"></div>
-  </div>
-
-  <div class="sb-section mode-manual-only">
-    <div class="sb-heading">Scenario Editor</div>
-    <div class="sb-row tight">
-      <label class="sb-lbl" for="scenario-name">Scenario name</label>
-      <input id="scenario-name" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-    </div>
-    <div class="sb-row tight">
-      <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
-      <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
-    </div>
-    <div class="sb-row tight">
-      <span class="sb-lbl">Stage</span>
-      <div class="shape-chip-row" id="scenario-shape-row">
-      </div>
-      <div class="sb-btn-row" style="margin-top:8px;">
-        <button id="stage-add" class="sb-mini-btn" type="button">Add Stage</button>
-      </div>
-    </div>
-    <div id="stage-config-panel" class="sb-row tight">
-      <label class="sb-lbl" for="stage-name-input">Stage name</label>
-      <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-      <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
-      <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0-120"/>
-      <div id="stage-components-panel" class="sb-row tight hidden">
-        <span class="sb-lbl">Components</span>
-        <div id="stage-component-controls"></div>
-      </div>
-    </div>
-    <div class="sb-row tight">
-      <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
-      <div class="icon-upload-row">
-        <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
-        <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png"/></label>
-        <button id="scenario-icon-reset" class="sb-mini-btn" type="button">Reset</button>
-      </div>
-      <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
-      <div class="typo-controls">
-        <input id="scenario-icon-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Icon size"/>
-        <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
-      </div>
-    </div>
-    <div id="editor-primary-field" class="sb-row tight editor-field">
-      <label class="sb-lbl" for="scenario-primary">Primary text</label>
-      <input id="scenario-primary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-      <div class="typo-controls">
-        <input id="scenario-primary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Primary size"/>
-        <input id="scenario-primary-color" class="typo-color" type="color" value="#ffffff"/>
-      </div>
-    </div>
-    <div id="editor-secondary-field" class="sb-row tight editor-field">
-      <label class="sb-lbl" for="scenario-secondary">Secondary text</label>
-      <input id="scenario-secondary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-      <div class="typo-controls">
-        <input id="scenario-secondary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Secondary size"/>
-        <input id="scenario-secondary-color" class="typo-color" type="color" value="#8a8a8a"/>
-      </div>
-    </div>
-    <div id="editor-detail-field" class="sb-row tight editor-field">
-      <label class="sb-lbl" for="scenario-detail">Detail text</label>
-      <input id="scenario-detail" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-      <div class="typo-controls">
-        <input id="scenario-detail-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Detail size"/>
-        <input id="scenario-detail-color" class="typo-color" type="color" value="#5a5a5a"/>
-      </div>
-    </div>
-    <div id="editor-media-field" class="sb-row tight editor-field hidden">
-      <label class="sb-lbl">Card image(s)</label>
-      <div id="scenario-media-list" class="media-list"></div>
-    </div>
-  </div>
-
-  <div class="sb-section mode-manual-only">
-    <div class="sb-heading">Animation</div>
-    <div class="sb-row">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;">
-        <span class="sb-lbl">Duration</span>
-        <span class="sb-val" id="dur-val">450ms</span>
-      </div>
-      <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
-    </div>
-    <div class="sb-row">
-      <span class="sb-lbl">Easing</span>
-      <select id="ease-select">
-        <option value="custom" selected>Custom bezier</option>
-        <option value="spring">Liquid feeling</option>
-        <option value="ease">Ease</option>
-        <option value="linear">Linear</option>
-      </select>
-    </div>
-    <div class="sb-row" id="bz-group">
-      <span class="sb-lbl">Bezier</span>
-      <div id="bz-row">
-        <input class="bz-inp" id="bz-input" type="text" value="0.35, 0.23, 0.13, 0.98" autocomplete="off" spellcheck="false" placeholder="0.2, 0.2, 0.1, 1"/>
-      </div>
-    </div>
-  </div>
-
-  <div class="sb-section mode-manual-only">
-    <div class="sb-heading">Legacy / Debug</div>
-    <div class="legacy-grid">
-      <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
-      <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
-      <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
-      <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
-      <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
-    </div>
-    <div id="shape-panel">
-      <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="text" inputmode="numeric" value="280"/></div>
-      <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="text" inputmode="numeric" value="140"/></div>
-      <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="text" inputmode="numeric" value="24"/></div>
-      <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
-    </div>
   </div>
 </div>
 
@@ -1660,11 +1721,11 @@ function contentPos(shape, w, h) {
   }
   if (shape === 'image') {
     return {
-      thumb:  { x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 },
-      prim:   { x:w/2, y:h/2, op:0, fs:28, cx:true },
-      sec:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
-      div:    { x:w/2, y:h/2, dw:0, op:0 },
-      det:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
+      thumb:  { x:CARD_P, y:CARD_P, w:0, h:0, br:'0px', op:0 },
+      prim:   { x:CARD_P, y:CARD_P, op:0, fs:28, cx:false },
+      sec:    { x:CARD_P, y:CARD_P, op:0, fs:24, cx:false },
+      div:    { x:CARD_P, y:CARD_P, dw:0, op:0 },
+      det:    { x:CARD_P, y:CARD_P, op:0, fs:24, cx:false },
     };
   }
   return {
@@ -3121,6 +3182,9 @@ function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   if (fromShape === 'dot' && toCardLike) {
     contentMoveMs = 0;
   }
+  if (fromShape === 'image' && toShape === 'pill') {
+    contentMoveMs = 0;
+  }
   if (fromCardLike && toShape === 'dot') {
     contentFadeMs = 200;
     detailFadeMs = 200;
@@ -3153,17 +3217,7 @@ function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
 
 function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
   const pos = contentPos(shape, w, h);
-  const freezeThumbTransform = fromShape === 'image' && shape === 'pill';
-  if (freezeThumbTransform) {
-    C.thumb.style.transition = 'width var(--anim-w), height var(--anim-h), border-radius var(--anim-br), opacity var(--thumb-fade-ms, 280ms) ease';
-  }
   C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
-  if (freezeThumbTransform) {
-    const id = setTimeout(() => {
-      C.thumb.style.transition = '';
-    }, Math.max(200, currentTransitionAnimMs + 20));
-    uiFadeTimers.push(id);
-  }
   applyThumbVisualMode(shape);
   let thumbOpacity = pos.thumb.op;
   if (shape === 'circle' && thumbContentState.kind === 'none') thumbOpacity = 0;
@@ -4273,6 +4327,18 @@ function bindTypographyInputs(layer, sizeInput, colorInput) {
   });
 }
 
+function initSidebarCollapsibleSections() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  sidebar.addEventListener('click', (e) => {
+    const toggle = e.target.closest('.sb-section-toggle');
+    if (!toggle) return;
+    const section = toggle.closest('.sb-section');
+    if (!section || section.dataset.collapsible !== '1') return;
+    section.classList.toggle('collapsed');
+  });
+}
+
 UI.modeToggle.addEventListener('change', () => {
   responseMode = UI.modeToggle.checked ? RESPONSE_MODE.AI : RESPONSE_MODE.MANUAL;
   persistResponseMode();
@@ -4611,6 +4677,7 @@ document.getElementById('bz-input').addEventListener('blur', function() {
   document.getElementById('bz-input').value = formatBezierValues(getCustomBezierValues());
 }
 
+initSidebarCollapsibleSections();
 applyCanvasSettings();
 applyResponseModeUi();
 renderScenarioUi();
