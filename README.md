@@ -1,6 +1,6 @@
 # GenUI
 
-Single-file generative UI prototype tool for designers. The current workflow is manual and edit-based: build a library of scenarios, edit icon/text content for `dot`, `pill`, and `card`, and preview the result instantly.
+Single-file generative UI prototype tool for designers with two modes: manual prototyping and AI preview.
 
 ## Run
 
@@ -17,10 +17,13 @@ Open `http://localhost:5173`.
 - Tune icon, primary, secondary, and detail text size and color per scenario.
 - Upload a PNG to replace the default emoji icon.
 - Toggle the blurred background image on or off.
-- Scenario data and canvas settings persist in browser `localStorage`.
+- Switch between Manual mode and AI mode from the Canvas section.
+- In AI mode, use input + stage override (`Auto`, `Dot`, `Pill`, `Card`) for preview generation.
+- Scenario data, canvas settings, mode, and AI stage override persist in browser `localStorage`.
 
 ## Architecture Notes
 
 - Rendering is driven by a normalized scenario object with `shape`, `content`, and `triggers`.
-- The app is currently in manual mode; future AI can plug into the same scenario format instead of calling rendering code directly.
-- The small Node server remains available for local hosting and for future AI-route experiments, but the default UI no longer calls AI APIs.
+- Rendering is shared between manual and AI paths through the same scenario format.
+- AI mode currently uses a frontend Gauss adapter stub (placeholder for real API integration) and falls back to manual matching on AI errors.
+- The Node server remains available for local hosting and future provider integrations.
