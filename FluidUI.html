@@ -1541,6 +1541,34 @@ function normalizeStageImages(value) {
   return value.map(normalizeStageImage).filter(Boolean);
 }
 
+function normalizeIconByShape(value = {}, fallbackShape = 'pill', legacyIcon = null) {
+  const stageIds = Array.from(new Set([
+    ...SCENARIO_SHAPES,
+    ...availableScenarioShapes(),
+    ...Object.keys(value || {}),
+    fallbackShape,
+  ].filter(Boolean)));
+  const output = {};
+  stageIds.forEach((shape) => {
+    output[shape] = normalizeIcon(value?.[shape] || (shape === fallbackShape ? legacyIcon : null));
+  });
+  return output;
+}
+
+function normalizeImagesByShape(value = {}, fallbackShape = 'pill', legacyImages = []) {
+  const stageIds = Array.from(new Set([
+    ...SCENARIO_SHAPES,
+    ...availableScenarioShapes(),
+    ...Object.keys(value || {}),
+    fallbackShape,
+  ].filter(Boolean)));
+  const output = {};
+  stageIds.forEach((shape) => {
+    output[shape] = normalizeStageImages(value?.[shape] || (shape === fallbackShape ? legacyImages : []));
+  });
+  return output;
+}
+
 function normalizeStageTextEntry(value = {}, fallback = {}) {
   return {
     primary: String(value?.primary ?? fallback?.primary ?? ''),
@@ -1589,6 +1617,18 @@ function stageTextForShape(scenario, shape) {
   return normalizeStageTextEntry(scenario?.content?.textByShape?.[shape], legacy);
 }
 
+function stageIconForShape(scenario, shape) {
+  return normalizeIcon(
+    scenario?.content?.iconByShape?.[shape] || scenario?.content?.icon
+  );
+}
+
+function stageImagesForShape(scenario, shape) {
+  return normalizeStageImages(
+    scenario?.content?.imagesByShape?.[shape] || scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : [])
+  );
+}
+
 function createScenario({
   id = scenarioId(),
   name = 'New Scenario',
@@ -1602,6 +1642,7 @@ function createScenario({
     shape: availableScenarioShapes().includes(shape) ? shape : 'pill',
     content: {
       icon: normalizeIcon(content.icon),
+      iconByShape: normalizeIconByShape(content.iconByShape, shape, content.icon),
       primary: String(content.primary || ''),
       secondary: String(content.secondary || ''),
       detail: String(content.detail || ''),
@@ -1611,6 +1652,11 @@ function createScenario({
         detail: String(content.detail || ''),
       }),
       images: normalizeStageImages(content.images || (content.image ? [content.image] : [])),
+      imagesByShape: normalizeImagesByShape(
+        content.imagesByShape,
+        shape,
+        normalizeStageImages(content.images || (content.image ? [content.image] : []))
+      ),
       typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
     },
     triggers: normalizeTriggers(triggers),
@@ -2296,11 +2342,11 @@ function scenarioToRenderContent(scenario) {
   const shape = scenario?.shape || currentShape;
   const has = (type) => counts[type] > 0;
   const text = stageTextForShape(scenario, shape);
-  const sourceImages = normalizeStageImages(scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : []));
+  const sourceImages = stageImagesForShape(scenario, shape);
   const imageCount = Math.max(0, counts.image || 0);
   const images = has('image') ? sourceImages.slice(0, imageCount).filter(Boolean) : [];
   return {
-    icon: has('icon') ? (scenario?.content?.icon || createIcon('none', '')) : createIcon('none', ''),
+    icon: has('icon') ? stageIconForShape(scenario, shape) : createIcon('none', ''),
     primary: has('primary') ? text.primary : '',
     secondary: has('secondary') ? text.secondary : '',
     detail: has('detail') ? text.detail : '',
@@ -2431,7 +2477,7 @@ function renderStageConfigPanel() {
 
 function getScenarioImagesForStage(scenario, stage) {
   const count = Math.max(0, stageComponentCounts(stage).image || 0);
-  const source = normalizeStageImages(scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : []));
+  const source = stageImagesForShape(scenario, scenario?.shape);
   const output = [];
   for (let i = 0; i < count; i += 1) {
     output.push(source[i] || null);
@@ -2464,9 +2510,10 @@ function renderScenarioEditor() {
   const scenario = selectedScenario();
   if (!scenario) return;
   const stageText = stageTextForShape(scenario, scenario.shape);
+  const stageIcon = stageIconForShape(scenario, scenario.shape);
   UI.scenarioName.value = scenario.name;
   UI.scenarioTriggers.value = scenario.triggers.join(', ');
-  UI.scenarioIconInput.value = scenario.content.icon.kind === 'emoji' ? scenario.content.icon.value : '';
+  UI.scenarioIconInput.value = stageIcon.kind === 'emoji' ? stageIcon.value : '';
   UI.scenarioPrimary.value = stageText.primary;
   UI.scenarioSecondary.value = stageText.secondary;
   UI.scenarioDetail.value = stageText.detail;
@@ -2479,8 +2526,8 @@ function renderScenarioEditor() {
   UI.scenarioSecondaryColor.value = typography.secondary.color;
   UI.scenarioDetailSize.value = typography.detail.size;
   UI.scenarioDetailColor.value = typography.detail.color;
-  UI.scenarioIconMode.textContent = scenario.content.icon.kind === 'image' ? 'png' : (scenario.content.icon.kind === 'emoji' ? 'emoji' : 'empty');
-  const iconTextEditable = scenario.content.icon.kind !== 'image';
+  UI.scenarioIconMode.textContent = stageIcon.kind === 'image' ? 'png' : (stageIcon.kind === 'emoji' ? 'emoji' : 'empty');
+  const iconTextEditable = stageIcon.kind !== 'image';
   UI.scenarioIconInput.disabled = !iconTextEditable;
   UI.scenarioIconColor.disabled = !iconTextEditable;
   UI.scenarioIconInput.placeholder = iconTextEditable ? 'Emoji or glyph' : 'PNG icon active';
@@ -4608,7 +4655,12 @@ UI.scenarioTriggers.addEventListener('input', (e) => {
 UI.scenarioIconInput.addEventListener('input', (e) => {
   commitScenarioChange((scenario) => {
     const value = String(e.target.value || '').trim();
-    scenario.content.icon = value ? createIcon('emoji', value) : createIcon('none', '');
+    scenario.content.iconByShape = normalizeIconByShape(
+      scenario.content.iconByShape,
+      scenario.shape,
+      scenario.content.icon
+    );
+    scenario.content.iconByShape[scenario.shape] = value ? createIcon('emoji', value) : createIcon('none', '');
   });
 });
 
@@ -4787,7 +4839,12 @@ UI.stageComponentControls.addEventListener('change', (e) => {
 
 UI.scenarioIconReset.addEventListener('click', () => {
   commitScenarioChange((scenario) => {
-    scenario.content.icon = createIcon('none', '');
+    scenario.content.iconByShape = normalizeIconByShape(
+      scenario.content.iconByShape,
+      scenario.shape,
+      scenario.content.icon
+    );
+    scenario.content.iconByShape[scenario.shape] = createIcon('none', '');
   });
   UI.scenarioIconUpload.value = '';
 });
@@ -4807,7 +4864,12 @@ UI.scenarioIconUpload.addEventListener('change', async (e) => {
   }).catch(() => '');
   if (!dataUrl) return;
   commitScenarioChange((scenario) => {
-    scenario.content.icon = createIcon('image', dataUrl);
+    scenario.content.iconByShape = normalizeIconByShape(
+      scenario.content.iconByShape,
+      scenario.shape,
+      scenario.content.icon
+    );
+    scenario.content.iconByShape[scenario.shape] = createIcon('image', dataUrl);
   });
 });
 
@@ -4820,7 +4882,12 @@ UI.editorMedia.addEventListener('click', (e) => {
     const stage = stageById(scenario.shape);
     const images = getScenarioImagesForStage(scenario, stage);
     images[index] = null;
-    scenario.content.images = images.filter(Boolean);
+    scenario.content.imagesByShape = normalizeImagesByShape(
+      scenario.content.imagesByShape,
+      scenario.shape,
+      scenario.content.images
+    );
+    scenario.content.imagesByShape[scenario.shape] = images.filter(Boolean);
   });
 });
 
@@ -4857,7 +4924,12 @@ UI.editorMedia.addEventListener('change', async (e) => {
       width: dimensions.width,
       height: dimensions.height,
     };
-    scenario.content.images = images.filter(Boolean);
+    scenario.content.imagesByShape = normalizeImagesByShape(
+      scenario.content.imagesByShape,
+      scenario.shape,
+      scenario.content.images
+    );
+    scenario.content.imagesByShape[scenario.shape] = images.filter(Boolean);
   });
 });
 
