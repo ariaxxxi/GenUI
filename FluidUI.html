@@ -353,6 +353,7 @@ body {
   transition: height var(--anim-h);
 }
 body.bg-off #stage { mix-blend-mode: normal; }
+body.float-off #stage { animation: none; }
 #stage.flow-active { animation-play-state: paused; }
 
 /* ── Input area ── */
@@ -1092,6 +1093,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <span class="sb-chevron">▾</span>
     </button>
     <div class="sb-section-body">
+      <label class="sb-toggle" for="float-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Floating effect</strong>
+        </div>
+        <input id="float-toggle" class="sb-toggle-input" type="checkbox" checked/>
+      </label>
       <label class="sb-toggle" for="align-bottom-toggle">
         <div class="sb-toggle-copy">
           <strong>Bottom align</strong>
@@ -1160,6 +1167,10 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
         <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
         <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0-120"/>
+        <label class="sb-lbl" for="stage-width-input">Container width override</label>
+        <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        <label class="sb-lbl" for="stage-height-input">Container height override</label>
+        <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
         <div id="stage-components-panel" class="sb-row tight hidden">
           <span class="sb-lbl">Components</span>
           <div id="stage-component-controls"></div>
@@ -1365,12 +1376,12 @@ const AI_STAGE_OVERRIDE = Object.freeze({
   CARD: 'card',
 });
 const BUILTIN_STAGE_DEFS = Object.freeze([
-  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, components: [] },
-  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, components: ['icon'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, components: ['icon', 'primary', 'secondary'] },
-  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, components: ['image'] },
+  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, components: [] },
+  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, components: ['icon'] },
+  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, components: ['icon', 'primary', 'secondary'] },
+  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, components: ['image'] },
 ]);
 const SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
@@ -1441,10 +1452,14 @@ function normalizeStage(raw, fallback) {
   const cornerRadius = Number.isFinite(rawCorner)
     ? clamp(Math.round(rawCorner), 0, 120)
     : clamp(Math.round(fallbackCorner), 0, 120);
+  const rawWidth = Number(raw?.widthOverride);
+  const rawHeight = Number(raw?.heightOverride);
+  const widthOverride = Number.isFinite(rawWidth) && rawWidth > 0 ? clamp(Math.round(rawWidth), 40, 1400) : null;
+  const heightOverride = Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null;
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => STAGE_COMPONENT_TYPES.includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, components };
 }
 
 function loadStageLibrary() {
@@ -1526,6 +1541,54 @@ function normalizeStageImages(value) {
   return value.map(normalizeStageImage).filter(Boolean);
 }
 
+function normalizeStageTextEntry(value = {}, fallback = {}) {
+  return {
+    primary: String(value?.primary ?? fallback?.primary ?? ''),
+    secondary: String(value?.secondary ?? fallback?.secondary ?? ''),
+    detail: String(value?.detail ?? fallback?.detail ?? ''),
+  };
+}
+
+function normalizeStageTextByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
+  const stageIds = Array.from(new Set([
+    ...SCENARIO_SHAPES,
+    ...availableScenarioShapes(),
+    ...Object.keys(value || {}),
+    fallbackShape,
+  ].filter(Boolean)));
+  const output = {};
+  stageIds.forEach((shape) => {
+    output[shape] = normalizeStageTextEntry(value?.[shape], shape === fallbackShape ? legacy : {});
+  });
+  return output;
+}
+
+function stageDefaultMainSize(stageId) {
+  const renderShape = renderShapeForStageId(stageId);
+  const base = SHAPES[renderShape] || SHAPES.pill;
+  return {
+    width: Number(base?.main?.w) || 420,
+    height: Number(base?.main?.h) || 120,
+  };
+}
+
+function stageMainSize(stage) {
+  const defaults = stageDefaultMainSize(stage?.id);
+  return {
+    width: Number.isFinite(stage?.widthOverride) ? stage.widthOverride : defaults.width,
+    height: Number.isFinite(stage?.heightOverride) ? stage.heightOverride : defaults.height,
+  };
+}
+
+function stageTextForShape(scenario, shape) {
+  const legacy = {
+    primary: String(scenario?.content?.primary || ''),
+    secondary: String(scenario?.content?.secondary || ''),
+    detail: String(scenario?.content?.detail || ''),
+  };
+  return normalizeStageTextEntry(scenario?.content?.textByShape?.[shape], legacy);
+}
+
 function createScenario({
   id = scenarioId(),
   name = 'New Scenario',
@@ -1542,6 +1605,11 @@ function createScenario({
       primary: String(content.primary || ''),
       secondary: String(content.secondary || ''),
       detail: String(content.detail || ''),
+      textByShape: normalizeStageTextByShape(content.textByShape, shape, {
+        primary: String(content.primary || ''),
+        secondary: String(content.secondary || ''),
+        detail: String(content.detail || ''),
+      }),
       images: normalizeStageImages(content.images || (content.image ? [content.image] : [])),
       typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
     },
@@ -1774,6 +1842,7 @@ const C = {
 const UI = {
   modeToggle: document.getElementById('mode-toggle'),
   bgToggle: document.getElementById('bg-toggle'),
+  floatToggle: document.getElementById('float-toggle'),
   alignBottomToggle: document.getElementById('align-bottom-toggle'),
   aiStageButtons: Array.from(document.querySelectorAll('[data-ai-stage]')),
   scenarioList: document.getElementById('scenario-list'),
@@ -1786,6 +1855,8 @@ const UI = {
   stageReset: document.getElementById('stage-reset'),
   stageNameInput: document.getElementById('stage-name-input'),
   stageRadiusInput: document.getElementById('stage-radius-input'),
+  stageWidthInput: document.getElementById('stage-width-input'),
+  stageHeightInput: document.getElementById('stage-height-input'),
   stageComponentsPanel: document.getElementById('stage-components-panel'),
   stageComponentControls: document.getElementById('stage-component-controls'),
   scenarioShapeRow: document.getElementById('scenario-shape-row'),
@@ -1851,6 +1922,7 @@ function loadCanvasSettings() {
   const stored = readStoredJson(STORAGE_KEYS.settings, null);
   return {
     backgroundEnabled: stored?.backgroundEnabled !== false,
+    floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign === true,
   };
 }
@@ -2111,8 +2183,29 @@ function stageCornerRadiusPx(stageId, fallbackBr) {
   return `${clamp(Math.round(radius), 0, 120)}px`;
 }
 
+function withStageSizeOverride(geo, stageId) {
+  if (!stageId) return geo;
+  const stage = stageById(stageId);
+  if (!stage) return geo;
+  const { width, height } = stageMainSize(stage);
+  if (width === geo.main.w && height === geo.main.h) return geo;
+  return {
+    ...geo,
+    main: {
+      ...geo.main,
+      w: width,
+      h: height,
+      tx: -(width / 2),
+      ty: -(height / 2),
+    },
+  };
+}
+
 function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
-  const baseGeo = customGeo || SHAPES[shape] || SHAPES.card;
+  const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
+  const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId);
+  const stage = stageId ? stageById(stageId) : null;
+  const hasHeightOverride = Number.isFinite(stage?.heightOverride);
   const withStageRadius = (geo) => {
     if (!stageId) return geo;
     const nextRadius = stageCornerRadiusPx(stageId, geo.main.br);
@@ -2138,6 +2231,7 @@ function resolveGeometryForContent(shape, contentData, customGeo, stageId = null
   const secondaryText = contentData?.secondary !== undefined ? contentData.secondary : C.sec.textContent;
   const iconValue = contentData?.icon !== undefined ? contentData.icon : thumbContentState;
   if (shape === 'image') {
+    if (hasHeightOverride) return withStageRadius(baseGeo);
     const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image'));
     if (!mediaHeight) return withStageRadius(baseGeo);
     const neededHeight = mediaHeight + CARD_P * 2;
@@ -2183,6 +2277,7 @@ function resolveGeometryForContent(shape, contentData, customGeo, stageId = null
       Math.round(baseGeo.main.h + (layout.neededHeight - baselineLayout.neededHeight)),
       Math.ceil(layout.neededHeight)
     );
+  if (hasHeightOverride) return withStageRadius(baseGeo);
   if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
 
   return withStageRadius({
@@ -2200,14 +2295,15 @@ function scenarioToRenderContent(scenario) {
   const counts = stageComponentCounts(stage);
   const shape = scenario?.shape || currentShape;
   const has = (type) => counts[type] > 0;
+  const text = stageTextForShape(scenario, shape);
   const sourceImages = normalizeStageImages(scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : []));
   const imageCount = Math.max(0, counts.image || 0);
   const images = has('image') ? sourceImages.slice(0, imageCount).filter(Boolean) : [];
   return {
     icon: has('icon') ? (scenario?.content?.icon || createIcon('none', '')) : createIcon('none', ''),
-    primary: has('primary') ? String(scenario?.content?.primary || '') : '',
-    secondary: has('secondary') ? String(scenario?.content?.secondary || '') : '',
-    detail: has('detail') ? String(scenario?.content?.detail || '') : '',
+    primary: has('primary') ? text.primary : '',
+    secondary: has('secondary') ? text.secondary : '',
+    detail: has('detail') ? text.detail : '',
     image: images[0] || null,
     images,
     typography: getScenarioTypography(scenario, shape),
@@ -2216,8 +2312,10 @@ function scenarioToRenderContent(scenario) {
 
 function applyCanvasSettings() {
   document.body.classList.toggle('bg-off', !canvasSettings.backgroundEnabled);
+  document.body.classList.toggle('float-off', !canvasSettings.floatingEnabled);
   document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
   if (UI.bgToggle) UI.bgToggle.checked = !!canvasSettings.backgroundEnabled;
+  if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
   if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
 }
 
@@ -2323,6 +2421,8 @@ function renderStageConfigPanel() {
   const builtin = builtinStageById(stage?.id);
   if (UI.stageNameInput) UI.stageNameInput.value = stage?.name || '';
   if (UI.stageRadiusInput) UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
+  if (UI.stageWidthInput) UI.stageWidthInput.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
+  if (UI.stageHeightInput) UI.stageHeightInput.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
   if (UI.stageComponentsPanel) UI.stageComponentsPanel.classList.remove('hidden');
   if (UI.stageDelete) UI.stageDelete.disabled = !stage || !!stage.preset;
   if (UI.stageReset) UI.stageReset.disabled = !stage || !builtin;
@@ -2363,12 +2463,13 @@ function renderScenarioMediaEditor(scenario, stage) {
 function renderScenarioEditor() {
   const scenario = selectedScenario();
   if (!scenario) return;
+  const stageText = stageTextForShape(scenario, scenario.shape);
   UI.scenarioName.value = scenario.name;
   UI.scenarioTriggers.value = scenario.triggers.join(', ');
   UI.scenarioIconInput.value = scenario.content.icon.kind === 'emoji' ? scenario.content.icon.value : '';
-  UI.scenarioPrimary.value = scenario.content.primary;
-  UI.scenarioSecondary.value = scenario.content.secondary;
-  UI.scenarioDetail.value = scenario.content.detail;
+  UI.scenarioPrimary.value = stageText.primary;
+  UI.scenarioSecondary.value = stageText.secondary;
+  UI.scenarioDetail.value = stageText.detail;
   const typography = getScenarioTypography(scenario, scenario.shape);
   UI.scenarioIconSize.value = typography.icon.size;
   UI.scenarioIconColor.value = typography.icon.color;
@@ -2506,6 +2607,8 @@ function addStage() {
     preset: false,
     renderShape: baseStage?.renderShape || 'card',
     cornerRadius: Number.isFinite(baseStage?.cornerRadius) ? baseStage.cornerRadius : 30,
+    widthOverride: Number.isFinite(baseStage?.widthOverride) ? baseStage.widthOverride : null,
+    heightOverride: Number.isFinite(baseStage?.heightOverride) ? baseStage.heightOverride : null,
     components: (baseStage?.components?.length ? [...baseStage.components] : ['icon', 'primary', 'secondary']),
   }, baseStage);
   stageLibrary.push(stage);
@@ -4469,6 +4572,12 @@ UI.bgToggle.addEventListener('change', () => {
   applyCanvasSettings();
 });
 
+UI.floatToggle.addEventListener('change', () => {
+  canvasSettings.floatingEnabled = UI.floatToggle.checked;
+  persistCanvasSettings();
+  applyCanvasSettings();
+});
+
 UI.alignBottomToggle.addEventListener('change', () => {
   canvasSettings.bottomAlign = UI.alignBottomToggle.checked;
   persistCanvasSettings();
@@ -4505,19 +4614,34 @@ UI.scenarioIconInput.addEventListener('input', (e) => {
 
 UI.scenarioPrimary.addEventListener('input', (e) => {
   commitScenarioChange((scenario) => {
-    scenario.content.primary = e.target.value;
+    scenario.content.textByShape = normalizeStageTextByShape(
+      scenario.content.textByShape,
+      scenario.shape,
+      scenario.content
+    );
+    scenario.content.textByShape[scenario.shape].primary = e.target.value;
   });
 });
 
 UI.scenarioSecondary.addEventListener('input', (e) => {
   commitScenarioChange((scenario) => {
-    scenario.content.secondary = e.target.value;
+    scenario.content.textByShape = normalizeStageTextByShape(
+      scenario.content.textByShape,
+      scenario.shape,
+      scenario.content
+    );
+    scenario.content.textByShape[scenario.shape].secondary = e.target.value;
   });
 });
 
 UI.scenarioDetail.addEventListener('input', (e) => {
   commitScenarioChange((scenario) => {
-    scenario.content.detail = e.target.value;
+    scenario.content.textByShape = normalizeStageTextByShape(
+      scenario.content.textByShape,
+      scenario.shape,
+      scenario.content
+    );
+    scenario.content.textByShape[scenario.shape].detail = e.target.value;
   });
 });
 
@@ -4528,6 +4652,11 @@ UI.scenarioShapeRow.addEventListener('click', (e) => {
   if (!availableScenarioShapes().includes(shape)) return;
   commitScenarioChange((scenario) => {
     scenario.shape = shape;
+    scenario.content.textByShape = normalizeStageTextByShape(
+      scenario.content.textByShape,
+      shape,
+      scenario.content
+    );
     scenario.content.typographyByShape = normalizeTypographyByShape(
       scenario.content.typographyByShape,
       shape
@@ -4576,6 +4705,48 @@ UI.stageRadiusInput.addEventListener('blur', (e) => {
     return;
   }
   commitStageRadius(value);
+});
+
+const commitStageSizeOverride = (axis, rawValue) => {
+  const scenario = selectedScenario();
+  const stage = stageById(scenario?.shape);
+  if (!stage) return;
+  const value = String(rawValue || '').trim();
+  const key = axis === 'width' ? 'widthOverride' : 'heightOverride';
+  if (!value) {
+    commitStageChange(stage.id, (draft) => {
+      draft[key] = null;
+    });
+    return;
+  }
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return;
+  const bounded = clamp(parsed, 40, 1400);
+  commitStageChange(stage.id, (draft) => {
+    draft[key] = bounded;
+  });
+};
+
+UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
+UI.stageWidthInput.addEventListener('blur', (e) => {
+  const stage = stageById(selectedScenario()?.shape);
+  const value = String(e.target.value || '').trim();
+  if (!value) {
+    e.target.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
+    return;
+  }
+  commitStageSizeOverride('width', value);
+});
+
+UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
+UI.stageHeightInput.addEventListener('blur', (e) => {
+  const stage = stageById(selectedScenario()?.shape);
+  const value = String(e.target.value || '').trim();
+  if (!value) {
+    e.target.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
+    return;
+  }
+  commitStageSizeOverride('height', value);
 });
 
 UI.stageComponentControls.addEventListener('click', (e) => {
