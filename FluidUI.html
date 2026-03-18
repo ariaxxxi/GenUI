@@ -3163,12 +3163,13 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
 function applyGeometry(shape, resolvedGeo, stageId = null) {
   const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
   const mainRadius = stageId ? stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
-  const alignedStageHeight = canvasSettings.bottomAlign
+  const useBottomAlign = canvasSettings.bottomAlign && shape !== 'idle';
+  const alignedStageHeight = useBottomAlign
     ? Math.max(BOTTOM_ALIGN_REF_H, geo.main.h)
     : geo.main.h;
   ['main','left','right'].forEach(k => {
     const el = DROPS[k], s = geo[k];
-    const yOffset = canvasSettings.bottomAlign ? ((alignedStageHeight - s.h) / 2) : 0;
+    const yOffset = useBottomAlign ? ((alignedStageHeight - s.h) / 2) : 0;
     el.style.width        = s.w + 'px';
     el.style.height       = s.h + 'px';
     el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
@@ -4871,6 +4872,10 @@ UI.scenarioIconUpload.addEventListener('change', async (e) => {
     );
     scenario.content.iconByShape[scenario.shape] = createIcon('image', dataUrl);
   });
+  e.target.value = '';
+});
+UI.scenarioIconUpload.addEventListener('click', (e) => {
+  e.target.value = '';
 });
 
 UI.editorMedia.addEventListener('click', (e) => {
@@ -4931,6 +4936,12 @@ UI.editorMedia.addEventListener('change', async (e) => {
     );
     scenario.content.imagesByShape[scenario.shape] = images.filter(Boolean);
   });
+  input.value = '';
+});
+UI.editorMedia.addEventListener('click', (e) => {
+  const input = e.target.closest('[data-media-upload-index]');
+  if (!input) return;
+  input.value = '';
 });
 
 bindTypographyInputs('icon', UI.scenarioIconSize, UI.scenarioIconColor);
