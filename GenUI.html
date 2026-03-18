@@ -1163,7 +1163,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
         <div class="icon-upload-row">
           <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
-          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png"/></label>
+          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG/GIF<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
           <button id="scenario-icon-reset" class="sb-mini-btn" type="button">Reset</button>
         </div>
         <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
@@ -1197,7 +1197,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
         </div>
       </div>
       <div id="editor-media-field" class="sb-row tight editor-field hidden">
-        <label class="sb-lbl">Card image(s)</label>
+      <label class="sb-lbl">Card image(s)</label>
         <div id="scenario-media-list" class="media-list"></div>
       </div>
     </div>
@@ -2338,7 +2338,7 @@ function renderScenarioMediaEditor(scenario, stage) {
     row.className = 'media-upload-row';
     const inputId = `scenario-media-upload-${index}`;
     row.innerHTML = `
-      <label class="sb-mini-btn upload-btn" for="${inputId}">PNG ${index + 1}<input id="${inputId}" data-media-upload-index="${index}" type="file" accept="image/png"/></label>
+      <label class="sb-mini-btn upload-btn" for="${inputId}">PNG/GIF ${index + 1}<input id="${inputId}" data-media-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>
       <button class="sb-mini-btn" type="button" data-media-reset-index="${index}">Reset</button>
     `;
     UI.scenarioMediaList.appendChild(row);
@@ -3438,7 +3438,7 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   const autoInDelay = fromShape === 'dot' && shape === 'pill'
     ? 180
     : (fromShape === 'idle' && shape === 'dot')
-      ? 200
+      ? 0
     : (fromShape === 'dot' && (shape === 'card' || shape === 'card-s'))
       ? 200
       : (nextArea > prevArea * 1.08 ? 300 : 0);
@@ -3488,7 +3488,8 @@ function morphTo(shape, contentData, customGeo, stageId = null) {
     thinkingBridgeTimer = null;
   }
 
-  if ((currentShape === 'ai' || currentShape === 'idle') && shape !== 'ai' && shape !== 'idle') {
+  const inAiIdleState = currentShape === 'idle' && document.getElementById('drop-main')?.classList.contains('ai-mode');
+  if ((currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {
     if (shape === 'circle') {
       bridgeThinkingToHome(contentData, customGeo, stageId);
       return;
@@ -4415,6 +4416,14 @@ function initSidebarCollapsibleSections() {
   });
 }
 
+function isSupportedAssetFile(file) {
+  if (!file) return false;
+  const type = String(file.type || '').toLowerCase();
+  if (type === 'image/png' || type === 'image/gif') return true;
+  const name = String(file.name || '').toLowerCase();
+  return name.endsWith('.png') || name.endsWith('.gif');
+}
+
 UI.modeToggle.addEventListener('change', () => {
   responseMode = UI.modeToggle.checked ? RESPONSE_MODE.AI : RESPONSE_MODE.MANUAL;
   persistResponseMode();
@@ -4589,7 +4598,7 @@ UI.scenarioIconReset.addEventListener('click', () => {
 UI.scenarioIconUpload.addEventListener('change', async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  if (file.type !== 'image/png') {
+  if (!isSupportedAssetFile(file)) {
     e.target.value = '';
     return;
   }
@@ -4625,7 +4634,7 @@ UI.editorMedia.addEventListener('change', async (e) => {
   if (!Number.isFinite(index) || index < 0) return;
   const file = input.files?.[0];
   if (!file) return;
-  if (file.type !== 'image/png') {
+  if (!isSupportedAssetFile(file)) {
     input.value = '';
     return;
   }
