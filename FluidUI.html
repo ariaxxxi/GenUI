@@ -15,6 +15,7 @@ body {
   background: #000; position: relative;
   font-family: 'DM Mono', monospace;
   height: 100%;
+  --panel-w: 360px;
 }
 
 /* ── Two-column layout ── */
@@ -56,7 +57,8 @@ body {
   border-radius: var(--frame-corner-radius);
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 16px 80px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: none;
+  background: transparent;
 }
 #ui-frame.phone {
   width: var(--phone-frame-w, 390px);
@@ -115,7 +117,7 @@ body {
 /* ── Drop shell ── */
 .drop {
   position: absolute; left: 50%; top: 50%;
-  background: #000;
+  background: transparent;
   box-shadow: 0 0 40px rgba(255,255,255,0.02);
   border: none; overflow: hidden;
   transition:
@@ -416,8 +418,8 @@ body.float-off #stage { animation: none; }
 
 /* ── Input area ── */
 #input-area {
-  position: fixed; bottom: 36px; left: 0;
-  width: calc(100% - 300px);
+  position: fixed; bottom: 36px; left: var(--panel-w);
+  width: calc(100% - (var(--panel-w) * 2));
   display: flex; flex-direction: column; align-items: center;
   transition: opacity 300ms ease, transform 300ms ease;
 }
@@ -475,16 +477,18 @@ body.mode-manual .mode-ai-only { display: none !important; }
 .ex-chip:active { transform: scale(.93); }
 
 /* ── Sidebar ── */
+#left-sidebar,
 #sidebar {
   width: 360px; height: 100%;
   display: flex; flex-direction: column;
   justify-content: flex-start;
   padding: 32px 24px;
   background: #0b0b0b;
-  border-left: 1px solid rgba(255,255,255,0.06);
   gap: 24px; flex-shrink: 0;
   overflow-y: auto;
 }
+#left-sidebar { border-right: 1px solid rgba(255,255,255,0.06); }
+#sidebar { border-left: 1px solid rgba(255,255,255,0.06); }
 .sb-section { display: flex; flex-direction: column; gap: 14px; }
 .sb-section-toggle {
   display: flex;
@@ -528,7 +532,18 @@ body.mode-manual .mode-ai-only { display: none !important; }
 }
 .sb-row { display: flex; flex-direction: column; gap: 6px; }
 .sb-row.tight { gap: 10px; }
+#left-sidebar .sb-row + .sb-row,
 #sidebar .sb-row + .sb-row { margin-top: 14px; }
+.sb-pair-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.sb-pair-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .sb-lbl { font-size: 10px; letter-spacing: .10em; color: rgba(255,255,255,0.40); }
 .sb-val { font-size: 11px; color: rgba(255,255,255,0.55); min-width: 36px; }
 .sb-shape-btn {
@@ -905,6 +920,17 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 #sp-apply:hover { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.09); }
 
 /* Control panel typography */
+#left-sidebar,
+#left-sidebar .sb-heading,
+#left-sidebar .sb-lbl,
+#left-sidebar .sb-val,
+#left-sidebar .sb-shape-btn,
+#left-sidebar .sb-shape-num,
+#left-sidebar #ease-select,
+#left-sidebar .bz-inp,
+#left-sidebar .sp-lbl,
+#left-sidebar .sp-inp,
+#left-sidebar #sp-apply,
 #sidebar,
 #sidebar .sb-heading,
 #sidebar .sb-lbl,
@@ -996,7 +1022,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
   position: absolute;
   width: 420px; height: 120px;
   border-radius: 60px;
-  background: #000;
+  background: transparent;
   box-shadow: 0 0 40px rgba(255,255,255,0.02);
   left: -210px;
   display: flex; align-items: center;
@@ -1103,6 +1129,100 @@ body.bg-off .bg-blur-image { opacity: 0; }
 
 <div id="wordmark">genui sys</div>
 
+<div id="left-sidebar">
+  <div class="sb-section" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Canvas</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <label class="sb-toggle" for="frame-glasses-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Glasses</strong>
+        </div>
+        <input id="frame-glasses-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
+      <label class="sb-toggle" for="frame-phone-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Phone</strong>
+        </div>
+        <input id="frame-phone-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
+      <div id="phone-frame-controls" class="sb-row tight hidden">
+        <div class="sb-pair-row">
+          <div class="sb-pair-col">
+            <label class="sb-lbl" for="phone-frame-width">Phone width</label>
+            <input id="phone-frame-width" class="sb-input" type="text" inputmode="numeric" placeholder="390"/>
+          </div>
+          <div class="sb-pair-col">
+            <label class="sb-lbl" for="phone-frame-height">Phone height</label>
+            <input id="phone-frame-height" class="sb-input" type="text" inputmode="numeric" placeholder="838"/>
+          </div>
+        </div>
+        <label class="sb-lbl" for="frame-corner-radius">Frame corner radius</label>
+        <input id="frame-corner-radius" class="sb-input" type="text" inputmode="numeric" placeholder="48"/>
+        <label class="sb-lbl" for="phone-bg-upload">Phone frame background</label>
+        <div class="media-upload-row">
+          <label class="sb-mini-btn upload-btn" for="phone-bg-upload">Upload<input id="phone-bg-upload" type="file" accept="image/*"/></label>
+          <button id="phone-bg-reset" class="sb-mini-btn" type="button">Reset</button>
+        </div>
+        <div id="phone-bg-state" class="icon-mode-badge">empty</div>
+      </div>
+      <div class="sb-row tight mode-ai-only">
+        <span class="sb-lbl">Stage override</span>
+        <div class="shape-chip-row">
+          <button class="shape-chip" data-ai-stage="auto" type="button">Auto</button>
+          <button class="shape-chip" data-ai-stage="dot" type="button">Dot</button>
+          <button class="shape-chip" data-ai-stage="pill" type="button">Pill</button>
+          <button class="shape-chip" data-ai-stage="card" type="button">Card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-section mode-manual-only" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Scenarios</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <div class="sb-btn-row">
+        <button id="scenario-add" class="sb-mini-btn" type="button">Add</button>
+        <button id="scenario-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
+        <button id="scenario-delete" class="sb-mini-btn" type="button">Delete</button>
+      </div>
+      <div id="scenario-list" class="scenario-list"></div>
+    </div>
+  </div>
+
+  <div class="sb-section" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Settings</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <label class="sb-toggle" for="float-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Floating effect</strong>
+        </div>
+        <input id="float-toggle" class="sb-toggle-input" type="checkbox" checked/>
+      </label>
+      <label class="sb-toggle" for="align-bottom-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Bottom align</strong>
+        </div>
+        <input id="align-bottom-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
+      <label class="sb-toggle" for="bg-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Background image</strong>
+        </div>
+        <input id="bg-toggle" class="sb-toggle-input" type="checkbox" checked/>
+      </label>
+    </div>
+  </div>
+</div>
+
 <div id="main-col">
   <div id="ui-frame">
     <div id="ui-frame-bg"></div>
@@ -1149,92 +1269,6 @@ body.bg-off .bg-blur-image { opacity: 0; }
 </div>
 
 <div id="sidebar">
-  <div class="sb-section" data-collapsible="1">
-    <button class="sb-section-toggle" type="button">
-      <div class="sb-heading">Canvas</div>
-      <span class="sb-chevron">▾</span>
-    </button>
-    <div class="sb-section-body">
-      <label class="sb-toggle" for="frame-glasses-toggle">
-        <div class="sb-toggle-copy">
-          <strong>Glasses</strong>
-        </div>
-        <input id="frame-glasses-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-      <label class="sb-toggle" for="frame-phone-toggle">
-        <div class="sb-toggle-copy">
-          <strong>Phone</strong>
-        </div>
-        <input id="frame-phone-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-      <div id="phone-frame-controls" class="sb-row tight hidden">
-        <label class="sb-lbl" for="phone-frame-width">Phone width</label>
-        <input id="phone-frame-width" class="sb-input" type="text" inputmode="numeric" placeholder="390"/>
-        <label class="sb-lbl" for="phone-frame-height">Phone height</label>
-        <input id="phone-frame-height" class="sb-input" type="text" inputmode="numeric" placeholder="838"/>
-        <label class="sb-lbl" for="frame-corner-radius">Frame corner radius</label>
-        <input id="frame-corner-radius" class="sb-input" type="text" inputmode="numeric" placeholder="48"/>
-        <label class="sb-lbl" for="phone-bg-upload">Phone frame background</label>
-        <div class="media-upload-row">
-          <label class="sb-mini-btn upload-btn" for="phone-bg-upload">Upload<input id="phone-bg-upload" type="file" accept="image/*"/></label>
-          <button id="phone-bg-reset" class="sb-mini-btn" type="button">Reset</button>
-        </div>
-        <div id="phone-bg-state" class="icon-mode-badge">empty</div>
-      </div>
-      <div class="sb-row tight mode-ai-only">
-        <span class="sb-lbl">Stage override</span>
-        <div class="shape-chip-row">
-          <button class="shape-chip" data-ai-stage="auto" type="button">Auto</button>
-          <button class="shape-chip" data-ai-stage="dot" type="button">Dot</button>
-          <button class="shape-chip" data-ai-stage="pill" type="button">Pill</button>
-          <button class="shape-chip" data-ai-stage="card" type="button">Card</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sb-section" data-collapsible="1">
-    <button class="sb-section-toggle" type="button">
-      <div class="sb-heading">Settings</div>
-      <span class="sb-chevron">▾</span>
-    </button>
-    <div class="sb-section-body">
-      <label class="sb-toggle" for="float-toggle">
-        <div class="sb-toggle-copy">
-          <strong>Floating effect</strong>
-        </div>
-        <input id="float-toggle" class="sb-toggle-input" type="checkbox" checked/>
-      </label>
-      <label class="sb-toggle" for="align-bottom-toggle">
-        <div class="sb-toggle-copy">
-          <strong>Bottom align</strong>
-        </div>
-        <input id="align-bottom-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-      <label class="sb-toggle" for="bg-toggle">
-        <div class="sb-toggle-copy">
-          <strong>Background image</strong>
-        </div>
-        <input id="bg-toggle" class="sb-toggle-input" type="checkbox" checked/>
-      </label>
-    </div>
-  </div>
-
-  <div class="sb-section mode-manual-only" data-collapsible="1">
-    <button class="sb-section-toggle" type="button">
-      <div class="sb-heading">Scenarios</div>
-      <span class="sb-chevron">▾</span>
-    </button>
-    <div class="sb-section-body">
-      <div class="sb-btn-row">
-        <button id="scenario-add" class="sb-mini-btn" type="button">Add</button>
-        <button id="scenario-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
-        <button id="scenario-delete" class="sb-mini-btn" type="button">Delete</button>
-      </div>
-      <div id="scenario-list" class="scenario-list"></div>
-    </div>
-  </div>
-
   <div class="sb-section mode-manual-only" data-collapsible="1">
     <button class="sb-section-toggle" type="button">
       <div class="sb-heading">Scenario Editor</div>
@@ -1244,10 +1278,6 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <div class="sb-row tight">
         <label class="sb-lbl" for="scenario-name">Scenario name</label>
         <input id="scenario-name" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-      </div>
-      <div class="sb-row tight">
-        <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
-        <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
       </div>
       <div class="sb-row tight">
         <span class="sb-lbl">Stage</span>
@@ -1264,18 +1294,16 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
         <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
         <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0-120"/>
-        <label class="sb-lbl" for="stage-width-input">Container width override</label>
-        <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        <label class="sb-lbl" for="stage-height-input">Container height override</label>
-        <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        <label class="sb-lbl" for="stage-gap-input">Icon ↔ text gap</label>
-        <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        <label class="sb-toggle" for="stage-phone-blur-toggle">
-          <div class="sb-toggle-copy">
-            <strong>Phone BG blur</strong>
+        <div class="sb-pair-row">
+          <div class="sb-pair-col">
+            <label class="sb-lbl" for="stage-width-input">Container width override</label>
+            <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
           </div>
-          <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
-        </label>
+          <div class="sb-pair-col">
+            <label class="sb-lbl" for="stage-height-input">Container height override</label>
+            <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
+        </div>
         <div id="stage-components-panel" class="sb-row tight hidden">
           <span class="sb-lbl">Components</span>
           <div id="stage-component-controls"></div>
@@ -1321,6 +1349,22 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <div id="editor-media-field" class="sb-row tight editor-field hidden">
       <label class="sb-lbl">Card image(s)</label>
         <div id="scenario-media-list" class="media-list"></div>
+      </div>
+      <div class="sb-row tight">
+        <label class="sb-lbl" for="stage-gap-input">Icon ↔ text gap</label>
+        <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        <label class="sb-lbl" for="stage-icon-pad-input">Icon left padding</label>
+        <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        <label class="sb-toggle" for="stage-phone-blur-toggle">
+          <div class="sb-toggle-copy">
+            <strong>Phone BG blur</strong>
+          </div>
+          <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
+        </label>
+      </div>
+      <div class="sb-row tight">
+        <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
+        <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
       </div>
     </div>
   </div>
@@ -1391,6 +1435,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
 <script>
 const P   = 20;
 const PILL_NO_ICON_P = 32;
+const PILL_ICON_P = 32;
 const CARD_P = 24;
 const BOTTOM_ALIGN_REF_H = 580;
 const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
@@ -1480,12 +1525,12 @@ const AI_STAGE_OVERRIDE = Object.freeze({
   CARD: 'card',
 });
 const BUILTIN_STAGE_DEFS = Object.freeze([
-  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, phoneBgBlur: false, components: [] },
-  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, phoneBgBlur: false, components: ['icon'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary'] },
-  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, phoneBgBlur: false, components: ['image'] },
+  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: [] },
+  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon'] },
+  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary'] },
+  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['image'] },
 ]);
 const SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
@@ -1562,13 +1607,15 @@ function normalizeStage(raw, fallback) {
   const heightOverride = Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null;
   const rawGap = Number(raw?.iconTextGap);
   const iconTextGap = Number.isFinite(rawGap) && rawGap >= 0 ? clamp(Math.round(rawGap), 0, 80) : null;
+  const rawIconPad = Number(raw?.iconLeftPadding);
+  const iconLeftPadding = Number.isFinite(rawIconPad) && rawIconPad >= 0 ? clamp(Math.round(rawIconPad), 0, 120) : null;
   const phoneBgBlur = raw?.phoneBgBlur === undefined
     ? !!fallbackStage.phoneBgBlur
     : raw?.phoneBgBlur === true;
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => STAGE_COMPONENT_TYPES.includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, phoneBgBlur, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, components };
 }
 
 function loadStageLibrary() {
@@ -1659,7 +1706,9 @@ function normalizeIconByShape(value = {}, fallbackShape = 'pill', legacyIcon = n
   ].filter(Boolean)));
   const output = {};
   stageIds.forEach((shape) => {
-    output[shape] = normalizeIcon(value?.[shape] || (shape === fallbackShape ? legacyIcon : null));
+    const stageValue = value?.[shape];
+    const resolved = stageValue !== undefined ? stageValue : legacyIcon;
+    output[shape] = normalizeIcon(resolved);
   });
   return output;
 }
@@ -1700,6 +1749,36 @@ function normalizeStageTextByShape(value = {}, fallbackShape = 'pill', legacy = 
   return output;
 }
 
+function normalizeStageSizeEntry(value = {}, fallback = {}) {
+  const rawWidth = Number(value?.widthOverride ?? fallback?.widthOverride);
+  const rawHeight = Number(value?.heightOverride ?? fallback?.heightOverride);
+  return {
+    widthOverride: Number.isFinite(rawWidth) && rawWidth > 0 ? clamp(Math.round(rawWidth), 40, 1400) : null,
+    heightOverride: Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null,
+  };
+}
+
+function normalizeStageSizeByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
+  const stageIds = Array.from(new Set([
+    ...SCENARIO_SHAPES,
+    ...availableScenarioShapes(),
+    ...Object.keys(value || {}),
+    fallbackShape,
+  ].filter(Boolean)));
+  const output = {};
+  stageIds.forEach((shape) => {
+    output[shape] = normalizeStageSizeEntry(
+      value?.[shape],
+      shape === fallbackShape ? legacy : {}
+    );
+  });
+  return output;
+}
+
+function scenarioStageSizeOverride(scenario, shape) {
+  return normalizeStageSizeEntry(scenario?.content?.sizeByShape?.[shape]);
+}
+
 function stageDefaultMainSize(stageId) {
   const renderShape = renderShapeForStageId(stageId);
   const base = SHAPES[renderShape] || SHAPES.pill;
@@ -1709,11 +1788,16 @@ function stageDefaultMainSize(stageId) {
   };
 }
 
-function stageMainSize(stage) {
+function stageMainSize(stage, scenario = selectedScenario()) {
   const defaults = stageDefaultMainSize(stage?.id);
+  const sizeOverride = scenarioStageSizeOverride(scenario, stage?.id);
   return {
-    width: Number.isFinite(stage?.widthOverride) ? stage.widthOverride : defaults.width,
-    height: Number.isFinite(stage?.heightOverride) ? stage.heightOverride : defaults.height,
+    width: Number.isFinite(sizeOverride.widthOverride)
+      ? sizeOverride.widthOverride
+      : defaults.width,
+    height: Number.isFinite(sizeOverride.heightOverride)
+      ? sizeOverride.heightOverride
+      : defaults.height,
   };
 }
 
@@ -1722,6 +1806,14 @@ function stageIconTextGap(stageId, renderShape) {
   const stage = stageId ? stageById(stageId) : null;
   const value = Number(stage?.iconTextGap);
   return Number.isFinite(value) ? clamp(Math.round(value), 0, 80) : GAP;
+}
+
+function stageIconLeftPadding(stageId, renderShape) {
+  if (renderShape !== 'pill' && renderShape !== 'card-s') return renderShape === 'pill' ? PILL_ICON_P : CARD_P;
+  const stage = stageId ? stageById(stageId) : null;
+  const value = Number(stage?.iconLeftPadding);
+  const fallback = renderShape === 'pill' ? PILL_ICON_P : CARD_P;
+  return Number.isFinite(value) ? clamp(Math.round(value), 0, 120) : fallback;
 }
 
 function stageTextForShape(scenario, shape) {
@@ -1734,9 +1826,16 @@ function stageTextForShape(scenario, shape) {
 }
 
 function stageIconForShape(scenario, shape) {
-  return normalizeIcon(
-    scenario?.content?.iconByShape?.[shape] || scenario?.content?.icon
-  );
+  const iconByShape = scenario?.content?.iconByShape || {};
+  if (iconByShape[shape] !== undefined) {
+    return normalizeIcon(iconByShape[shape]);
+  }
+  const legacy = normalizeIcon(scenario?.content?.icon);
+  if (legacy.kind !== 'none' && legacy.value) return legacy;
+  const firstDefined = Object.values(iconByShape)
+    .map((value) => normalizeIcon(value))
+    .find((value) => value.kind !== 'none' && value.value);
+  return firstDefined || createIcon('none', '');
 }
 
 function stageImagesForShape(scenario, shape) {
@@ -1774,6 +1873,10 @@ function createScenario({
         normalizeStageImages(content.images || (content.image ? [content.image] : []))
       ),
       typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
+      sizeByShape: normalizeStageSizeByShape(content.sizeByShape, shape, {
+        widthOverride: content.widthOverride,
+        heightOverride: content.heightOverride,
+      }),
     },
     triggers: normalizeTriggers(triggers),
   };
@@ -1895,8 +1998,9 @@ function contentPos(shape, w, h) {
   if (shape === 'pill') {
     const typography = normalizeTypography(contentTypographyState, 'pill');
     const gap = stageIconTextGap(selectedScenario()?.shape, 'pill');
+    const iconLeft = stageIconLeftPadding(selectedScenario()?.shape, 'pill');
     const hasIcon = hasIconContent(thumbContentState);
-    const textX = hasIcon ? (P + TS + gap) : PILL_NO_ICON_P;
+    const textX = hasIcon ? (iconLeft + TS + gap) : PILL_NO_ICON_P;
     const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
     const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
     const rowGap = 4;
@@ -1915,7 +2019,7 @@ function contentPos(shape, w, h) {
       pY = sY;
     }
     return {
-      thumb:  { x:P, y:tY, w:TS, h:TS, br:TBR, op:hasIcon ? 1 : 0 },
+      thumb:  { x:iconLeft, y:tY, w:TS, h:TS, br:TBR, op:hasIcon ? 1 : 0 },
       prim:   { x:textX, y:pY, op:1, fs:typography.primary.size, cx:false },
       sec:    { x:textX, y:sY, op:1, fs:typography.secondary.size, cx:false },
       div:    { x:P, y:h/2, dw:0, op:0 },
@@ -1948,6 +2052,7 @@ function contentPos(shape, w, h) {
   if (shape === 'card-s') {
     const typography = normalizeTypography(contentTypographyState, 'card-s');
     const gap = stageIconTextGap(selectedScenario()?.shape, 'card-s');
+    const iconLeft = stageIconLeftPadding(selectedScenario()?.shape, 'card-s');
     const layout = getCardSLayoutMetrics(
       w,
       typography,
@@ -1958,11 +2063,11 @@ function contentPos(shape, w, h) {
       thumbContentState
     );
     const hasIcon = hasIconContent(thumbContentState);
-    const textX = hasIcon ? (CARD_P + TS + gap) : CARD_P;
+    const textX = hasIcon ? (iconLeft + TS + gap) : CARD_P;
     const hasPrimary = !!String(C.prim.textContent || '').trim();
     const hasSecondary = !!String(C.sec.textContent || '').trim();
     return {
-      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIcon ? 1 : 0 },
+      thumb:  { x:iconLeft, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIcon ? 1 : 0 },
       prim:   { x:textX, y:layout.primaryTop, op:layout.hasTopRow && hasPrimary ? 1 : 0, fs:typography.primary.size, cx:false },
       sec:    { x:textX, y:layout.secondaryTop, op:layout.hasTopRow && hasSecondary ? 1 : 0, fs:typography.secondary.size, cx:false },
       div:    { x:CARD_P, y:layout.dividerY, dw:w-CARD_P*2, op:layout.hasTopRow ? 1 : 0 },
@@ -2031,6 +2136,7 @@ const UI = {
   stageWidthInput: document.getElementById('stage-width-input'),
   stageHeightInput: document.getElementById('stage-height-input'),
   stageGapInput: document.getElementById('stage-gap-input'),
+  stageIconPadInput: document.getElementById('stage-icon-pad-input'),
   stagePhoneBlurToggle: document.getElementById('stage-phone-blur-toggle'),
   stageComponentsPanel: document.getElementById('stage-components-panel'),
   stageComponentControls: document.getElementById('stage-component-controls'),
@@ -2122,6 +2228,25 @@ function loadAiStageOverride() {
 function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
   const scenarios = Array.isArray(stored) ? stored.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
+  scenarios.forEach((scenario) => {
+    const shape = scenario?.shape;
+    if (!shape) return;
+    const stage = stageById(shape);
+    const legacyWidth = Number(stage?.widthOverride);
+    const legacyHeight = Number(stage?.heightOverride);
+    scenario.content.sizeByShape = normalizeStageSizeByShape(
+      scenario.content.sizeByShape,
+      shape,
+      scenario.content
+    );
+    const current = scenario.content.sizeByShape[shape];
+    if (!Number.isFinite(current?.widthOverride) && Number.isFinite(legacyWidth)) {
+      scenario.content.sizeByShape[shape].widthOverride = clamp(Math.round(legacyWidth), 40, 1400);
+    }
+    if (!Number.isFinite(current?.heightOverride) && Number.isFinite(legacyHeight)) {
+      scenario.content.sizeByShape[shape].heightOverride = clamp(Math.round(legacyHeight), 40, 1400);
+    }
+  });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
 
@@ -2199,14 +2324,18 @@ function cardDetailTextWidth(cardWidth) {
 function lineTextWidth(shape, width) {
   const hasIcon = hasIconContent(thumbContentState);
   if (shape === 'pill') {
-    const textX = hasIcon ? (P + TS + stageIconTextGap(selectedScenario()?.shape, 'pill')) : PILL_NO_ICON_P;
+    const textX = hasIcon
+      ? (stageIconLeftPadding(selectedScenario()?.shape, 'pill') + TS + stageIconTextGap(selectedScenario()?.shape, 'pill'))
+      : PILL_NO_ICON_P;
     return Math.max(120, width - textX - P);
   }
   if (shape === 'card') {
     return Math.max(120, width - CARD_P * 2);
   }
   if (shape === 'card-s') {
-    const textX = hasIcon ? (CARD_P + TS + stageIconTextGap(selectedScenario()?.shape, 'card-s')) : CARD_P;
+    const textX = hasIcon
+      ? (stageIconLeftPadding(selectedScenario()?.shape, 'card-s') + TS + stageIconTextGap(selectedScenario()?.shape, 'card-s'))
+      : CARD_P;
     return Math.max(120, width - textX - CARD_P);
   }
   return null;
@@ -2363,11 +2492,17 @@ function stageCornerRadiusPx(stageId, fallbackBr) {
   return `${clamp(Math.round(radius), 0, 120)}px`;
 }
 
-function withStageSizeOverride(geo, stageId) {
+function withStageSizeOverride(geo, stageId, scenario = selectedScenario(), sizeOverride = null) {
   if (!stageId) return geo;
   const stage = stageById(stageId);
   if (!stage) return geo;
-  const { width, height } = stageMainSize(stage);
+  const normalizedOverride = normalizeStageSizeEntry(sizeOverride);
+  const width = Number.isFinite(normalizedOverride.widthOverride)
+    ? normalizedOverride.widthOverride
+    : stageMainSize(stage, scenario).width;
+  const height = Number.isFinite(normalizedOverride.heightOverride)
+    ? normalizedOverride.heightOverride
+    : stageMainSize(stage, scenario).height;
   if (width === geo.main.w && height === geo.main.h) return geo;
   return {
     ...geo,
@@ -2383,9 +2518,13 @@ function withStageSizeOverride(geo, stageId) {
 
 function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
   const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
-  const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId);
-  const stage = stageId ? stageById(stageId) : null;
-  const hasHeightOverride = Number.isFinite(stage?.heightOverride);
+  const scenario = selectedScenario();
+  const stageSizeOverride = normalizeStageSizeEntry(
+    contentData?.sizeOverride,
+    scenarioStageSizeOverride(scenario, stageId)
+  );
+  const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
+  const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
   const withStageRadius = (geo) => {
     if (!stageId) return geo;
     const nextRadius = stageCornerRadiusPx(stageId, geo.main.br);
@@ -2487,6 +2626,7 @@ function scenarioToRenderContent(scenario) {
     image: images[0] || null,
     images,
     typography: getScenarioTypography(scenario, shape),
+    sizeOverride: scenarioStageSizeOverride(scenario, shape),
   };
 }
 
@@ -2634,11 +2774,13 @@ function renderStageConfigPanel() {
   const scenario = selectedScenario();
   const stage = stageById(scenario?.shape);
   const builtin = builtinStageById(stage?.id);
+  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
   if (UI.stageNameInput) UI.stageNameInput.value = stage?.name || '';
   if (UI.stageRadiusInput) UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
-  if (UI.stageWidthInput) UI.stageWidthInput.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
-  if (UI.stageHeightInput) UI.stageHeightInput.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
+  if (UI.stageWidthInput) UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
+  if (UI.stageHeightInput) UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
   if (UI.stageGapInput) UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
+  if (UI.stageIconPadInput) UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
   if (UI.stagePhoneBlurToggle) UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
   if (UI.stageComponentsPanel) UI.stageComponentsPanel.classList.remove('hidden');
   if (UI.stageDelete) UI.stageDelete.disabled = !stage || !!stage.preset;
@@ -2827,9 +2969,10 @@ function addStage() {
     preset: false,
     renderShape: baseStage?.renderShape || 'card',
     cornerRadius: Number.isFinite(baseStage?.cornerRadius) ? baseStage.cornerRadius : 30,
-    widthOverride: Number.isFinite(baseStage?.widthOverride) ? baseStage.widthOverride : null,
-    heightOverride: Number.isFinite(baseStage?.heightOverride) ? baseStage.heightOverride : null,
+    widthOverride: null,
+    heightOverride: null,
     iconTextGap: Number.isFinite(baseStage?.iconTextGap) ? baseStage.iconTextGap : null,
+    iconLeftPadding: Number.isFinite(baseStage?.iconLeftPadding) ? baseStage.iconLeftPadding : null,
     components: (baseStage?.components?.length ? [...baseStage.components] : ['icon', 'primary', 'secondary']),
   }, baseStage);
   stageLibrary.push(stage);
@@ -2839,6 +2982,11 @@ function addStage() {
     active.content.typographyByShape = normalizeTypographyByShape(
       active.content.typographyByShape,
       stage.id
+    );
+    active.content.sizeByShape = normalizeStageSizeByShape(
+      active.content.sizeByShape,
+      stage.id,
+      active.content
     );
   });
 }
@@ -3691,13 +3839,14 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
         : null;
       if (shape === 'dot' && outgoingTypography && outgoingLayout) {
         const cardSGap = stageIconTextGap(selectedScenario()?.shape, 'card-s');
+        const cardSIconPad = stageIconLeftPadding(selectedScenario()?.shape, 'card-s');
         const outgoingTextX = fromShape === 'card-s'
-          ? (hasIconContent(thumbContentState) ? (CARD_P + TS + cardSGap) : CARD_P)
+          ? (hasIconContent(thumbContentState) ? (cardSIconPad + TS + cardSGap) : CARD_P)
           : CARD_P;
         const outgoingLineWidth = fromShape === 'card-s'
           ? Math.max(
             120,
-            fromWidth - (hasIconContent(thumbContentState) ? (CARD_P + TS + cardSGap) : CARD_P) - CARD_P
+            fromWidth - (hasIconContent(thumbContentState) ? (cardSIconPad + TS + cardSGap) : CARD_P) - CARD_P
           )
           : Math.max(120, fromWidth - CARD_P * 2);
         C.prim.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.primaryTop}px)`;
@@ -4747,14 +4896,16 @@ function bindTypographyInputs(layer, sizeInput, colorInput) {
 }
 
 function initSidebarCollapsibleSections() {
-  const sidebar = document.getElementById('sidebar');
-  if (!sidebar) return;
-  sidebar.addEventListener('click', (e) => {
-    const toggle = e.target.closest('.sb-section-toggle');
-    if (!toggle) return;
-    const section = toggle.closest('.sb-section');
-    if (!section || section.dataset.collapsible !== '1') return;
-    section.classList.toggle('collapsed');
+  const sidebars = [document.getElementById('left-sidebar'), document.getElementById('sidebar')].filter(Boolean);
+  if (!sidebars.length) return;
+  sidebars.forEach((sidebar) => {
+    sidebar.addEventListener('click', (e) => {
+      const toggle = e.target.closest('.sb-section-toggle');
+      if (!toggle) return;
+      const section = toggle.closest('.sb-section');
+      if (!section || section.dataset.collapsible !== '1') return;
+      section.classList.toggle('collapsed');
+    });
   });
 }
 
@@ -4970,6 +5121,11 @@ UI.scenarioShapeRow.addEventListener('click', (e) => {
       scenario.content.typographyByShape,
       shape
     );
+    scenario.content.sizeByShape = normalizeStageSizeByShape(
+      scenario.content.sizeByShape,
+      shape,
+      scenario.content
+    );
   });
 });
 
@@ -5018,30 +5174,40 @@ UI.stageRadiusInput.addEventListener('blur', (e) => {
 
 const commitStageSizeOverride = (axis, rawValue) => {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
+  if (!scenario) return;
   const value = String(rawValue || '').trim();
   const key = axis === 'width' ? 'widthOverride' : 'heightOverride';
   if (!value) {
-    commitStageChange(stage.id, (draft) => {
-      draft[key] = null;
+    commitScenarioChange((draftScenario) => {
+      draftScenario.content.sizeByShape = normalizeStageSizeByShape(
+        draftScenario.content.sizeByShape,
+        draftScenario.shape,
+        draftScenario.content
+      );
+      draftScenario.content.sizeByShape[draftScenario.shape][key] = null;
     });
     return;
   }
   const parsed = parseInt(value, 10);
   if (!Number.isFinite(parsed)) return;
   const bounded = clamp(parsed, 40, 1400);
-  commitStageChange(stage.id, (draft) => {
-    draft[key] = bounded;
+  commitScenarioChange((draftScenario) => {
+    draftScenario.content.sizeByShape = normalizeStageSizeByShape(
+      draftScenario.content.sizeByShape,
+      draftScenario.shape,
+      draftScenario.content
+    );
+    draftScenario.content.sizeByShape[draftScenario.shape][key] = bounded;
   });
 };
 
 UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
 UI.stageWidthInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
   const value = String(e.target.value || '').trim();
   if (!value) {
-    e.target.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
+    e.target.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
     return;
   }
   commitStageSizeOverride('width', value);
@@ -5049,10 +5215,11 @@ UI.stageWidthInput.addEventListener('blur', (e) => {
 
 UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
 UI.stageHeightInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
   const value = String(e.target.value || '').trim();
   if (!value) {
-    e.target.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
+    e.target.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
     return;
   }
   commitStageSizeOverride('height', value);
@@ -5085,6 +5252,35 @@ UI.stageGapInput.addEventListener('blur', (e) => {
     return;
   }
   commitStageGapOverride(value);
+});
+
+const commitStageIconPadOverride = (rawValue) => {
+  const scenario = selectedScenario();
+  const stage = stageById(scenario?.shape);
+  if (!stage) return;
+  const value = String(rawValue || '').trim();
+  if (!value) {
+    commitStageChange(stage.id, (draft) => {
+      draft.iconLeftPadding = null;
+    });
+    return;
+  }
+  const parsed = parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return;
+  const bounded = clamp(parsed, 0, 120);
+  commitStageChange(stage.id, (draft) => {
+    draft.iconLeftPadding = bounded;
+  });
+};
+UI.stageIconPadInput.addEventListener('change', (e) => commitStageIconPadOverride(e.target.value));
+UI.stageIconPadInput.addEventListener('blur', (e) => {
+  const stage = stageById(selectedScenario()?.shape);
+  const value = String(e.target.value || '').trim();
+  if (!value) {
+    e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
+    return;
+  }
+  commitStageIconPadOverride(value);
 });
 
 UI.stagePhoneBlurToggle.addEventListener('change', (e) => {
