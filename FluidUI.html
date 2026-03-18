@@ -1163,7 +1163,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
         <div class="icon-upload-row">
           <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
-          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png"/></label>
+          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG/GIF<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
           <button id="scenario-icon-reset" class="sb-mini-btn" type="button">Reset</button>
         </div>
         <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
@@ -2338,7 +2338,7 @@ function renderScenarioMediaEditor(scenario, stage) {
     row.className = 'media-upload-row';
     const inputId = `scenario-media-upload-${index}`;
     row.innerHTML = `
-      <label class="sb-mini-btn upload-btn" for="${inputId}">PNG ${index + 1}<input id="${inputId}" data-media-upload-index="${index}" type="file" accept="image/png"/></label>
+      <label class="sb-mini-btn upload-btn" for="${inputId}">PNG/GIF ${index + 1}<input id="${inputId}" data-media-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>
       <button class="sb-mini-btn" type="button" data-media-reset-index="${index}">Reset</button>
     `;
     UI.scenarioMediaList.appendChild(row);
@@ -4589,7 +4589,7 @@ UI.scenarioIconReset.addEventListener('click', () => {
 UI.scenarioIconUpload.addEventListener('change', async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  if (file.type !== 'image/png') {
+  if (file.type !== 'image/png' && file.type !== 'image/gif') {
     e.target.value = '';
     return;
   }
@@ -4625,7 +4625,7 @@ UI.editorMedia.addEventListener('change', async (e) => {
   if (!Number.isFinite(index) || index < 0) return;
   const file = input.files?.[0];
   if (!file) return;
-  if (file.type !== 'image/png') {
+  if (file.type !== 'image/png' && file.type !== 'image/gif') {
     input.value = '';
     return;
   }
