@@ -3438,7 +3438,7 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   const autoInDelay = fromShape === 'dot' && shape === 'pill'
     ? 180
     : (fromShape === 'idle' && shape === 'dot')
-      ? 200
+      ? 100
     : (fromShape === 'dot' && (shape === 'card' || shape === 'card-s'))
       ? 200
       : (nextArea > prevArea * 1.08 ? 300 : 0);
