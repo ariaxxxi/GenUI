@@ -3163,13 +3163,14 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
 function applyGeometry(shape, resolvedGeo, stageId = null) {
   const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
   const mainRadius = stageId ? stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
-  const useBottomAlign = canvasSettings.bottomAlign && shape !== 'idle';
+  const useBottomAlign = !!canvasSettings.bottomAlign;
   const alignedStageHeight = useBottomAlign
-    ? Math.max(BOTTOM_ALIGN_REF_H, geo.main.h)
+    ? Math.max(BOTTOM_ALIGN_REF_H, geo.main.h, SHAPES.dot.main.h)
     : geo.main.h;
   ['main','left','right'].forEach(k => {
     const el = DROPS[k], s = geo[k];
-    const yOffset = useBottomAlign ? ((alignedStageHeight - s.h) / 2) : 0;
+    const anchorHeight = (shape === 'idle' && k === 'main') ? SHAPES.dot.main.h : s.h;
+    const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
     el.style.width        = s.w + 'px';
     el.style.height       = s.h + 'px';
     el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
