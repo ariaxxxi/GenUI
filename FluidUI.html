@@ -43,13 +43,15 @@ body {
 #ui-frame-bg {
   position: absolute;
   inset: 0;
-  display: none;
+  display: block;
+  opacity: 0;
   pointer-events: none;
   z-index: 0;
   background-size: cover;
   background-position: center;
   filter: none;
   transform: scale(1.04);
+  transition: opacity 260ms ease, filter 260ms ease;
 }
 #ui-frame.glasses {
   width: 420px;
@@ -70,7 +72,7 @@ body {
   box-shadow: 0 20px 120px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 #ui-frame.phone.has-bg #ui-frame-bg {
-  display: block;
+  opacity: 1;
 }
 #ui-frame.phone.stage-blur #ui-frame-bg {
   filter: blur(20px);
@@ -1361,6 +1363,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
           </div>
           <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
         </label>
+        <label class="sb-toggle" for="phone-bg-visible-toggle">
+          <div class="sb-toggle-copy">
+            <strong>Phone BG visible</strong>
+          </div>
+          <input id="phone-bg-visible-toggle" class="sb-toggle-input" type="checkbox" checked/>
+        </label>
       </div>
       <div class="sb-row tight">
         <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
@@ -1749,6 +1757,12 @@ function normalizeStageTextByShape(value = {}, fallbackShape = 'pill', legacy = 
   return output;
 }
 
+function normalizeScenarioCanvas(value = {}, fallback = {}) {
+  const rawMode = String(value?.frameMode || fallback?.frameMode || 'none');
+  const frameMode = ['none', 'glasses', 'phone'].includes(rawMode) ? rawMode : 'none';
+  return { frameMode };
+}
+
 function normalizeStageSizeEntry(value = {}, fallback = {}) {
   const rawWidth = Number(value?.widthOverride ?? fallback?.widthOverride);
   const rawHeight = Number(value?.heightOverride ?? fallback?.heightOverride);
@@ -1877,6 +1891,7 @@ function createScenario({
         widthOverride: content.widthOverride,
         heightOverride: content.heightOverride,
       }),
+      canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
     },
     triggers: normalizeTriggers(triggers),
   };
@@ -2122,6 +2137,7 @@ const UI = {
   phoneBgUpload: document.getElementById('phone-bg-upload'),
   phoneBgReset: document.getElementById('phone-bg-reset'),
   phoneBgState: document.getElementById('phone-bg-state'),
+  phoneBgVisibleToggle: document.getElementById('phone-bg-visible-toggle'),
   aiStageButtons: Array.from(document.querySelectorAll('[data-ai-stage]')),
   scenarioList: document.getElementById('scenario-list'),
   scenarioAdd: document.getElementById('scenario-add'),
@@ -2206,6 +2222,7 @@ function loadCanvasSettings() {
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
+    phoneBgEnabled: stored?.phoneBgEnabled !== false,
     phoneFrameWidth: clamp(parseInt(stored?.phoneFrameWidth, 10) || 390, 240, 600),
     phoneFrameHeight: clamp(parseInt(stored?.phoneFrameHeight, 10) || 838, 420, 1200),
     frameCornerRadius: clamp(parseInt(stored?.frameCornerRadius, 10) || 48, 0, 120),
@@ -2229,6 +2246,10 @@ function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
   const scenarios = Array.isArray(stored) ? stored.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
   scenarios.forEach((scenario) => {
+    scenario.content.canvas = normalizeScenarioCanvas(
+      scenario?.content?.canvas,
+      { frameMode: canvasSettings?.frameMode || 'none' }
+    );
     const shape = scenario?.shape;
     if (!shape) return;
     const stage = stageById(shape);
@@ -2630,11 +2651,21 @@ function scenarioToRenderContent(scenario) {
   };
 }
 
+function currentScenarioFrameMode() {
+  const scenario = selectedScenario();
+  if (!scenario) return canvasSettings.frameMode;
+  return normalizeScenarioCanvas(
+    scenario?.content?.canvas,
+    { frameMode: canvasSettings.frameMode }
+  ).frameMode;
+}
+
 function applyCanvasSettings() {
   const frame = document.getElementById('ui-frame');
   const frameBg = document.getElementById('ui-frame-bg');
-  const isPhone = canvasSettings.frameMode === 'phone';
-  const isGlasses = canvasSettings.frameMode === 'glasses';
+  const frameMode = currentScenarioFrameMode();
+  const isPhone = frameMode === 'phone';
+  const isGlasses = frameMode === 'glasses';
   document.body.classList.toggle('bg-off', !canvasSettings.backgroundEnabled);
   document.body.classList.toggle('float-off', !canvasSettings.floatingEnabled);
   document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
@@ -2645,7 +2676,7 @@ function applyCanvasSettings() {
     frame.style.setProperty('--phone-frame-w', `${canvasSettings.phoneFrameWidth}px`);
     frame.style.setProperty('--phone-frame-h', `${canvasSettings.phoneFrameHeight}px`);
     frame.style.setProperty('--frame-corner-radius', `${canvasSettings.frameCornerRadius}px`);
-    const hasBg = isPhone && !!canvasSettings.phoneFrameBackground?.src;
+    const hasBg = isPhone && !!canvasSettings.phoneBgEnabled && !!canvasSettings.phoneFrameBackground?.src;
     frame.classList.toggle('has-bg', hasBg);
   }
   if (frameBg) {
@@ -2662,13 +2693,17 @@ function applyCanvasSettings() {
   if (UI.phoneFrameHeight) UI.phoneFrameHeight.value = String(canvasSettings.phoneFrameHeight);
   if (UI.frameCornerRadius) UI.frameCornerRadius.value = String(canvasSettings.frameCornerRadius);
   if (UI.phoneBgState) UI.phoneBgState.textContent = canvasSettings.phoneFrameBackground?.src ? 'loaded' : 'empty';
+  if (UI.phoneBgVisibleToggle) {
+    UI.phoneBgVisibleToggle.checked = !!canvasSettings.phoneBgEnabled;
+    UI.phoneBgVisibleToggle.disabled = !isPhone || !canvasSettings.phoneFrameBackground?.src;
+  }
 }
 
 function applyStagePhoneBlur(stageId) {
   const frame = document.getElementById('ui-frame');
   if (!frame) return;
   const stage = stageById(stageId);
-  const shouldBlur = canvasSettings.frameMode === 'phone'
+  const shouldBlur = currentScenarioFrameMode() === 'phone'
     && !!canvasSettings.phoneFrameBackground?.src
     && !!stage?.phoneBgBlur;
   frame.classList.toggle('stage-blur', shouldBlur);
@@ -2859,6 +2894,8 @@ function renderScenarioUi() {
   renderScenarioList();
   renderScenarioEditor();
   renderAiStageOverrideUi();
+  applyCanvasSettings();
+  applyStagePhoneBlur(selectedScenario()?.shape);
 }
 
 function previewScenario(scenario) {
@@ -4965,20 +5002,37 @@ UI.alignBottomToggle.addEventListener('change', () => {
 });
 
 UI.frameGlassesToggle.addEventListener('change', () => {
-  canvasSettings.frameMode = UI.frameGlassesToggle.checked ? 'glasses' : 'none';
-  if (UI.frameGlassesToggle.checked && UI.framePhoneToggle) UI.framePhoneToggle.checked = false;
-  persistCanvasSettings();
+  const nextMode = UI.frameGlassesToggle.checked ? 'glasses' : 'none';
+  if (nextMode === 'glasses' && UI.framePhoneToggle) UI.framePhoneToggle.checked = false;
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  scenario.content.canvas = normalizeScenarioCanvas(
+    scenario.content.canvas,
+    { frameMode: canvasSettings.frameMode }
+  );
+  scenario.content.canvas.frameMode = nextMode;
+  persistScenarios();
+  renderScenarioUi();
   applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
+  applyStagePhoneBlur(scenario.shape);
 });
 
 UI.framePhoneToggle.addEventListener('change', () => {
-  canvasSettings.frameMode = UI.framePhoneToggle.checked ? 'phone' : 'none';
-  if (UI.framePhoneToggle.checked && UI.frameGlassesToggle) UI.frameGlassesToggle.checked = false;
-  if (UI.framePhoneToggle.checked) canvasSettings.floatingEnabled = false;
+  const nextMode = UI.framePhoneToggle.checked ? 'phone' : 'none';
+  if (nextMode === 'phone' && UI.frameGlassesToggle) UI.frameGlassesToggle.checked = false;
+  if (nextMode === 'phone') canvasSettings.floatingEnabled = false;
   persistCanvasSettings();
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  scenario.content.canvas = normalizeScenarioCanvas(
+    scenario.content.canvas,
+    { frameMode: canvasSettings.frameMode }
+  );
+  scenario.content.canvas.frameMode = nextMode;
+  persistScenarios();
+  renderScenarioUi();
   applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
+  applyStagePhoneBlur(scenario.shape);
 });
 
 const commitPhoneFrameSize = (axis, rawValue) => {
@@ -5042,6 +5096,13 @@ UI.phoneBgReset.addEventListener('click', () => {
   applyCanvasSettings();
   applyStagePhoneBlur(selectedScenario()?.shape);
   UI.phoneBgUpload.value = '';
+});
+
+UI.phoneBgVisibleToggle.addEventListener('change', () => {
+  canvasSettings.phoneBgEnabled = UI.phoneBgVisibleToggle.checked;
+  persistCanvasSettings();
+  applyCanvasSettings();
+  applyStagePhoneBlur(selectedScenario()?.shape);
 });
 
 UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
