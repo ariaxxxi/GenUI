@@ -1092,6 +1092,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <span class="sb-chevron">▾</span>
     </button>
     <div class="sb-section-body">
+      <label class="sb-toggle" for="align-bottom-toggle">
+        <div class="sb-toggle-copy">
+          <strong>Bottom align</strong>
+        </div>
+        <input id="align-bottom-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
       <label class="sb-toggle" for="bg-toggle">
         <div class="sb-toggle-copy">
           <strong>Background image</strong>
@@ -1270,6 +1276,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
 const P   = 20;
 const PILL_NO_ICON_P = 32;
 const CARD_P = 24;
+const BOTTOM_ALIGN_REF_H = 580;
 const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
 const CARD_DIVIDER_GAP = 10;
 const CARD_PRIMARY_GAP = 14;
@@ -1767,6 +1774,7 @@ const C = {
 const UI = {
   modeToggle: document.getElementById('mode-toggle'),
   bgToggle: document.getElementById('bg-toggle'),
+  alignBottomToggle: document.getElementById('align-bottom-toggle'),
   aiStageButtons: Array.from(document.querySelectorAll('[data-ai-stage]')),
   scenarioList: document.getElementById('scenario-list'),
   scenarioAdd: document.getElementById('scenario-add'),
@@ -1843,6 +1851,7 @@ function loadCanvasSettings() {
   const stored = readStoredJson(STORAGE_KEYS.settings, null);
   return {
     backgroundEnabled: stored?.backgroundEnabled !== false,
+    bottomAlign: stored?.bottomAlign === true,
   };
 }
 
@@ -2207,7 +2216,9 @@ function scenarioToRenderContent(scenario) {
 
 function applyCanvasSettings() {
   document.body.classList.toggle('bg-off', !canvasSettings.backgroundEnabled);
+  document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
   if (UI.bgToggle) UI.bgToggle.checked = !!canvasSettings.backgroundEnabled;
+  if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
 }
 
 function applyResponseModeUi() {
@@ -3002,17 +3013,21 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
 function applyGeometry(shape, resolvedGeo, stageId = null) {
   const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
   const mainRadius = stageId ? stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
+  const alignedStageHeight = canvasSettings.bottomAlign
+    ? Math.max(BOTTOM_ALIGN_REF_H, geo.main.h)
+    : geo.main.h;
   ['main','left','right'].forEach(k => {
     const el = DROPS[k], s = geo[k];
+    const yOffset = canvasSettings.bottomAlign ? ((alignedStageHeight - s.h) / 2) : 0;
     el.style.width        = s.w + 'px';
     el.style.height       = s.h + 'px';
     el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
-    el.style.transform    = `translate(${s.tx}px,${s.ty}px)`;
+    el.style.transform    = `translate(${s.tx}px,${s.ty + yOffset}px)`;
     el.style.opacity      = s.op;
     el.style.pointerEvents = s.op > 0 ? 'auto' : 'none';
   });
   const stage = document.getElementById('stage');
-  if (stage) stage.style.height = geo.main.h + 'px';
+  if (stage) stage.style.height = alignedStageHeight + 'px';
   lastMainGeo = { ...geo.main };
 }
 
@@ -4452,6 +4467,17 @@ UI.bgToggle.addEventListener('change', () => {
   canvasSettings.backgroundEnabled = UI.bgToggle.checked;
   persistCanvasSettings();
   applyCanvasSettings();
+});
+
+UI.alignBottomToggle.addEventListener('change', () => {
+  canvasSettings.bottomAlign = UI.alignBottomToggle.checked;
+  persistCanvasSettings();
+  applyCanvasSettings();
+  if (responseMode === RESPONSE_MODE.AI) {
+    previewAiStageOverride();
+  } else {
+    previewScenario(selectedScenario());
+  }
 });
 
 UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
