@@ -1116,6 +1116,146 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 }
 body.bg-off .bg-blur-image { opacity: 0; }
 
+/* ── Sidebar tab bar ── */
+.sb-tabs {
+  display: flex;
+  gap: 2px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+.sb-tab {
+  flex: 1;
+  padding: 7px 6px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.38);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.sb-tab:hover { color: rgba(255,255,255,0.65); }
+.sb-tab.active {
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.90);
+}
+.sb-tab-panel { display: flex; flex-direction: column; gap: 14px; }
+.sb-tab-panel-hidden { display: none !important; }
+
+/* ── Scenario name header ── */
+.sb-scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.sb-scenario-name-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px !important;
+  font-weight: 500;
+  color: rgba(255,255,255,0.90);
+}
+
+/* ── Stage timeline ── */
+.stage-timeline {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.stage-timeline::-webkit-scrollbar { display: none; }
+.stage-timeline .shape-chip { white-space: nowrap; flex-shrink: 0; }
+
+/* ── Layer rows (collapsible component rows) ── */
+.layer-row {
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.layer-row.expanded { border-color: rgba(255,255,255,0.20); }
+.layer-row-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  gap: 8px;
+  outline: none;
+}
+.layer-row-header:hover .layer-row-label { color: rgba(255,255,255,0.88); }
+.layer-row-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.46);
+  flex-shrink: 0;
+  width: 62px;
+  text-align: left;
+  transition: color .15s;
+}
+.layer-row-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.layer-preview-val {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: rgba(255,255,255,0.52);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.layer-preview-size {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.26);
+  flex-shrink: 0;
+}
+.layer-preview-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.18);
+  flex-shrink: 0;
+  background: #fff;
+}
+.layer-row-chevron {
+  color: rgba(255,255,255,0.28);
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: transform .18s ease;
+}
+.layer-row.expanded .layer-row-chevron { transform: rotate(0deg); }
+.layer-row:not(.expanded) .layer-row-chevron { transform: rotate(-90deg); }
+.layer-row-body {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.layer-row:not(.expanded) .layer-row-body { display: none; }
+
 </style>
 </head>
 <body class="mode-manual">
@@ -1231,6 +1371,13 @@ body.bg-off .bg-blur-image { opacity: 0; }
       </label>
     </div>
   </div>
+
+  <div class="sb-section mode-toggle-bottom">
+    <label class="sb-toggle" for="mode-toggle">
+      <div class="sb-toggle-copy"><strong>AI mode</strong></div>
+      <input id="mode-toggle" class="sb-toggle-input" type="checkbox"/>
+    </label>
+  </div>
 </div>
 
 <div id="main-col">
@@ -1279,60 +1426,92 @@ body.bg-off .bg-blur-image { opacity: 0; }
 </div>
 
 <div id="sidebar">
-  <div class="sb-section mode-manual-only" data-collapsible="1">
-    <button class="sb-section-toggle" type="button">
-      <div class="sb-heading">Scenario Editor</div>
-      <span class="sb-chevron">▾</span>
-    </button>
-    <div class="sb-section-body">
-      <div class="sb-row tight">
-        <label class="sb-lbl" for="scenario-name">Scenario name</label>
-        <input id="scenario-name" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+
+  <!-- Scenario name — always visible, always editable -->
+  <div class="sb-scenario-header mode-manual-only">
+    <input id="scenario-name" class="sb-input sb-scenario-name-input" type="text" autocomplete="off" spellcheck="false" placeholder="Scenario name"/>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="sb-tabs mode-manual-only" id="sb-tab-bar">
+    <button class="sb-tab active" data-tab="stage" type="button">Stage</button>
+    <button class="sb-tab" data-tab="content" type="button">Content</button>
+    <button class="sb-tab" data-tab="style" type="button">Style</button>
+    <button class="sb-tab" data-tab="config" type="button">Config</button>
+  </div>
+
+  <!-- ── Stage tab ── -->
+  <div class="sb-tab-panel mode-manual-only" data-panel="stage">
+
+    <div class="sb-row tight">
+      <span class="sb-lbl">Stage</span>
+      <div class="stage-timeline" id="scenario-shape-row"></div>
+    </div>
+
+    <div class="sb-btn-row">
+      <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
+      <button id="stage-delete" class="sb-mini-btn" type="button">Delete</button>
+      <button id="stage-reset" class="sb-mini-btn" type="button">Reset</button>
+    </div>
+
+    <div id="stage-config-panel" class="sb-row tight">
+      <label class="sb-lbl" for="stage-name-input">Stage name</label>
+      <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+      <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
+      <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0–120"/>
+      <div class="sb-pair-row">
+        <div class="sb-pair-col">
+          <label class="sb-lbl" for="stage-width-input">Width override</label>
+          <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        </div>
+        <div class="sb-pair-col">
+          <label class="sb-lbl" for="stage-height-input">Height override</label>
+          <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        </div>
       </div>
-      <div class="sb-row tight">
-        <span class="sb-lbl">Stage</span>
-      <div class="shape-chip-row" id="scenario-shape-row">
+      <div class="sb-pair-row">
+        <div class="sb-pair-col">
+          <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
+          <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        </div>
+        <div class="sb-pair-col">
+          <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
+          <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+        </div>
       </div>
-      <div class="sb-btn-row" style="margin-top:8px;">
-        <button id="stage-add" class="sb-mini-btn" type="button">Add Stage</button>
-        <button id="stage-delete" class="sb-mini-btn" type="button">Delete Stage</button>
-        <button id="stage-reset" class="sb-mini-btn" type="button">Reset Stage</button>
+      <div id="stage-components-panel" class="sb-row tight hidden">
+        <span class="sb-lbl">Components</span>
+        <div id="stage-component-controls"></div>
+      </div>
+      <div id="phone-scene-visible-row" class="sb-row tight hidden">
+        <label class="sb-toggle" for="phone-bg-visible-toggle">
+          <div class="sb-toggle-copy"><strong>Phone scene visible</strong></div>
+          <input id="phone-bg-visible-toggle" class="sb-toggle-input" type="checkbox" checked/>
+        </label>
       </div>
     </div>
-      <div id="stage-config-panel" class="sb-row tight">
-        <label class="sb-lbl" for="stage-name-input">Stage name</label>
-        <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-        <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
-        <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0-120"/>
-        <div class="sb-pair-row">
-          <div class="sb-pair-col">
-            <label class="sb-lbl" for="stage-width-input">Container width override</label>
-            <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-          </div>
-          <div class="sb-pair-col">
-            <label class="sb-lbl" for="stage-height-input">Container height override</label>
-            <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-          </div>
-        </div>
-        <div id="stage-components-panel" class="sb-row tight hidden">
-          <span class="sb-lbl">Components</span>
-          <div id="stage-component-controls"></div>
-        </div>
-        <div id="phone-scene-visible-row" class="sb-row tight hidden">
-          <label class="sb-toggle" for="phone-bg-visible-toggle">
-            <div class="sb-toggle-copy">
-              <strong>Phone scene visible</strong>
-            </div>
-            <input id="phone-bg-visible-toggle" class="sb-toggle-input" type="checkbox" checked/>
-          </label>
-        </div>
-      </div>
-      <div class="sb-row tight">
-        <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
+
+  </div>
+
+  <!-- ── Content tab ── -->
+  <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="content">
+
+    <!-- Icon layer row -->
+    <div id="editor-icon-layer" class="layer-row editor-field">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Icon</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-icon-text" class="layer-preview-val"></span>
+          <span id="layer-preview-icon-size" class="layer-preview-size"></span>
+          <span id="layer-preview-icon-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
         <div class="icon-upload-row">
           <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
-          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG/GIF<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
-          <button id="scenario-icon-reset" class="sb-mini-btn" type="button">Reset</button>
+          <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
+          <button id="scenario-icon-reset" class="sb-mini-btn" type="button">×</button>
         </div>
         <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
         <div class="typo-controls">
@@ -1340,122 +1519,152 @@ body.bg-off .bg-blur-image { opacity: 0; }
           <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
         </div>
       </div>
-      <div class="sb-row tight">
-        <div class="sb-pair-row">
-          <div class="sb-pair-col">
-            <label class="sb-lbl" for="stage-icon-pad-input">Icon left padding</label>
-            <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-          </div>
-          <div class="sb-pair-col">
-            <label class="sb-lbl" for="stage-gap-input">Icon right padding</label>
-            <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-          </div>
-        </div>
-      </div>
-      <div id="editor-primary-field" class="sb-row tight editor-field">
-        <label class="sb-lbl" for="scenario-primary">Primary text</label>
+    </div>
+
+    <!-- Primary layer row -->
+    <div id="editor-primary-field" class="layer-row editor-field">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Primary</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-primary-text" class="layer-preview-val"></span>
+          <span id="layer-preview-primary-size" class="layer-preview-size"></span>
+          <span id="layer-preview-primary-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
         <input id="scenario-primary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
         <div class="typo-controls">
-          <input id="scenario-primary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Primary size"/>
+          <input id="scenario-primary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
           <input id="scenario-primary-color" class="typo-color" type="color" value="#ffffff"/>
         </div>
       </div>
-      <div id="editor-secondary-field" class="sb-row tight editor-field">
-        <label class="sb-lbl" for="scenario-secondary">Secondary text</label>
+    </div>
+
+    <!-- Secondary layer row -->
+    <div id="editor-secondary-field" class="layer-row editor-field">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Secondary</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-secondary-text" class="layer-preview-val"></span>
+          <span id="layer-preview-secondary-size" class="layer-preview-size"></span>
+          <span id="layer-preview-secondary-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
         <input id="scenario-secondary" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
         <div class="typo-controls">
-          <input id="scenario-secondary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Secondary size"/>
+          <input id="scenario-secondary-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
           <input id="scenario-secondary-color" class="typo-color" type="color" value="#8a8a8a"/>
         </div>
       </div>
-      <div id="editor-detail-field" class="sb-row tight editor-field">
-        <label class="sb-lbl" for="scenario-detail">Detail text</label>
+    </div>
+
+    <!-- Detail layer row -->
+    <div id="editor-detail-field" class="layer-row editor-field">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Detail</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-detail-text" class="layer-preview-val"></span>
+          <span id="layer-preview-detail-size" class="layer-preview-size"></span>
+          <span id="layer-preview-detail-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
         <input id="scenario-detail" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
         <div class="typo-controls">
-          <input id="scenario-detail-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Detail size"/>
+          <input id="scenario-detail-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
           <input id="scenario-detail-color" class="typo-color" type="color" value="#5a5a5a"/>
         </div>
       </div>
-      <div id="editor-media-field" class="sb-row tight editor-field hidden">
+    </div>
+
+    <!-- Media -->
+    <div id="editor-media-field" class="sb-row tight editor-field hidden">
       <label class="sb-lbl">Card image(s)</label>
-        <div id="scenario-media-list" class="media-list"></div>
-      </div>
-      <div class="sb-row tight">
-        <label class="sb-toggle" for="stage-phone-blur-toggle">
-          <div class="sb-toggle-copy">
-            <strong>Phone BG blur</strong>
+      <div id="scenario-media-list" class="media-list"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Style tab ── -->
+  <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="style">
+
+    <div class="sb-row tight">
+      <label class="sb-toggle" for="stage-phone-blur-toggle">
+        <div class="sb-toggle-copy"><strong>Phone BG blur</strong></div>
+        <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
+    </div>
+
+    <div class="sb-section" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Animation</div>
+        <span class="sb-chevron">▾</span>
+      </button>
+      <div class="sb-section-body">
+        <div class="sb-row">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span class="sb-lbl">Duration</span>
+            <span class="sb-val" id="dur-val">450ms</span>
           </div>
-          <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
-        </label>
-      </div>
-      <div class="sb-row tight">
-        <label class="sb-lbl" for="scenario-triggers">Future AI match phrases</label>
-        <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
-      </div>
-    </div>
-  </div>
-
-  <div class="sb-section mode-manual-only collapsed" data-collapsible="1">
-    <button class="sb-section-toggle" type="button">
-      <div class="sb-heading">Animation</div>
-      <span class="sb-chevron">▾</span>
-    </button>
-    <div class="sb-section-body">
-      <div class="sb-row">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;">
-          <span class="sb-lbl">Duration</span>
-          <span class="sb-val" id="dur-val">450ms</span>
+          <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
         </div>
-        <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
-      </div>
-      <div class="sb-row">
-        <span class="sb-lbl">Easing</span>
-        <select id="ease-select">
-          <option value="custom" selected>Custom bezier</option>
-          <option value="spring">Liquid feeling</option>
-          <option value="ease">Ease</option>
-          <option value="linear">Linear</option>
-        </select>
-      </div>
-      <div class="sb-row" id="bz-group">
-        <span class="sb-lbl">Bezier</span>
-        <div id="bz-row">
-          <input class="bz-inp" id="bz-input" type="text" value="0.35, 0.23, 0.13, 0.98" autocomplete="off" spellcheck="false" placeholder="0.2, 0.2, 0.1, 1"/>
+        <div class="sb-row">
+          <span class="sb-lbl">Easing</span>
+          <select id="ease-select">
+            <option value="custom" selected>Custom bezier</option>
+            <option value="spring">Liquid feeling</option>
+            <option value="ease">Ease</option>
+            <option value="linear">Linear</option>
+          </select>
+        </div>
+        <div class="sb-row" id="bz-group">
+          <span class="sb-lbl">Bezier</span>
+          <div id="bz-row">
+            <input class="bz-inp" id="bz-input" type="text" value="0.35, 0.23, 0.13, 0.98" autocomplete="off" spellcheck="false" placeholder="0.2, 0.2, 0.1, 1"/>
+          </div>
         </div>
       </div>
     </div>
+
   </div>
 
-  <div class="sb-section mode-manual-only collapsed" data-collapsible="1">
-    <button class="sb-section-toggle" type="button">
-      <div class="sb-heading">Legacy / Debug</div>
-      <span class="sb-chevron">▾</span>
-    </button>
-    <div class="sb-section-body">
-      <div class="legacy-grid">
-        <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
-        <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
-        <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
-        <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
-        <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
-      </div>
-      <div id="shape-panel">
-        <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="text" inputmode="numeric" value="280"/></div>
-        <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="text" inputmode="numeric" value="140"/></div>
-        <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="text" inputmode="numeric" value="24"/></div>
-        <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
+  <!-- ── Config tab ── -->
+  <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="config">
+
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="scenario-triggers">AI match phrases</label>
+      <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
+    </div>
+
+    <div class="sb-section collapsed" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Legacy / Debug</div>
+        <span class="sb-chevron">▾</span>
+      </button>
+      <div class="sb-section-body">
+        <div class="legacy-grid">
+          <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
+          <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
+          <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
+          <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
+          <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
+        </div>
+        <div id="shape-panel">
+          <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="text" inputmode="numeric" value="280"/></div>
+          <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="text" inputmode="numeric" value="140"/></div>
+          <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="text" inputmode="numeric" value="24"/></div>
+          <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
+        </div>
       </div>
     </div>
+
   </div>
 
-  <div class="sb-section mode-toggle-bottom">
-    <label class="sb-toggle" for="mode-toggle">
-      <div class="sb-toggle-copy">
-        <strong>AI mode</strong>
-      </div>
-      <input id="mode-toggle" class="sb-toggle-input" type="checkbox"/>
-    </label>
-  </div>
+
 </div>
 
 <script>
@@ -2966,10 +3175,13 @@ function renderScenarioEditor() {
   const stage = stageById(scenario.shape);
   const visibleFields = stageVisibleEditorFields(stage);
   renderScenarioMediaEditor(scenario, stage);
+  const iconLayerRow = document.getElementById('editor-icon-layer');
+  if (iconLayerRow) iconLayerRow.classList.toggle('hidden', !visibleFields.has('primary') && !stageHasComponent(stage, 'icon'));
   UI.editorPrimary.classList.toggle('hidden', !visibleFields.has('primary'));
   UI.editorSecondary.classList.toggle('hidden', !visibleFields.has('secondary'));
   UI.editorDetail.classList.toggle('hidden', !visibleFields.has('detail'));
   UI.editorMedia.classList.toggle('hidden', !stageHasComponent(stage, 'image'));
+  updateLayerPreviews();
 }
 
 function renderScenarioUi() {
@@ -5014,6 +5226,64 @@ function bindTypographyInputs(layer, sizeInput, colorInput) {
   });
 }
 
+// ── Sidebar tab switching ──
+function initSidebarTabs() {
+  const tabBar = document.getElementById('sb-tab-bar');
+  if (!tabBar) return;
+  tabBar.addEventListener('click', (e) => {
+    const tab = e.target.closest('.sb-tab');
+    if (!tab) return;
+    const targetPanel = tab.dataset.tab;
+    // Update tab active state
+    tabBar.querySelectorAll('.sb-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === targetPanel));
+    // Show / hide panels
+    document.querySelectorAll('#sidebar .sb-tab-panel[data-panel]').forEach(panel => {
+      panel.classList.toggle('sb-tab-panel-hidden', panel.dataset.panel !== targetPanel);
+    });
+  });
+}
+
+// ── Layer row collapsible toggle ──
+function initLayerRowToggles() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  sidebar.addEventListener('click', (e) => {
+    const header = e.target.closest('.layer-row-header');
+    if (!header) return;
+    const row = header.closest('.layer-row');
+    if (!row) return;
+    row.classList.toggle('expanded');
+  });
+}
+
+// ── Layer row preview updates ──
+function updateLayerPreviews() {
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  const typography = getScenarioTypography(scenario, scenario.shape);
+  const stageIcon = stageIconForShape(scenario, scenario.shape);
+  const stageText = stageTextForShape(scenario, scenario.shape);
+
+  function setPreview(textId, sizeId, colorId, text, size, color) {
+    const textEl = document.getElementById(textId);
+    const sizeEl = document.getElementById(sizeId);
+    const colorEl = document.getElementById(colorId);
+    if (textEl) textEl.textContent = text || '—';
+    if (sizeEl) sizeEl.textContent = size ? `${size}px` : '';
+    if (colorEl) colorEl.style.background = color || '#fff';
+  }
+
+  const iconText = stageIcon.kind === 'emoji' ? stageIcon.value : (stageIcon.kind === 'image' ? 'PNG' : '—');
+  setPreview('layer-preview-icon-text', 'layer-preview-icon-size', 'layer-preview-icon-color',
+    iconText, typography.icon.size, typography.icon.color);
+  setPreview('layer-preview-primary-text', 'layer-preview-primary-size', 'layer-preview-primary-color',
+    stageText.primary, typography.primary.size, typography.primary.color);
+  setPreview('layer-preview-secondary-text', 'layer-preview-secondary-size', 'layer-preview-secondary-color',
+    stageText.secondary, typography.secondary.size, typography.secondary.color);
+  setPreview('layer-preview-detail-text', 'layer-preview-detail-size', 'layer-preview-detail-color',
+    stageText.detail, typography.detail.size, typography.detail.color);
+}
+
 function initSidebarCollapsibleSections() {
   const sidebars = [document.getElementById('left-sidebar'), document.getElementById('sidebar')].filter(Boolean);
   if (!sidebars.length) return;
@@ -5582,6 +5852,12 @@ bindTypographyInputs('primary', UI.scenarioPrimarySize, UI.scenarioPrimaryColor)
 bindTypographyInputs('secondary', UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
 bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
 
+// Keep layer row previews in sync with live input
+[UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
+ UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor,
+ UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,
+].forEach(el => { if (el) el.addEventListener('input', updateLayerPreviews); });
+
 let animDur = 450;
 const SPRING_WITH_ANTICIPATION = `linear(
   0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
@@ -5681,6 +5957,8 @@ document.getElementById('bz-input').addEventListener('blur', function() {
   document.getElementById('bz-input').value = formatBezierValues(getCustomBezierValues());
 }
 
+initSidebarTabs();
+initLayerRowToggles();
 initSidebarCollapsibleSections();
 applyCanvasSettings();
 applyResponseModeUi();
