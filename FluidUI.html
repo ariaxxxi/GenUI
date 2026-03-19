@@ -1168,12 +1168,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
 /* ── Stage timeline ── */
 .stage-timeline {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+  overflow: visible;
+  padding-bottom: 0;
+  scrollbar-width: auto;
 }
-.stage-timeline::-webkit-scrollbar { display: none; }
 .stage-timeline .shape-chip { white-space: nowrap; flex-shrink: 0; }
 
 /* ── Layer rows (collapsible component rows) ── */
@@ -1269,11 +1269,11 @@ body.bg-off .bg-blur-image { opacity: 0; }
       1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
       1.004 92%, 1.001 97%, 1
     );
-    --anim-w:  450ms var(--spring);
-    --anim-h:  450ms var(--spring);
-    --anim-br: 450ms var(--spring);
-    --anim-tx: 450ms var(--spring);
-    --anim-t:  450ms var(--spring);
+    --anim-w:  600ms var(--spring);
+    --anim-h:  600ms var(--spring);
+    --anim-br: 600ms var(--spring);
+    --anim-tx: 600ms var(--spring);
+    --anim-t:  600ms var(--spring);
   }
 </style>
 
@@ -1459,6 +1459,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
       <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
       <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0–120"/>
+      <div id="stage-card-style-row" class="sb-row tight hidden">
+        <label class="sb-toggle" for="stage-card-s-toggle">
+          <div class="sb-toggle-copy"><strong>Card-S style</strong></div>
+          <input id="stage-card-s-toggle" class="sb-toggle-input" type="checkbox"/>
+        </label>
+      </div>
       <div class="sb-pair-row">
         <div class="sb-pair-col">
           <label class="sb-lbl" for="stage-width-input">Width override</label>
@@ -1608,9 +1614,9 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <div class="sb-row">
           <div style="display:flex;justify-content:space-between;align-items:baseline;">
             <span class="sb-lbl">Duration</span>
-            <span class="sb-val" id="dur-val">450ms</span>
+            <span class="sb-val" id="dur-val">600ms</span>
           </div>
-          <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
+          <input type="range" id="dur-sl" min="100" max="1400" step="50" value="600"/>
         </div>
         <div class="sb-row">
           <span class="sb-lbl">Easing</span>
@@ -1860,11 +1866,7 @@ function loadStageLibrary() {
   if (!Array.isArray(stored)) return defaultStageLibrary();
   const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
   const normalized = stored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
-  const ids = new Set(normalized.map((stage) => stage.id));
-  BUILTIN_STAGE_DEFS.forEach((builtin) => {
-    if (!ids.has(builtin.id)) normalized.unshift(normalizeStage(builtin, builtin));
-  });
-  return normalized;
+  return normalized.length ? normalized : defaultStageLibrary();
 }
 
 function persistStageLibrary() {
@@ -1873,6 +1875,19 @@ function persistStageLibrary() {
   } catch (err) {
     console.warn('Unable to persist stage library', err);
   }
+}
+
+function ensureBuiltinStagesPresent() {
+  const ids = new Set(stageLibrary.map((stage) => stage.id));
+  let changed = false;
+  BUILTIN_STAGE_DEFS.forEach((builtin) => {
+    if (ids.has(builtin.id)) return;
+    stageLibrary.push(normalizeStage(builtin, builtin));
+    ids.add(builtin.id);
+    changed = true;
+  });
+  if (changed) persistStageLibrary();
+  return changed;
 }
 
 function stageById(id) {
@@ -1890,6 +1905,24 @@ function renderShapeForStageId(id) {
 
 function availableScenarioShapes() {
   return stageLibrary.map((stage) => stage.id);
+}
+
+function normalizeDisabledStageIds(value = []) {
+  if (!Array.isArray(value)) return [];
+  const valid = new Set(availableScenarioShapes());
+  const out = [];
+  value.forEach((item) => {
+    const id = String(item || '');
+    if (!id || !valid.has(id) || out.includes(id)) return;
+    out.push(id);
+  });
+  return out;
+}
+
+function availableScenarioShapesFor(scenario = selectedScenario()) {
+  const hidden = new Set(normalizeDisabledStageIds(scenario?.disabledStageIds || []));
+  const visible = availableScenarioShapes().filter((id) => !hidden.has(id));
+  return visible.length ? visible : availableScenarioShapes();
 }
 
 function stageComponentCounts(stage) {
@@ -2087,7 +2120,7 @@ function stageDefaultMainSize(stageId) {
 
 function stageMainSize(stage, scenario = selectedScenario()) {
   const defaults = stageDefaultMainSize(stage?.id);
-  const sizeOverride = scenarioStageSizeOverride(scenario, stage?.id);
+  const sizeOverride = normalizeStageSizeEntry(stage || {});
   const renderShape = stage?.renderShape || renderShapeForStageId(stage?.id);
   const frameMode = normalizeScenarioCanvas(
     scenario?.content?.canvas,
@@ -2155,18 +2188,26 @@ function createScenario({
   shape = 'pill',
   content = {},
   triggers = [],
+  disabledStageIds = [],
 } = {}) {
+  const stageIds = availableScenarioShapes();
+  const normalizedHidden = normalizeDisabledStageIds(disabledStageIds);
+  const hiddenSet = new Set(normalizedHidden);
+  const visibleStageIds = stageIds.filter((id) => !hiddenSet.has(id));
+  const fallbackShape = visibleStageIds[0] || stageIds[0] || 'pill';
+  const safeShape = (stageIds.includes(shape) && !hiddenSet.has(shape)) ? shape : fallbackShape;
   return {
     id,
     name,
-    shape: availableScenarioShapes().includes(shape) ? shape : 'pill',
+    shape: safeShape,
+    disabledStageIds: normalizedHidden,
     content: {
       icon: normalizeIcon(content.icon),
-      iconByShape: normalizeIconByShape(content.iconByShape, shape, content.icon),
+      iconByShape: normalizeIconByShape(content.iconByShape, safeShape, content.icon),
       primary: String(content.primary || ''),
       secondary: String(content.secondary || ''),
       detail: String(content.detail || ''),
-      textByShape: normalizeStageTextByShape(content.textByShape, shape, {
+      textByShape: normalizeStageTextByShape(content.textByShape, safeShape, {
         primary: String(content.primary || ''),
         secondary: String(content.secondary || ''),
         detail: String(content.detail || ''),
@@ -2174,11 +2215,11 @@ function createScenario({
       images: normalizeStageImages(content.images || (content.image ? [content.image] : [])),
       imagesByShape: normalizeImagesByShape(
         content.imagesByShape,
-        shape,
+        safeShape,
         normalizeStageImages(content.images || (content.image ? [content.image] : []))
       ),
-      typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
-      sizeByShape: normalizeStageSizeByShape(content.sizeByShape, shape, {
+      typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, safeShape),
+      sizeByShape: normalizeStageSizeByShape(content.sizeByShape, safeShape, {
         widthOverride: content.widthOverride,
         heightOverride: content.heightOverride,
       }),
@@ -2213,6 +2254,7 @@ function normalizeScenario(raw, index = 0) {
     shape: raw?.shape || 'pill',
     content: raw?.content || {},
     triggers: raw?.triggers || [],
+    disabledStageIds: raw?.disabledStageIds || [],
   });
 }
 
@@ -2453,6 +2495,8 @@ const UI = {
   stageReset: document.getElementById('stage-reset'),
   stageNameInput: document.getElementById('stage-name-input'),
   stageRadiusInput: document.getElementById('stage-radius-input'),
+  stageCardStyleRow: document.getElementById('stage-card-style-row'),
+  stageCardStyleToggle: document.getElementById('stage-card-s-toggle'),
   stageWidthInput: document.getElementById('stage-width-input'),
   stageHeightInput: document.getElementById('stage-height-input'),
   stageGapInput: document.getElementById('stage-gap-input'),
@@ -2826,12 +2870,12 @@ function withStageSizeOverride(geo, stageId, scenario = selectedScenario(), size
 
 function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
   const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
-  const scenario = selectedScenario();
+  const stage = stageId ? stageById(stageId) : null;
   const stageSizeOverride = normalizeStageSizeEntry(
     contentData?.sizeOverride,
-    scenarioStageSizeOverride(scenario, stageId)
+    stage
   );
-  const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
+  const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, selectedScenario(), stageSizeOverride);
   const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
   const withStageRadius = (geo) => {
     if (!stageId) return geo;
@@ -2934,7 +2978,7 @@ function scenarioToRenderContent(scenario) {
     image: images[0] || null,
     images,
     typography: getScenarioTypography(scenario, shape),
-    sizeOverride: scenarioStageSizeOverride(scenario, shape),
+    sizeOverride: normalizeStageSizeEntry(stage || {}),
   };
 }
 
@@ -3054,7 +3098,9 @@ function renderScenarioStageChips() {
   if (!UI.scenarioShapeRow) return;
   const scenario = selectedScenario();
   UI.scenarioShapeRow.innerHTML = '';
-  stageLibrary.forEach((stage) => {
+  availableScenarioShapesFor(scenario).forEach((stageId) => {
+    const stage = stageById(stageId);
+    if (!stage) return;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'shape-chip' + (scenario?.shape === stage.id ? ' active' : '');
@@ -3100,16 +3146,22 @@ function renderStageConfigPanel() {
   const scenario = selectedScenario();
   const stage = stageById(scenario?.shape);
   const builtin = builtinStageById(stage?.id);
-  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
   if (UI.stageNameInput) UI.stageNameInput.value = stage?.name || '';
   if (UI.stageRadiusInput) UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
-  if (UI.stageWidthInput) UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
-  if (UI.stageHeightInput) UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
+  if (UI.stageCardStyleRow) {
+    const canToggleCardStyle = stage?.renderShape === 'card' || stage?.renderShape === 'card-s';
+    UI.stageCardStyleRow.classList.toggle('hidden', !canToggleCardStyle);
+  }
+  if (UI.stageCardStyleToggle) UI.stageCardStyleToggle.checked = stage?.renderShape === 'card-s';
+  if (UI.stageWidthInput) UI.stageWidthInput.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
+  if (UI.stageHeightInput) UI.stageHeightInput.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
   if (UI.stageGapInput) UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
   if (UI.stageIconPadInput) UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
   if (UI.stagePhoneBlurToggle) UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
   if (UI.stageComponentsPanel) UI.stageComponentsPanel.classList.remove('hidden');
-  if (UI.stageDelete) UI.stageDelete.disabled = !stage || !!stage.preset;
+  if (UI.stageDelete) {
+    UI.stageDelete.disabled = !stage || availableScenarioShapesFor(scenario).length <= 1;
+  }
   if (UI.stageReset) UI.stageReset.disabled = !stage || !builtin;
   renderStageComponentControls(stage);
 }
@@ -3293,6 +3345,7 @@ function commitStageChange(stageId, mutator) {
 
 function addStage() {
   const scenario = selectedScenario();
+  if (!scenario) return;
   const baseStage = stageById(scenario?.shape || 'card');
   const stage = normalizeStage({
     id: stageId(),
@@ -3308,43 +3361,47 @@ function addStage() {
   }, baseStage);
   stageLibrary.push(stage);
   persistStageLibrary();
-  commitScenarioChange((active) => {
-    active.shape = stage.id;
-    active.content.typographyByShape = normalizeTypographyByShape(
-      active.content.typographyByShape,
-      stage.id
-    );
-    active.content.sizeByShape = normalizeStageSizeByShape(
-      active.content.sizeByShape,
-      stage.id,
-      active.content
-    );
+  scenarioLibrary = scenarioLibrary.map((item) => {
+    const hidden = new Set(normalizeDisabledStageIds(item.disabledStageIds || []));
+    if (item.id === scenario.id) {
+      hidden.delete(stage.id);
+      return createScenario({
+        ...item,
+        shape: stage.id,
+        disabledStageIds: Array.from(hidden),
+        content: {
+          ...item.content,
+          typographyByShape: normalizeTypographyByShape(item.content?.typographyByShape, stage.id),
+        },
+      });
+    }
+    hidden.add(stage.id);
+    return createScenario({
+      ...item,
+      disabledStageIds: Array.from(hidden),
+      content: item.content,
+    });
   });
+  persistScenarios();
+  renderScenarioUi();
+  previewScenario(selectedScenario());
 }
 
 function deleteCurrentStage() {
   const scenario = selectedScenario();
   const stage = stageById(scenario?.shape);
-  if (!stage || stage.preset) return;
-  const fallbackId = stageById('pill')?.id || stageLibrary.find((item) => item.id !== stage.id)?.id;
-  if (!fallbackId) return;
-  stageLibrary = stageLibrary.filter((item) => item.id !== stage.id);
-  scenarioLibrary = scenarioLibrary.map((item) => {
-    if (item.shape !== stage.id) return item;
-    return createScenario({
-      ...item,
-      shape: fallbackId,
-      content: item.content,
-      triggers: item.triggers,
-    });
+  if (!stage) return;
+  const visibleStages = availableScenarioShapesFor(scenario);
+  if (visibleStages.length <= 1) return;
+  commitScenarioChange((draft) => {
+    const hidden = new Set(normalizeDisabledStageIds(draft.disabledStageIds || []));
+    hidden.add(stage.id);
+    draft.disabledStageIds = Array.from(hidden);
+    if (draft.shape === stage.id) {
+      const fallback = availableScenarioShapes().find((id) => !hidden.has(id));
+      if (fallback) draft.shape = fallback;
+    }
   });
-  if (scenario?.shape === stage.id) {
-    selectedScenarioId = scenario.id;
-  }
-  persistStageLibrary();
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(selectedScenario());
 }
 
 function resetCurrentStageToDefault() {
@@ -3364,11 +3421,13 @@ function resetCurrentStageToDefault() {
 }
 
 function addScenario(shape = 'pill') {
+  ensureBuiltinStagesPresent();
+  const nextShape = availableScenarioShapes().includes(shape) ? shape : (stageById('pill')?.id || stageLibrary[0]?.id || 'pill');
   const scenario = createScenario({
-    name: shape === 'card' ? 'New Card' : (shape === 'dot' ? 'New Dot' : 'New Scenario'),
-    shape,
+    name: nextShape === 'card' ? 'New Card' : (nextShape === 'dot' ? 'New Dot' : 'New Scenario'),
+    shape: nextShape,
     content: {
-      icon: createIcon('emoji', shape === 'dot' ? '•' : '◉'),
+      icon: createIcon('emoji', nextShape === 'dot' ? '•' : '◉'),
       primary: '',
       secondary: '',
       detail: '',
@@ -3387,6 +3446,7 @@ function duplicateScenario() {
   const copy = createScenario({
     name: `${scenario.name} Copy`,
     shape: scenario.shape,
+    disabledStageIds: [...(scenario.disabledStageIds || [])],
     content: typeof structuredClone === 'function'
       ? structuredClone(scenario.content)
       : JSON.parse(JSON.stringify(scenario.content)),
@@ -5522,7 +5582,7 @@ UI.scenarioShapeRow.addEventListener('click', (e) => {
   const button = e.target.closest('[data-scenario-shape]');
   if (!button) return;
   const shape = String(button.dataset.scenarioShape || '');
-  if (!availableScenarioShapes().includes(shape)) return;
+  if (!availableScenarioShapesFor(selectedScenario()).includes(shape)) return;
   commitScenarioChange((scenario) => {
     scenario.shape = shape;
     scenario.content.textByShape = normalizeStageTextByShape(
@@ -5533,11 +5593,6 @@ UI.scenarioShapeRow.addEventListener('click', (e) => {
     scenario.content.typographyByShape = normalizeTypographyByShape(
       scenario.content.typographyByShape,
       shape
-    );
-    scenario.content.sizeByShape = normalizeStageSizeByShape(
-      scenario.content.sizeByShape,
-      shape,
-      scenario.content
     );
   });
 });
@@ -5561,6 +5616,18 @@ UI.stageNameInput.addEventListener('input', (e) => {
     draft.name = nextName || 'Untitled Stage';
   });
 });
+
+if (UI.stageCardStyleToggle) {
+  UI.stageCardStyleToggle.addEventListener('change', (e) => {
+    const scenario = selectedScenario();
+    const stage = stageById(scenario?.shape);
+    if (!stage) return;
+    if (stage.renderShape !== 'card' && stage.renderShape !== 'card-s') return;
+    commitStageChange(stage.id, (draft) => {
+      draft.renderShape = e.target.checked ? 'card-s' : 'card';
+    });
+  });
+}
 
 const commitStageRadius = (rawValue) => {
   const scenario = selectedScenario();
@@ -5586,41 +5653,30 @@ UI.stageRadiusInput.addEventListener('blur', (e) => {
 });
 
 const commitStageSizeOverride = (axis, rawValue) => {
-  const scenario = selectedScenario();
-  if (!scenario) return;
+  const stage = stageById(selectedScenario()?.shape);
+  if (!stage) return;
   const value = String(rawValue || '').trim();
   const key = axis === 'width' ? 'widthOverride' : 'heightOverride';
   if (!value) {
-    commitScenarioChange((draftScenario) => {
-      draftScenario.content.sizeByShape = normalizeStageSizeByShape(
-        draftScenario.content.sizeByShape,
-        draftScenario.shape,
-        draftScenario.content
-      );
-      draftScenario.content.sizeByShape[draftScenario.shape][key] = null;
+    commitStageChange(stage.id, (draft) => {
+      draft[key] = null;
     });
     return;
   }
   const parsed = parseInt(value, 10);
   if (!Number.isFinite(parsed)) return;
   const bounded = clamp(parsed, 40, 1400);
-  commitScenarioChange((draftScenario) => {
-    draftScenario.content.sizeByShape = normalizeStageSizeByShape(
-      draftScenario.content.sizeByShape,
-      draftScenario.shape,
-      draftScenario.content
-    );
-    draftScenario.content.sizeByShape[draftScenario.shape][key] = bounded;
+  commitStageChange(stage.id, (draft) => {
+    draft[key] = bounded;
   });
 };
 
 UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
 UI.stageWidthInput.addEventListener('blur', (e) => {
-  const scenario = selectedScenario();
-  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
+  const stage = stageById(selectedScenario()?.shape);
   const value = String(e.target.value || '').trim();
   if (!value) {
-    e.target.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
+    e.target.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
     return;
   }
   commitStageSizeOverride('width', value);
@@ -5628,11 +5684,10 @@ UI.stageWidthInput.addEventListener('blur', (e) => {
 
 UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
 UI.stageHeightInput.addEventListener('blur', (e) => {
-  const scenario = selectedScenario();
-  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
+  const stage = stageById(selectedScenario()?.shape);
   const value = String(e.target.value || '').trim();
   if (!value) {
-    e.target.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
+    e.target.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
     return;
   }
   commitStageSizeOverride('height', value);
@@ -5858,7 +5913,7 @@ bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
  UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,
 ].forEach(el => { if (el) el.addEventListener('input', updateLayerPreviews); });
 
-let animDur = 450;
+let animDur = 600;
 const SPRING_WITH_ANTICIPATION = `linear(
   0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
   0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
@@ -5910,7 +5965,7 @@ function setAnimDuration(nextDuration) {
 
 function applyEasingPresetDefaults(preset) {
   if (preset === 'custom') {
-    setAnimDuration(450);
+    setAnimDuration(600);
     return;
   }
   if (preset === 'spring') {
