@@ -77,12 +77,20 @@ body {
 #ui-frame.phone.stage-blur #ui-frame-bg {
   filter: blur(20px);
 }
+#ui-frame.phone.phone-scene-off #ui-frame-bg {
+  opacity: 0 !important;
+}
+#ui-frame.phone.phone-scene-off #stage-wrap {
+  opacity: 0;
+}
 
 #stage-wrap {
   display: flex; flex-direction: column;
   align-items: center; flex-shrink: 0;
   position: relative;
   z-index: 1;
+  opacity: 1;
+  transition: opacity 220ms ease;
 }
 
 #intent-header {
@@ -1310,6 +1318,14 @@ body.bg-off .bg-blur-image { opacity: 0; }
           <span class="sb-lbl">Components</span>
           <div id="stage-component-controls"></div>
         </div>
+        <div id="phone-scene-visible-row" class="sb-row tight hidden">
+          <label class="sb-toggle" for="phone-bg-visible-toggle">
+            <div class="sb-toggle-copy">
+              <strong>Phone scene visible</strong>
+            </div>
+            <input id="phone-bg-visible-toggle" class="sb-toggle-input" type="checkbox" checked/>
+          </label>
+        </div>
       </div>
       <div class="sb-row tight">
         <label class="sb-lbl" for="scenario-icon-input">Icon text</label>
@@ -1322,6 +1338,18 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <div class="typo-controls">
           <input id="scenario-icon-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Icon size"/>
           <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
+        </div>
+      </div>
+      <div class="sb-row tight">
+        <div class="sb-pair-row">
+          <div class="sb-pair-col">
+            <label class="sb-lbl" for="stage-icon-pad-input">Icon left padding</label>
+            <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
+          <div class="sb-pair-col">
+            <label class="sb-lbl" for="stage-gap-input">Icon right padding</label>
+            <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
         </div>
       </div>
       <div id="editor-primary-field" class="sb-row tight editor-field">
@@ -1353,21 +1381,11 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <div id="scenario-media-list" class="media-list"></div>
       </div>
       <div class="sb-row tight">
-        <label class="sb-lbl" for="stage-gap-input">Icon ↔ text gap</label>
-        <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        <label class="sb-lbl" for="stage-icon-pad-input">Icon left padding</label>
-        <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
         <label class="sb-toggle" for="stage-phone-blur-toggle">
           <div class="sb-toggle-copy">
             <strong>Phone BG blur</strong>
           </div>
           <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
-        </label>
-        <label class="sb-toggle" for="phone-bg-visible-toggle">
-          <div class="sb-toggle-copy">
-            <strong>Phone BG visible</strong>
-          </div>
-          <input id="phone-bg-visible-toggle" class="sb-toggle-input" type="checkbox" checked/>
         </label>
       </div>
       <div class="sb-row tight">
@@ -1443,7 +1461,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
 <script>
 const P   = 20;
 const PILL_NO_ICON_P = 32;
-const PILL_ICON_P = 32;
+const PILL_ICON_P = 16;
 const CARD_P = 24;
 const BOTTOM_ALIGN_REF_H = 580;
 const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
@@ -1455,7 +1473,7 @@ const CARD_DETAIL_TO_MEDIA_GAP = 24;
 const CARD_MEDIA_STACK_GAP = 8;
 const TS  = 60;
 const TBR = '30px';
-const GAP = 4;
+const GAP = 8;
 
 const SHAPES = {
   idle: {
@@ -1474,7 +1492,7 @@ const SHAPES = {
     right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
   },
   pill: {
-    main:  { w:420, h:120, br:'60px', tx:-210, ty:-60,  op:1 },
+    main:  { w:420, h:100, br:'60px', tx:-210, ty:-50,  op:1 },
     left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
     right: { w:100, h:100, br:'50px', tx:60,   ty:-50,  op:0 },
   },
@@ -1535,9 +1553,9 @@ const AI_STAGE_OVERRIDE = Object.freeze({
 const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: [] },
   { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary'] },
+  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, components: ['icon', 'primary', 'secondary'] },
   { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
   { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['image'] },
 ]);
 const SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
@@ -1547,9 +1565,9 @@ const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 function defaultTypographyForShape(shape = 'pill') {
   return {
     icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: (shape === 'card' || shape === 'card-s') ? 40 : 28, color: '#ffffff' },
-    secondary: { size: 24, color: '#7a7a7a' },
-    detail: { size: 24, color: '#4a4a4a' },
+    primary: { size: shape === 'card' ? 40 : 28, color: '#ffffff' },
+    secondary: { size: 24, color: '#d4d4d4' },
+    detail: { size: 24, color: '#a3a3a3' },
   };
 }
 
@@ -1613,9 +1631,11 @@ function normalizeStage(raw, fallback) {
   const rawHeight = Number(raw?.heightOverride);
   const widthOverride = Number.isFinite(rawWidth) && rawWidth > 0 ? clamp(Math.round(rawWidth), 40, 1400) : null;
   const heightOverride = Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null;
-  const rawGap = Number(raw?.iconTextGap);
+  const fallbackGap = Number(fallbackStage?.iconTextGap);
+  const rawGap = Number(raw?.iconTextGap ?? fallbackGap);
   const iconTextGap = Number.isFinite(rawGap) && rawGap >= 0 ? clamp(Math.round(rawGap), 0, 80) : null;
-  const rawIconPad = Number(raw?.iconLeftPadding);
+  const fallbackIconPad = Number(fallbackStage?.iconLeftPadding);
+  const rawIconPad = Number(raw?.iconLeftPadding ?? fallbackIconPad);
   const iconLeftPadding = Number.isFinite(rawIconPad) && rawIconPad >= 0 ? clamp(Math.round(rawIconPad), 0, 120) : null;
   const phoneBgBlur = raw?.phoneBgBlur === undefined
     ? !!fallbackStage.phoneBgBlur
@@ -1743,6 +1763,45 @@ function normalizeStageTextEntry(value = {}, fallback = {}) {
   };
 }
 
+function hasMeaningfulStageText(value = {}) {
+  const entry = normalizeStageTextEntry(value);
+  return !!(entry.primary.trim() || entry.secondary.trim() || entry.detail.trim());
+}
+
+function defaultStageTextFallback(shape) {
+  const renderShape = renderShapeForStageId(shape) || shape;
+  if (renderShape === 'pill') {
+    return {
+      primary: 'Primary text',
+      secondary: 'Secondary text',
+      detail: '',
+    };
+  }
+  if (renderShape === 'card') {
+    return {
+      primary: 'Primary text',
+      secondary: 'Secondary text',
+      detail: 'Detail text example',
+    };
+  }
+  if (renderShape === 'card-s') {
+    return {
+      primary: 'Primary text',
+      secondary: 'Secondary text',
+      detail: 'Detail text example',
+    };
+  }
+  return { primary: '', secondary: '', detail: '' };
+}
+
+function isPlaceholderStageText(entry, shape) {
+  const normalized = normalizeStageTextEntry(entry);
+  const placeholder = normalizeStageTextEntry(defaultStageTextFallback(shape));
+  return normalized.primary === placeholder.primary
+    && normalized.secondary === placeholder.secondary
+    && normalized.detail === placeholder.detail;
+}
+
 function normalizeStageTextByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
   const stageIds = Array.from(new Set([
     ...SCENARIO_SHAPES,
@@ -1751,8 +1810,21 @@ function normalizeStageTextByShape(value = {}, fallbackShape = 'pill', legacy = 
     fallbackShape,
   ].filter(Boolean)));
   const output = {};
+  const legacyEntry = normalizeStageTextEntry(legacy);
+  const useLegacyByDefault = hasMeaningfulStageText(legacyEntry);
   stageIds.forEach((shape) => {
-    output[shape] = normalizeStageTextEntry(value?.[shape], shape === fallbackShape ? legacy : {});
+    const rawEntry = value?.[shape];
+    if (rawEntry !== undefined) {
+      const normalized = normalizeStageTextEntry(rawEntry);
+      if (useLegacyByDefault && isPlaceholderStageText(normalized, shape)) {
+        output[shape] = normalizeStageTextEntry(undefined, legacyEntry);
+      } else {
+        output[shape] = normalized;
+      }
+      return;
+    }
+    const fallback = useLegacyByDefault ? legacyEntry : defaultStageTextFallback(shape);
+    output[shape] = normalizeStageTextEntry(undefined, fallback);
   });
   return output;
 }
@@ -1796,19 +1868,29 @@ function scenarioStageSizeOverride(scenario, shape) {
 function stageDefaultMainSize(stageId) {
   const renderShape = renderShapeForStageId(stageId);
   const base = SHAPES[renderShape] || SHAPES.pill;
+  const width = Number(base?.main?.w);
+  const height = Number(base?.main?.h);
   return {
-    width: Number(base?.main?.w) || 420,
-    height: Number(base?.main?.h) || 120,
+    width: Number.isFinite(width) ? width : 420,
+    height: Number.isFinite(height) ? height : 120,
   };
 }
 
 function stageMainSize(stage, scenario = selectedScenario()) {
   const defaults = stageDefaultMainSize(stage?.id);
   const sizeOverride = scenarioStageSizeOverride(scenario, stage?.id);
+  const renderShape = stage?.renderShape || renderShapeForStageId(stage?.id);
+  const frameMode = normalizeScenarioCanvas(
+    scenario?.content?.canvas,
+    { frameMode: canvasSettings?.frameMode || 'none' }
+  ).frameMode;
+  const phoneDefaultWidth = clamp((Number(canvasSettings?.phoneFrameWidth) || 390) - 20, 40, 1400);
+  const usePhoneDefaultWidth = frameMode === 'phone' && ['pill', 'card', 'card-s', 'image'].includes(renderShape);
+  const defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
   return {
     width: Number.isFinite(sizeOverride.widthOverride)
       ? sizeOverride.widthOverride
-      : defaults.width,
+      : defaultWidth,
     height: Number.isFinite(sizeOverride.heightOverride)
       ? sizeOverride.heightOverride
       : defaults.height,
@@ -1826,7 +1908,7 @@ function stageIconLeftPadding(stageId, renderShape) {
   if (renderShape !== 'pill' && renderShape !== 'card-s') return renderShape === 'pill' ? PILL_ICON_P : CARD_P;
   const stage = stageId ? stageById(stageId) : null;
   const value = Number(stage?.iconLeftPadding);
-  const fallback = renderShape === 'pill' ? PILL_ICON_P : CARD_P;
+  const fallback = (renderShape === 'pill' || renderShape === 'card-s') ? PILL_ICON_P : CARD_P;
   return Number.isFinite(value) ? clamp(Math.round(value), 0, 120) : fallback;
 }
 
@@ -1934,6 +2016,18 @@ function defaultScenarioLibrary() {
         icon: createIcon('emoji', '🌤'),
         primary: '21° Sunny',
         secondary: 'San Francisco',
+        textByShape: {
+          card: {
+            primary: '21° Sunny',
+            secondary: 'San Francisco',
+            detail: 'H:24°  L:16° · Humidity 68%',
+          },
+          'card-s': {
+            primary: '21° Sunny',
+            secondary: 'San Francisco',
+            detail: 'H:24°  L:16° · Humidity 68%',
+          },
+        },
       },
       triggers: ['weather', 'temperature', 'forecast'],
     }),
@@ -2138,6 +2232,7 @@ const UI = {
   phoneBgReset: document.getElementById('phone-bg-reset'),
   phoneBgState: document.getElementById('phone-bg-state'),
   phoneBgVisibleToggle: document.getElementById('phone-bg-visible-toggle'),
+  phoneSceneVisibleRow: document.getElementById('phone-scene-visible-row'),
   aiStageButtons: Array.from(document.querySelectorAll('[data-ai-stage]')),
   scenarioList: document.getElementById('scenario-list'),
   scenarioAdd: document.getElementById('scenario-add'),
@@ -2250,23 +2345,6 @@ function loadScenarioLibrary() {
       scenario?.content?.canvas,
       { frameMode: canvasSettings?.frameMode || 'none' }
     );
-    const shape = scenario?.shape;
-    if (!shape) return;
-    const stage = stageById(shape);
-    const legacyWidth = Number(stage?.widthOverride);
-    const legacyHeight = Number(stage?.heightOverride);
-    scenario.content.sizeByShape = normalizeStageSizeByShape(
-      scenario.content.sizeByShape,
-      shape,
-      scenario.content
-    );
-    const current = scenario.content.sizeByShape[shape];
-    if (!Number.isFinite(current?.widthOverride) && Number.isFinite(legacyWidth)) {
-      scenario.content.sizeByShape[shape].widthOverride = clamp(Math.round(legacyWidth), 40, 1400);
-    }
-    if (!Number.isFinite(current?.heightOverride) && Number.isFinite(legacyHeight)) {
-      scenario.content.sizeByShape[shape].heightOverride = clamp(Math.round(legacyHeight), 40, 1400);
-    }
   });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
@@ -2673,6 +2751,7 @@ function applyCanvasSettings() {
     frame.classList.toggle('phone', isPhone);
     frame.classList.toggle('glasses', isGlasses);
     frame.classList.remove('stage-blur');
+    frame.classList.toggle('phone-scene-off', isPhone && !canvasSettings.phoneBgEnabled);
     frame.style.setProperty('--phone-frame-w', `${canvasSettings.phoneFrameWidth}px`);
     frame.style.setProperty('--phone-frame-h', `${canvasSettings.phoneFrameHeight}px`);
     frame.style.setProperty('--frame-corner-radius', `${canvasSettings.frameCornerRadius}px`);
@@ -2695,7 +2774,10 @@ function applyCanvasSettings() {
   if (UI.phoneBgState) UI.phoneBgState.textContent = canvasSettings.phoneFrameBackground?.src ? 'loaded' : 'empty';
   if (UI.phoneBgVisibleToggle) {
     UI.phoneBgVisibleToggle.checked = !!canvasSettings.phoneBgEnabled;
-    UI.phoneBgVisibleToggle.disabled = !isPhone || !canvasSettings.phoneFrameBackground?.src;
+    UI.phoneBgVisibleToggle.disabled = !isPhone;
+  }
+  if (UI.phoneSceneVisibleRow) {
+    UI.phoneSceneVisibleRow.classList.toggle('hidden', !isPhone);
   }
 }
 
