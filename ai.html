@@ -21,6 +21,38 @@ body[data-page-mode="ai"] #left-sidebar,
 body[data-page-mode="ai"] #sidebar {
   display: none !important;
 }
+.ai-legacy-debug {
+  position: fixed;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 180px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.ai-legacy-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: rgba(255,255,255,0.56);
+  text-transform: uppercase;
+}
+.ai-legacy-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ai-legacy-actions .sb-shape-btn {
+  width: 100%;
+}
 .entry-point-btn {
   position: fixed;
   left: 16px;
@@ -120,6 +152,23 @@ body[data-page-mode="ai"] #sidebar {
   z-index: 1;
   opacity: 1;
   transition: opacity 220ms ease;
+}
+#home-start-prompt {
+  margin-top: 22px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  letter-spacing: 0;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+#home-start-prompt.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 #intent-header {
@@ -248,11 +297,10 @@ body[data-page-mode="ai"] #sidebar {
   opacity: 0;
   z-index: 2;
   box-shadow:
-    inset 0 0 20px rgba(255,255,255,0.5),
-    inset 0 0 34px rgba(255,255,255,0.30),
-    inset 0 0 82px rgba(210,230,255,0.22),
-    0 0 52px rgba(255,255,255,0.24),
-    0 0 120px rgba(210,230,255,0.20);
+    inset 0 -6px 6px -2px rgba(35,101,255,0.15),
+    inset 0 -15px 20px -6px rgba(255,255,255,0.5),
+    inset 0 -15px 20px -6px rgba(230,229,247,0.5),
+    inset 0 -70px 60px -30px rgba(19,75,192,1);
   transition: opacity 500ms ease var(--home-glow-delay, 0ms);
 }
 #c-primary {
@@ -1028,15 +1076,36 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
   }
 }
 
+@keyframes think-ai-breathe-spread {
+  0%, 100% {
+    box-shadow: 0 0 22.1px -1px rgba(123,194,255,1);
+  }
+  50% {
+    box-shadow: 0 0 22.1px 9px rgba(123,194,255,1);
+  }
+}
+
 /* ── AI mode: liquid shell + inner glow, no inner white blob ── */
 #drop-main.ai-mode {
-  background: rgba(0,0,0,0.92) !important;
-  box-shadow: 0 0 44px rgba(255,255,255,0.08) !important;
-  animation: morph 3.4s ease-in-out infinite;
+  background: #000 !important;
+  box-shadow: 0 0 22.1px -1px rgba(123,194,255,1) !important;
+  filter: blur(2.75px);
+  animation: think-ai-breathe-spread 1400ms ease-in-out infinite;
+  transition:
+    filter 760ms cubic-bezier(0.22,1,0.36,1),
+    box-shadow 760ms cubic-bezier(0.22,1,0.36,1),
+    background 760ms cubic-bezier(0.22,1,0.36,1);
   will-change: border-radius, rotate;
+}
+#drop-main.ai-bridge {
+  transition:
+    filter 980ms cubic-bezier(0.42,0,0.2,1),
+    box-shadow 980ms cubic-bezier(0.42,0,0.2,1),
+    background 980ms cubic-bezier(0.42,0,0.2,1);
 }
 #drop-main.ai-mode::before { opacity: 0; }
 #drop-main.ai-mode::after  { opacity: 0; }
+#drop-main.home-blur { filter: blur(6px); }
 #drop-main.home-glow #home-glow-layer { opacity: 1; }
 #drop-main.ai-mode #home-glow-layer {
   opacity: 1 !important;
@@ -1430,6 +1499,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <div class="drop" id="drop-right"></div>
         <div id="list-pills"></div>
       </div>
+      <div id="home-start-prompt">Where should we begin?</div>
     </div>
   </div>
 
@@ -1691,6 +1761,14 @@ body.bg-off .bg-blur-image { opacity: 0; }
 
 </div>
 
+<div class="ai-legacy-debug">
+  <div class="ai-legacy-title">Legacy / Debug</div>
+  <div class="ai-legacy-actions">
+    <button class="sb-shape-btn" data-shape="circle" type="button" onclick="manualShape('circle')">Home</button>
+    <button class="sb-shape-btn" data-shape="ai" type="button" onclick="manualShape('ai')">Thinking</button>
+  </div>
+</div>
+
 <a class="entry-point-btn" href="./index.html">prototype mode</a>
 
 <script>
@@ -1752,9 +1830,9 @@ const SHAPES = {
     right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
   },
   ai: {
-    main:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
+    main:  { w:60, h:60, br:'30px', tx:-30, ty:-30, op:1 },
+    left:  { w:60, h:60, br:'30px', tx:-30, ty:-30, op:0 },
+    right: { w:60, h:60, br:'30px', tx:-30, ty:-30, op:0 },
   },
   'card-form': {
     main:  { w:420, h:400, br:'30px', tx:-210, ty:-200, op:1 },
@@ -3276,6 +3354,7 @@ function previewScenarioInstant(scenario) {
   clearUiFadeTimers();
   currentShape = shape;
   applyGeometry(shape, geo, scenario.shape);
+  DROPS.main.classList.toggle('home-blur', shape === 'circle');
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
   DROPS.main.classList.toggle('home-glow', shape === 'circle');
   applyContent(content);
@@ -3469,7 +3548,7 @@ function listPhaseTwoStartMs() {
 }
 
 function thinkingBridgeMs() {
-  return clamp(Math.round(animDur * 0.55), 220, 420);
+  return Math.max(780, Math.round(animDur * 1.8));
 }
 
 function homeThinkingBridgeMs() {
@@ -3502,7 +3581,12 @@ function transitionAnimMs(fromShape, toShape, baseMs = animDur, fromGeo = null, 
     (fromShape === 'dot' && toCardLike) ||
     (fromCardLike && toShape === 'dot')
   );
+  const isHomeThinkingPair = (
+    (fromShape === 'circle' && toShape === 'ai') ||
+    (fromShape === 'ai' && toShape === 'circle')
+  );
   const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
+  if (isHomeThinkingPair) return clamp(Math.round(baseMs * 1.45), 520, 1200);
   if (isDotPillPair) return clamp(baseMs, 100, 1800);
   if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
   if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);
@@ -3675,6 +3759,8 @@ function bridgeHomeToThinking(targetShape) {
     thinkingBridgeTimer = null;
   }
   stopSiriOrb();
+  DROPS.main.classList.add('ai-bridge');
+  setTimeout(() => DROPS.main.classList.remove('ai-bridge'), 980);
   morphCore('circle', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
   C.thumb.style.opacity = '0';
   updateActive(targetShape);
@@ -3697,6 +3783,8 @@ function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = nu
     thinkingBridgeTimer = null;
   }
   stopSiriOrb();
+  DROPS.main.classList.add('ai-bridge');
+  setTimeout(() => DROPS.main.classList.remove('ai-bridge'), 980);
   morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
   updateActive('circle');
 }
@@ -4084,6 +4172,11 @@ function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
 function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   const root = document.documentElement;
   const transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
+  const isHomeThinkingPair = (
+    (fromShape === 'circle' && toShape === 'ai') ||
+    (fromShape === 'ai' && toShape === 'circle')
+  );
+  const motionEase = isHomeThinkingPair ? 'cubic-bezier(0.42,0,0.2,1)' : 'var(--spring)';
   const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
   const toCardLike = toShape === 'card' || toShape === 'card-s';
   let contentFadeMs = 260;
@@ -4126,16 +4219,16 @@ function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   currentDetailFadeMs = detailFadeMs;
   currentMediaFadeMs = mediaFadeMs;
   currentTransitionAnimMs = transitionMs;
-  root.style.setProperty('--anim-w', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-h', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-br', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-tx', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-t', `${transitionMs}ms var(--spring)`);
+  root.style.setProperty('--anim-w', `${transitionMs}ms ${motionEase}`);
+  root.style.setProperty('--anim-h', `${transitionMs}ms ${motionEase}`);
+  root.style.setProperty('--anim-br', `${transitionMs}ms ${motionEase}`);
+  root.style.setProperty('--anim-tx', `${transitionMs}ms ${motionEase}`);
+  root.style.setProperty('--anim-t', `${transitionMs}ms ${motionEase}`);
   root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`);
   root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`);
   root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`);
   root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`);
-  root.style.setProperty('--content-move-t', `${contentMoveMs}ms var(--spring)`);
+  root.style.setProperty('--content-move-t', `${contentMoveMs}ms ${motionEase}`);
   root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`);
   root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
 }
@@ -4315,6 +4408,7 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   const geo = nextGeo;
   const mw = geo.main.w, mh = geo.main.h;
   applyGeometry(shape, geo, stageId);
+  DROPS.main.classList.toggle('home-blur', shape === 'circle');
   const goingHome = shape === 'circle' && fromShape !== 'circle';
   if (goingHome) {
     DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, currentTransitionAnimMs - 500)}ms`);
@@ -4811,8 +4905,12 @@ function syncFlightDestinationFromText(userText) {
   if (found) flightData.dest = cityMap[found];
 }
 
+function isFlightIntent(userText) {
+  return /(?:\bflight\b|\bfly\b|book\s+(?:a\s+)?flight|\bticket\b)/i.test(String(userText || ''));
+}
+
 function handleManualRequest(userText) {
-  if (/flight|fly|book.*flight|ticket/i.test(userText)) {
+  if (isFlightIntent(userText)) {
     syncFlightDestinationFromText(userText);
     startFlightFlow();
     return;
@@ -4876,6 +4974,11 @@ async function handleAiRequest(userText) {
 async function processRequest(userText) {
   hideRich();
   stopSiriOrb();
+  if (isFlightIntent(userText)) {
+    syncFlightDestinationFromText(userText);
+    startFlightFlow();
+    return;
+  }
   if (responseMode === RESPONSE_MODE.AI) {
     await handleAiRequest(userText);
     return;
@@ -5122,6 +5225,8 @@ function manualShape(shape) {
 
 function updateActive(shape) {
   document.querySelectorAll('.sb-shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
+  const prompt = document.getElementById('home-start-prompt');
+  if (prompt) prompt.classList.toggle('visible', shape === 'circle');
 }
 
 function openCustom() {
