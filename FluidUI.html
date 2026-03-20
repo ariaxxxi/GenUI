@@ -580,6 +580,19 @@ body.mode-manual .mode-ai-only { display: none !important; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+.sb-btn-row.stage-actions {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 40px 40px;
+}
+.sb-mini-btn.icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
 .sb-mini-btn {
   padding: 9px 10px;
   border-radius: 8px;
@@ -1174,7 +1187,39 @@ body.bg-off .bg-blur-image { opacity: 0; }
   padding-bottom: 0;
   scrollbar-width: auto;
 }
-.stage-timeline .shape-chip { white-space: nowrap; flex-shrink: 0; }
+.stage-timeline .shape-chip {
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: none;
+  letter-spacing: .02em;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(120,170,255,0.42);
+  background: rgba(55,95,165,0.14);
+  color: rgba(222,236,255,0.92);
+  padding: 8px 14px;
+  transition: border-color .18s, background .18s, color .18s, transform .1s;
+}
+.stage-timeline .shape-chip:hover {
+  border-color: rgba(150,190,255,0.66);
+  background: rgba(64,110,188,0.24);
+}
+.stage-timeline .shape-chip:active { transform: scale(.97); }
+.stage-timeline .shape-chip.active {
+  border-color: rgba(185,215,255,0.92);
+  background: linear-gradient(180deg, rgba(91,150,255,0.44), rgba(61,110,198,0.62));
+  color: #f7fbff;
+}
+.icon-upload-scope-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.icon-upload-scope-row .sb-lbl {
+  margin: 0;
+  min-width: 84px;
+}
 
 /* ── Layer rows (collapsible component rows) ── */
 .layer-row {
@@ -1448,10 +1493,16 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <div class="stage-timeline" id="scenario-shape-row"></div>
     </div>
 
-    <div class="sb-btn-row">
+    <div class="sb-btn-row stage-actions">
+      <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
+        <option value="dot">Dot</option>
+        <option value="pill">Pill</option>
+        <option value="card" selected>Card</option>
+        <option value="blank">Blank</option>
+      </select>
       <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
-      <button id="stage-delete" class="sb-mini-btn" type="button">Delete</button>
-      <button id="stage-reset" class="sb-mini-btn" type="button">Reset</button>
+      <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
+      <button id="stage-reset" class="sb-mini-btn icon-btn" type="button" title="Reset stage" aria-label="Reset stage">↻</button>
     </div>
 
     <div id="stage-config-panel" class="sb-row tight">
@@ -1518,6 +1569,13 @@ body.bg-off .bg-blur-image { opacity: 0; }
           <input id="scenario-icon-input" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph"/>
           <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
           <button id="scenario-icon-reset" class="sb-mini-btn" type="button">×</button>
+        </div>
+        <div class="icon-upload-scope-row">
+          <span class="sb-lbl">Apply upload</span>
+          <select id="scenario-icon-upload-scope" class="sb-select">
+            <option value="current">Current stage</option>
+            <option value="all">All stages</option>
+          </select>
         </div>
         <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
         <div class="typo-controls">
@@ -2540,6 +2598,7 @@ const UI = {
   scenarioDelete: document.getElementById('scenario-delete'),
   scenarioName: document.getElementById('scenario-name'),
   stageAdd: document.getElementById('stage-add'),
+  stageAddKind: document.getElementById('stage-add-kind'),
   stageDelete: document.getElementById('stage-delete'),
   stageReset: document.getElementById('stage-reset'),
   stageNameInput: document.getElementById('stage-name-input'),
@@ -2557,6 +2616,7 @@ const UI = {
   scenarioTriggers: document.getElementById('scenario-triggers'),
   scenarioIconInput: document.getElementById('scenario-icon-input'),
   scenarioIconUpload: document.getElementById('scenario-icon-upload'),
+  scenarioIconUploadScope: document.getElementById('scenario-icon-upload-scope'),
   scenarioIconReset: document.getElementById('scenario-icon-reset'),
   scenarioIconMode: document.getElementById('scenario-icon-mode'),
   scenarioIconSize: document.getElementById('scenario-icon-size'),
@@ -3396,37 +3456,120 @@ function commitStageChange(stageId, mutator) {
   previewScenario(scenario);
 }
 
-function addStage() {
+function stageTemplateFromKind(kind = 'card') {
+  if (kind === 'dot') {
+    return {
+      name: 'Dot',
+      renderShape: 'dot',
+      cornerRadius: 50,
+      iconTextGap: null,
+      iconLeftPadding: null,
+      components: ['icon'],
+      content: {
+        icon: createIcon('emoji', '◉'),
+        text: { primary: '', secondary: '', detail: '' },
+        images: [],
+      },
+    };
+  }
+  if (kind === 'pill') {
+    return {
+      name: 'Pill',
+      renderShape: 'pill',
+      cornerRadius: 60,
+      iconTextGap: 8,
+      iconLeftPadding: 16,
+      components: ['icon', 'primary', 'secondary'],
+      content: {
+        icon: createIcon('emoji', '◉'),
+        text: {
+          primary: 'Primary text',
+          secondary: 'Secondary text',
+          detail: '',
+        },
+        images: [],
+      },
+    };
+  }
+  if (kind === 'blank') {
+    return {
+      name: 'Blank',
+      renderShape: 'card',
+      cornerRadius: 30,
+      iconTextGap: null,
+      iconLeftPadding: null,
+      components: [],
+      content: {
+        icon: createIcon('none', ''),
+        text: { primary: '', secondary: '', detail: '' },
+        images: [],
+      },
+    };
+  }
+  return {
+    name: 'Card',
+    renderShape: 'card',
+    cornerRadius: 30,
+    iconTextGap: null,
+    iconLeftPadding: null,
+    components: ['icon', 'primary', 'secondary', 'detail', 'image'],
+    content: {
+      icon: createIcon('emoji', '◉'),
+      text: {
+        primary: 'Primary text',
+        secondary: 'Secondary text',
+        detail: 'Detail text example',
+      },
+      images: [],
+    },
+  };
+}
+
+function addStage(kind = 'card') {
   const scenario = selectedScenario();
   if (!scenario) return;
   const baseStage = stageForScenario(scenario?.shape || 'card', scenario);
+  const template = stageTemplateFromKind(kind);
+  const templateFallback = stageLibrary.find((item) => item.renderShape === template.renderShape)
+    || builtinStageById(template.renderShape)
+    || baseStage;
   const stage = normalizeStage({
     id: stageId(),
-    name: 'New Stage',
+    name: template.name,
     preset: false,
-    renderShape: baseStage?.renderShape || 'card',
-    cornerRadius: Number.isFinite(baseStage?.cornerRadius) ? baseStage.cornerRadius : 30,
+    renderShape: template.renderShape,
+    cornerRadius: Number.isFinite(template.cornerRadius)
+      ? template.cornerRadius
+      : (Number.isFinite(baseStage?.cornerRadius) ? baseStage.cornerRadius : 30),
     widthOverride: null,
     heightOverride: null,
-    iconTextGap: Number.isFinite(baseStage?.iconTextGap) ? baseStage.iconTextGap : null,
-    iconLeftPadding: Number.isFinite(baseStage?.iconLeftPadding) ? baseStage.iconLeftPadding : null,
-    components: (baseStage?.components?.length ? [...baseStage.components] : ['icon', 'primary', 'secondary']),
-  }, baseStage);
+    iconTextGap: template.iconTextGap,
+    iconLeftPadding: template.iconLeftPadding,
+    components: [...template.components],
+  }, templateFallback);
   stageLibrary.push(stage);
   persistStageLibrary();
   scenarioLibrary = scenarioLibrary.map((item) => {
     const hidden = new Set(normalizeDisabledStageIds(item.disabledStageIds || []));
     if (item.id === scenario.id) {
       hidden.delete(stage.id);
-      return createScenario({
+      const nextScenario = createScenario({
         ...item,
         shape: stage.id,
         disabledStageIds: Array.from(hidden),
         content: {
           ...item.content,
+          textByShape: normalizeStageTextByShape(item.content?.textByShape, stage.id, item.content),
+          iconByShape: normalizeIconByShape(item.content?.iconByShape, stage.id, item.content?.icon),
+          imagesByShape: normalizeImagesByShape(item.content?.imagesByShape, stage.id, item.content?.images),
           typographyByShape: normalizeTypographyByShape(item.content?.typographyByShape, stage.id),
         },
       });
+      nextScenario.content.textByShape[stage.id] = normalizeStageTextEntry(template.content.text);
+      nextScenario.content.iconByShape[stage.id] = normalizeIcon(template.content.icon);
+      nextScenario.content.imagesByShape[stage.id] = normalizeStageImages(template.content.images);
+      nextScenario.content.typographyByShape[stage.id] = normalizeTypography({}, stage.renderShape || 'card');
+      return nextScenario;
     }
     hidden.add(stage.id);
     return createScenario({
@@ -5305,7 +5448,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
+document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .sb-select, .typo-color').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
 
 function bindTypographyInputs(layer, sizeInput, colorInput) {
   const commitSize = (rawValue) => {
@@ -5657,7 +5800,8 @@ UI.scenarioShapeRow.addEventListener('click', (e) => {
 });
 
 UI.stageAdd.addEventListener('click', () => {
-  addStage();
+  const kind = String(UI.stageAddKind?.value || 'card');
+  addStage(kind);
 });
 UI.stageDelete.addEventListener('click', () => {
   deleteCurrentStage();
@@ -5670,9 +5814,9 @@ UI.stageNameInput.addEventListener('input', (e) => {
   const scenario = selectedScenario();
   const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
-  const nextName = String(e.target.value || '').trim();
+  const nextName = String(e.target.value || '');
   commitStageChange(stage.id, (draft) => {
-    draft.name = nextName || 'Untitled Stage';
+    draft.name = nextName.length ? nextName : 'Untitled Stage';
   });
 });
 
@@ -5886,13 +6030,20 @@ UI.scenarioIconUpload.addEventListener('change', async (e) => {
     reader.readAsDataURL(file);
   }).catch(() => '');
   if (!dataUrl) return;
+  const scope = String(UI.scenarioIconUploadScope?.value || 'current');
   commitScenarioChange((scenario) => {
     scenario.content.iconByShape = normalizeIconByShape(
       scenario.content.iconByShape,
       scenario.shape,
       scenario.content.icon
     );
-    scenario.content.iconByShape[scenario.shape] = createIcon('image', dataUrl);
+    if (scope === 'all') {
+      availableScenarioShapesFor(scenario).forEach((stageId) => {
+        scenario.content.iconByShape[stageId] = createIcon('image', dataUrl);
+      });
+    } else {
+      scenario.content.iconByShape[scenario.shape] = createIcon('image', dataUrl);
+    }
   });
   e.target.value = '';
 });
