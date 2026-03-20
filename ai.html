@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>GenUI Sys - AI</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@500&display=swap" rel="stylesheet"/>
 <style id="base-style">
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 100%; height: 100%; overflow: hidden; user-select: none; }
@@ -85,6 +85,11 @@ body[data-page-mode="ai"] #sidebar {
   align-items: center; justify-content: center;
   flex: 1; height: 100%;
   overflow-y: auto;
+}
+body.mode-ai #main-col {
+  width: 100%;
+  margin-right: 0;
+  justify-content: flex-start;
 }
 
 /* ── Intent header ── */
@@ -177,7 +182,8 @@ body[data-page-mode="ai"] #sidebar {
 }
 
 #intent-header {
-  display: flex; align-items: center; gap: 10px;
+  display: none;
+  align-items: center; gap: 10px;
   height: 36px; margin-bottom: 12px;
   opacity: 0;
   transform: translateY(20px);
@@ -208,6 +214,84 @@ body[data-page-mode="ai"] #sidebar {
   color: rgba(255,255,255,0.28);
   text-transform: uppercase;
   transition: opacity 200ms ease;
+}
+
+#chat-panel {
+  position: relative;
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  height: 220px;
+  z-index: 5;
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px 0 0;
+  overflow-y: auto;
+  margin-top: 0;
+  margin-bottom: 14px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 36%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 36%);
+}
+body.mode-ai #chat-panel {
+  position: fixed;
+  left: 50%;
+  bottom: calc(50% + 210px + 32px);
+  transform: translateX(-50%);
+  margin-top: 0;
+  padding-top: 0;
+}
+body.mode-ai #ui-frame {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+#chat-panel::-webkit-scrollbar { display: none; }
+.chat-bubble {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 300;
+  padding: 7px 10px;
+  border-radius: 10px;
+  animation: bubbleIn .18s ease both;
+  word-break: break-word;
+  font-family: 'DM Sans', sans-serif;
+}
+@keyframes bubbleIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.chat-bubble.user {
+  align-self: flex-end;
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.88);
+  border-radius: 10px 10px 3px 10px;
+}
+.chat-bubble.ai {
+  align-self: flex-start;
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.58);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 3px 10px 10px 10px;
+}
+.chat-bubble.typing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+}
+.typing-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.4);
+  animation: typingBounce .9s ease infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: .15s; }
+.typing-dot:nth-child(3) { animation-delay: .30s; }
+@keyframes typingBounce {
+  0%,60%,100% { transform: translateY(0); opacity: .35; }
+  30% { transform: translateY(-4px); opacity: 1; }
 }
 
 /* ── Drop shell ── */
@@ -424,7 +508,7 @@ body[data-page-mode="ai"] #sidebar {
 }
 .rich-route-sub {
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 300;
+  font-size: 20px; font-weight: 300;
   color: rgba(255,255,255,0.30);
   margin-top: 4px; flex-shrink: 0;
   letter-spacing: .01em;
@@ -454,9 +538,9 @@ body[data-page-mode="ai"] #sidebar {
 /* Rich: flight list */
 .rich-list-header {
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 400;
+  font-size: 20px; font-weight: 400;
   color: rgba(255,255,255,0.38);
-  letter-spacing: .04em;
+  letter-spacing: .02em;
   padding-bottom: 14px; flex-shrink: 0;
 }
 .rich-flight-row {
@@ -473,12 +557,12 @@ body[data-page-mode="ai"] #sidebar {
 .rich-flight-left { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .rich-flight-airline {
   font-family: 'DM Sans', sans-serif;
-  font-size: 15px; font-weight: 500;
+  font-size: 20px; font-weight: 500;
   color: rgba(255,255,255,0.85);
 }
 .rich-flight-times {
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 300;
+  font-size: 20px; font-weight: 300;
   color: rgba(255,255,255,0.38);
 }
 .rich-flight-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
@@ -489,9 +573,239 @@ body[data-page-mode="ai"] #sidebar {
 }
 .rich-flight-meta {
   font-family: 'DM Sans', sans-serif;
-  font-size: 11px; font-weight: 300;
+  font-size: 20px; font-weight: 300;
   color: rgba(255,255,255,0.30);
   letter-spacing: .03em;
+}
+
+.flight-destination-step {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+.flight-route-row-core {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  align-items: center;
+  column-gap: 20px;
+  width: 100%;
+  height: 100%;
+}
+.flight-destination-origin {
+  justify-self: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(255,255,255,1);
+}
+.flight-destination-swap {
+  justify-self: center;
+  width: 24px;
+  height: 24px;
+  opacity: 0.8;
+}
+.flight-destination-swap svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+.flight-destination-target {
+  justify-self: center;
+  font-size: 24px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+.flight-destination-target.placeholder {
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+}
+.flight-destination-target.filled {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  color: rgba(255,255,255,1);
+}
+.flight-date-route-shared {
+  position: relative;
+  width: 100%;
+  height: 32px;
+}
+.flight-date-step {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-top: 6px;
+}
+.flight-date-route {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 26px;
+}
+.flight-date-route-code {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.96);
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.flight-date-route-code.from {
+  justify-self: start;
+}
+.flight-date-route-code.to {
+  justify-self: end;
+}
+.flight-date-route-code.placeholder {
+  color: rgba(255,255,255,0.36);
+}
+.flight-date-route-swap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 32px;
+  color: rgba(255,255,255,0.86);
+  font-size: 24px;
+  line-height: 1;
+}
+.flight-date-panel {
+  width: 100%;
+  min-height: 77px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  padding: 12px 24px;
+  column-gap: 20px;
+}
+.flight-date-panel-divider {
+  width: 1px;
+  height: 100%;
+  background: rgba(255,255,255,0.12);
+}
+.flight-date-panel-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.flight-date-panel-lbl {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.1;
+}
+.flight-date-panel-val {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.96);
+  line-height: 1.1;
+}
+.flight-date-panel-val.placeholder {
+  color: rgba(255,255,255,0.42);
+  font-weight: 400;
+}
+.flight-confirm-card {
+  width: 100%;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flight-confirm-head {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.60);
+}
+.flight-confirm-time {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 56px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.96);
+  line-height: 1;
+}
+.flight-confirm-route {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.56);
+}
+.flight-total-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.flight-total-lbl {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 48px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.72);
+}
+.flight-total-val {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 72px;
+  font-weight: 700;
+  color: #2EE1A6;
+  line-height: 1;
+}
+
+/* AI mode type scale lock: only 20px and 24px */
+body.mode-ai :is(
+  #wordmark,
+  #home-start-prompt,
+  #user-input,
+  #send-btn,
+  .chat-bubble,
+  .rich-route-sub,
+  .rich-flight-times,
+  .rich-flight-meta,
+  .rich-date-lbl,
+  .rich-date-val,
+  .rich-date-input,
+  .flight-date-panel-lbl,
+  .rich-action-btn
+) {
+  font-size: 20px !important;
+}
+body.mode-ai :is(
+  .rich-list-header,
+  .rich-flight-airline,
+  .rich-route-main,
+  .rich-route-arrow,
+  .rich-flight-price,
+  .flight-destination-origin,
+  .flight-destination-target,
+  .flight-confirm-head,
+  .flight-confirm-time,
+  .flight-confirm-route,
+  .flight-total-lbl,
+  .flight-total-val,
+  .flight-date-route-code,
+  .flight-date-route-swap,
+  .flight-date-panel-val,
+  #c-primary,
+  #c-secondary,
+  #c-detail
+) {
+  font-size: 24px !important;
+}
+body.mode-ai .ex-chip {
+  font-size: 16px !important;
 }
 
 /* ── Stage ── */
@@ -510,6 +824,7 @@ body[data-page-mode="ai"] #sidebar {
 body.bg-off #stage { mix-blend-mode: normal; }
 body.float-off #stage { animation: none; }
 #stage.flow-active { animation-play-state: paused; }
+#stage.flow-active { height: 420px; }
 
 /* ── Input area ── */
 #input-area {
@@ -517,6 +832,10 @@ body.float-off #stage { animation: none; }
   width: calc(100% - (var(--panel-w) * 2));
   display: flex; flex-direction: column; align-items: center;
   transition: opacity 300ms ease, transform 300ms ease;
+}
+body.mode-ai #input-area {
+  left: 0;
+  width: 100%;
 }
 body.mode-manual #input-area { display: none; }
 body.mode-ai .mode-manual-only { display: none !important; }
@@ -1483,6 +1802,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
 </div>
 
 <div id="main-col">
+  <div id="chat-panel" class="mode-ai-only" aria-live="polite"></div>
   <div id="ui-frame">
     <div id="ui-frame-bg"></div>
     <div id="stage-wrap">
@@ -1515,12 +1835,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
   <div id="input-area">
     <div id="input-wrap">
       <input id="user-input" type="text" autocomplete="off" spellcheck="false"
-        placeholder="What's the weather? · Book a flight · Send a message…"/>
+        placeholder="Ask anything"/>
       <button id="send-btn" onclick="handleSend()">↑</button>
     </div>
     <div id="example-chips">
       <button class="ex-chip" onclick="fireChip(this)">What's the weather?</button>
-      <button class="ex-chip" onclick="fireChip(this)">Book a flight to Tokyo</button>
+      <button class="ex-chip" onclick="fireChip(this)">Book a flight</button>
       <button class="ex-chip" onclick="fireChip(this)">Send a message to Alice</button>
       <button class="ex-chip" onclick="fireChip(this)">Set a 10 min timer</button>
       <button class="ex-chip" onclick="fireChip(this)">Call Mom</button>
@@ -1785,7 +2105,7 @@ const P   = 20;
 const PILL_NO_ICON_P = 32;
 const PILL_ICON_P = 16;
 const CARD_P = 24;
-const BOTTOM_ALIGN_REF_H = 580;
+const BOTTOM_ALIGN_REF_H = 420;
 const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
 const CARD_DIVIDER_GAP = 10;
 const CARD_PRIMARY_GAP = 14;
@@ -4030,10 +4350,10 @@ function applyGeometry(shape, resolvedGeo, stageId = null) {
     : geo.main.h;
   ['main','left','right'].forEach(k => {
     const el = DROPS[k], s = geo[k];
-    const anchorHeight = (shape === 'idle' && k === 'main') ? SHAPES.dot.main.h : s.h;
-    const yOffset = useBottomAlign
-      ? ((shape === 'ai' && k === 'main') ? 0 : ((alignedStageHeight - anchorHeight) / 2))
-      : 0;
+    const anchorHeight = (shape === 'idle' && k === 'main')
+      ? SHAPES.dot.main.h
+      : ((shape === 'ai' && k === 'main') ? SHAPES.dot.main.h : s.h);
+    const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
     el.style.width        = s.w + 'px';
     el.style.height       = s.h + 'px';
     el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
@@ -4455,7 +4775,13 @@ function applyContent(data) {
   if (data.typography !== undefined) setContentTypography(data.typography, currentShape);
 }
 
+let richHideTimer = null;
+
 function showRich(html) {
+  if (richHideTimer) {
+    clearTimeout(richHideTimer);
+    richHideTimer = null;
+  }
   C.rich.style.opacity = '0';
   C.rich.innerHTML = html;
   C.rich.classList.add('visible');
@@ -4465,8 +4791,13 @@ function showRich(html) {
 }
 
 function hideRich() {
+  if (richHideTimer) {
+    clearTimeout(richHideTimer);
+    richHideTimer = null;
+  }
   C.rich.style.opacity = '0';
-  setTimeout(() => {
+  richHideTimer = setTimeout(() => {
+    richHideTimer = null;
     C.rich.classList.remove('visible');
     C.rich.innerHTML = '';
   }, 220);
@@ -4719,283 +5050,591 @@ function stopSiriOrb(options = {}) {
   orbRamp = 0; orbTarget = 0;
 }
 
-let flightData = { origin:'SFO', dest:'NRT', destCity:'Tokyo', depDate:'Mar 15, 2026', retDate:'Mar 22, 2026' };
-const flightUi = { active:false, step:'idle', highlight:0, depIdx:0, retIdx:0 };
 const THINKING_HOLD_MS = 3000;
-const FLIGHT_DEP_OPTIONS = ['Mar 15, 2026', 'Mar 16, 2026', 'Mar 17, 2026', 'Mar 18, 2026'];
-const FLIGHT_RET_OPTIONS = ['Mar 22, 2026', 'Mar 23, 2026', 'Mar 24, 2026', 'Mar 25, 2026'];
-
-const FLIGHTS = [
-  { airline:'ANA', code:'NH 7', dep:'10:30', arr:'14:30', day:'+1', stops:'Non-stop', duration:'13h 0m', price:'$899' },
-  { airline:'JAL', code:'JL 61', dep:'12:00', arr:'15:45', day:'+1', stops:'Non-stop', duration:'13h 45m', price:'$1,049' },
-  { airline:'United', code:'UA 837', dep:'13:45', arr:'17:20', day:'+1', stops:'1 stop', duration:'15h 35m', price:'$649' },
+const DATE_SELECTION_STEP_GEO = {
+  ...SHAPES['card-form'],
+  main: { ...SHAPES['card-form'].main, h: 180, ty: -90 },
+};
+const FLIGHT_FLOW_STEPS = [
+  { type: 'destination', shape: 'pill', aiGreet: 'Where would you like to go?' },
+  { type: 'dates', shape: 'card-form', aiGreet: 'When are you departing, and when do you return?' },
+  {
+    type: 'options',
+    shape: 'card-list',
+    label: 'Passengers',
+    key: 'passengers',
+    aiGreet: 'How many passengers?',
+    options: [
+      { icon: '🧑', name: '1 adult', sub: 'Just me' },
+      { icon: '👫', name: '2 adults', sub: 'Pair' },
+      { icon: '👨‍👩‍👧', name: 'Family · 2+', sub: 'Adults with children' },
+    ],
+  },
+  { type: 'thinking', shape: 'ai', aiGreet: null },
+  {
+    type: 'options',
+    shape: 'card-list',
+    label: 'Choose your flight',
+    key: 'flight',
+    aiGreet: 'I found three options — arrow keys to navigate, space to pick.',
+    options: [
+      { icon: '🟢', name: '06:45 → 09:30', sub: 'ANA · Non-stop · $842' },
+      { icon: '🟡', name: '10:15 → 15:40', sub: 'JAL · 1 stop · $631' },
+      { icon: '🟢', name: '22:00 → 06:15+1', sub: 'United · Non-stop · $912' },
+    ],
+  },
+  { type: 'confirm', shape: 'card-form', aiGreet: "Here's your flight summary. Space to continue or tell me what to change." },
+  {
+    type: 'payment',
+    shape: 'card-form',
+    aiGreet: 'How would you like to pay?',
+    options: [
+      { icon: '', name: 'Apple Pay', sub: 'Default wallet' },
+      { icon: '💳', name: 'Visa •••• 9421', sub: 'Primary card' },
+      { icon: '🏦', name: 'Bank transfer', sub: '1-2 business days' },
+    ],
+  },
+  { type: 'done', shape: 'card', aiGreet: null },
 ];
+const flightUi = {
+  active: false,
+  stepIndex: 0,
+  focused: 0,
+  data: {
+    origin: 'SFO',
+    destination: '',
+    depart: '',
+    return: '',
+    passengers: '',
+    flight: '',
+    paymentMethod: '',
+  },
+};
+let flightThinkingTimer = null;
+let typingBubble = null;
+const API_BASE = location.protocol === 'file:' ? 'http://localhost:5180' : '';
+
+function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
+
+function chatPanelEl() {
+  return document.getElementById('chat-panel');
+}
+
+function addChatBubble(role, text) {
+  const panel = chatPanelEl();
+  if (!panel || !text) return;
+  const bubble = document.createElement('div');
+  bubble.className = `chat-bubble ${role}`;
+  bubble.textContent = text;
+  panel.appendChild(bubble);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function showTypingBubble() {
+  const panel = chatPanelEl();
+  if (!panel || typingBubble) return;
+  typingBubble = document.createElement('div');
+  typingBubble.className = 'chat-bubble ai typing';
+  typingBubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  panel.appendChild(typingBubble);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function hideTypingBubble() {
+  if (!typingBubble) return;
+  typingBubble.remove();
+  typingBubble = null;
+}
+
+function flightStep() {
+  return FLIGHT_FLOW_STEPS[flightUi.stepIndex] || FLIGHT_FLOW_STEPS[0];
+}
 
 function setFlightStep(step, highlight = 0) {
-  flightUi.step = step;
-  flightUi.highlight = highlight;
-}
-
-function syncFlightDateIndexes() {
-  const dep = FLIGHT_DEP_OPTIONS.indexOf(flightData.depDate);
-  const ret = FLIGHT_RET_OPTIONS.indexOf(flightData.retDate);
-  flightUi.depIdx = dep >= 0 ? dep : 0;
-  flightUi.retIdx = ret >= 0 ? ret : 0;
-}
-
-function updateFlightDateHighlight() {
-  const ids = ['f-opt-dep', 'f-opt-ret', 'f-opt-search'];
-  ids.forEach((id, idx) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('selected', flightUi.highlight === idx);
-  });
-  const depVal = document.getElementById('f-dep-val');
-  const retVal = document.getElementById('f-ret-val');
-  if (depVal) depVal.textContent = flightData.depDate;
-  if (retVal) retVal.textContent = flightData.retDate;
-}
-
-function updateFlightResultHighlight() {
-  document.querySelectorAll('.rich-flight-row').forEach((r, i) => r.classList.toggle('selected', i === flightUi.highlight));
-}
-
-function cycleFlightDate(which) {
-  if (which === 'dep') {
-    flightUi.depIdx = (flightUi.depIdx + 1) % FLIGHT_DEP_OPTIONS.length;
-    flightData.depDate = FLIGHT_DEP_OPTIONS[flightUi.depIdx];
+  if (typeof step === 'number') {
+    flightUi.stepIndex = Math.max(0, Math.min(FLIGHT_FLOW_STEPS.length - 1, step));
   } else {
-    flightUi.retIdx = (flightUi.retIdx + 1) % FLIGHT_RET_OPTIONS.length;
-    flightData.retDate = FLIGHT_RET_OPTIONS[flightUi.retIdx];
+    const idx = FLIGHT_FLOW_STEPS.findIndex((entry) => entry.type === step);
+    flightUi.stepIndex = idx >= 0 ? idx : 0;
   }
-  updateFlightDateHighlight();
+  flightUi.focused = Math.max(0, Number(highlight) || 0);
+}
+
+function resetFlightData() {
+  flightUi.data = {
+    origin: 'SFO',
+    destination: '',
+    depart: '',
+    return: '',
+    passengers: '',
+    flight: '',
+    paymentMethod: '',
+  };
+}
+
+function normalizeCity(input) {
+  const text = String(input || '').trim();
+  if (!text) return '';
+  return text
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function cityToAirport(city) {
+  const key = String(city || '').toLowerCase();
+  const cityMap = {
+    tokyo: 'NRT',
+    paris: 'CDG',
+    london: 'LHR',
+    'new york': 'JFK',
+    sydney: 'SYD',
+    dubai: 'DXB',
+    seoul: 'ICN',
+    amsterdam: 'AMS',
+    singapore: 'SIN',
+    berlin: 'BER',
+  };
+  const found = Object.keys(cityMap).find((k) => key.includes(k));
+  return found ? cityMap[found] : (city ? city.toUpperCase().slice(0, 3) : '---');
+}
+
+function flightOptionRows(options) {
+  return options.map((opt, index) => `
+    <div class="rich-flight-row ${index === flightUi.focused ? 'selected' : ''}" data-flight-opt="${index}">
+      <div class="rich-flight-left">
+        <div class="rich-flight-airline">${opt.icon || ''} ${opt.name}</div>
+        <div class="rich-flight-times">${opt.sub || ''}</div>
+      </div>
+      <div class="rich-flight-right"><div class="rich-flight-meta">Space</div></div>
+    </div>
+    ${index < options.length - 1 ? '<div class="rich-divider"></div>' : ''}
+  `).join('');
+}
+
+function buildFlightConfirmRows() {
+  const departDate = flightUi.data.depart || '—';
+  const returnDate = flightUi.data.return || '—';
+  const fromCode = flightUi.data.origin || 'SFO';
+  const toCode = cityToAirport(flightUi.data.destination || '');
+  const outTime = flightUi.data.flight || '7:10 AM - 10:30 AM';
+  const backTime = flightUi.data.returnFlight || '2:10 PM - 11:30 PM';
+  return `
+    <div class="flight-confirm-card">
+      <div class="flight-confirm-head">Departing flight • ${departDate}</div>
+      <div class="flight-confirm-time">${outTime}</div>
+      <div class="flight-confirm-route">${fromCode} - ${toCode}</div>
+    </div>
+    <div style="height:14px;"></div>
+    <div class="flight-confirm-card">
+      <div class="flight-confirm-head">Returning flight • ${returnDate}</div>
+      <div class="flight-confirm-time">${backTime}</div>
+      <div class="flight-confirm-route">${toCode} - ${fromCode}</div>
+    </div>
+    <div class="flight-total-row">
+      <div class="flight-total-lbl">Total</div>
+      <div class="flight-total-val">$395</div>
+    </div>
+  `;
+}
+
+function buildPaymentRows() {
+  const options = flightStep().options || [];
+  return options.map((opt, index) => `
+    <div class="rich-flight-row ${index === flightUi.focused ? 'selected' : ''}" data-flight-opt="${index}">
+      <div class="rich-flight-left">
+        <div class="rich-flight-airline">${opt.icon || ''} ${opt.name}</div>
+        <div class="rich-flight-times">${opt.sub || ''}</div>
+      </div>
+      <div class="rich-flight-right"><div class="rich-flight-meta">Space</div></div>
+    </div>
+    ${index < options.length - 1 ? '<div class="rich-divider"></div>' : ''}
+  `).join('');
+}
+
+function buildFlightRouteRowHtml(originCode, destinationText, destinationReady) {
+  return `
+    <div class="flight-route-row-core">
+      <div class="flight-destination-origin">${originCode}</div>
+      <div class="flight-destination-swap" aria-hidden="true">
+        <svg viewBox="0 0 26 24.7279" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <g opacity="0.8">
+            <path d="M11 6.36396C10.4477 6.36396 10 6.81168 10 7.36396C10 7.91624 10.4477 8.36396 11 8.36396L11 7.36396L11 6.36396ZM25.7071 8.07107C26.0976 7.68054 26.0976 7.04738 25.7071 6.65685L19.3431 0.292893C18.9526 -0.0976311 18.3195 -0.0976312 17.9289 0.292893C17.5384 0.683418 17.5384 1.31658 17.9289 1.70711L23.5858 7.36396L17.9289 13.0208C17.5384 13.4113 17.5384 14.0445 17.9289 14.435C18.3195 14.8256 18.9526 14.8256 19.3431 14.435L25.7071 8.07107ZM11 7.36396L11 8.36396L25 8.36396L25 7.36396L25 6.36396L11 6.36396L11 7.36396Z" fill="white"/>
+            <path d="M0.292893 16.6569C-0.0976311 17.0474 -0.0976311 17.6805 0.292893 18.0711L6.65685 24.435C7.04738 24.8256 7.68054 24.8256 8.07107 24.435C8.46159 24.0445 8.46159 23.4113 8.07107 23.0208L2.41421 17.364L8.07107 11.7071C8.46159 11.3166 8.46159 10.6834 8.07107 10.2929C7.68054 9.90237 7.04738 9.90237 6.65685 10.2929L0.292893 16.6569ZM15 18.364C15.5523 18.364 16 17.9162 16 17.364C16 16.8117 15.5523 16.364 15 16.364L15 17.364L15 18.364ZM1 17.364L1 18.364L15 18.364L15 17.364L15 16.364L1 16.364L1 17.364Z" fill="white"/>
+          </g>
+        </svg>
+      </div>
+      <div class="flight-destination-target ${destinationReady ? 'filled' : 'placeholder'}">${destinationText}</div>
+    </div>
+  `;
+}
+
+function renderFlightStep(skipGreet = false) {
+  const step = flightStep();
+  const isDestinationStep = step.type === 'destination';
+  const isDatesStep = step.type === 'dates';
+  if (flightThinkingTimer) {
+    clearTimeout(flightThinkingTimer);
+    flightThinkingTimer = null;
+  }
+  if (step.shape !== 'ai') {
+    stopSiriOrb();
+  }
+  hideRich();
+  C.thumb.style.opacity = '0';
+
+  if (step.shape === 'pill') {
+    const pillContent = isDestinationStep
+      ? { icon: '', primary: '', secondary: '' }
+      : { icon: '✈', primary: '', secondary: '' };
+    morphTo('pill', pillContent);
+  } else if (step.shape === 'card-form') {
+    morphTo('card-form', { icon: '', primary: '', secondary: '' }, isDatesStep ? DATE_SELECTION_STEP_GEO : null);
+  } else if (step.shape === 'card-list') {
+    morphTo('card-list', { icon: '', primary: '', secondary: '' });
+  } else if (step.shape === 'card') {
+    morphTo('card', { icon: '', primary: '', secondary: '' });
+  } else if (step.shape === 'ai') {
+    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
+    startSiriOrb(true, true, true);
+  }
+
+  let html = '';
+  if (step.type === 'destination') {
+    const dest = String(flightUi.data.destination || '').trim();
+    const destinationReady = dest.length > 0;
+    const destinationText = destinationReady ? cityToAirport(dest) : 'Where to?';
+    html = `
+      <div class="flight-destination-step">
+        ${buildFlightRouteRowHtml(flightUi.data.origin, destinationText, destinationReady)}
+      </div>
+    `;
+  } else if (step.type === 'dates') {
+    const destinationCode = cityToAirport(flightUi.data.destination || '');
+    const destinationReady = !!String(flightUi.data.destination || '').trim();
+    const departVal = String(flightUi.data.depart || '').trim();
+    const returnVal = String(flightUi.data.return || '').trim();
+    html = `
+      <div class="flight-date-step">
+        <div class="flight-date-route-shared">
+          ${buildFlightRouteRowHtml(flightUi.data.origin, destinationReady ? destinationCode : 'Where to?', destinationReady)}
+        </div>
+        <div class="flight-date-panel">
+          <div class="flight-date-panel-col">
+            <div class="flight-date-panel-lbl">Depart</div>
+            <div class="flight-date-panel-val ${departVal ? '' : 'placeholder'}">${departVal || 'Select'}</div>
+          </div>
+          <div class="flight-date-panel-divider"></div>
+          <div class="flight-date-panel-col">
+            <div class="flight-date-panel-lbl">Return</div>
+            <div class="flight-date-panel-val ${returnVal ? '' : 'placeholder'}">${returnVal || 'Select'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (step.type === 'options') {
+    html = `
+      <div class="rich-list-header">${step.label}</div>
+      <div class="rich-divider"></div>
+      <div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${flightOptionRows(step.options || [])}</div>
+    `;
+  } else if (step.type === 'thinking') {
+    html = '';
+    addChatBubble('ai', 'Searching flights...');
+    flightThinkingTimer = setTimeout(() => {
+      flightThinkingTimer = null;
+      stopSiriOrb();
+      flightNextStep(true);
+    }, THINKING_HOLD_MS);
+  } else if (step.type === 'confirm') {
+    html = `
+      <div class="rich-list-header">Confirm flight</div>
+      <div style="flex:1;overflow-y:auto;margin:0 -4px;padding:0 4px;">${buildFlightConfirmRows()}</div>
+    `;
+  } else if (step.type === 'payment') {
+    html = `
+      <div class="rich-list-header">Payment</div>
+      <div class="rich-divider"></div>
+      <div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${buildPaymentRows()}</div>
+      <div class="rich-divider"></div>
+      <div class="rich-route-sub">↑/↓ choose payment · Space to pay</div>
+    `;
+  } else if (step.type === 'done') {
+    html = `
+      <div class="rich-list-header">Trip booked</div>
+      <div class="rich-divider"></div>
+      <div class="rich-route-sub" style="padding-top:10px;">${flightUi.data.flight || 'Flight'} to ${flightUi.data.destination}</div>
+      <div class="rich-route-sub">${flightUi.data.depart || '—'} → ${flightUi.data.return || '—'} · ${flightUi.data.paymentMethod || 'Paid'}</div>
+    `;
+  }
+
+  if (html) setTimeout(() => showRich(html), 180);
+  if (!skipGreet && step.aiGreet) addChatBubble('ai', step.aiGreet);
+
+  if (step.type === 'done') {
+    setTimeout(() => resetFlightFlowToHome(), 2800);
+  }
+}
+
+function flightCanAdvance() {
+  const step = flightStep();
+  if (step.type === 'dates') {
+    return !!flightUi.data.depart && !!flightUi.data.return;
+  }
+  if (step.type === 'options' || step.type === 'payment') {
+    return true;
+  }
+  return true;
+}
+
+function flightNextStep(skipGreet = false) {
+  if (!flightCanAdvance()) return;
+  if (flightUi.stepIndex >= FLIGHT_FLOW_STEPS.length - 1) return;
+  flightUi.stepIndex += 1;
+  flightUi.focused = 0;
+  renderFlightStep(skipGreet);
+}
+
+function flightBackStep() {
+  if (!flightUi.active) return;
+  if (flightUi.stepIndex > 0) {
+    flightUi.stepIndex -= 1;
+    flightUi.focused = 0;
+    renderFlightStep(true);
+    return;
+  }
+  resetFlightFlowToHome();
+}
+
+function updateFlightOptionHighlight() {
+  document.querySelectorAll('[data-flight-opt]').forEach((el, idx) => {
+    el.classList.toggle('selected', idx === flightUi.focused);
+  });
 }
 
 function moveFlightHighlight(dir) {
-  if (flightUi.step === 'dates') {
-    const max = 2;
-    flightUi.highlight = (flightUi.highlight + dir + max + 1) % (max + 1);
-    updateFlightDateHighlight();
-    return;
-  }
-  if (flightUi.step === 'results') {
-    const max = FLIGHTS.length - 1;
-    flightUi.highlight = (flightUi.highlight + dir + max + 1) % (max + 1);
-    updateFlightResultHighlight();
-  }
+  const step = flightStep();
+  if (!flightUi.active || (step.type !== 'options' && step.type !== 'payment')) return;
+  const max = Math.max(0, (step.options || []).length - 1);
+  flightUi.focused = Math.max(0, Math.min(max, flightUi.focused + dir));
+  updateFlightOptionHighlight();
 }
 
 function confirmFlightStep() {
   if (!flightUi.active) return;
-  if (flightUi.step === 'route') {
-    flowDateStep();
+  const step = flightStep();
+  if (step.type === 'options' || step.type === 'payment') {
+    const selected = step.options?.[flightUi.focused];
+    if (!selected) return;
+    addChatBubble('user', selected.name);
+    if (step.type === 'payment') {
+      flightUi.data.paymentMethod = selected.name;
+    } else {
+      flightUi.data[step.key] = selected.name;
+      if (step.key === 'flight') {
+        flightUi.data.returnFlight = selected.sub?.split('·')?.[0]?.trim() || '2:10 PM - 11:30 PM';
+      }
+    }
+    setTimeout(() => flightNextStep(), 140);
     return;
   }
-  if (flightUi.step === 'dates') {
-    if (flightUi.highlight === 0) {
-      cycleFlightDate('dep');
-      return;
-    }
-    if (flightUi.highlight === 1) {
-      cycleFlightDate('ret');
-      return;
-    }
-    submitDates();
+  if (step.type === 'confirm' || step.type === 'dates') {
+    flightNextStep();
     return;
   }
-  if (flightUi.step === 'results') {
-    selectFlight(flightUi.highlight);
+  if (step.type === 'done') {
+    resetFlightFlowToHome();
   }
 }
 
-function cancelFlightFlow() {
+async function callGeminiFlightAction(userText) {
+  const step = flightStep();
+  const options = Array.isArray(step.options) ? step.options.map((o, i) => `[${i}] ${o.name} — ${o.sub}`).join('\n') : '';
+  const systemPrompt = `
+You are the AI brain of a structured flight-booking UI with strict steps.
+Return ONLY JSON:
+{"reply":"short reply","action":"next|update|select|stay|back","data":{}}
+
+Current step type: ${step.type}
+Current step label: ${step.label || ''}
+Collected data: ${JSON.stringify(flightUi.data)}
+${options ? `Available options:\n${options}` : ''}
+
+Rules:
+- destination: collect destination city only, action "next" with {"destination":"City"}
+- dates: collect depart/return in short form like "Mar 24"; one date -> action "update"; both -> action "next"
+- options/payment: match user text to one option and action "select" with {"index":N}
+- confirm: confirm intent -> action "next"; change request -> action "update" or "back"
+- done: action "stay"
+`.trim();
+
+  const response = await fetch(apiUrl('/api/gemini'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userText,
+      systemPrompt,
+      maxTokens: 300,
+      model: 'gemini-2.0-flash',
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.error || `Gemini ${response.status}`);
+  }
+  const raw = String(payload?.text || '').trim();
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Gemini returned non-JSON');
+  return JSON.parse(match[0]);
+}
+
+function parseFlightDatesLocally(text) {
+  const t = String(text || '').toLowerCase();
+  const matches = [...t.matchAll(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})\b/g)];
+  const fmt = (m, d) => `${m.slice(0, 1).toUpperCase()}${m.slice(1, 3)} ${d}`;
+  const out = {};
+  if (matches[0]) out.depart = fmt(matches[0][1], matches[0][2]);
+  if (matches[1]) out.return = fmt(matches[1][1], matches[1][2]);
+  if (/\breturn|back\b/.test(t) && matches[0] && !out.return) {
+    out.return = fmt(matches[0][1], matches[0][2]);
+    delete out.depart;
+  }
+  return out;
+}
+
+function localFlightFallback(userText) {
+  const step = flightStep();
+  const text = String(userText || '').trim();
+  if (!text) return { reply: 'Tell me more.', action: 'stay', data: {} };
+  if (step.type === 'destination') {
+    const cleaned = normalizeCity(text.replace(/book a flight to|book a flight|fly to|to/ig, ' ').trim());
+    return { reply: `Got it. Flying to ${cleaned}.`, action: 'next', data: { destination: cleaned } };
+  }
+  if (step.type === 'dates') {
+    if (/\bsearch\b/i.test(text) && flightUi.data.depart && flightUi.data.return) {
+      return { reply: 'Great, searching now.', action: 'next', data: {} };
+    }
+    const dates = parseFlightDatesLocally(text);
+    if (dates.depart && dates.return) return { reply: `Perfect, ${dates.depart} to ${dates.return}.`, action: 'next', data: dates };
+    if (dates.depart || dates.return) return { reply: 'Got one date. What is the other date?', action: 'update', data: dates };
+    return { reply: 'Please give dates like "Mar 24 to Mar 31".', action: 'stay', data: {} };
+  }
+  if (step.type === 'options' || step.type === 'payment') {
+    const idx = (step.options || []).findIndex((o) => text.toLowerCase().includes(o.name.toLowerCase().split(' ')[0]));
+    if (idx >= 0) return { reply: `Selected ${step.options[idx].name}.`, action: 'select', data: { index: idx } };
+    return { reply: 'Use arrow keys or type the option.', action: 'stay', data: {} };
+  }
+  if (step.type === 'confirm') {
+    if (/\byes|ok|confirm|book\b/i.test(text)) return { reply: 'Confirmed.', action: 'next', data: {} };
+    return { reply: 'Tell me what to change.', action: 'stay', data: {} };
+  }
+  return { reply: 'Done.', action: 'stay', data: {} };
+}
+
+async function handleFlightUserInput(userText) {
   if (!flightUi.active) return;
-  setFlightStep('idle', 0);
+  const step = flightStep();
+  const rawText = String(userText || '').trim();
+  if (step.type === 'dates' && /\bsearch\b/i.test(rawText) && flightUi.data.depart && flightUi.data.return) {
+    addChatBubble('user', userText);
+    addChatBubble('ai', 'Great, searching flights now.');
+    flightNextStep(true);
+    return;
+  }
+  addChatBubble('user', userText);
+  showTypingBubble();
+  let result;
+  try {
+    result = await callGeminiFlightAction(userText);
+  } catch (err) {
+    console.warn('Gemini flight action failed, using local fallback', err);
+    result = localFlightFallback(userText);
+  } finally {
+    hideTypingBubble();
+  }
+
+  if (result?.reply) addChatBubble('ai', result.reply);
+  if (result?.data && typeof result.data === 'object') {
+    Object.assign(flightUi.data, result.data);
+  }
+
+  const action = String(result?.action || 'stay');
+  if (action === 'back') {
+    flightBackStep();
+    return;
+  }
+  if (action === 'select') {
+    const index = Math.max(0, Math.min((flightStep().options || []).length - 1, Number(result?.data?.index) || 0));
+    flightUi.focused = index;
+    updateFlightOptionHighlight();
+    confirmFlightStep();
+    return;
+  }
+  if (action === 'next') {
+    flightNextStep(true);
+    return;
+  }
+  if (action === 'update') {
+    renderFlightStep(true);
+    return;
+  }
+}
+
+function resetFlightFlowToHome() {
+  if (flightThinkingTimer) {
+    clearTimeout(flightThinkingTimer);
+    flightThinkingTimer = null;
+  }
   flightUi.active = false;
-  stopSiriOrb();
+  flightUi.stepIndex = 0;
+  flightUi.focused = 0;
+  hideTypingBubble();
   hideRich();
-  hideIntentHeader();
-  morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
+  stopSiriOrb();
+  morphTo('circle', { icon: '', primary: '', secondary: '', detail: '' });
   document.getElementById('stage').classList.remove('flow-active');
   document.getElementById('stage-wrap')?.classList.remove('flow-active');
   document.getElementById('input-area').classList.remove('hidden');
 }
 
-function startFlightFlow() {
-  syncFlightDateIndexes();
+function cancelFlightFlow() {
+  if (!flightUi.active) return;
+  flightBackStep();
+}
+
+function startFlightFlow(seedText = '') {
+  resetFlightData();
+  if (seedText) syncFlightDestinationFromText(seedText);
   flightUi.active = true;
-  setFlightStep('confirming', 0);
+  flightUi.stepIndex = 0;
+  flightUi.focused = 0;
   document.getElementById('stage').classList.add('flow-active');
   document.getElementById('stage-wrap')?.classList.add('flow-active');
-  hideRich();
-  C.thumb.style.opacity = '0';
-  if (currentShape === 'circle') {
-    bridgeHomeToThinking('ai');
-  } else {
-    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
-    startSiriOrb();
+  const panel = chatPanelEl();
+  if (panel) panel.innerHTML = '';
+  renderFlightStep(false);
+  if (seedText && /\bto\s+[a-zA-Z]/i.test(seedText)) {
+    addChatBubble('user', seedText);
+    addChatBubble('ai', `Got it. Flying to ${flightUi.data.destination || 'your destination'}.`);
+    flightNextStep(true);
   }
-  setIntentHeader('Book a Flight', 'Confirming');
-
-  setTimeout(() => {
-    stopSiriOrb();
-    morphTo('pill', {
-      icon: '✈',
-      primary: `${flightData.origin} → ${flightData.dest}`,
-      secondary: flightData.destCity + ', Japan',
-    });
-    setIntentHeader('Book a Flight', 'Route · Space to Continue');
-    setFlightStep('route', 0);
-  }, THINKING_HOLD_MS);
-}
-
-function flowDateStep() {
-  setIntentHeader('Book a Flight', 'When?');
-  hideRich();
-  morphTo('card-form', null);
-  setFlightStep('dates', 0);
-
-  const html = `
-    <div class="rich-route-row" style="margin-bottom:6px;">
-      <span class="rich-route-main">${flightData.origin}</span>
-      <span class="rich-route-arrow">→</span>
-      <span class="rich-route-main">${flightData.dest}</span>
-    </div>
-    <div class="rich-route-sub" style="margin-bottom:14px;">San Francisco → Tokyo Narita · ↑/↓ move · Space confirm · X cancel</div>
-    <div class="rich-divider"></div>
-    <div class="rich-flight-row selected" id="f-opt-dep">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">Departure</div>
-        <div class="rich-flight-times" id="f-dep-val">${flightData.depDate}</div>
-      </div>
-      <div class="rich-flight-right"><div class="rich-flight-meta">Space: cycle</div></div>
-    </div>
-    <div class="rich-divider"></div>
-    <div class="rich-flight-row" id="f-opt-ret">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">Return</div>
-        <div class="rich-flight-times" id="f-ret-val">${flightData.retDate}</div>
-      </div>
-      <div class="rich-flight-right"><div class="rich-flight-meta">Space: cycle</div></div>
-    </div>
-    <div class="rich-divider"></div>
-    <div class="rich-flight-row" id="f-opt-search">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">Search Flights</div>
-        <div class="rich-flight-times">${flightData.origin} → ${flightData.dest}</div>
-      </div>
-      <div class="rich-flight-right"><div class="rich-flight-price">Space</div></div>
-    </div>
-  `;
-
-  setTimeout(() => {
-    showRich(html);
-    updateFlightDateHighlight();
-  }, 350);
-}
-
-function submitDates() {
-  flowSearchStep();
-}
-
-function flowSearchStep() {
-  setFlightStep('searching', 0);
-  setIntentHeader('Book a Flight', 'Searching');
-  hideRich();
-  morphTo('pill', {
-    icon: '',
-    primary: `${flightData.origin} → ${flightData.dest}`,
-    secondary: flightData.depDate,
-  });
-  C.thumb.style.opacity = '0';
-  startSiriOrb();
-
-  setTimeout(() => {
-    stopSiriOrb();
-    flowResultsStep();
-  }, THINKING_HOLD_MS);
-}
-
-function flowResultsStep() {
-  setFlightStep('results', 0);
-  setIntentHeader('Book a Flight', 'Select');
-  hideRich();
-  morphTo('card-list', null);
-
-  const rows = FLIGHTS.map((f, i) => `
-    <div class="rich-flight-row ${i === flightUi.highlight ? 'selected' : ''}">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">${f.airline} · ${f.dep} <span style="color:rgba(255,255,255,0.30);">→ ${f.arr}<sup style="font-size:10px;">${f.day}</sup></span></div>
-        <div class="rich-flight-times">${f.stops} · ${f.duration}</div>
-      </div>
-      <div class="rich-flight-right">
-        <div class="rich-flight-price">${f.price}</div>
-        <div class="rich-flight-meta">${f.code}</div>
-      </div>
-    </div>
-    ${i < FLIGHTS.length - 1 ? '<div class="rich-divider"></div>' : ''}
-  `).join('');
-
-  const html = `
-    <div class="rich-list-header">${flightData.origin} → ${flightData.dest} · ${flightData.depDate} · ↑/↓ select · Space confirm · X cancel</div>
-    <div class="rich-divider"></div>
-    <div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${rows}</div>
-  `;
-
-  setTimeout(() => {
-    showRich(html);
-    updateFlightResultHighlight();
-  }, 350);
-}
-
-function selectFlight(idx) {
-  if (!flightUi.active) return;
-  setFlightStep('confirm', idx);
-  flightUi.highlight = idx;
-  const f = FLIGHTS[idx];
-  updateFlightResultHighlight();
-
-  setTimeout(() => {
-    setIntentHeader('Book a Flight', 'Confirm');
-    hideRich();
-    morphTo('pill', {
-      icon: '✈',
-      primary: `${f.airline} · ${f.price}`,
-      secondary: `${flightData.depDate} · ${f.stops}`,
-    });
-
-    setTimeout(() => {
-      setIntentHeader('Book a Flight', 'Booked ✓');
-      setFlightStep('booked', 0);
-      morphTo('circle', { icon:'✓', primary:'', secondary:'', detail:'' });
-      C.thumb.style.fontSize = '26px';
-
-      setTimeout(() => {
-        flightUi.active = false;
-        setFlightStep('idle', 0);
-        hideIntentHeader();
-        morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
-        document.getElementById('stage').classList.remove('flow-active');
-        document.getElementById('stage-wrap')?.classList.remove('flow-active');
-        document.getElementById('input-area').classList.remove('hidden');
-      }, 3000);
-    }, 2000);
-  }, 500);
 }
 
 const FUTURE_ROUTE_ADAPTER = {
-  provider: 'gauss',
+  provider: 'gemini',
   get mode() {
     return responseMode;
   },
 };
 
 const AI_PROVIDERS = {
-  gauss: {
-    // Placeholder for future Gauss integration.
+  gemini: {
     async resolve({ userText, stageOverride, scenarios, selected }) {
       const text = String(userText || '').trim();
-      const scenario = scenarios.find(item => scenarioMatchesText(item, text)) || selected || scenarios[0] || null;
-      const base = scenario ? scenarioToRenderContent(scenario) : {
+      const fallbackScenario = scenarios.find(item => scenarioMatchesText(item, text)) || selected || scenarios[0] || null;
+      const fallbackBase = fallbackScenario ? scenarioToRenderContent(fallbackScenario) : {
         icon: createIcon('emoji', '✨'),
         primary: '',
         secondary: '',
@@ -5003,19 +5642,67 @@ const AI_PROVIDERS = {
         image: null,
         typography: defaultTypographyForShape('pill'),
       };
-      const nextShape = (stageOverride && stageOverride !== AI_STAGE_OVERRIDE.AUTO)
+      const fallbackShape = (stageOverride && stageOverride !== AI_STAGE_OVERRIDE.AUTO)
         ? stageOverride
-        : (scenario?.shape || 'pill');
-      return {
-        scenarioId: scenario?.id || null,
-        shape: nextShape,
-        content: {
-          ...base,
-          primary: base.primary || (scenario?.name || 'Generated response'),
-          secondary: base.secondary || `User: ${text}`,
-          detail: base.detail || `AI draft generated for "${text}"`,
-        },
-      };
+        : (fallbackScenario?.shape || 'pill');
+
+      try {
+        const scenarioList = (scenarios || []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          shape: s.shape,
+          triggers: s.triggers || [],
+        }));
+        const systemPrompt = `
+Return ONLY JSON:
+{"scenarioId":string|null,"shape":"dot|pill|card|card-s|image|idle","content":{"primary":string,"secondary":string,"detail":string}}
+Pick the best scenario by name/triggers for the user text. Keep copy concise.
+Scenarios: ${JSON.stringify(scenarioList)}
+Selected scenario id: ${selected?.id || null}
+Stage override: ${stageOverride}
+`.trim();
+        const response = await fetch(apiUrl('/api/gemini'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userText: text,
+            systemPrompt,
+            maxTokens: 260,
+            model: 'gemini-2.0-flash',
+          }),
+        });
+        if (!response.ok) throw new Error(`Gemini ${response.status}`);
+        const payload = await response.json().catch(() => ({}));
+        const raw = String(payload?.text || '').trim();
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error('No JSON object');
+        const parsed = JSON.parse(match[0]);
+        const shapeCandidate = String(parsed?.shape || fallbackShape);
+        const safeShape = SCENARIO_SHAPES.includes(shapeCandidate) ? shapeCandidate : fallbackShape;
+        const safeScenarioId = scenarios.some((s) => s.id === parsed?.scenarioId) ? parsed.scenarioId : (fallbackScenario?.id || null);
+        return {
+          scenarioId: safeScenarioId,
+          shape: safeShape,
+          content: {
+            ...fallbackBase,
+            primary: String(parsed?.content?.primary || fallbackBase.primary || fallbackScenario?.name || 'Generated response'),
+            secondary: String(parsed?.content?.secondary || fallbackBase.secondary || `User: ${text}`),
+            detail: String(parsed?.content?.detail || fallbackBase.detail || ''),
+          },
+        };
+      } catch (err) {
+        console.warn('Gemini resolve fallback', err);
+        return {
+          scenarioId: fallbackScenario?.id || null,
+          shape: fallbackShape,
+          content: {
+            ...fallbackBase,
+            primary: fallbackBase.primary || (fallbackScenario?.name || 'Generated response'),
+            secondary: fallbackBase.secondary || `User: ${text}`,
+            detail: fallbackBase.detail || `AI draft generated for "${text}"`,
+          },
+        };
+      }
     },
   },
 };
@@ -5023,11 +5710,7 @@ const AI_PROVIDERS = {
 function syncFlightDestinationFromText(userText) {
   const destMatch = String(userText || '').match(/to\s+([a-zA-Z\s]+)/i);
   if (!destMatch) return;
-  flightData.destCity = destMatch[1].trim();
-  const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
-  const key = flightData.destCity.toLowerCase();
-  const found = Object.keys(cityMap).find(k => key.includes(k));
-  if (found) flightData.dest = cityMap[found];
+  flightUi.data.destination = normalizeCity(destMatch[1].trim());
 }
 
 function isFlightIntent(userText) {
@@ -5037,7 +5720,7 @@ function isFlightIntent(userText) {
 function handleManualRequest(userText) {
   if (isFlightIntent(userText)) {
     syncFlightDestinationFromText(userText);
-    startFlightFlow();
+    startFlightFlow(userText);
     return;
   }
   const scenario = resolveScenario(userText);
@@ -5056,7 +5739,7 @@ function handleManualRequest(userText) {
 }
 
 async function handleAiRequest(userText) {
-  const provider = AI_PROVIDERS.gauss;
+  const provider = AI_PROVIDERS.gemini;
   try {
     const result = await provider.resolve({
       userText,
@@ -5090,18 +5773,21 @@ async function handleAiRequest(userText) {
     }));
   } catch (err) {
     console.warn('AI mode failed, falling back to manual mode', err);
-    setIntentHeader('AI unavailable', 'Fallback to manual');
-    setTimeout(() => hideIntentHeader(), 1200);
+    addChatBubble('ai', 'AI unavailable. Falling back to manual flow.');
     handleManualRequest(userText);
   }
 }
 
 async function processRequest(userText) {
+  if (flightUi.active) {
+    await handleFlightUserInput(userText);
+    return;
+  }
   hideRich();
   stopSiriOrb();
   if (isFlightIntent(userText)) {
     syncFlightDestinationFromText(userText);
-    startFlightFlow();
+    startFlightFlow(userText);
     return;
   }
   if (responseMode === RESPONSE_MODE.AI) {
@@ -5403,7 +6089,6 @@ input.addEventListener('keydown', e => {
 function handleSend() {
   const text = input.value.trim();
   if (!text) return;
-  if (flightUi.active) cancelFlightFlow();
   input.value = '';
   sendBtn.classList.remove('active');
   void processRequest(text);
@@ -5411,7 +6096,7 @@ function handleSend() {
 
 function fireChip(el) {
   const text = el.textContent.trim();
-  if (flightUi.active) cancelFlightFlow();
+  if (flightUi.active) resetFlightFlowToHome();
   input.value = text;
   sendBtn.classList.add('active');
   setTimeout(() => {
@@ -5422,9 +6107,20 @@ function fireChip(el) {
 }
 
 document.addEventListener('keydown', e => {
-  if (document.activeElement?.matches?.('input, textarea, select')) return;
+  const activeInInput = document.activeElement?.matches?.('input, textarea, select');
 
   if (flightUi.active) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      resetFlightFlowToHome();
+      manualShape('circle');
+      return;
+    }
+    if ((e.key === 'x' || e.key === 'X') && !(activeInInput && input.value.trim().length > 0)) {
+      e.preventDefault();
+      flightBackStep();
+      return;
+    }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       moveFlightHighlight(-1);
@@ -5435,26 +6131,14 @@ document.addEventListener('keydown', e => {
       moveFlightHighlight(1);
       return;
     }
-    if (e.code === 'Space') {
+    if (e.code === 'Space' && !(activeInInput && input.value.length > 0)) {
       e.preventDefault();
       confirmFlightStep();
       return;
     }
-    if (e.key === 'x' || e.key === 'X') {
-      e.preventDefault();
-      cancelFlightFlow();
-      return;
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      cancelFlightFlow();
-      if (responseMode === RESPONSE_MODE.AI) {
-        manualShape('circle');
-      } else {
-        previewScenario(selectedScenario());
-      }
-      return;
-    }
+  }
+
+  if (activeInInput) {
     return;
   }
 

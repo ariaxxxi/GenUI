@@ -1018,7 +1018,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 
 @keyframes morph {
   0%, 100% {
-    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    border-radius: 50% 50% 50% 50%;
     rotate: 0deg;
   }
   33% {
@@ -1033,7 +1033,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 
 /* ── AI mode: liquid shell + inner glow, no inner white blob ── */
 #drop-main.ai-mode {
-  background: rgba(0,0,0,0.92) !important;
+  background: rgba(0,0,0,0.92);
   box-shadow: 0 0 44px rgba(255,255,255,0.08) !important;
   animation: morph 3.4s ease-in-out infinite;
   will-change: border-radius, rotate;
@@ -5334,9 +5334,11 @@ function manualShape(shape) {
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
-    startSiriOrb(true);
     updateActive('ai');
+    setTimeout(() => {
+      document.getElementById('drop-main').classList.add('ai-mode');
+      startSiriOrb(true);
+    }, animDur);
     return;
   }
   if (shape === 'idle') {
@@ -5347,9 +5349,11 @@ function manualShape(shape) {
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
-    showAiIdle();
     updateActive('idle');
+    setTimeout(() => {
+      document.getElementById('drop-main').classList.add('ai-mode');
+      showAiIdle();
+    }, animDur);
     return;
   }
 
