@@ -908,6 +908,10 @@ body.mode-ai #example-chips {
   overflow-y: hidden;
   justify-content: flex-start;
   align-content: center;
+  scrollbar-width: none;
+}
+body.mode-ai #example-chips::-webkit-scrollbar {
+  display: none;
 }
 .ex-chip {
   padding: 7px 14px; border-radius: 9999px;
@@ -2147,6 +2151,27 @@ body.bg-off .bg-blur-image { opacity: 0; }
 <a class="entry-point-btn" href="./index.html">prototype mode</a>
 
 <script>
+if (location.protocol === 'file:') {
+  // When opened from file://, browsers block module imports. Use a legacy non-module fallback.
+  const s = document.createElement('script'); s.src = 'src/shapes.legacy.js'; document.head.appendChild(s);
+} 
+</script>
+<script type="module" src="src/shapes.js"></script>
+<script type="module">
+import {
+  SHAPES,
+  configureShapeHelpers,
+  defaultTypographyForShape,
+  normalizeIcon,
+  normalizeIconByShape,
+  normalizeImagesByShape,
+  normalizeStage,
+  normalizeStageImage,
+  normalizeStageImages,
+  normalizeTypography,
+  normalizeTypographyByShape,
+} from './src/shapes.js';
+
 const P   = 20;
 const PILL_NO_ICON_P = 32;
 const PILL_ICON_P = 16;
@@ -2162,69 +2187,6 @@ const CARD_MEDIA_STACK_GAP = 8;
 const TS  = 60;
 const TBR = '30px';
 const GAP = 8;
-
-const SHAPES = {
-  idle: {
-    main:  { w:0, h:0, br:'0px', tx:0, ty:0, op:0 },
-    left:  { w:0, h:0, br:'0px', tx:0, ty:0, op:0 },
-    right: { w:0, h:0, br:'0px', tx:0, ty:0, op:0 },
-  },
-  circle: {
-    main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-  },
-  magic: {
-    main:  { w:60, h:60, br:'30px', tx:-30,  ty:-30,  op:1 },
-    left:  { w:60, h:60, br:'30px', tx:-30,  ty:-30,  op:0 },
-    right: { w:60, h:60, br:'30px', tx:-30,  ty:-30,  op:0 },
-  },
-  dot: {
-    main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-  },
-  pill: {
-    main:  { w:420, h:100, br:'60px', tx:-210, ty:-50,  op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:60,   ty:-50,  op:0 },
-  },
-  split: {
-    main:  { w:96, h:96, br:'48px', tx:-48, ty:-48, op:0 },
-    left:  { w:96, h:96, br:'48px', tx:-108, ty:-48, op:1 },
-    right: { w:96, h:96, br:'48px', tx:12, ty:-48, op:1 },
-  },
-  card: {
-    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  'card-s': {
-    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  image: {
-    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  ai: {
-    main:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
-  },
-  'card-form': {
-    main:  { w:420, h:400, br:'30px', tx:-210, ty:-200, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  'card-list': {
-    main:  { w:420, h:360, br:'30px', tx:-210, ty:-180, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-};
 
 const STORAGE_KEYS = {
   scenarios: 'genui.scenarios.v1',
@@ -2259,50 +2221,14 @@ const BUILTIN_STAGE_DEFS = Object.freeze([
 ]);
 const SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 
-function defaultTypographyForShape(shape = 'pill') {
-  return {
-    icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
-    secondary: { size: 24, color: '#d4d4d4' },
-    detail: { size: 24, color: '#a3a3a3' },
-  };
-}
-
-function normalizeTypography(value = {}, shape = 'pill') {
-  const defaults = defaultTypographyForShape(shape);
-  const output = {};
-  TYPOGRAPHY_LAYERS.forEach((layer) => {
-    const src = value?.[layer] || {};
-    const fallback = defaults[layer];
-    const size = Number(src.size);
-    output[layer] = {
-      size: Number.isFinite(size) ? clamp(Math.round(size), 12, 96) : fallback.size,
-      color: /^#[0-9a-f]{6}$/i.test(String(src.color || '')) ? String(src.color) : fallback.color,
-    };
-  });
-  return output;
-}
-
-function normalizeTypographyByShape(value = {}, fallbackShape = 'pill') {
-  const legacyTypography = value && TYPOGRAPHY_LAYERS.some((layer) => value[layer]);
-  const output = {};
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  stageIds.forEach((shape) => {
-    const renderShape = renderShapeForStageId(shape) || shape;
-    const source = legacyTypography
-      ? (shape === fallbackShape ? value : {})
-      : (value?.[shape] || {});
-    output[shape] = normalizeTypography(source, renderShape);
-  });
-  return output;
-}
+configureShapeHelpers({
+  clampFn: clamp,
+  getAvailableScenarioShapes: availableScenarioShapes,
+  renderShapeForStageId,
+  scenarioShapes: SCENARIO_SHAPES,
+  stageComponentTypes: STAGE_COMPONENT_TYPES,
+});
 
 function stageId() {
   return 'stage-' + Math.random().toString(36).slice(2, 10);
@@ -2315,41 +2241,11 @@ function defaultStageLibrary() {
   }));
 }
 
-function normalizeStage(raw, fallback) {
-  const fallbackStage = fallback || BUILTIN_STAGE_DEFS[0];
-  const id = String(raw?.id || fallbackStage.id);
-  const preset = !!raw?.preset;
-  const renderShape = String(raw?.renderShape || fallbackStage.renderShape || 'card');
-  const name = String(raw?.name || fallbackStage.name || id);
-  const fallbackCorner = Number.isFinite(Number(fallbackStage.cornerRadius)) ? Number(fallbackStage.cornerRadius) : 30;
-  const rawCorner = Number(raw?.cornerRadius);
-  const cornerRadius = Number.isFinite(rawCorner)
-    ? clamp(Math.round(rawCorner), 0, 120)
-    : clamp(Math.round(fallbackCorner), 0, 120);
-  const rawWidth = Number(raw?.widthOverride);
-  const rawHeight = Number(raw?.heightOverride);
-  const widthOverride = Number.isFinite(rawWidth) && rawWidth > 0 ? clamp(Math.round(rawWidth), 40, 1400) : null;
-  const heightOverride = Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null;
-  const fallbackGap = Number(fallbackStage?.iconTextGap);
-  const rawGap = Number(raw?.iconTextGap ?? fallbackGap);
-  const iconTextGap = Number.isFinite(rawGap) && rawGap >= 0 ? clamp(Math.round(rawGap), 0, 80) : null;
-  const fallbackIconPad = Number(fallbackStage?.iconLeftPadding);
-  const rawIconPad = Number(raw?.iconLeftPadding ?? fallbackIconPad);
-  const iconLeftPadding = Number.isFinite(rawIconPad) && rawIconPad >= 0 ? clamp(Math.round(rawIconPad), 0, 120) : null;
-  const phoneBgBlur = raw?.phoneBgBlur === undefined
-    ? !!fallbackStage.phoneBgBlur
-    : raw?.phoneBgBlur === true;
-  const components = Array.isArray(raw?.components)
-    ? raw.components.map((item) => String(item || '')).filter((item) => STAGE_COMPONENT_TYPES.includes(item))
-    : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, components };
-}
-
 function loadStageLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.stages, null);
   if (!Array.isArray(stored)) return defaultStageLibrary();
   const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
-  const normalized = stored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
+  const normalized = stored.map((item) => normalizeStage(item, byId.get(item?.id) || BUILTIN_STAGE_DEFS[0])).filter(Boolean);
   const ids = new Set(normalized.map((stage) => stage.id));
   BUILTIN_STAGE_DEFS.forEach((builtin) => {
     if (!ids.has(builtin.id)) normalized.unshift(normalizeStage(builtin, builtin));
@@ -2408,50 +2304,6 @@ function scenarioId() {
 
 function createIcon(kind = 'none', value = '') {
   return { kind, value: String(value || '') };
-}
-
-function normalizeStageImage(value) {
-  if (!value || typeof value !== 'object') return null;
-  const src = String(value.src || '').trim();
-  const width = Number(value.width);
-  const height = Number(value.height);
-  if (!src || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
-  return { src, width, height };
-}
-
-function normalizeStageImages(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map(normalizeStageImage).filter(Boolean);
-}
-
-function normalizeIconByShape(value = {}, fallbackShape = 'pill', legacyIcon = null) {
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  const output = {};
-  stageIds.forEach((shape) => {
-    const stageValue = value?.[shape];
-    const resolved = stageValue !== undefined ? stageValue : legacyIcon;
-    output[shape] = normalizeIcon(resolved);
-  });
-  return output;
-}
-
-function normalizeImagesByShape(value = {}, fallbackShape = 'pill', legacyImages = []) {
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  const output = {};
-  stageIds.forEach((shape) => {
-    output[shape] = normalizeStageImages(value?.[shape] || (shape === fallbackShape ? legacyImages : []));
-  });
-  return output;
 }
 
 function normalizeStageTextEntry(value = {}, fallback = {}) {
@@ -2688,15 +2540,6 @@ function normalizeTriggers(value) {
     .split(/[\n,]/)
     .map(v => v.trim())
     .filter(Boolean);
-}
-
-function normalizeIcon(value) {
-  if (value && typeof value === 'object') {
-    const kind = ['emoji', 'image', 'none'].includes(value.kind) ? value.kind : 'none';
-    return createIcon(kind, value.value || '');
-  }
-  const text = String(value || '').trim();
-  return text ? createIcon('emoji', text) : createIcon('none', '');
 }
 
 function normalizeScenario(raw, index = 0) {
@@ -5243,6 +5086,9 @@ function cityToAirport(city) {
     paris: 'CDG',
     london: 'LHR',
     'new york': 'JFK',
+    ny: 'JFK',
+    nyc: 'JFK',
+    manhattan: 'JFK',
     sydney: 'SYD',
     dubai: 'DXB',
     seoul: 'ICN',
@@ -5637,7 +5483,10 @@ Never: "Got it. Flying to Lax."
   }
   const raw = String(payload?.text || '').trim();
   const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Gemini returned non-JSON');
+  if (!match) {
+    // graceful fallback: return a safe reply object instead of throwing — keep the UI responsive
+    return { reply: raw || 'AI returned an unexpected response', action: 'stay', data: {} };
+  }
   return JSON.parse(match[0]);
 }
 
@@ -5735,6 +5584,10 @@ async function handleFlightUserInput(userText) {
     return;
   }
   addChatBubble('user', userText);
+  // Quick local command: if user explicitly asks for 'destination', jump straight to destination step UI
+  if (/\bdestination\b/i.test(rawText)) {
+    if (jumpToFlightStep({ type: 'destination' })) return;
+  }
   showTypingBubble();
   let result;
   try {
@@ -5744,6 +5597,67 @@ async function handleFlightUserInput(userText) {
     result = localFlightFallback(userText);
   } finally {
     hideTypingBubble();
+  }
+
+  // If the AI reply contains date text but no structured data, extract dates locally or resolve named events
+  try {
+    if ((!result?.data || Object.keys(result.data || {}).length === 0) && typeof result?.reply === 'string') {
+      const lower = String(result.reply || '').toLowerCase();
+      // Named event shortcut (hybrid): check for local events first, otherwise ask AI via /api/gemini
+      if (/coachella/.test(lower)) {
+        // try local map first (src/events.js)
+        let eventDates = null;
+        try {
+          // dynamic import of the small events map
+          const mod = await import('./src/events.js');
+          const ev = (mod.EVENTS || {})['coachella'];
+          if (ev && ev.weeks && ev.weeks.week1) {
+            eventDates = { depart: ev.weeks.week1.depart, return: ev.weeks.week1.return };
+          }
+        } catch (e) {
+          // ignore import errors
+        }
+        if (!eventDates) {
+          // fallback: query the AI (server normalizes responses)
+          try {
+            const prompt = `Return JSON object {"depart":"Mon DD","return":"Mon DD"} for "Coachella week 1" in 2026. Provide only the JSON.`;
+            const resp = await fetch(apiUrl('/api/gemini'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userText: prompt, systemPrompt: '', maxTokens: 200, model: 'gemini-2.5-flash' }),
+            });
+            const payload = await resp.json().catch(() => ({}));
+            const rawText = String(payload?.text || '').trim();
+            const match = rawText.match(/\{[\s\S]*\}/);
+            if (match) {
+              try {
+                const parsed = JSON.parse(match[0]);
+                eventDates = { depart: parsed.depart || parsed.start || '', return: parsed.return || parsed.end || '' };
+              } catch (e) {/* ignore */}
+            }
+          } catch (e) {
+            console.warn('event lookup failed', e);
+          }
+        }
+
+        if (eventDates && (eventDates.depart || eventDates.return)) {
+          result.data = { ...(result.data || {}), ...eventDates };
+        } else {
+          const parsedDates = parseFlightDatesLocally(result.reply);
+          if (parsedDates.depart || parsedDates.return) {
+            result.data = { ...(result.data || {}), ...parsedDates };
+          }
+        }
+      } else {
+        const parsedDates = parseFlightDatesLocally(result.reply);
+        if (parsedDates.depart || parsedDates.return) {
+          result.data = { ...(result.data || {}), ...parsedDates };
+        }
+      }
+    }
+  } catch (e) {
+    // fall through — do not let date parsing break the flow
+    console.warn('date extraction fallback failed', e);
   }
 
   const action = String(result?.action || 'stay');
@@ -6331,8 +6245,8 @@ function handleChipQuickAction(text) {
     return true;
   }
   if (/\bmessage\b|\btext\b/.test(t)) {
-    // route through processRequest so AI/manual mode handling is consistent
-    void processRequest(text);
+    // message quick-action should trigger the manual preview path (show card scenario)
+    handleManualRequest('send a message to alice');
     return true;
   }
   if (/\btimer\b/.test(t)) {
@@ -7415,6 +7329,14 @@ function selectListItem(el, idx, items) {
   document.querySelectorAll('.list-pill').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
 }
+
+Object.assign(window, {
+  applyCustomShape,
+  fireChip,
+  handleSend,
+  manualShape,
+  openCustom,
+});
 
 </script>
 </body>

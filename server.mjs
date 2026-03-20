@@ -214,31 +214,61 @@ async function handleGeminiRoute(req, res) {
   try {
     body = await readJsonBody(req);
   } catch (err) {
-    json(res, 400, { error: String(err.message || err) });
+    json(res, 400, { error: String(err.message || err), code: 'INVALID_REQUEST' });
     return;
   }
   const apiKey = String(process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '').trim();
   if (!apiKey) {
-    json(res, 500, { error: 'Missing GEMINI_API_KEY on server' });
+    json(res, 500, { error: 'Missing GEMINI_API_KEY on server', code: 'MISSING_CONFIG' });
     return;
   }
   const userText = String(body.userText || '').trim();
+  const systemPrompt = String(body.systemPrompt || '').trim();
   if (!userText) {
-    json(res, 400, { error: 'Missing userText' });
+    json(res, 400, { error: 'Missing userText', code: 'INVALID_REQUEST' });
     return;
   }
-  try {
-    const text = await callGemini({
-      apiKey,
-      model: String(body.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
-      maxTokens: Math.max(32, Math.min(2000, Number(body.maxTokens || 300))),
-      systemPrompt: String(body.systemPrompt || ''),
-      userText,
-    });
-    json(res, 200, { text, provider: 'gemini' });
-  } catch (err) {
-    json(res, 502, { error: String(err.message || err) });
+
+  // retry for transient errors
+  const maxAttempts = 3; // initial + 2 retries
+  const backoffs = [0, 200, 800];
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    try {
+      const text = await callGemini({
+        apiKey,
+        model: String(body.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
+        maxTokens: Math.max(32, Math.min(2000, Number(body.maxTokens || 300))),
+        systemPrompt,
+        userText,
+      });
+
+      // try to extract inner JSON object from text
+      const raw = String(text || '').trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) {
+        // return normalized envelope indicating parse failure
+        json(res, 200, { text: raw, provider: 'gemini', parse_ok: false });
+        return;
+      }
+      // return the inner JSON text as the canonical 'text' field
+      json(res, 200, { text: match[0], provider: 'gemini', parse_ok: true });
+      return;
+    } catch (err) {
+      attempt += 1;
+      const msg = String(err?.message || err || 'Unknown');
+      // transient statuses/messages heuristic: 429, 502, 503, 504 in message
+      if (/(429|502|503|504)/.test(msg) && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, backoffs[attempt] || 400));
+        continue; // retry
+      }
+      // map some known messages to codes
+      const code = msg.includes('quota') ? 'QUOTA_EXCEEDED' : (/(429|502|503|504)/.test(msg) ? 'GEMINI_RETRY_FAILED' : 'GEMINI_ERROR');
+      json(res, 502, { error: msg, code });
+      return;
+    }
   }
+  json(res, 502, { error: 'Upstream retries exhausted', code: 'GEMINI_RETRY_FAILED' });
 }
 
 const MIME = {
