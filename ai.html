@@ -170,17 +170,25 @@ body[data-page-mode="ai"] #sidebar {
   opacity: 1;
   transform: translateY(0);
 }
+#home-start-prompt.to-thinking {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 260ms ease, transform 320ms cubic-bezier(0.22,1,0.36,1);
+}
 
 #intent-header {
   display: flex; align-items: center; gap: 10px;
   height: 36px; margin-bottom: 12px;
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 360ms ease, transform 360ms ease;
+  transform: translateY(20px);
+  transition: opacity 420ms ease, transform 420ms cubic-bezier(0.22,1,0.36,1);
   pointer-events: none;
 }
 #intent-header.visible {
   opacity: 1; transform: translateY(0);
+}
+#stage-wrap.flow-active #intent-header {
+  margin-bottom: 100px;
 }
 #intent-label {
   font-size: 9px; letter-spacing: .32em;
@@ -1078,30 +1086,32 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 
 @keyframes think-ai-breathe-spread {
   0%, 100% {
-    box-shadow: 0 0 22.1px -1px rgba(123,194,255,1);
+    box-shadow: 0 0 22.1px 0 rgba(123,194,255,1);
   }
   50% {
-    box-shadow: 0 0 22.1px 9px rgba(123,194,255,1);
+    box-shadow: 0 0 22.1px 10px rgba(123,194,255,1);
   }
 }
 
 /* ── AI mode: liquid shell + inner glow, no inner white blob ── */
 #drop-main.ai-mode {
-  background: #000 !important;
-  box-shadow: 0 0 22.1px -1px rgba(123,194,255,1) !important;
-  filter: blur(2.75px);
-  animation: think-ai-breathe-spread 1400ms ease-in-out infinite;
+  background: rgba(255,255,255,0.05) !important;
+  box-shadow: 0 0 22.1px 5px rgba(123,194,255,1);
+  filter: blur(6px);
   transition:
     filter 760ms cubic-bezier(0.22,1,0.36,1),
     box-shadow 760ms cubic-bezier(0.22,1,0.36,1),
     background 760ms cubic-bezier(0.22,1,0.36,1);
-  will-change: border-radius, rotate;
+  will-change: transform, width, height, border-radius, opacity;
 }
-#drop-main.ai-bridge {
+#drop-main.ai-mode.ai-bridge {
   transition:
     filter 980ms cubic-bezier(0.42,0,0.2,1),
     box-shadow 980ms cubic-bezier(0.42,0,0.2,1),
     background 980ms cubic-bezier(0.42,0,0.2,1);
+}
+#drop-main.ai-mode.ai-breathing {
+  animation: think-ai-breathe-spread 1400ms ease-in-out infinite;
 }
 #drop-main.ai-mode::before { opacity: 0; }
 #drop-main.ai-mode::after  { opacity: 0; }
@@ -1109,12 +1119,11 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 #drop-main.home-glow #home-glow-layer { opacity: 1; }
 #drop-main.ai-mode #home-glow-layer {
   opacity: 1 !important;
-  transition: opacity 280ms ease;
-  box-shadow:
-    inset 0 0 20px rgba(255,255,255,0.5),
-    inset 0 0 34px rgba(255,255,255,0.30),
-    inset 0 0 82px rgba(210,230,255,0.20),
-    0 0 52px rgba(255,255,255,0.16);
+  transition: opacity 0ms linear;
+}
+#drop-main.ai-mode.ai-glow-on #home-glow-layer {
+  opacity: 1 !important;
+  transition: opacity 0ms linear;
 }
 #drop-main.ai-mode #siri-orb { opacity: 0 !important; }
 #drop-main { z-index: 3; }
@@ -2603,6 +2612,9 @@ let suppressDeformation = false;
 let splitBridgeTimer = null;
 let listBridgeTimer = null;
 let thinkingBridgeTimer = null;
+let aiBridgeTimer = null;
+let aiBreathingTimer = null;
+let homePromptExitTimer = null;
 let thumbContentState = createIcon('none', '');
 let contentTypographyState = defaultTypographyForShape('pill');
 let contentDelayProfile = { secondaryInAdvanceMs: 0, detailInAdvanceMs: 0 };
@@ -3314,6 +3326,7 @@ function previewScenario(scenario) {
   hideRich();
   hideIntentHeader();
   document.getElementById('stage').classList.remove('flow-active');
+  document.getElementById('stage-wrap')?.classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
   morphTo(renderShapeForStageId(scenario.shape), scenarioToRenderContent(scenario), null, scenario.shape);
@@ -3329,6 +3342,7 @@ function previewScenarioInstant(scenario) {
   hideRich();
   hideIntentHeader();
   document.getElementById('stage').classList.remove('flow-active');
+  document.getElementById('stage-wrap')?.classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
 
@@ -3548,7 +3562,7 @@ function listPhaseTwoStartMs() {
 }
 
 function thinkingBridgeMs() {
-  return Math.max(780, Math.round(animDur * 1.8));
+  return clamp(Math.round(animDur * 0.55), 220, 420);
 }
 
 function homeThinkingBridgeMs() {
@@ -3581,12 +3595,7 @@ function transitionAnimMs(fromShape, toShape, baseMs = animDur, fromGeo = null, 
     (fromShape === 'dot' && toCardLike) ||
     (fromCardLike && toShape === 'dot')
   );
-  const isHomeThinkingPair = (
-    (fromShape === 'circle' && toShape === 'ai') ||
-    (fromShape === 'ai' && toShape === 'circle')
-  );
   const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
-  if (isHomeThinkingPair) return clamp(Math.round(baseMs * 1.45), 520, 1200);
   if (isDotPillPair) return clamp(baseMs, 100, 1800);
   if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
   if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);
@@ -3753,28 +3762,98 @@ function bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId = nul
   }, thinkingBridgeMs());
 }
 
+function enterAiModeVisual(startBreathing = false) {
+  const main = document.getElementById('drop-main');
+  if (!main) return;
+  if (aiBreathingTimer) {
+    clearTimeout(aiBreathingTimer);
+    aiBreathingTimer = null;
+  }
+  main.classList.add('ai-mode');
+  main.classList.remove('ai-glow-on');
+  main.classList.remove('ai-breathing');
+  if (startBreathing) {
+    aiBreathingTimer = setTimeout(() => {
+      aiBreathingTimer = null;
+      main.classList.add('ai-breathing');
+    }, 320);
+  }
+}
+
+function setAiBridgeWindow(durationMs = 900) {
+  const main = document.getElementById('drop-main');
+  if (!main) return;
+  if (aiBridgeTimer) {
+    clearTimeout(aiBridgeTimer);
+    aiBridgeTimer = null;
+  }
+  main.classList.add('ai-bridge');
+  aiBridgeTimer = setTimeout(() => {
+    aiBridgeTimer = null;
+    main.classList.remove('ai-bridge');
+  }, Math.max(220, durationMs));
+}
+
+function animateHomePromptToThinking() {
+  const prompt = document.getElementById('home-start-prompt');
+  if (!prompt) return;
+  if (homePromptExitTimer) {
+    clearTimeout(homePromptExitTimer);
+    homePromptExitTimer = null;
+  }
+  prompt.classList.add('visible');
+  prompt.classList.remove('to-thinking');
+  void prompt.offsetWidth;
+  prompt.classList.add('to-thinking');
+  homePromptExitTimer = setTimeout(() => {
+    homePromptExitTimer = null;
+    prompt.classList.remove('visible');
+    prompt.classList.remove('to-thinking');
+  }, 360);
+}
+
 function bridgeHomeToThinking(targetShape) {
   if (thinkingBridgeTimer) {
     clearTimeout(thinkingBridgeTimer);
     thinkingBridgeTimer = null;
   }
   stopSiriOrb();
-  DROPS.main.classList.add('ai-bridge');
-  setTimeout(() => DROPS.main.classList.remove('ai-bridge'), 980);
-  morphCore('circle', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
   C.thumb.style.opacity = '0';
+  animateHomePromptToThinking();
   updateActive(targetShape);
-  thinkingBridgeTimer = setTimeout(() => {
-    thinkingBridgeTimer = null;
-    morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
-    if (targetShape === 'idle') {
-      showAiIdle();
-      updateActive('idle');
-      return;
+  enterAiModeVisual(false);
+  const transitionMs = clamp(
+    Math.round(transitionAnimMs('circle', 'ai', animDur) * 1.45),
+    520,
+    1200
+  );
+  const glowDelayMs = 0;
+  const glowFadeMs = 0;
+  setAiBridgeWindow(Math.max(780, Math.round(animDur * 1.8)));
+  morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+  {
+    const main = document.getElementById('drop-main');
+    if (main) main.classList.add('home-glow');
+  }
+  {
+    const main = document.getElementById('drop-main');
+    if (main && main.classList.contains('ai-mode')) {
+      main.classList.remove('home-glow');
+      main.classList.add('ai-glow-on');
     }
-    startSiriOrb(true);
-    updateActive('ai');
-  }, homeThinkingBridgeMs());
+  }
+  if (targetShape === 'idle') {
+    showAiIdle();
+    updateActive('idle');
+    return;
+  }
+  startSiriOrb(true, false, false);
+  setTimeout(() => {
+    const main = document.getElementById('drop-main');
+    if (!main || !main.classList.contains('ai-mode')) return;
+    main.classList.add('ai-breathing');
+  }, Math.max(280, Math.round(transitionMs * 0.45)));
+  updateActive('ai');
 }
 
 function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = null) {
@@ -3782,9 +3861,16 @@ function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = nu
     clearTimeout(thinkingBridgeTimer);
     thinkingBridgeTimer = null;
   }
-  stopSiriOrb();
-  DROPS.main.classList.add('ai-bridge');
-  setTimeout(() => DROPS.main.classList.remove('ai-bridge'), 980);
+  stopSiriOrb({ keepAiMode: true });
+  const bridgeWindowMs = Math.max(780, Math.round(animDur * 1.8));
+  setAiBridgeWindow(bridgeWindowMs);
+  setTimeout(() => {
+    const main = document.getElementById('drop-main');
+    if (!main) return;
+    main.classList.remove('ai-mode');
+    main.classList.remove('ai-glow-on');
+    main.classList.remove('ai-breathing');
+  }, bridgeWindowMs);
   morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
   updateActive('circle');
 }
@@ -3945,7 +4031,9 @@ function applyGeometry(shape, resolvedGeo, stageId = null) {
   ['main','left','right'].forEach(k => {
     const el = DROPS[k], s = geo[k];
     const anchorHeight = (shape === 'idle' && k === 'main') ? SHAPES.dot.main.h : s.h;
-    const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
+    const yOffset = useBottomAlign
+      ? ((shape === 'ai' && k === 'main') ? 0 : ((alignedStageHeight - anchorHeight) / 2))
+      : 0;
     el.style.width        = s.w + 'px';
     el.style.height       = s.h + 'px';
     el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
@@ -4171,12 +4259,15 @@ function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
 
 function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   const root = document.documentElement;
-  const transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
+  let transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
   const isHomeThinkingPair = (
     (fromShape === 'circle' && toShape === 'ai') ||
     (fromShape === 'ai' && toShape === 'circle')
   );
-  const motionEase = isHomeThinkingPair ? 'cubic-bezier(0.42,0,0.2,1)' : 'var(--spring)';
+  if (isHomeThinkingPair) {
+    transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
+  }
+  const geometryEase = isHomeThinkingPair ? 'cubic-bezier(0.42,0,0.2,1)' : 'var(--spring)';
   const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
   const toCardLike = toShape === 'card' || toShape === 'card-s';
   let contentFadeMs = 260;
@@ -4219,16 +4310,16 @@ function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   currentDetailFadeMs = detailFadeMs;
   currentMediaFadeMs = mediaFadeMs;
   currentTransitionAnimMs = transitionMs;
-  root.style.setProperty('--anim-w', `${transitionMs}ms ${motionEase}`);
-  root.style.setProperty('--anim-h', `${transitionMs}ms ${motionEase}`);
-  root.style.setProperty('--anim-br', `${transitionMs}ms ${motionEase}`);
-  root.style.setProperty('--anim-tx', `${transitionMs}ms ${motionEase}`);
-  root.style.setProperty('--anim-t', `${transitionMs}ms ${motionEase}`);
+  root.style.setProperty('--anim-w', `${transitionMs}ms ${geometryEase}`);
+  root.style.setProperty('--anim-h', `${transitionMs}ms ${geometryEase}`);
+  root.style.setProperty('--anim-br', `${transitionMs}ms ${geometryEase}`);
+  root.style.setProperty('--anim-tx', `${transitionMs}ms ${geometryEase}`);
+  root.style.setProperty('--anim-t', `${transitionMs}ms ${geometryEase}`);
   root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`);
   root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`);
   root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`);
   root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`);
-  root.style.setProperty('--content-move-t', `${contentMoveMs}ms ${motionEase}`);
+  root.style.setProperty('--content-move-t', `${contentMoveMs}ms ${geometryEase}`);
   root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`);
   root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
 }
@@ -4251,6 +4342,15 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
   setEl(C.prim, pos.prim);
   setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (contentDelayProfile.secondaryInAdvanceMs || 0)));
   setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (contentDelayProfile.detailInAdvanceMs || 0)));
+  if (shape === 'ai') {
+    [C.thumb, C.prim, C.sec, C.det, C.div].forEach((el) => {
+      if (!el) return;
+      el.style.transitionDelay = '0ms';
+      el.style.opacity = '0';
+    });
+    hideAllStageMedia();
+    hideRich();
+  }
   applyTypographyStyles(shape);
   const mainLineWidth = lineTextWidth(shape, w);
   if (mainLineWidth) {
@@ -4560,7 +4660,7 @@ function resetOrbStyle() {
 }
 
 function showAiIdle() {
-  document.getElementById('drop-main').classList.add('ai-mode');
+  enterAiModeVisual(false);
   if (!USE_THINKING_ORB) {
     const orb = document.getElementById('siri-orb');
     if (orb) orb.classList.remove('visible');
@@ -4572,8 +4672,10 @@ function showAiIdle() {
   _ensureOrbLoop();
 }
 
-function startSiriOrb(instant) {
-  document.getElementById('drop-main').classList.add('ai-mode');
+function startSiriOrb(instant, startBreathing = true, startGlow = true) {
+  enterAiModeVisual(startBreathing);
+  const main = document.getElementById('drop-main');
+  if (main && startGlow) main.classList.add('ai-glow-on');
   if (!USE_THINKING_ORB) {
     const orb = document.getElementById('siri-orb');
     if (orb) orb.classList.remove('visible');
@@ -4591,12 +4693,27 @@ function ambientFromAi(shape, contentData, customGeo) {
   morphTo(shape, contentData, customGeo);
 }
 
-function stopSiriOrb() {
+function stopSiriOrb(options = {}) {
+  const keepAiMode = options?.keepAiMode === true;
+  if (aiBreathingTimer) {
+    clearTimeout(aiBreathingTimer);
+    aiBreathingTimer = null;
+  }
+  if (aiBridgeTimer) {
+    clearTimeout(aiBridgeTimer);
+    aiBridgeTimer = null;
+  }
   if (siriRaf) { cancelAnimationFrame(siriRaf); siriRaf = null; }
   const orb = document.getElementById('siri-orb');
   if (orb) orb.classList.remove('visible');
   clearListPills();
-  document.getElementById('drop-main').classList.remove('ai-mode');
+  const main = document.getElementById('drop-main');
+  if (main && !keepAiMode) {
+    main.classList.remove('ai-mode');
+    main.classList.remove('ai-glow-on');
+    main.classList.remove('ai-breathing');
+    main.classList.remove('ai-bridge');
+  }
   C.thumb.style.opacity = '';
   C.thumb.style.fontSize = '';
   orbRamp = 0; orbTarget = 0;
@@ -4604,6 +4721,7 @@ function stopSiriOrb() {
 
 let flightData = { origin:'SFO', dest:'NRT', destCity:'Tokyo', depDate:'Mar 15, 2026', retDate:'Mar 22, 2026' };
 const flightUi = { active:false, step:'idle', highlight:0, depIdx:0, retIdx:0 };
+const THINKING_HOLD_MS = 3000;
 const FLIGHT_DEP_OPTIONS = ['Mar 15, 2026', 'Mar 16, 2026', 'Mar 17, 2026', 'Mar 18, 2026'];
 const FLIGHT_RET_OPTIONS = ['Mar 22, 2026', 'Mar 23, 2026', 'Mar 24, 2026', 'Mar 25, 2026'];
 
@@ -4698,6 +4816,7 @@ function cancelFlightFlow() {
   hideIntentHeader();
   morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
   document.getElementById('stage').classList.remove('flow-active');
+  document.getElementById('stage-wrap')?.classList.remove('flow-active');
   document.getElementById('input-area').classList.remove('hidden');
 }
 
@@ -4706,10 +4825,15 @@ function startFlightFlow() {
   flightUi.active = true;
   setFlightStep('confirming', 0);
   document.getElementById('stage').classList.add('flow-active');
+  document.getElementById('stage-wrap')?.classList.add('flow-active');
   hideRich();
-  morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
   C.thumb.style.opacity = '0';
-  startSiriOrb();
+  if (currentShape === 'circle') {
+    bridgeHomeToThinking('ai');
+  } else {
+    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
+    startSiriOrb();
+  }
   setIntentHeader('Book a Flight', 'Confirming');
 
   setTimeout(() => {
@@ -4721,7 +4845,7 @@ function startFlightFlow() {
     });
     setIntentHeader('Book a Flight', 'Route · Space to Continue');
     setFlightStep('route', 0);
-  }, 1200);
+  }, THINKING_HOLD_MS);
 }
 
 function flowDateStep() {
@@ -4788,7 +4912,7 @@ function flowSearchStep() {
   setTimeout(() => {
     stopSiriOrb();
     flowResultsStep();
-  }, 1800);
+  }, THINKING_HOLD_MS);
 }
 
 function flowResultsStep() {
@@ -4851,6 +4975,7 @@ function selectFlight(idx) {
         hideIntentHeader();
         morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
         document.getElementById('stage').classList.remove('flow-active');
+        document.getElementById('stage-wrap')?.classList.remove('flow-active');
         document.getElementById('input-area').classList.remove('hidden');
       }, 3000);
     }, 2000);
@@ -5164,6 +5289,7 @@ function manualShape(shape) {
   hideRich();
   hideIntentHeader();
   document.getElementById('stage').classList.remove('flow-active');
+  document.getElementById('stage-wrap')?.classList.remove('flow-active');
   document.getElementById('input-area').classList.remove('hidden');
   const leavingSplit = currentShape === 'split' && shape !== 'split';
   const leavingList = currentShape === 'list' && shape !== 'list';
@@ -5187,9 +5313,10 @@ function manualShape(shape) {
       return;
     }
     stopSiriOrb();
+    enterAiModeVisual(false);
+    setAiBridgeWindow(Math.max(780, Math.round(animDur * 1.8)));
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
     startSiriOrb(true);
     updateActive('ai');
     return;
@@ -5200,9 +5327,10 @@ function manualShape(shape) {
       return;
     }
     stopSiriOrb();
+    enterAiModeVisual(false);
+    setAiBridgeWindow(Math.max(780, Math.round(animDur * 1.8)));
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
     showAiIdle();
     updateActive('idle');
     return;
@@ -5226,7 +5354,18 @@ function manualShape(shape) {
 function updateActive(shape) {
   document.querySelectorAll('.sb-shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
   const prompt = document.getElementById('home-start-prompt');
-  if (prompt) prompt.classList.toggle('visible', shape === 'circle');
+  if (!prompt) return;
+  if (shape === 'circle') {
+    if (homePromptExitTimer) {
+      clearTimeout(homePromptExitTimer);
+      homePromptExitTimer = null;
+    }
+    prompt.classList.remove('to-thinking');
+    prompt.classList.add('visible');
+    return;
+  }
+  if (prompt.classList.contains('to-thinking')) return;
+  prompt.classList.remove('visible');
 }
 
 function openCustom() {
