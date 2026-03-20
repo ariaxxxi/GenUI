@@ -804,6 +804,12 @@ body.mode-ai :is(
 ) {
   font-size: 24px !important;
 }
+body.mode-ai[data-current-shape="card"] #c-primary {
+  font-size: 28px !important;
+}
+body.mode-ai #c-secondary {
+  font-size: 24px !important;
+}
 body.mode-ai .ex-chip {
   font-size: 16px !important;
 }
@@ -1403,24 +1409,8 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
   }
 }
 
-@keyframes think-ai-breathe-spread {
-  0%, 100% {
-    box-shadow: 0 0 22.1px 0 rgba(123,194,255,1);
-  }
-  50% {
-    box-shadow: 0 0 22.1px 10px rgba(123,194,255,1);
-  }
-}
-
-/* ── AI mode: liquid shell + inner glow, no inner white blob ── */
+/* ── AI mode state marker (no custom visual override) ── */
 #drop-main.ai-mode {
-  background: rgba(255,255,255,0.05) !important;
-  box-shadow: 0 0 22.1px 5px rgba(123,194,255,1);
-  filter: blur(6px);
-  transition:
-    filter 760ms cubic-bezier(0.22,1,0.36,1),
-    box-shadow 760ms cubic-bezier(0.22,1,0.36,1),
-    background 760ms cubic-bezier(0.22,1,0.36,1);
   will-change: transform, width, height, border-radius, opacity;
 }
 #drop-main.ai-mode.ai-bridge {
@@ -1429,20 +1419,19 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
     box-shadow 980ms cubic-bezier(0.42,0,0.2,1),
     background 980ms cubic-bezier(0.42,0,0.2,1);
 }
-#drop-main.ai-mode.ai-breathing {
-  animation: think-ai-breathe-spread 1400ms ease-in-out infinite;
-}
-#drop-main.ai-mode::before { opacity: 0; }
-#drop-main.ai-mode::after  { opacity: 0; }
-#drop-main.home-blur { filter: blur(6px); }
+#drop-main.home-blur { filter: blur(4px); }
 #drop-main.home-glow #home-glow-layer { opacity: 1; }
-#drop-main.ai-mode #home-glow-layer {
-  opacity: 1 !important;
-  transition: opacity 0ms linear;
+@keyframes magic-breathe-spread {
+  0%, 100% {
+    box-shadow: 0 0 22.1px 0 rgba(123,194,255,1);
+  }
+  50% {
+    box-shadow: 0 0 22.1px 10px rgba(123,194,255,1);
+  }
 }
-#drop-main.ai-mode.ai-glow-on #home-glow-layer {
-  opacity: 1 !important;
-  transition: opacity 0ms linear;
+#drop-main.magic-glow {
+  box-shadow: 0 0 22.1px 0 rgba(123,194,255,1);
+  animation: magic-breathe-spread 1200ms ease-in-out infinite;
 }
 #drop-main.ai-mode #siri-orb { opacity: 0 !important; }
 #drop-main { z-index: 3; }
@@ -1798,6 +1787,37 @@ body.bg-off .bg-blur-image { opacity: 0; }
     </div>
   </div>
 
+  <div class="sb-section" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Animation</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <div class="sb-row">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span class="sb-lbl">Duration</span>
+          <span class="sb-val" id="dur-val-left">450ms</span>
+        </div>
+        <input type="range" id="dur-sl-left" min="100" max="1400" step="50" value="450"/>
+      </div>
+      <div class="sb-row">
+        <span class="sb-lbl">Easing</span>
+        <select id="ease-select-left">
+          <option value="custom" selected>Custom bezier</option>
+          <option value="spring">Liquid feeling</option>
+          <option value="ease">Ease</option>
+          <option value="linear">Linear</option>
+        </select>
+      </div>
+      <div class="sb-row" id="bz-group-left">
+        <span class="sb-lbl">Bezier</span>
+        <div id="bz-row-left">
+          <input class="bz-inp" id="bz-input-left" type="text" value="0.35, 0.23, 0.13, 0.98" autocomplete="off" spellcheck="false" placeholder="0.2, 0.2, 0.1, 1"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="sb-section mode-toggle-bottom hidden"></div>
 </div>
 
@@ -2071,9 +2091,9 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <div class="sb-section-body">
         <div class="legacy-grid">
           <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
+          <button class="sb-shape-btn" data-shape="magic" onclick="manualShape('magic')"><span class="sb-shape-num">9</span> Magic</button>
           <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
           <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
-          <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
           <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
         </div>
         <div id="shape-panel">
@@ -2094,7 +2114,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
   <div class="ai-legacy-title">Legacy / Debug</div>
   <div class="ai-legacy-actions">
     <button class="sb-shape-btn" data-shape="circle" type="button" onclick="manualShape('circle')">Home</button>
-    <button class="sb-shape-btn" data-shape="ai" type="button" onclick="manualShape('ai')">Thinking</button>
+    <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Magic</button>
   </div>
 </div>
 
@@ -2128,6 +2148,11 @@ const SHAPES = {
     left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
     right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
   },
+  magic: {
+    main:  { w:60, h:60, br:'30px', tx:-30,  ty:-30,  op:1 },
+    left:  { w:60, h:60, br:'30px', tx:-30,  ty:-30,  op:0 },
+    right: { w:60, h:60, br:'30px', tx:-30,  ty:-30,  op:0 },
+  },
   dot: {
     main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
     left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
@@ -2159,9 +2184,9 @@ const SHAPES = {
     right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
   },
   ai: {
-    main:  { w:60, h:60, br:'30px', tx:-30, ty:-30, op:1 },
-    left:  { w:60, h:60, br:'30px', tx:-30, ty:-30, op:0 },
-    right: { w:60, h:60, br:'30px', tx:-30, ty:-30, op:0 },
+    main:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:1 },
+    left:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
+    right: { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
   },
   'card-form': {
     main:  { w:420, h:400, br:'30px', tx:-210, ty:-200, op:1 },
@@ -2213,7 +2238,7 @@ const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 function defaultTypographyForShape(shape = 'pill') {
   return {
     icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: shape === 'card' ? 40 : 28, color: '#ffffff' },
+    primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
   };
@@ -2549,7 +2574,9 @@ function stageIconTextGap(stageId, renderShape) {
   if (renderShape !== 'pill' && renderShape !== 'card-s') return GAP;
   const stage = stageId ? stageById(stageId) : null;
   const value = Number(stage?.iconTextGap);
-  return Number.isFinite(value) ? clamp(Math.round(value), 0, 80) : GAP;
+  const resolved = Number.isFinite(value) ? clamp(Math.round(value), 0, 80) : GAP;
+  if (PAGE_MODE_OVERRIDE === RESPONSE_MODE.AI) return 8;
+  return resolved;
 }
 
 function stageIconLeftPadding(stageId, renderShape) {
@@ -2557,7 +2584,9 @@ function stageIconLeftPadding(stageId, renderShape) {
   const stage = stageId ? stageById(stageId) : null;
   const value = Number(stage?.iconLeftPadding);
   const fallback = (renderShape === 'pill' || renderShape === 'card-s') ? PILL_ICON_P : CARD_P;
-  return Number.isFinite(value) ? clamp(Math.round(value), 0, 120) : fallback;
+  const resolved = Number.isFinite(value) ? clamp(Math.round(value), 0, 120) : fallback;
+  if (PAGE_MODE_OVERRIDE === RESPONSE_MODE.AI) return 16;
+  return resolved;
 }
 
 function stageTextForShape(scenario, shape) {
@@ -2745,7 +2774,7 @@ function contentPos(shape, w, h) {
     div:    { x:w/2, y:h/2, dw:0, op:0 },
     det:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
   };
-  if (shape === 'circle' || shape === 'dot') return {
+  if (shape === 'circle' || shape === 'magic' || shape === 'dot') return {
     thumb:  { x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 },
     prim:   { x:w/2, y:h/2, op:0, fs:28, cx:true },
     sec:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
@@ -2760,7 +2789,7 @@ function contentPos(shape, w, h) {
     const textX = hasIcon ? (iconLeft + TS + gap) : PILL_NO_ICON_P;
     const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
     const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
-    const rowGap = 4;
+    const rowGap = 2;
     const tY = (h-TS)/2;
     const iconMidY = tY + TS/2;
     const hasPrimary = !!String(C.prim.textContent || '').trim();
@@ -3688,9 +3717,10 @@ function previewScenarioInstant(scenario) {
   clearUiFadeTimers();
   currentShape = shape;
   applyGeometry(shape, geo, scenario.shape);
-  DROPS.main.classList.toggle('home-blur', shape === 'circle');
+  DROPS.main.classList.toggle('home-blur', shape === 'circle' || shape === 'magic');
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'circle');
+  DROPS.main.classList.toggle('home-glow', shape === 'circle' || shape === 'magic');
+  DROPS.main.classList.toggle('magic-glow', shape === 'magic');
   applyContent(content);
   applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
   updateActive(shape);
@@ -4090,14 +4120,7 @@ function enterAiModeVisual(startBreathing = false) {
     aiBreathingTimer = null;
   }
   main.classList.add('ai-mode');
-  main.classList.remove('ai-glow-on');
   main.classList.remove('ai-breathing');
-  if (startBreathing) {
-    aiBreathingTimer = setTimeout(() => {
-      aiBreathingTimer = null;
-      main.classList.add('ai-breathing');
-    }, 320);
-  }
 }
 
 function setAiBridgeWindow(durationMs = 900) {
@@ -4147,19 +4170,13 @@ function bridgeHomeToThinking(targetShape) {
     520,
     1200
   );
-  const glowDelayMs = 0;
-  const glowFadeMs = 0;
   setAiBridgeWindow(Math.max(780, Math.round(animDur * 1.8)));
   morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
   {
     const main = document.getElementById('drop-main');
-    if (main) main.classList.add('home-glow');
-  }
-  {
-    const main = document.getElementById('drop-main');
-    if (main && main.classList.contains('ai-mode')) {
-      main.classList.remove('home-glow');
-      main.classList.add('ai-glow-on');
+    if (main) {
+      main.classList.add('home-blur');
+      main.classList.add('home-glow');
     }
   }
   if (targetShape === 'idle') {
@@ -4168,15 +4185,10 @@ function bridgeHomeToThinking(targetShape) {
     return;
   }
   startSiriOrb(true, false, false);
-  setTimeout(() => {
-    const main = document.getElementById('drop-main');
-    if (!main || !main.classList.contains('ai-mode')) return;
-    main.classList.add('ai-breathing');
-  }, Math.max(280, Math.round(transitionMs * 0.45)));
   updateActive('ai');
 }
 
-function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = null) {
+function bridgeThinkingToHome(targetShape = 'circle', contentData = null, customGeo = null, stageId = null) {
   if (thinkingBridgeTimer) {
     clearTimeout(thinkingBridgeTimer);
     thinkingBridgeTimer = null;
@@ -4188,11 +4200,11 @@ function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = nu
     const main = document.getElementById('drop-main');
     if (!main) return;
     main.classList.remove('ai-mode');
-    main.classList.remove('ai-glow-on');
-    main.classList.remove('ai-breathing');
+    main.classList.remove('home-blur');
+    main.classList.remove('home-glow');
   }, bridgeWindowMs);
-  morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
-  updateActive('circle');
+  morphCore(targetShape, contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
+  updateActive(targetShape);
 }
 
 function getActiveEasing() {
@@ -4241,7 +4253,7 @@ function getCurrentMainGeometry() {
 }
 
 function shouldUseStrongDeform(fromShape, toShape) {
-  const compact = new Set(['circle', 'pill', 'split']);
+  const compact = new Set(['circle', 'magic', 'pill', 'split']);
   return compact.has(fromShape) && compact.has(toShape);
 }
 
@@ -4424,17 +4436,17 @@ function setOpacityWithDelay(el, targetOpacity, inDelayMs = 0, outDelayMs = 0) {
 
 function isIconOnlyThumb(shape) {
   if (thumbContentState.kind === 'image' && thumbContentState.value) {
-    return ['circle', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    return ['circle', 'magic', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
   }
   const icon = (C.thumbLabel.textContent || '').trim();
   if (!icon) return false;
   if (icon === '···') return false;
-  return ['circle', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+  return ['circle', 'magic', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
 }
 
 function applyThumbVisualMode(shape) {
   const icon = thumbContentState.kind === 'image' ? '__image__' : (C.thumbLabel.textContent || '').trim();
-  const homeEmpty = shape === 'circle' && !icon;
+  const homeEmpty = (shape === 'circle' || shape === 'magic') && !icon;
   C.thumb.classList.toggle('thumb-empty', homeEmpty);
 
   const plain = isIconOnlyThumb(shape);
@@ -4446,6 +4458,7 @@ function applyThumbVisualMode(shape) {
   }
   const sizeByShape = {
     circle: 42,
+    magic: 42,
     dot: 42,
     pill: 40,
     card: 48,
@@ -4580,9 +4593,18 @@ function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
 function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   const root = document.documentElement;
   let transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
+  const isHomeMagicPair = (
+    (fromShape === 'circle' && toShape === 'magic') ||
+    (fromShape === 'magic' && toShape === 'circle')
+  );
+  if (isHomeMagicPair) {
+    transitionMs = 500;
+  }
   const isHomeThinkingPair = (
     (fromShape === 'circle' && toShape === 'ai') ||
-    (fromShape === 'ai' && toShape === 'circle')
+    (fromShape === 'ai' && toShape === 'circle') ||
+    (fromShape === 'magic' && toShape === 'ai') ||
+    (fromShape === 'ai' && toShape === 'magic')
   );
   if (isHomeThinkingPair) {
     transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
@@ -4649,7 +4671,7 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
   C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
   applyThumbVisualMode(shape);
   let thumbOpacity = pos.thumb.op;
-  if (shape === 'circle' && thumbContentState.kind === 'none') thumbOpacity = 0;
+  if ((shape === 'circle' || shape === 'magic') && thumbContentState.kind === 'none') thumbOpacity = 0;
   setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
   const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
     const finalTransform = p.cx
@@ -4662,7 +4684,7 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
   setEl(C.prim, pos.prim);
   setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (contentDelayProfile.secondaryInAdvanceMs || 0)));
   setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (contentDelayProfile.detailInAdvanceMs || 0)));
-  if (shape === 'ai') {
+  if (shape === 'ai' || shape === 'magic') {
     [C.thumb, C.prim, C.sec, C.det, C.div].forEach((el) => {
       if (!el) return;
       el.style.transitionDelay = '0ms';
@@ -4836,11 +4858,13 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
 
   currentShape = shape;
+  document.body.dataset.currentShape = shape;
   const geo = nextGeo;
   const mw = geo.main.w, mh = geo.main.h;
   applyGeometry(shape, geo, stageId);
-  DROPS.main.classList.toggle('home-blur', shape === 'circle');
-  const goingHome = shape === 'circle' && fromShape !== 'circle';
+  DROPS.main.classList.toggle('home-blur', shape === 'circle' || shape === 'magic');
+  const enteringHomeLike = (shape === 'circle' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'magic');
+  const goingHome = enteringHomeLike;
   if (goingHome) {
     DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, currentTransitionAnimMs - 500)}ms`);
     DROPS.main.classList.remove('home-glow');
@@ -4848,8 +4872,9 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
     DROPS.main.classList.add('home-glow');
   } else {
     DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-    DROPS.main.classList.toggle('home-glow', shape === 'circle');
+    DROPS.main.classList.toggle('home-glow', shape === 'circle' || shape === 'magic');
   }
+  DROPS.main.classList.toggle('magic-glow', shape === 'magic');
   if (contentData) applyContent(contentData);
   applyContentPositions(shape, mw, mh, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
   if (!skipActiveUpdate) updateActive(shape);
@@ -4871,8 +4896,8 @@ function morphTo(shape, contentData, customGeo, stageId = null) {
 
   const inAiIdleState = currentShape === 'idle' && document.getElementById('drop-main')?.classList.contains('ai-mode');
   if ((currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {
-    if (shape === 'circle') {
-      bridgeThinkingToHome(contentData, customGeo, stageId);
+    if (shape === 'circle' || shape === 'magic') {
+      bridgeThinkingToHome(shape, contentData, customGeo, stageId);
       return;
     }
     bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId);
@@ -5005,8 +5030,6 @@ function showAiIdle() {
 
 function startSiriOrb(instant, startBreathing = true, startGlow = true) {
   enterAiModeVisual(startBreathing);
-  const main = document.getElementById('drop-main');
-  if (main && startGlow) main.classList.add('ai-glow-on');
   if (!USE_THINKING_ORB) {
     const orb = document.getElementById('siri-orb');
     if (orb) orb.classList.remove('visible');
@@ -5041,7 +5064,6 @@ function stopSiriOrb(options = {}) {
   const main = document.getElementById('drop-main');
   if (main && !keepAiMode) {
     main.classList.remove('ai-mode');
-    main.classList.remove('ai-glow-on');
     main.classList.remove('ai-breathing');
     main.classList.remove('ai-bridge');
   }
@@ -5070,7 +5092,7 @@ const FLIGHT_FLOW_STEPS = [
       { icon: '👨‍👩‍👧', name: 'Family · 2+', sub: 'Adults with children' },
     ],
   },
-  { type: 'thinking', shape: 'ai', aiGreet: null },
+  { type: 'thinking', shape: 'magic', aiGreet: null },
   {
     type: 'options',
     shape: 'card-list',
@@ -5100,6 +5122,7 @@ const flightUi = {
   active: false,
   stepIndex: 0,
   focused: 0,
+  editReturnStepIndex: null,
   data: {
     origin: 'SFO',
     destination: '',
@@ -5172,6 +5195,7 @@ function resetFlightData() {
     flight: '',
     paymentMethod: '',
   };
+  flightUi.editReturnStepIndex = null;
 }
 
 function normalizeCity(input) {
@@ -5202,13 +5226,18 @@ function cityToAirport(city) {
 }
 
 function flightOptionRows(options) {
+  const step = flightStep();
   return options.map((opt, index) => `
     <div class="rich-flight-row ${index === flightUi.focused ? 'selected' : ''}" data-flight-opt="${index}">
       <div class="rich-flight-left">
         <div class="rich-flight-airline">${opt.icon || ''} ${opt.name}</div>
         <div class="rich-flight-times">${opt.sub || ''}</div>
       </div>
-      <div class="rich-flight-right"><div class="rich-flight-meta">Space</div></div>
+      <div class="rich-flight-right">${
+        step.type === 'options' && step.key === 'flight'
+          ? `<div class="rich-flight-price">${((String(opt.sub || '').match(/\$\d[\d,]*/) || [''])[0])}</div>`
+          : ''
+      }</div>
     </div>
     ${index < options.length - 1 ? '<div class="rich-divider"></div>' : ''}
   `).join('');
@@ -5279,9 +5308,7 @@ function renderFlightStep(skipGreet = false) {
     clearTimeout(flightThinkingTimer);
     flightThinkingTimer = null;
   }
-  if (step.shape !== 'ai') {
-    stopSiriOrb();
-  }
+  stopSiriOrb();
   hideRich();
   C.thumb.style.opacity = '0';
 
@@ -5296,9 +5323,8 @@ function renderFlightStep(skipGreet = false) {
     morphTo('card-list', { icon: '', primary: '', secondary: '' });
   } else if (step.shape === 'card') {
     morphTo('card', { icon: '', primary: '', secondary: '' });
-  } else if (step.shape === 'ai') {
-    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
-    startSiriOrb(true, true, true);
+  } else if (step.shape === 'magic') {
+    morphTo('magic', { icon:'', primary:'', secondary:'', detail:'' });
   }
 
   let html = '';
@@ -5441,6 +5467,14 @@ function confirmFlightStep() {
     return;
   }
   if (step.type === 'confirm' || step.type === 'dates') {
+    if (step.type === 'dates' && flightUi.editReturnStepIndex != null && flightUi.data.depart && flightUi.data.return) {
+      const returnIndex = flightUi.editReturnStepIndex;
+      flightUi.editReturnStepIndex = null;
+      flightUi.stepIndex = returnIndex;
+      flightUi.focused = 0;
+      renderFlightStep(true);
+      return;
+    }
     flightNextStep();
     return;
   }
@@ -5449,9 +5483,82 @@ function confirmFlightStep() {
   }
 }
 
+function nextFlightStepFor(step) {
+  if (flightUi?.editReturnStepIndex != null && step?.type === 'dates') {
+    return FLIGHT_FLOW_STEPS[flightUi.editReturnStepIndex] || null;
+  }
+  const currentIndex = FLIGHT_FLOW_STEPS.findIndex((entry) =>
+    entry.type === step?.type && entry.key === step?.key && entry.shape === step?.shape
+  );
+  if (currentIndex < 0) return null;
+  return FLIGHT_FLOW_STEPS[currentIndex + 1] || null;
+}
+
+function flightStepIndexBy(type, key = null) {
+  return FLIGHT_FLOW_STEPS.findIndex((entry) =>
+    entry.type === type && (key == null || entry.key === key)
+  );
+}
+
+function detectFlightEditTarget(text) {
+  const t = String(text || '').toLowerCase();
+  if (!t) return null;
+  if (/\b(date|dates|depart|departure|return)\b/.test(t)) return { type: 'dates' };
+  if (/\b(passenger|passengers|adult|adults|people|traveler|travellers|traveler|travellers)\b/.test(t)) {
+    return { type: 'options', key: 'passengers' };
+  }
+  if (/\b(flight|airline|time|times)\b/.test(t)) return { type: 'options', key: 'flight' };
+  if (/\b(payment|pay|card|apple pay|visa|bank)\b/.test(t)) return { type: 'payment' };
+  return null;
+}
+
+function jumpToFlightStep(target) {
+  if (!target || !target.type) return false;
+  const idx = flightStepIndexBy(target.type, target.key || null);
+  if (idx < 0) return false;
+  flightUi.stepIndex = idx;
+  flightUi.focused = 0;
+  renderFlightStep(true);
+  return true;
+}
+
+function nextFlightQuestion(step) {
+  if (!step) return 'What would you like to do next?';
+  if (step.type === 'dates') return 'When are you departing and returning?';
+  if (step.type === 'options' && step.key === 'passengers') return 'How many passengers?';
+  if (step.type === 'thinking') return 'Want me to find flights now?';
+  if (step.type === 'options' && step.key === 'flight') return 'Which flight do you want?';
+  if (step.type === 'confirm') return 'Would you like to confirm this flight?';
+  if (step.type === 'payment') return 'How would you like to pay?';
+  if (step.type === 'done') return 'Ready to book this trip?';
+  return 'What should we do next?';
+}
+
+function isDatesAdvanceIntent(text) {
+  const t = String(text || '').toLowerCase().trim();
+  if (!t) return false;
+  return /\b(search|confirm|confirmed|continue|next|done|yes|okay|ok|proceed)\b/.test(t);
+}
+
+function enforceFlightProgressReply(reply, action, currentStep) {
+  const text = String(reply || '').trim();
+  if (action !== 'next' && action !== 'select') return text;
+  const nextStep = nextFlightStepFor(currentStep);
+  const nextQuestion = nextFlightQuestion(nextStep);
+  if (!text) return nextQuestion;
+  if (/\?\s*$/.test(text)) return text;
+  if (text.toLowerCase().includes(nextQuestion.toLowerCase().replace(/\?$/, ''))) return text;
+  return `${text} ${nextQuestion}`;
+}
+
 async function callGeminiFlightAction(userText) {
   const step = flightStep();
+  const nextStep = nextFlightStepFor(step);
   const options = Array.isArray(step.options) ? step.options.map((o, i) => `[${i}] ${o.name} — ${o.sub}`).join('\n') : '';
+  const nextStepHint = nextStep
+    ? `${nextStep.type}${nextStep.key ? ` (${nextStep.key})` : ''}${nextStep.label ? ` — ${nextStep.label}` : ''}`
+    : 'none';
+  const nextQuestionHint = nextFlightQuestion(nextStep);
   const systemPrompt = `
 You are the AI brain of a structured flight-booking UI with strict steps.
 Return ONLY JSON:
@@ -5459,15 +5566,32 @@ Return ONLY JSON:
 
 Current step type: ${step.type}
 Current step label: ${step.label || ''}
+Next step type: ${nextStepHint}
+Next-step question to ask: ${nextQuestionHint}
+Editing from confirmation: ${flightUi.editReturnStepIndex != null ? 'yes' : 'no'}
 Collected data: ${JSON.stringify(flightUi.data)}
 ${options ? `Available options:\n${options}` : ''}
 
 Rules:
 - destination: collect destination city only, action "next" with {"destination":"City"}
-- dates: collect depart/return in short form like "Mar 24"; one date -> action "update"; both -> action "next"
+- dates: collect depart/return in short form like "Mar 24"; one date -> action "update"
+- dates: when both dates are filled, stay on dates UI with action "update" and ask user to confirm
+- dates: ONLY if user explicitly confirms (search/confirm/continue/next/done/yes/ok), use action "next"
 - options/payment: match user text to one option and action "select" with {"index":N}
 - confirm: confirm intent -> action "next"; change request -> action "update" or "back"
 - done: action "stay"
+- If editing from confirmation and current step is dates, once both dates are complete, action "next" should return to confirmation summary (not passengers)
+
+When action is "next", your reply must confirm what was just collected AND ask the question for the upcoming step:
+- After destination -> ask for departure and return dates
+- After dates -> ask how many passengers
+- After passengers -> tell them you're finding flights
+- After flight selection -> show summary and ask to confirm
+
+REPLY RULE: Every reply = confirmation of what was just collected + the next question.
+Never end a reply without asking something. 1-2 sentences max.
+Example: "Got it, flying to LAX! When are you departing and returning?"
+Never: "Got it. Flying to Lax."
 `.trim();
 
   const response = await fetch(apiUrl('/api/gemini'), {
@@ -5476,8 +5600,8 @@ Rules:
     body: JSON.stringify({
       userText,
       systemPrompt,
-      maxTokens: 300,
-      model: 'gemini-2.0-flash',
+      maxTokens: 600,
+      model: 'gemini-2.5-flash',
     }),
   });
   const payload = await response.json().catch(() => ({}));
@@ -5504,20 +5628,52 @@ function parseFlightDatesLocally(text) {
   return out;
 }
 
+function inferSingleDateSlot(rawText, dates, currentData) {
+  const t = String(rawText || '').toLowerCase();
+  const hasDepartKeyword = /\bdepart|departure|leave|outbound\b/.test(t);
+  const hasReturnKeyword = /\breturn|back|inbound\b/.test(t);
+  const next = { ...(dates || {}) };
+  const incomingSingle = next.depart && !next.return;
+  if (!incomingSingle) return next;
+
+  const hasExistingDepart = !!String(currentData?.depart || '').trim();
+  const hasExistingReturn = !!String(currentData?.return || '').trim();
+
+  if (hasReturnKeyword) {
+    next.return = next.depart;
+    delete next.depart;
+    return next;
+  }
+  if (hasDepartKeyword) {
+    return next;
+  }
+  if (hasExistingDepart && !hasExistingReturn) {
+    next.return = next.depart;
+    delete next.depart;
+    return next;
+  }
+  if (!hasExistingDepart && hasExistingReturn) {
+    return next;
+  }
+  return next;
+}
+
 function localFlightFallback(userText) {
   const step = flightStep();
   const text = String(userText || '').trim();
   if (!text) return { reply: 'Tell me more.', action: 'stay', data: {} };
   if (step.type === 'destination') {
     const cleaned = normalizeCity(text.replace(/book a flight to|book a flight|fly to|to/ig, ' ').trim());
-    return { reply: `Got it. Flying to ${cleaned}.`, action: 'next', data: { destination: cleaned } };
+    return { reply: `Got it. Flying to ${cleaned}. When are you departing and returning?`, action: 'next', data: { destination: cleaned } };
   }
   if (step.type === 'dates') {
-    if (/\bsearch\b/i.test(text) && flightUi.data.depart && flightUi.data.return) {
-      return { reply: 'Great, searching now.', action: 'next', data: {} };
+    if (isDatesAdvanceIntent(text) && flightUi.data.depart && flightUi.data.return) {
+      return { reply: 'Great, dates are set. Moving on.', action: 'next', data: {} };
     }
-    const dates = parseFlightDatesLocally(text);
-    if (dates.depart && dates.return) return { reply: `Perfect, ${dates.depart} to ${dates.return}.`, action: 'next', data: dates };
+    const dates = inferSingleDateSlot(text, parseFlightDatesLocally(text), flightUi.data);
+    if (dates.depart && dates.return) {
+      return { reply: `Perfect, ${dates.depart} to ${dates.return}. Say confirm or press Space to continue.`, action: 'update', data: dates };
+    }
     if (dates.depart || dates.return) return { reply: 'Got one date. What is the other date?', action: 'update', data: dates };
     return { reply: 'Please give dates like "Mar 24 to Mar 31".', action: 'stay', data: {} };
   }
@@ -5527,7 +5683,7 @@ function localFlightFallback(userText) {
     return { reply: 'Use arrow keys or type the option.', action: 'stay', data: {} };
   }
   if (step.type === 'confirm') {
-    if (/\byes|ok|confirm|book\b/i.test(text)) return { reply: 'Confirmed.', action: 'next', data: {} };
+    if (/\byes|ok|confirm|book\b/i.test(text)) return { reply: 'Confirmed. How would you like to pay?', action: 'next', data: {} };
     return { reply: 'Tell me what to change.', action: 'stay', data: {} };
   }
   return { reply: 'Done.', action: 'stay', data: {} };
@@ -5537,10 +5693,18 @@ async function handleFlightUserInput(userText) {
   if (!flightUi.active) return;
   const step = flightStep();
   const rawText = String(userText || '').trim();
-  if (step.type === 'dates' && /\bsearch\b/i.test(rawText) && flightUi.data.depart && flightUi.data.return) {
+  if (step.type === 'dates' && isDatesAdvanceIntent(rawText) && flightUi.data.depart && flightUi.data.return) {
     addChatBubble('user', userText);
-    addChatBubble('ai', 'Great, searching flights now.');
-    flightNextStep(true);
+    addChatBubble('ai', 'Great, moving on.');
+    if (flightUi.editReturnStepIndex != null) {
+      const returnIndex = flightUi.editReturnStepIndex;
+      flightUi.editReturnStepIndex = null;
+      flightUi.stepIndex = returnIndex;
+      flightUi.focused = 0;
+      renderFlightStep(true);
+    } else {
+      flightNextStep(true);
+    }
     return;
   }
   addChatBubble('user', userText);
@@ -5555,12 +5719,22 @@ async function handleFlightUserInput(userText) {
     hideTypingBubble();
   }
 
-  if (result?.reply) addChatBubble('ai', result.reply);
-  if (result?.data && typeof result.data === 'object') {
-    Object.assign(flightUi.data, result.data);
-  }
-
   const action = String(result?.action || 'stay');
+  if (step.type === 'confirm') {
+    const editTarget = detectFlightEditTarget(rawText);
+    if (editTarget) {
+      flightUi.editReturnStepIndex = flightStepIndexBy('confirm');
+      if (jumpToFlightStep(editTarget)) return;
+    }
+  }
+  if (result?.data && typeof result.data === 'object') {
+    const normalizedData = step.type === 'dates'
+      ? inferSingleDateSlot(rawText, result.data, flightUi.data)
+      : result.data;
+    Object.assign(flightUi.data, normalizedData);
+  }
+  const aiReply = enforceFlightProgressReply(result?.reply, action, step);
+  if (aiReply) addChatBubble('ai', aiReply);
   if (action === 'back') {
     flightBackStep();
     return;
@@ -5573,6 +5747,18 @@ async function handleFlightUserInput(userText) {
     return;
   }
   if (action === 'next') {
+    if (step.type === 'dates' && !isDatesAdvanceIntent(rawText)) {
+      renderFlightStep(true);
+      return;
+    }
+    if (step.type === 'dates' && flightUi.editReturnStepIndex != null && flightUi.data.depart && flightUi.data.return) {
+      const returnIndex = flightUi.editReturnStepIndex;
+      flightUi.editReturnStepIndex = null;
+      flightUi.stepIndex = returnIndex;
+      flightUi.focused = 0;
+      renderFlightStep(true);
+      return;
+    }
     flightNextStep(true);
     return;
   }
@@ -5590,6 +5776,7 @@ function resetFlightFlowToHome() {
   flightUi.active = false;
   flightUi.stepIndex = 0;
   flightUi.focused = 0;
+  flightUi.editReturnStepIndex = null;
   hideTypingBubble();
   hideRich();
   stopSiriOrb();
@@ -5667,8 +5854,8 @@ Stage override: ${stageOverride}
           body: JSON.stringify({
             userText: text,
             systemPrompt,
-            maxTokens: 260,
-            model: 'gemini-2.0-flash',
+            maxTokens: 600,
+            model: 'gemini-2.5-flash',
           }),
         });
         if (!response.ok) throw new Error(`Gemini ${response.status}`);
@@ -5971,6 +6158,7 @@ function animateSplitMetaball() {
 }
 
 function manualShape(shape) {
+  if (shape === 'ai') shape = 'magic';
   document.getElementById('shape-panel').classList.remove('visible');
   hideRich();
   hideIntentHeader();
@@ -5993,22 +6181,14 @@ function manualShape(shape) {
     updateActive('list');
     return;
   }
-  if (shape === 'ai') {
-    if (currentShape === 'circle') {
-      bridgeHomeToThinking('ai');
-      return;
-    }
-    stopSiriOrb();
-    enterAiModeVisual(false);
-    setAiBridgeWindow(Math.max(780, Math.round(animDur * 1.8)));
-    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
+  if (shape === 'magic') {
+    morphTo('magic', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    startSiriOrb(true);
-    updateActive('ai');
+    updateActive('magic');
     return;
   }
   if (shape === 'idle') {
-    if (currentShape === 'circle') {
+    if (currentShape === 'circle' || currentShape === 'magic') {
       bridgeHomeToThinking('idle');
       return;
     }
@@ -6048,6 +6228,10 @@ function updateActive(shape) {
     }
     prompt.classList.remove('to-thinking');
     prompt.classList.add('visible');
+    return;
+  }
+  if (shape === 'magic') {
+    animateHomePromptToThinking();
     return;
   }
   if (prompt.classList.contains('to-thinking')) return;
@@ -6094,6 +6278,66 @@ function handleSend() {
   void processRequest(text);
 }
 
+function handleChipQuickAction(text) {
+  const t = String(text || '').trim().toLowerCase();
+  if (!t) return false;
+  hideRich();
+  stopSiriOrb();
+  if (/\bbook\b.*\bflight\b|\bflight\b|\bfly\b/.test(t)) {
+    if (flightUi.active) resetFlightFlowToHome();
+    syncFlightDestinationFromText(text);
+    startFlightFlow(text);
+    return true;
+  }
+  if (/\bweather\b|\bforecast\b|\btemperature\b/.test(t)) {
+    previewScenario(createScenario({
+      name: 'Weather',
+      shape: 'card',
+      content: {
+        icon: createIcon('emoji', '🌤'),
+        primary: 'San Francisco',
+        secondary: '57°F · Sunny',
+        detail: 'H: 61°F  L: 51°F · 0% rain · Wind 8 mph',
+      },
+      triggers: [],
+    }));
+    return true;
+  }
+  if (/\bmessage\b|\btext\b/.test(t)) {
+    handleManualRequest('send a message to alice');
+    return true;
+  }
+  if (/\btimer\b/.test(t)) {
+    previewScenario(createScenario({
+      name: 'Timer',
+      shape: 'pill',
+      content: {
+        icon: createIcon('emoji', '⏱'),
+        primary: '10 min timer',
+        secondary: 'Ready to start',
+        detail: '',
+      },
+      triggers: [],
+    }));
+    return true;
+  }
+  if (/\bcall\b/.test(t)) {
+    previewScenario(createScenario({
+      name: 'Call',
+      shape: 'pill',
+      content: {
+        icon: createIcon('emoji', '📞'),
+        primary: 'Call Mom',
+        secondary: 'Ready to dial',
+        detail: '',
+      },
+      triggers: [],
+    }));
+    return true;
+  }
+  return false;
+}
+
 function fireChip(el) {
   const text = el.textContent.trim();
   if (flightUi.active) resetFlightFlowToHome();
@@ -6102,6 +6346,7 @@ function fireChip(el) {
   setTimeout(() => {
     input.value = '';
     sendBtn.classList.remove('active');
+    if (handleChipQuickAction(text)) return;
     void processRequest(text);
   }, 120);
 }
@@ -6143,11 +6388,12 @@ document.addEventListener('keydown', e => {
   }
 
   if (e.key === '1') manualShape('circle');
+  if (e.key === '9') manualShape('magic');
   if (e.key === '2') manualShape('dot');
   if (e.key === '3') manualShape('pill');
   if (e.key === '4') manualShape('card');
   if (e.key === '5') manualShape('list');
-  if (e.key === '8') manualShape('ai');
+  if (e.key === '8') manualShape('magic');
   if (e.key === '6') manualShape('split');
   if (e.key === '7') openCustom();
   if (e.key === 'Escape') {
@@ -6857,7 +7103,7 @@ function parseBezierInput(rawValue) {
 }
 
 function getCustomBezierValues() {
-  const input = document.getElementById('bz-input');
+  const input = document.getElementById('bz-input-left') || document.getElementById('bz-input');
   const parsed = parseBezierInput(input?.value);
   return parsed || DEFAULT_CUSTOM_BEZIER;
 }
@@ -6878,10 +7124,17 @@ const EASING_FN = {
 
 function setAnimDuration(nextDuration) {
   animDur = nextDuration;
-  const slider = document.getElementById('dur-sl');
+  const sliders = [
+    document.getElementById('dur-sl-left'),
+    document.getElementById('dur-sl'),
+  ].filter(Boolean);
   const value = clamp(parseInt(nextDuration, 10) || animDur, 100, 1400);
-  if (slider) slider.value = String(value);
-  document.getElementById('dur-val').textContent = value + 'ms';
+  sliders.forEach((slider) => { slider.value = String(value); });
+  const durVals = [
+    document.getElementById('dur-val-left'),
+    document.getElementById('dur-val'),
+  ].filter(Boolean);
+  durVals.forEach((el) => { el.textContent = value + 'ms'; });
   animDur = value;
   rebuildAnim();
 }
@@ -6897,7 +7150,8 @@ function applyEasingPresetDefaults(preset) {
 }
 
 function rebuildAnim() {
-  const curve  = document.getElementById('ease-select').value;
+  const curveEl = document.getElementById('ease-select-left') || document.getElementById('ease-select');
+  const curve  = curveEl ? curveEl.value : 'custom';
   const easing = EASING_FN[curve]();
   const wDur   = animDur;
   const hDur   = animDur;
@@ -6913,26 +7167,58 @@ function rebuildAnim() {
       --anim-t:  ${txDur}ms var(--spring);
     }`;
 }
-document.getElementById('dur-sl').addEventListener('input', function() {
-  setAnimDuration(parseInt(this.value, 10));
+const animSliders = [
+  document.getElementById('dur-sl-left'),
+  document.getElementById('dur-sl'),
+].filter(Boolean);
+const animEasingSelects = [
+  document.getElementById('ease-select-left'),
+  document.getElementById('ease-select'),
+].filter(Boolean);
+const animBezierInputs = [
+  document.getElementById('bz-input-left'),
+  document.getElementById('bz-input'),
+].filter(Boolean);
+const animBezierGroups = [
+  document.getElementById('bz-group-left'),
+  document.getElementById('bz-group'),
+].filter(Boolean);
+const animBezierRows = [
+  document.getElementById('bz-row-left'),
+  document.getElementById('bz-row'),
+].filter(Boolean);
+
+function syncAnimationEasingUi(selectedValue) {
+  animEasingSelects.forEach((sel) => { sel.value = selectedValue; });
+  const showBz = selectedValue === 'custom';
+  animBezierGroups.forEach((group) => { group.style.opacity = showBz ? '1' : '0.3'; });
+  animBezierRows.forEach((row) => { row.classList.toggle('hidden', !showBz); });
+}
+
+animSliders.forEach((slider) => {
+  slider.addEventListener('input', function() {
+    setAnimDuration(parseInt(this.value, 10));
+  });
 });
-document.getElementById('ease-select').addEventListener('change', function() {
-  const showBz = this.value === 'custom';
-  document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
-  document.getElementById('bz-row').classList.toggle('hidden', !showBz);
-  applyEasingPresetDefaults(this.value);
-  if (this.value !== 'custom' && this.value !== 'spring') rebuildAnim();
+animEasingSelects.forEach((select) => {
+  select.addEventListener('change', function() {
+    syncAnimationEasingUi(this.value);
+    applyEasingPresetDefaults(this.value);
+    if (this.value !== 'custom' && this.value !== 'spring') rebuildAnim();
+  });
 });
-document.querySelectorAll('.bz-inp').forEach(inp => inp.addEventListener('input', rebuildAnim));
-document.getElementById('bz-input').addEventListener('blur', function() {
+animBezierInputs.forEach((inp) => inp.addEventListener('input', rebuildAnim));
+animBezierInputs.forEach((inp) => inp.addEventListener('blur', function() {
   const parsed = parseBezierInput(this.value);
-  this.value = formatBezierValues(parsed || DEFAULT_CUSTOM_BEZIER);
-});
+  const normalized = formatBezierValues(parsed || DEFAULT_CUSTOM_BEZIER);
+  animBezierInputs.forEach((other) => { other.value = normalized; });
+}));
 {
-  const showBz = document.getElementById('ease-select').value === 'custom';
-  document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
-  document.getElementById('bz-row').classList.toggle('hidden', !showBz);
-  document.getElementById('bz-input').value = formatBezierValues(getCustomBezierValues());
+  const defaultCurve = (document.getElementById('ease-select-left') || document.getElementById('ease-select'))?.value || 'custom';
+  syncAnimationEasingUi(defaultCurve);
+  const normalizedBezier = formatBezierValues(getCustomBezierValues());
+  animBezierInputs.forEach((inp) => { inp.value = normalizedBezier; });
+  setAnimDuration(animDur);
 }
 
 initSidebarTabs();
