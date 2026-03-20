@@ -188,7 +188,9 @@ const MIME = {
 
 function safePath(urlPath) {
   const clean = urlPath.split('?')[0].split('#')[0] || '/';
-  const target = clean === '/' ? '/GenUI.html' : clean;
+  const target = clean === '/'
+    ? '/index.html'
+    : (clean === '/prototype' ? '/index.html' : (clean === '/ai' ? '/ai.html' : clean));
   const rel = normalize(target)
     .replace(/^(\.\.(\/|\\|$))+/, '')
     .replace(/^[/\\]+/, '');

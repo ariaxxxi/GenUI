@@ -1,6 +1,8 @@
 # GenUI
 
-Single-file generative UI prototype tool for designers with two modes: manual prototyping and AI preview.
+Two-page generative UI tool for designers:
+- `index.html` for prototype/editor workflows
+- `ai.html` for AI interaction workflows
 
 ## Run
 
@@ -8,7 +10,9 @@ Single-file generative UI prototype tool for designers with two modes: manual pr
 npm run start
 ```
 
-Open `http://localhost:5173`.
+Open:
+- `http://localhost:5173/` (prototype page)
+- `http://localhost:5173/ai.html` (AI page)
 
 ## Current Workflow
 
@@ -17,13 +21,13 @@ Open `http://localhost:5173`.
 - Tune icon, primary, secondary, and detail text size and color per scenario.
 - Upload a PNG to replace the default emoji icon.
 - Toggle the blurred background image on or off.
-- Switch between Manual mode and AI mode from the Canvas section.
-- In AI mode, use input + stage override (`Auto`, `Dot`, `Pill`, `Card`) for preview generation.
+- In AI page, use input + stage override (`Auto`, `Dot`, `Pill`, `Card`) for preview generation.
 - Scenario data, canvas settings, mode, and AI stage override persist in browser `localStorage`.
 
 ## Architecture Notes
 
 - Rendering is driven by a normalized scenario object with `shape`, `content`, and `triggers`.
-- Rendering is shared between manual and AI paths through the same scenario format.
-- AI mode currently uses a frontend Gauss adapter stub (placeholder for real API integration) and falls back to manual matching on AI errors.
+- Prototype and AI pages share the same scenario/stage data model and storage keys.
+- Each page is mode-locked using `data-page-mode` (`manual` for `index.html`, `ai` for `ai.html`) to avoid cross-mode editing conflicts.
+- AI page currently uses a frontend Gauss adapter stub (placeholder for real API integration) and falls back to manual matching on AI errors.
 - The Node server remains available for local hosting and future provider integrations.
