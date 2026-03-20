@@ -31,3 +31,4 @@ Open:
 - Each page is mode-locked using `data-page-mode` (`manual` for `index.html`, `ai` for `ai.html`) to avoid cross-mode editing conflicts.
 - AI page currently uses a frontend Gauss adapter stub (placeholder for real API integration) and falls back to manual matching on AI errors.
 - The Node server remains available for local hosting and future provider integrations.
+- Build and design guardrails are defined in `BUILD_RULES.md` and are the required source of truth for future UI/flow changes.
