@@ -1898,8 +1898,56 @@ function builtinStageById(id) {
   return BUILTIN_STAGE_DEFS.find((stage) => stage.id === id) || null;
 }
 
-function renderShapeForStageId(id) {
-  const stage = stageById(id);
+function normalizeStageOverrideEntry(value = {}, stageId = null) {
+  const base = stageById(stageId || value?.id);
+  if (!base) return null;
+  const normalized = normalizeStage({
+    ...base,
+    ...value,
+    id: base.id,
+    preset: base.preset,
+  }, base);
+  return {
+    name: normalized.name,
+    renderShape: normalized.renderShape,
+    cornerRadius: normalized.cornerRadius,
+    widthOverride: normalized.widthOverride,
+    heightOverride: normalized.heightOverride,
+    iconTextGap: normalized.iconTextGap,
+    iconLeftPadding: normalized.iconLeftPadding,
+    phoneBgBlur: normalized.phoneBgBlur,
+    components: [...normalized.components],
+  };
+}
+
+function normalizeStageOverridesByShape(value = {}) {
+  if (!value || typeof value !== 'object') return {};
+  const out = {};
+  Object.entries(value).forEach(([stageId, entry]) => {
+    const normalized = normalizeStageOverrideEntry(entry, stageId);
+    if (normalized) out[stageId] = normalized;
+  });
+  return out;
+}
+
+function stageForScenario(stageId, scenario = null) {
+  const base = stageById(stageId);
+  if (!base) return null;
+  const override = scenario?.content?.stageOverridesByShape?.[base.id];
+  if (!override) return { ...base, components: [...(base.components || [])] };
+  const normalized = normalizeStageOverrideEntry(override, base.id);
+  if (!normalized) return { ...base, components: [...(base.components || [])] };
+  return {
+    ...base,
+    ...normalized,
+    id: base.id,
+    preset: base.preset,
+    components: [...(normalized.components || [])],
+  };
+}
+
+function renderShapeForStageId(id, scenario = null) {
+  const stage = scenario ? stageForScenario(id, scenario) : stageById(id);
   return stage?.renderShape || 'pill';
 }
 
@@ -2108,7 +2156,7 @@ function scenarioStageSizeOverride(scenario, shape) {
 }
 
 function stageDefaultMainSize(stageId) {
-  const renderShape = renderShapeForStageId(stageId);
+  const renderShape = renderShapeForStageId(stageId, selectedScenario());
   const base = SHAPES[renderShape] || SHAPES.pill;
   const width = Number(base?.main?.w);
   const height = Number(base?.main?.h);
@@ -2141,14 +2189,14 @@ function stageMainSize(stage, scenario = selectedScenario()) {
 
 function stageIconTextGap(stageId, renderShape) {
   if (renderShape !== 'pill' && renderShape !== 'card-s') return GAP;
-  const stage = stageId ? stageById(stageId) : null;
+  const stage = stageId ? stageForScenario(stageId, selectedScenario()) : null;
   const value = Number(stage?.iconTextGap);
   return Number.isFinite(value) ? clamp(Math.round(value), 0, 80) : GAP;
 }
 
 function stageIconLeftPadding(stageId, renderShape) {
   if (renderShape !== 'pill' && renderShape !== 'card-s') return renderShape === 'pill' ? PILL_ICON_P : CARD_P;
-  const stage = stageId ? stageById(stageId) : null;
+  const stage = stageId ? stageForScenario(stageId, selectedScenario()) : null;
   const value = Number(stage?.iconLeftPadding);
   const fallback = (renderShape === 'pill' || renderShape === 'card-s') ? PILL_ICON_P : CARD_P;
   return Number.isFinite(value) ? clamp(Math.round(value), 0, 120) : fallback;
@@ -2223,6 +2271,7 @@ function createScenario({
         widthOverride: content.widthOverride,
         heightOverride: content.heightOverride,
       }),
+      stageOverridesByShape: normalizeStageOverridesByShape(content.stageOverridesByShape),
       canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
     },
     triggers: normalizeTriggers(triggers),
@@ -2837,7 +2886,7 @@ function getCardSLayoutMetrics(cardWidth, typography, detailText = '', imageValu
 }
 
 function stageCornerRadiusPx(stageId, fallbackBr) {
-  const stage = stageById(stageId);
+  const stage = stageForScenario(stageId, selectedScenario());
   if (!stage) return fallbackBr;
   const radius = Number(stage.cornerRadius);
   if (!Number.isFinite(radius)) return fallbackBr;
@@ -2846,7 +2895,7 @@ function stageCornerRadiusPx(stageId, fallbackBr) {
 
 function withStageSizeOverride(geo, stageId, scenario = selectedScenario(), sizeOverride = null) {
   if (!stageId) return geo;
-  const stage = stageById(stageId);
+  const stage = stageForScenario(stageId, scenario);
   if (!stage) return geo;
   const normalizedOverride = normalizeStageSizeEntry(sizeOverride);
   const width = Number.isFinite(normalizedOverride.widthOverride)
@@ -2870,7 +2919,7 @@ function withStageSizeOverride(geo, stageId, scenario = selectedScenario(), size
 
 function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
   const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
-  const stage = stageId ? stageById(stageId) : null;
+  const stage = stageId ? stageForScenario(stageId, selectedScenario()) : null;
   const stageSizeOverride = normalizeStageSizeEntry(
     contentData?.sizeOverride,
     stage
@@ -2962,7 +3011,7 @@ function resolveGeometryForContent(shape, contentData, customGeo, stageId = null
 }
 
 function scenarioToRenderContent(scenario) {
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   const counts = stageComponentCounts(stage);
   const shape = scenario?.shape || currentShape;
   const has = (type) => counts[type] > 0;
@@ -3037,7 +3086,7 @@ function applyCanvasSettings() {
 function applyStagePhoneBlur(stageId) {
   const frame = document.getElementById('ui-frame');
   if (!frame) return;
-  const stage = stageById(stageId);
+  const stage = stageForScenario(stageId, selectedScenario());
   const shouldBlur = currentScenarioFrameMode() === 'phone'
     && !!canvasSettings.phoneFrameBackground?.src
     && !!stage?.phoneBgBlur;
@@ -3082,7 +3131,7 @@ function renderScenarioList() {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'scenario-item' + (scenario.id === selectedScenarioId ? ' active' : '');
-    const stage = stageById(scenario.shape);
+    const stage = stageForScenario(scenario.shape, scenario);
     button.innerHTML = `
       <span class="scenario-item-name">${scenario.name}</span>
       <span class="scenario-item-meta">${stage?.name || scenario.shape}</span>
@@ -3099,7 +3148,7 @@ function renderScenarioStageChips() {
   const scenario = selectedScenario();
   UI.scenarioShapeRow.innerHTML = '';
   availableScenarioShapesFor(scenario).forEach((stageId) => {
-    const stage = stageById(stageId);
+    const stage = stageForScenario(stageId, scenario);
     if (!stage) return;
     const button = document.createElement('button');
     button.type = 'button';
@@ -3144,7 +3193,7 @@ function renderStageComponentControls(stage) {
 
 function renderStageConfigPanel() {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   const builtin = builtinStageById(stage?.id);
   if (UI.stageNameInput) UI.stageNameInput.value = stage?.name || '';
   if (UI.stageRadiusInput) UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
@@ -3224,7 +3273,7 @@ function renderScenarioEditor() {
   UI.scenarioIconInput.placeholder = iconTextEditable ? 'Emoji or glyph' : 'PNG icon active';
   renderScenarioStageChips();
   renderStageConfigPanel();
-  const stage = stageById(scenario.shape);
+  const stage = stageForScenario(scenario.shape, scenario);
   const visibleFields = stageVisibleEditorFields(stage);
   renderScenarioMediaEditor(scenario, stage);
   const iconLayerRow = document.getElementById('editor-icon-layer');
@@ -3256,7 +3305,7 @@ function previewScenario(scenario) {
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-  morphTo(renderShapeForStageId(scenario.shape), scenarioToRenderContent(scenario), null, scenario.shape);
+  morphTo(renderShapeForStageId(scenario.shape, scenario), scenarioToRenderContent(scenario), null, scenario.shape);
 }
 
 function previewScenarioInstant(scenario) {
@@ -3272,7 +3321,7 @@ function previewScenarioInstant(scenario) {
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
 
-  const shape = renderShapeForStageId(scenario.shape);
+  const shape = renderShapeForStageId(scenario.shape, scenario);
   const content = scenarioToRenderContent(scenario);
   const geo = resolveGeometryForContent(shape, content, null, scenario.shape);
 
@@ -3331,22 +3380,26 @@ function commitScenarioChange(mutator) {
 }
 
 function commitStageChange(stageId, mutator) {
-  const index = stageLibrary.findIndex((stage) => stage.id === stageId);
-  if (index < 0) return;
-  const stage = { ...stageLibrary[index], components: [...stageLibrary[index].components] };
+  const scenario = selectedScenario();
+  if (!scenario) return;
+  const base = stageById(stageId);
+  if (!base) return;
+  scenario.content.stageOverridesByShape = normalizeStageOverridesByShape(scenario.content.stageOverridesByShape);
+  const current = stageForScenario(stageId, scenario);
+  const stage = { ...current, components: [...(current?.components || [])] };
   mutator(stage);
-  stageLibrary[index] = normalizeStage(stage, stageLibrary[index]);
-  persistStageLibrary();
-  scenarioLibrary = scenarioLibrary.map((scenario) => createScenario(scenario));
+  const nextOverride = normalizeStageOverrideEntry(stage, stageId);
+  if (!nextOverride) return;
+  scenario.content.stageOverridesByShape[stageId] = nextOverride;
   persistScenarios();
   renderScenarioUi();
-  previewScenario(selectedScenario());
+  previewScenario(scenario);
 }
 
 function addStage() {
   const scenario = selectedScenario();
   if (!scenario) return;
-  const baseStage = stageById(scenario?.shape || 'card');
+  const baseStage = stageForScenario(scenario?.shape || 'card', scenario);
   const stage = normalizeStage({
     id: stageId(),
     name: 'New Stage',
@@ -3389,7 +3442,7 @@ function addStage() {
 
 function deleteCurrentStage() {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const visibleStages = availableScenarioShapesFor(scenario);
   if (visibleStages.length <= 1) return;
@@ -3406,26 +3459,32 @@ function deleteCurrentStage() {
 
 function resetCurrentStageToDefault() {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const builtin = builtinStageById(stage.id);
-  if (!builtin) return;
-  const index = stageLibrary.findIndex((item) => item.id === stage.id);
-  if (index < 0) return;
-  stageLibrary[index] = normalizeStage(builtin, builtin);
-  persistStageLibrary();
-  scenarioLibrary = scenarioLibrary.map((item) => createScenario(item));
+  if (!scenario) return;
+  scenario.content.stageOverridesByShape = normalizeStageOverridesByShape(scenario.content.stageOverridesByShape);
+  delete scenario.content.stageOverridesByShape[stage.id];
+  if (builtin && !availableScenarioShapesFor(scenario).includes(stage.id)) {
+    const hidden = new Set(normalizeDisabledStageIds(scenario.disabledStageIds || []));
+    hidden.delete(stage.id);
+    scenario.disabledStageIds = Array.from(hidden);
+  }
   persistScenarios();
   renderScenarioUi();
-  previewScenario(selectedScenario());
+  previewScenario(scenario);
 }
 
 function addScenario(shape = 'pill') {
   ensureBuiltinStagesPresent();
   const nextShape = availableScenarioShapes().includes(shape) ? shape : (stageById('pill')?.id || stageLibrary[0]?.id || 'pill');
+  const hiddenByDefault = stageLibrary
+    .filter((stage) => !stage.preset)
+    .map((stage) => stage.id);
   const scenario = createScenario({
     name: nextShape === 'card' ? 'New Card' : (nextShape === 'dot' ? 'New Dot' : 'New Scenario'),
     shape: nextShape,
+    disabledStageIds: hiddenByDefault,
     content: {
       icon: createIcon('emoji', nextShape === 'dot' ? '•' : '◉'),
       primary: '',
@@ -5609,7 +5668,7 @@ UI.stageReset.addEventListener('click', () => {
 
 UI.stageNameInput.addEventListener('input', (e) => {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const nextName = String(e.target.value || '').trim();
   commitStageChange(stage.id, (draft) => {
@@ -5620,7 +5679,7 @@ UI.stageNameInput.addEventListener('input', (e) => {
 if (UI.stageCardStyleToggle) {
   UI.stageCardStyleToggle.addEventListener('change', (e) => {
     const scenario = selectedScenario();
-    const stage = stageById(scenario?.shape);
+    const stage = stageForScenario(scenario?.shape, scenario);
     if (!stage) return;
     if (stage.renderShape !== 'card' && stage.renderShape !== 'card-s') return;
     commitStageChange(stage.id, (draft) => {
@@ -5631,7 +5690,7 @@ if (UI.stageCardStyleToggle) {
 
 const commitStageRadius = (rawValue) => {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const parsed = parseInt(String(rawValue || '').trim(), 10);
   if (!Number.isFinite(parsed)) return;
@@ -5645,7 +5704,7 @@ UI.stageRadiusInput.addEventListener('blur', (e) => {
   const value = String(e.target.value || '').trim();
   if (!value) {
     const scenario = selectedScenario();
-    const stage = stageById(scenario?.shape);
+    const stage = stageForScenario(scenario?.shape, scenario);
     e.target.value = stage ? String(stage.cornerRadius) : '';
     return;
   }
@@ -5653,7 +5712,8 @@ UI.stageRadiusInput.addEventListener('blur', (e) => {
 });
 
 const commitStageSizeOverride = (axis, rawValue) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const value = String(rawValue || '').trim();
   const key = axis === 'width' ? 'widthOverride' : 'heightOverride';
@@ -5673,7 +5733,8 @@ const commitStageSizeOverride = (axis, rawValue) => {
 
 UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
 UI.stageWidthInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const stage = stageForScenario(scenario?.shape, scenario);
   const value = String(e.target.value || '').trim();
   if (!value) {
     e.target.value = Number.isFinite(stage?.widthOverride) ? String(stage.widthOverride) : '';
@@ -5684,7 +5745,8 @@ UI.stageWidthInput.addEventListener('blur', (e) => {
 
 UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
 UI.stageHeightInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const stage = stageForScenario(scenario?.shape, scenario);
   const value = String(e.target.value || '').trim();
   if (!value) {
     e.target.value = Number.isFinite(stage?.heightOverride) ? String(stage.heightOverride) : '';
@@ -5695,7 +5757,7 @@ UI.stageHeightInput.addEventListener('blur', (e) => {
 
 const commitStageGapOverride = (rawValue) => {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const value = String(rawValue || '').trim();
   if (!value) {
@@ -5713,7 +5775,8 @@ const commitStageGapOverride = (rawValue) => {
 };
 UI.stageGapInput.addEventListener('change', (e) => commitStageGapOverride(e.target.value));
 UI.stageGapInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const stage = stageForScenario(scenario?.shape, scenario);
   const value = String(e.target.value || '').trim();
   if (!value) {
     e.target.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
@@ -5724,7 +5787,7 @@ UI.stageGapInput.addEventListener('blur', (e) => {
 
 const commitStageIconPadOverride = (rawValue) => {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   const value = String(rawValue || '').trim();
   if (!value) {
@@ -5742,7 +5805,8 @@ const commitStageIconPadOverride = (rawValue) => {
 };
 UI.stageIconPadInput.addEventListener('change', (e) => commitStageIconPadOverride(e.target.value));
 UI.stageIconPadInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
+  const scenario = selectedScenario();
+  const stage = stageForScenario(scenario?.shape, scenario);
   const value = String(e.target.value || '').trim();
   if (!value) {
     e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
@@ -5753,7 +5817,7 @@ UI.stageIconPadInput.addEventListener('blur', (e) => {
 
 UI.stagePhoneBlurToggle.addEventListener('change', (e) => {
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   commitStageChange(stage.id, (draft) => {
     draft.phoneBgBlur = e.target.checked;
@@ -5767,7 +5831,7 @@ UI.stageComponentControls.addEventListener('click', (e) => {
   const type = String(button.dataset.stageCompType || '');
   if (!STAGE_COMPONENT_TYPES.includes(type)) return;
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   commitStageChange(stage.id, (draft) => {
     const next = [...(draft.components || [])];
@@ -5787,7 +5851,7 @@ UI.stageComponentControls.addEventListener('change', (e) => {
   const type = String(checkbox.dataset.stageCompToggle || '');
   if (!['icon', 'primary', 'secondary', 'detail'].includes(type)) return;
   const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
+  const stage = stageForScenario(scenario?.shape, scenario);
   if (!stage) return;
   commitStageChange(stage.id, (draft) => {
     const next = [...(draft.components || [])].filter((item) => item !== type);
@@ -5842,7 +5906,7 @@ UI.editorMedia.addEventListener('click', (e) => {
   const index = parseInt(button.dataset.mediaResetIndex, 10);
   if (!Number.isFinite(index) || index < 0) return;
   commitScenarioChange((scenario) => {
-    const stage = stageById(scenario.shape);
+    const stage = stageForScenario(scenario.shape, scenario);
     const images = getScenarioImagesForStage(scenario, stage);
     images[index] = null;
     scenario.content.imagesByShape = normalizeImagesByShape(
@@ -5880,7 +5944,7 @@ UI.editorMedia.addEventListener('change', async (e) => {
   });
   if (!dimensions?.width || !dimensions?.height) return;
   commitScenarioChange((scenario) => {
-    const stage = stageById(scenario.shape);
+    const stage = stageForScenario(scenario.shape, scenario);
     const images = getScenarioImagesForStage(scenario, stage);
     images[index] = {
       src: dataUrl,
