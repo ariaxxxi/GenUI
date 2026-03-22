@@ -57,10 +57,18 @@ body {
   width: 420px;
   height: 420px;
   border-radius: var(--frame-corner-radius);
-  overflow: hidden;
+  overflow: visible;
   border: none;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+  box-shadow: none;
   background: transparent;
+}
+#ui-frame.glasses::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
 }
 #ui-frame.phone {
   width: var(--phone-frame-w, 390px);
@@ -1018,7 +1026,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 
 @keyframes morph {
   0%, 100% {
-    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    border-radius: 50% 50% 50% 50%;
     rotate: 0deg;
   }
   33% {
@@ -1033,7 +1041,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 
 /* ── AI mode: liquid shell + inner glow, no inner white blob ── */
 #drop-main.ai-mode {
-  background: rgba(0,0,0,0.92) !important;
+  background: rgba(0,0,0,0.92);
   box-shadow: 0 0 44px rgba(255,255,255,0.08) !important;
   animation: morph 3.4s ease-in-out infinite;
   will-change: border-radius, rotate;
@@ -5334,9 +5342,11 @@ function manualShape(shape) {
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
-    startSiriOrb(true);
     updateActive('ai');
+    setTimeout(() => {
+      document.getElementById('drop-main').classList.add('ai-mode');
+      startSiriOrb(true);
+    }, animDur);
     return;
   }
   if (shape === 'idle') {
@@ -5347,9 +5357,11 @@ function manualShape(shape) {
     stopSiriOrb();
     morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
     C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
-    showAiIdle();
     updateActive('idle');
+    setTimeout(() => {
+      document.getElementById('drop-main').classList.add('ai-mode');
+      showAiIdle();
+    }, animDur);
     return;
   }
 

@@ -44,7 +44,7 @@ function sendText(res, status, text, type = 'text/plain; charset=utf-8') {
 }
 
 function pickProvider(reqBodyProvider) {
-  return String(reqBodyProvider || process.env.AI_PROVIDER || 'openai').toLowerCase();
+  return String(reqBodyProvider || process.env.AI_PROVIDER || 'gemini').toLowerCase();
 }
 
 async function readJsonBody(req) {
@@ -119,6 +119,28 @@ async function callOpenAI({ endpoint, apiKey, model, maxTokens, systemPrompt, us
   return data?.choices?.[0]?.message?.content || '{}';
 }
 
+async function callGemini({ apiKey, model, maxTokens, systemPrompt, userText }) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const prompt = `${systemPrompt ? `${systemPrompt}\n\n` : ''}${userText}`;
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature: 0.3,
+      },
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = data?.error?.message || `Gemini ${res.status}`;
+    throw new Error(message);
+  }
+  return data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('') || '{}';
+}
+
 async function handleAiRoute(req, res) {
   let body;
   try {
@@ -129,7 +151,7 @@ async function handleAiRoute(req, res) {
   }
 
   const provider = pickProvider(body.provider);
-  const apiKey = String(process.env.AI_API_KEY || '').trim();
+  const apiKey = String(process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) {
     json(res, 500, { error: 'Missing AI_API_KEY on server' });
     return;
@@ -146,7 +168,15 @@ async function handleAiRoute(req, res) {
 
   try {
     let text;
-    if (provider === 'anthropic') {
+    if (provider === 'gemini') {
+      text = await callGemini({
+        apiKey,
+        model: String(body.model || process.env.GEMINI_MODEL || process.env.AI_MODEL || 'gemini-2.0-flash'),
+        maxTokens,
+        systemPrompt,
+        userText,
+      });
+    } else if (provider === 'anthropic') {
       text = await callAnthropic({
         apiKey,
         model: String(body.model || process.env.AI_MODEL || 'claude-sonnet-4-20250514'),
@@ -179,6 +209,68 @@ async function handleAiRoute(req, res) {
   }
 }
 
+async function handleGeminiRoute(req, res) {
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (err) {
+    json(res, 400, { error: String(err.message || err), code: 'INVALID_REQUEST' });
+    return;
+  }
+  const apiKey = String(process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '').trim();
+  if (!apiKey) {
+    json(res, 500, { error: 'Missing GEMINI_API_KEY on server', code: 'MISSING_CONFIG' });
+    return;
+  }
+  const userText = String(body.userText || '').trim();
+  const systemPrompt = String(body.systemPrompt || '').trim();
+  if (!userText) {
+    json(res, 400, { error: 'Missing userText', code: 'INVALID_REQUEST' });
+    return;
+  }
+
+  // retry for transient errors
+  const maxAttempts = 3; // initial + 2 retries
+  const backoffs = [0, 200, 800];
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    try {
+      const text = await callGemini({
+        apiKey,
+        model: String(body.model || process.env.GEMINI_MODEL || 'gemini-2.0-flash'),
+        maxTokens: Math.max(32, Math.min(2000, Number(body.maxTokens || 300))),
+        systemPrompt,
+        userText,
+      });
+
+      // try to extract inner JSON object from text
+      const raw = String(text || '').trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) {
+        // return normalized envelope indicating parse failure
+        json(res, 200, { text: raw, provider: 'gemini', parse_ok: false });
+        return;
+      }
+      // return the inner JSON text as the canonical 'text' field
+      json(res, 200, { text: match[0], provider: 'gemini', parse_ok: true });
+      return;
+    } catch (err) {
+      attempt += 1;
+      const msg = String(err?.message || err || 'Unknown');
+      // transient statuses/messages heuristic: 429, 502, 503, 504 in message
+      if (/(429|502|503|504)/.test(msg) && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, backoffs[attempt] || 400));
+        continue; // retry
+      }
+      // map some known messages to codes
+      const code = msg.includes('quota') ? 'QUOTA_EXCEEDED' : (/(429|502|503|504)/.test(msg) ? 'GEMINI_RETRY_FAILED' : 'GEMINI_ERROR');
+      json(res, 502, { error: msg, code });
+      return;
+    }
+  }
+  json(res, 502, { error: 'Upstream retries exhausted', code: 'GEMINI_RETRY_FAILED' });
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -188,7 +280,9 @@ const MIME = {
 
 function safePath(urlPath) {
   const clean = urlPath.split('?')[0].split('#')[0] || '/';
-  const target = clean === '/' ? '/GenUI.html' : clean;
+  const target = clean === '/'
+    ? '/index.html'
+    : (clean === '/prototype' ? '/index.html' : (clean === '/ai' ? '/ai.html' : clean));
   const rel = normalize(target)
     .replace(/^(\.\.(\/|\\|$))+/, '')
     .replace(/^[/\\]+/, '');
@@ -197,14 +291,32 @@ function safePath(urlPath) {
   return full;
 }
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   if (!req.url) {
     sendText(res, 400, 'Bad Request');
     return;
   }
 
+  const isApiRoute = req.url.startsWith('/api/');
+  if (isApiRoute) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+
+  if (isApiRoute && req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   if (req.method === 'POST' && req.url.startsWith('/api/ai-route')) {
     await handleAiRoute(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url.startsWith('/api/gemini')) {
+    await handleGeminiRoute(req, res);
     return;
   }
 
@@ -232,6 +344,24 @@ createServer(async (req, res) => {
   } catch {
     sendText(res, 500, 'Internal Server Error');
   }
-}).listen(PORT, () => {
-  console.log(`GenUI server running at http://localhost:${PORT}`);
 });
+
+function listen(port) {
+  server.listen(port, () => {
+    console.log(`GenUI server running at http://localhost:${port}`);
+  });
+}
+
+server.on('error', (err) => {
+  if (err?.code === 'EADDRINUSE' && !process.env.PORT && PORT === 5173) {
+    const fallbackPort = 5174;
+    console.warn(`Port 5173 is in use. Falling back to http://localhost:${fallbackPort}`);
+    server.removeAllListeners('error');
+    listen(fallbackPort);
+    return;
+  }
+  console.error(`Server failed to start on port ${PORT}: ${err?.message || err}`);
+  process.exit(1);
+});
+
+listen(PORT);
