@@ -1110,6 +1110,17 @@ body.mode-ai #c-secondary {
   mix-blend-mode: screen;
   transition: height var(--anim-h);
 }
+#stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 48px;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.12),
+    0 0 18px rgba(255,255,255,0.07);
+  z-index: 9;
+}
 #glass-controls-layer {
   position: absolute;
   inset: 0;
@@ -2114,7 +2125,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
         <div class="drop" id="drop-left"></div>
         <div class="drop" id="drop-right"></div>
         <div id="list-pills"></div>
-        <div id="home-start-prompt">Where should we begin?</div>
+        <div id="home-start-prompt"></div>
       </div>
     </div>
   </div>
@@ -4450,7 +4461,7 @@ function applyGeometry(shape, resolvedGeo, stageId = null) {
   const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
   const mainRadius = stageId ? stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
   const useBottomAlign = !!canvasSettings.bottomAlign;
-  const homePromptOrbLift = shape === 'circle' ? -60 : 0;
+  const HOME_ORB_BOTTOM_MARGIN = 20;
   const alignedStageHeight = PAGE_MODE_OVERRIDE === RESPONSE_MODE.AI
     ? 420
     : (useBottomAlign
@@ -4462,10 +4473,15 @@ function applyGeometry(shape, resolvedGeo, stageId = null) {
       ? SHAPES.dot.main.h
       : ((shape === 'ai' && k === 'main') ? SHAPES.dot.main.h : s.h);
     const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
+    let translateY = s.ty + yOffset;
+    if (PAGE_MODE_OVERRIDE === RESPONSE_MODE.AI && (shape === 'circle' || shape === 'magic') && k === 'main') {
+      const topLeftY = alignedStageHeight - s.h - HOME_ORB_BOTTOM_MARGIN;
+      translateY = topLeftY - (alignedStageHeight / 2);
+    }
     el.style.width        = s.w + 'px';
     el.style.height       = s.h + 'px';
     el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
-    el.style.transform    = `translate(${s.tx}px,${s.ty + yOffset + homePromptOrbLift}px)`;
+    el.style.transform    = `translate(${s.tx}px,${translateY}px)`;
     el.style.opacity      = s.op;
     el.style.pointerEvents = s.op > 0 ? 'auto' : 'none';
   });
@@ -4689,13 +4705,6 @@ function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
 function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
   const root = document.documentElement;
   let transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
-  const isHomeMagicPair = (
-    (fromShape === 'circle' && toShape === 'magic') ||
-    (fromShape === 'magic' && toShape === 'circle')
-  );
-  if (isHomeMagicPair) {
-    transitionMs = 500;
-  }
   const isHomeThinkingPair = (
     (fromShape === 'circle' && toShape === 'ai') ||
     (fromShape === 'ai' && toShape === 'circle') ||
@@ -5386,20 +5395,42 @@ function isGlassCardState(state = glassUi.state) {
 }
 
 function glassContentHeightPx() {
-  const body = C.rich.querySelector('[data-glass-body]');
-  if (body) {
-    const rectHeight = Math.ceil(body.getBoundingClientRect().height || 0);
-    const offsetHeight = Math.ceil(body.offsetHeight || 0);
-    const scrollHeight = Math.ceil(body.scrollHeight || 0);
-    const raw = Math.max(rectHeight, offsetHeight, scrollHeight);
-    if (raw > 0) {
-      const resolved = clamp(raw, 60, GLASS_MAX_SHELL_H - GLASS_TOP_INSET - GLASS_BOTTOM_INSET);
-      glassLastContentHeightPx = resolved;
-      if (isGlassCardState(glassUi.state)) {
-        glassHeightByState[glassUi.state] = resolved;
-      }
-      return resolved;
+  const measureNodeHeight = (node) => {
+    if (!node) return 0;
+    return Math.ceil(Math.max(
+      node.getBoundingClientRect().height || 0,
+      node.offsetHeight || 0,
+      node.scrollHeight || 0
+    ));
+  };
+  let layer = document.getElementById('glass-measure-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'glass-measure-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.position = 'fixed';
+    layer.style.left = '-10000px';
+    layer.style.top = '-10000px';
+    layer.style.width = '380px';
+    layer.style.visibility = 'hidden';
+    layer.style.pointerEvents = 'none';
+    layer.style.zIndex = '-1';
+    document.body.appendChild(layer);
+  }
+  layer.innerHTML = C.rich.innerHTML;
+  let body = layer.querySelector('[data-glass-body]');
+  let raw = measureNodeHeight(body);
+  if (raw <= 0) {
+    body = C.rich.querySelector('[data-glass-body]');
+    raw = measureNodeHeight(body);
+  }
+  if (raw > 0) {
+    const resolved = clamp(raw, 60, GLASS_MAX_SHELL_H - GLASS_TOP_INSET - GLASS_BOTTOM_INSET);
+    glassLastContentHeightPx = resolved;
+    if (isGlassCardState(glassUi.state)) {
+      glassHeightByState[glassUi.state] = resolved;
     }
+    return resolved;
   }
   if (isGlassCardState(glassUi.state) && Number.isFinite(glassHeightByState[glassUi.state]) && glassHeightByState[glassUi.state] > 0) {
     return clamp(glassHeightByState[glassUi.state], 60, GLASS_MAX_SHELL_H - GLASS_TOP_INSET - GLASS_BOTTOM_INSET);
@@ -7973,7 +8004,7 @@ bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
  UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,
 ].forEach(el => { if (el) el.addEventListener('input', updateLayerPreviews); });
 
-let animDur = 450;
+let animDur = 600;
 const SPRING_WITH_ANTICIPATION = `linear(
   0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
   0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
