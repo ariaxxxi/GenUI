@@ -1705,12 +1705,15 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
   z-index: 8;
   overflow: hidden;
   opacity: 0;
-  transition: opacity 500ms ease, filter 700ms ease;
+  transform: scale(0.2);
+  transform-origin: 50% 50%;
+  transition: opacity 500ms ease, transform 500ms cubic-bezier(0.22,1,0.36,1), filter 700ms ease;
   pointer-events: none;
   filter: blur(14px) contrast(22);
   background: #000;
 }
-#siri-orb.visible { opacity: 1; }
+#drop-main.listening-orb #siri-orb.visible,
+#drop-main.listening-orb #siri-orb { opacity: 1; transform: scale(1); }
 #siri-orb canvas {
   position: absolute;
   inset: 0;
@@ -1757,7 +1760,7 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
   box-shadow: 0 0 22.1px 0 rgba(123,194,255,1);
   animation: magic-breathe-spread 1200ms ease-in-out infinite;
 }
-#drop-main.ai-mode #siri-orb { opacity: 0 !important; }
+#drop-main:not(.listening-orb) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 #drop-main { z-index: 3; }
 #list-pills { z-index: 2; }
 
@@ -2429,6 +2432,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <div class="sb-section-body">
         <div class="legacy-grid">
           <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
+          <button class="sb-shape-btn" data-shape="listening" onclick="manualShape('listening')"><span class="sb-shape-num">0</span> Listening</button>
           <button class="sb-shape-btn" data-shape="magic" onclick="manualShape('magic')"><span class="sb-shape-num">9</span> Magic</button>
           <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
           <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
@@ -2452,6 +2456,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
   <div class="ai-legacy-title">Legacy / Debug</div>
   <div class="ai-legacy-actions">
     <button class="sb-shape-btn" data-shape="circle" type="button" onclick="manualShape('circle')">Home</button>
+    <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
     <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Magic</button>
   </div>
 </div>
@@ -3895,9 +3900,10 @@ function previewScenarioInstant(scenario) {
   clearUiFadeTimers();
   currentShape = shape;
   applyGeometry(shape, geo, scenario.shape);
-  DROPS.main.classList.toggle('home-blur', shape === 'circle' || shape === 'magic');
+  DROPS.main.classList.toggle('home-blur', shape === 'magic');
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'circle' || shape === 'magic');
+  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
+  DROPS.main.classList.toggle('listening-orb', shape === 'listening');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
   applyContent(content);
   applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
@@ -4548,7 +4554,7 @@ function applyGeometry(shape, resolvedGeo, stageId = null) {
       : ((shape === 'ai' && k === 'main') ? SHAPES.dot.main.h : s.h);
     const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
     let translateY = s.ty + yOffset;
-    if (PAGE_MODE_OVERRIDE === RESPONSE_MODE.AI && (shape === 'circle' || shape === 'magic') && k === 'main') {
+    if (PAGE_MODE_OVERRIDE === RESPONSE_MODE.AI && (shape === 'circle' || shape === 'listening' || shape === 'magic') && k === 'main') {
       const topLeftY = alignedStageHeight - s.h - HOME_ORB_BOTTOM_MARGIN;
       translateY = topLeftY - (alignedStageHeight / 2);
     }
@@ -4622,17 +4628,17 @@ function setOpacityWithDelay(el, targetOpacity, inDelayMs = 0, outDelayMs = 0) {
 
 function isIconOnlyThumb(shape) {
   if (thumbContentState.kind === 'image' && thumbContentState.value) {
-    return ['circle', 'magic', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    return ['circle', 'listening', 'magic', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
   }
   const icon = (C.thumbLabel.textContent || '').trim();
   if (!icon) return false;
   if (icon === '···') return false;
-  return ['circle', 'magic', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+  return ['circle', 'listening', 'magic', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
 }
 
 function applyThumbVisualMode(shape) {
   const icon = thumbContentState.kind === 'image' ? '__image__' : (C.thumbLabel.textContent || '').trim();
-  const homeEmpty = (shape === 'circle' || shape === 'magic') && !icon;
+  const homeEmpty = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !icon;
   C.thumb.classList.toggle('thumb-empty', homeEmpty);
 
   const plain = isIconOnlyThumb(shape);
@@ -4644,6 +4650,7 @@ function applyThumbVisualMode(shape) {
   }
   const sizeByShape = {
     circle: 42,
+    listening: 42,
     magic: 42,
     dot: 42,
     pill: 40,
@@ -4850,7 +4857,8 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
   C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
   applyThumbVisualMode(shape);
   let thumbOpacity = pos.thumb.op;
-  if ((shape === 'circle' || shape === 'magic') && thumbContentState.kind === 'none') thumbOpacity = 0;
+  if (shape === 'circle') thumbOpacity = 0;
+  else if (shape === 'magic' && thumbContentState.kind === 'none') thumbOpacity = 0;
   setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
   const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
     const finalTransform = p.cx
@@ -5044,18 +5052,19 @@ function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFa
   const geo = nextGeo;
   const mw = geo.main.w, mh = geo.main.h;
   applyGeometry(shape, geo, stageId);
-  DROPS.main.classList.toggle('home-blur', shape === 'circle' || shape === 'magic');
-  const enteringHomeLike = (shape === 'circle' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'magic');
+  DROPS.main.classList.toggle('home-blur', shape === 'magic');
+  const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
   const goingHome = enteringHomeLike;
   if (goingHome) {
     DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, currentTransitionAnimMs - 500)}ms`);
     DROPS.main.classList.remove('home-glow');
     void DROPS.main.offsetWidth;
-    DROPS.main.classList.add('home-glow');
+    if (shape === 'listening' || shape === 'magic') DROPS.main.classList.add('home-glow');
   } else {
     DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-    DROPS.main.classList.toggle('home-glow', shape === 'circle' || shape === 'magic');
+    DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
   }
+  DROPS.main.classList.toggle('listening-orb', shape === 'listening');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
   if (contentData) applyContent(contentData);
   applyContentPositions(shape, mw, mh, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
@@ -7322,7 +7331,7 @@ function updateActive(shape) {
   document.querySelectorAll('.sb-shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
   const prompt = document.getElementById('home-start-prompt');
   if (!prompt) return;
-  if (shape === 'circle') {
+  if (shape === 'circle' || shape === 'listening') {
     if (homePromptExitTimer) {
       clearTimeout(homePromptExitTimer);
       homePromptExitTimer = null;
@@ -7469,6 +7478,17 @@ input.addEventListener('keydown', e => {
 input.addEventListener('input', e => {
   if (glassUi.active && glassUi.state === GS.COMPOSE) {
     onTranscriptUpdate(e.target.value);
+    return;
+  }
+  if (glassUi.active || flightUi.active) return;
+  const text = String(e.target.value || '');
+  const hasText = text.trim().length > 0;
+  if (hasText && currentShape === 'circle') {
+    morphTo('listening', DEMO.circle || {});
+    return;
+  }
+  if (!hasText && currentShape === 'listening') {
+    morphTo('circle', DEMO.circle || {});
   }
 });
 
