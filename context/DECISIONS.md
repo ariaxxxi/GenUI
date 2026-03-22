@@ -28,6 +28,8 @@
 
 **When introduced:** Commit `87dca3d` — `refractor-to-2-pages` branch.
 
+**Note:** `src/shapes.legacy.js` is a non-module copy for `file://` loading. Keep in sync manually if shapes change.
+
 ---
 
 ## Per-Scenario Stage Independence
@@ -38,7 +40,7 @@
 ---
 
 ## Glasses Frame = Visual Stroke, Not Clip
-**Decision:** The 420×420 glasses frame border is a CSS outline/box-shadow, not a clip-path or overflow:hidden.
+**Decision:** The 420×420 glasses frame border is a CSS box-shadow/outline, not a clip-path or overflow:hidden.
 
 **Why:** Clipping creates visual artefacts on animated shape transitions (border-radius animations get clipped mid-frame). Visual-only stroke lets animations run cleanly. This means content must self-constrain — the frame will not hide overflow.
 
@@ -47,20 +49,29 @@
 ---
 
 ## Fallback UI Required
-**Decision:** ai.html must render a deterministic fallback UI when the AI provider is unavailable or returns an error.
+**Decision:** ai.html must render a deterministic fallback UI (`localFlightFallback()`) when the AI provider is unavailable or returns an error.
 
-**Why:** This is a demo/design tool. A blank screen during a live demo is unacceptable. Fallback lets the flow be walked through without any backend.
+**Why:** This is a demo/design tool. A blank screen during a live demo is unacceptable. Fallback lets the flow be walked through without any backend connection.
+
+**Implication:** Any new flight flow step must have a corresponding fallback branch.
 
 ---
 
 ## AI Provider Abstraction in server.mjs
 **Decision:** All AI calls go through `server.mjs` as a proxy, not directly from the browser.
 
-**Why:** Keeps API keys out of the browser. Also allows provider-specific logic (Gemini retry, Anthropic version header) in one place. Clients just POST to `/api/ai`.
+**Why:** Keeps API keys out of the browser. Allows provider-specific logic (Gemini retry, Anthropic version header) in one place. Clients just POST to `/api/ai` or `/api/gemini`.
 
 ---
 
 ## Flight Demo as Primary AI Use Case
 **Decision:** The flight booking flow is the canonical AI demo baked into ai.html.
 
-**Why:** It covers the full shape progression (dot → pill → card → card-form → card-list → confirm), demonstrates multi-turn AI conversation, and is concrete enough to evaluate UX quality. It's a scenario designers can relate to.
+**Why:** It covers the full shape progression (circle → dot → pill → card → card-form → card-list → magic → confirm), demonstrates multi-turn AI conversation, and is concrete enough to evaluate UX quality. A scenario designers can relate to and demo to stakeholders.
+
+---
+
+## Typography Constraints (12–96px, #hex only)
+**Decision:** Typography sizes clamped to 12–96px range; colors validated as 6-digit hex only.
+
+**Why:** (Inferred) Prevents degenerate layouts from out-of-range inputs. Enforced in `normalizeTypography()` in `src/shapes.js`.

@@ -25,7 +25,7 @@ async function loadEnvFile() {
 }
 
 await loadEnvFile();
-const PORT = Number(process.env.PORT || 5180);
+const PORT = Number(process.env.PORT || 5173);
 
 function json(res, status, data) {
   res.writeHead(status, {
@@ -291,7 +291,7 @@ function safePath(urlPath) {
   return full;
 }
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   if (!req.url) {
     sendText(res, 400, 'Bad Request');
     return;
@@ -344,6 +344,24 @@ createServer(async (req, res) => {
   } catch {
     sendText(res, 500, 'Internal Server Error');
   }
-}).listen(PORT, () => {
-  console.log(`GenUI server running at http://localhost:${PORT}`);
 });
+
+function listen(port) {
+  server.listen(port, () => {
+    console.log(`GenUI server running at http://localhost:${port}`);
+  });
+}
+
+server.on('error', (err) => {
+  if (err?.code === 'EADDRINUSE' && !process.env.PORT && PORT === 5173) {
+    const fallbackPort = 5174;
+    console.warn(`Port 5173 is in use. Falling back to http://localhost:${fallbackPort}`);
+    server.removeAllListeners('error');
+    listen(fallbackPort);
+    return;
+  }
+  console.error(`Server failed to start on port ${PORT}: ${err?.message || err}`);
+  process.exit(1);
+});
+
+listen(PORT);
