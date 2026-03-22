@@ -535,6 +535,11 @@ body.mode-ai #ui-frame {
   justify-content: flex-end;
   gap: 14px;
 }
+#c-rich.glass-sent {
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
@@ -578,6 +583,26 @@ body.mode-ai #ui-frame {
   font-family: 'DM Sans', sans-serif;
   font-size: 24px;
   color: rgba(255,255,255,0.50);
+}
+.g-sent-toast {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(255,255,255,1);
+  line-height: 1.2;
+  white-space: nowrap;
+    transform: translateY(2px);
+
+}
+.g-sent-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* transform: translateY(0); */
 }
 .g-spinner {
   width: 24px;
@@ -631,7 +656,7 @@ body.mode-ai #ui-frame {
 .g-chip {
   padding: 8px 16px;
   border-radius: 50px;
-  font-size: 20px;
+  font-size: 18px;
   white-space: nowrap;
   font-family: 'DM Sans', sans-serif;
   font-weight: 400;
@@ -5337,7 +5362,7 @@ function glassStateShape(state) {
   if (state === GS.DISAMBIGUATE) return 'card-list';
   if (state === GS.COMPOSE) return 'card-form';
   if (state === GS.CONFIRM) return 'card';
-  if (state === GS.SENDING) return 'pill';
+  if (state === GS.SENDING) return 'magic';
   if (state === GS.SENT) return 'pill';
   return 'circle';
 }
@@ -5395,6 +5420,30 @@ function glassDynamicGeo(shape, contentHeightPx) {
       ...base.main,
       h: shellHeight,
       ty: -(shellHeight / 2),
+    },
+  };
+}
+
+function glassSentGeo() {
+  const base = SHAPES.pill || SHAPES.card;
+  const textEl = C.rich.querySelector('[data-glass-sent]');
+  let w = 200;
+  let h = 52;
+  if (textEl) {
+    const rect = textEl.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      w = clamp(Math.round(rect.width + 48), 140, 360);
+      h = clamp(Math.round(rect.height + 32), 52, 140);
+    }
+  }
+  return {
+    ...base,
+    main: {
+      ...base.main,
+      w,
+      h,
+      tx: -(w / 2),
+      ty: -(h / 2),
     },
   };
 }
@@ -5519,10 +5568,15 @@ function buildGlassContent() {
     `;
   }
   if (glassUi.state === GS.SENDING) {
-    return `<div class="g-center-row"><div class="g-spinner" style="width:20px;height:20px;"></div><span style="font-size:20px;">Sending…</span></div>`;
+    return `
+      <div class="g-center-row">
+        <div class="g-spinner"></div>
+        <span id="g-thinking-dots">·</span>
+      </div>
+    `;
   }
   if (glassUi.state === GS.SENT) {
-    return `<div class="g-center-row"><span style="font-size:20px;">✅</span><span style="font-size:24px;color:rgba(255,255,255,1);font-weight:500;">Message sent</span></div>`;
+    return `<div data-glass-sent class="g-sent-toast"><span class="g-sent-emoji">✅</span><span>Message sent</span></div>`;
   }
   return '';
 }
@@ -5535,6 +5589,7 @@ function glassRender(shouldMorph = true) {
   C.rich.innerHTML = buildGlassContent();
   C.rich.classList.toggle('visible', glassUi.active);
   C.rich.classList.toggle('glass-active', glassUi.active);
+  C.rich.classList.toggle('glass-sent', glassUi.active && glassUi.state === GS.SENT);
   C.rich.dataset.glassState = glassUi.active ? String(glassUi.state) : '';
   C.rich.style.opacity = glassUi.active ? '1' : '';
   renderGlassControlsOverlay();
@@ -5571,7 +5626,13 @@ function glassRender(shouldMorph = true) {
       }, 80);
     }
   } else if (glassUi.active) {
-    if (shouldMorph) {
+    if (glassUi.state === GS.SENT) {
+      const sentGeo = glassSentGeo();
+      const current = getCurrentMainGeometry();
+      if (shouldMorph || Math.abs(sentGeo.main.w - (current?.w || 0)) > 1 || Math.abs(sentGeo.main.h - (current?.h || 0)) > 1) {
+        morphTo(shape, { icon:'', primary:'', secondary:'', detail:'' }, sentGeo);
+      }
+    } else if (shouldMorph) {
       morphTo(shape, { icon:'', primary:'', secondary:'', detail:'' });
     }
     renderGlassControlsOverlay();
@@ -5582,7 +5643,7 @@ function glassRender(shouldMorph = true) {
 
   setGlassOverlayOpacity(glassUi.active);
   const glow = document.getElementById('home-glow-layer');
-  if (glow) glow.style.opacity = '0';
+  if (glow) glow.style.opacity = (glassUi.active && glassUi.state !== GS.THINKING && glassUi.state !== GS.SENDING) ? '0' : '';
 
   if (glassUi.active && glassUi.state === GS.DISAMBIGUATE) {
     setIntentHeader('Which Hiro?', null);
