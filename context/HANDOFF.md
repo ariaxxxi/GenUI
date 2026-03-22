@@ -140,3 +140,43 @@ GlassOS layout parity fixes: entry sizing, multiline compose growth, external co
 - Validate on `http://localhost:5174/ai.html` with the exact sequence:
   `send msg to hiro` -> DISAMBIGUATE -> COMPOSE typing long text -> CONFIRM,
   checking first-entry sizing, external controls placement, and blue field-only glow.
+
+---
+
+## Task title
+GlassOS: eliminate first-frame sizing drift and move controls fully outside shell
+
+## Completion status
+- Completed
+
+## Summary
+- Added a dedicated external controls overlay root: `#glass-controls-layer` (sibling of `#drop-main`, inside `#stage`).
+- Removed controls from `#c-rich` body markup; COMPOSE checkmark and CONFIRM action row now render via overlay-only path.
+- Implemented overlay renderer anchored to `drop-main` geometry:
+  - X centered to shell
+  - Y positioned at shell bottom + fixed gap (`GLASS_CONTROLS_GAP`).
+- Strengthened body height measurement:
+  - `max(getBoundingClientRect().height, offsetHeight, scrollHeight)`.
+  - cache per card state only when measurement is valid.
+- Added deterministic 3-pass settle for card-state entry:
+  - Pass A immediate after forced layout (`void C.rich.offsetHeight`)
+  - Pass B next animation frame
+  - Pass C delayed settle (~80ms) on state entry.
+- Added settle timer cleanup and integrated it into Glass timer reset logic.
+
+## Files changed
+- `ai.html`
+
+## Validation performed
+- `SMOKE_BASE_URL=http://localhost:5174 node test/smoke.mjs` (pass)
+- Inline JS parse check for `ai.html` (pass)
+
+## Remaining issues / caveats
+- Pixel-perfect visual verification remains manual in local browser due sandbox limitations with custom headless Playwright probes.
+
+## Recommended next step
+- Manual check on `:5174` for:
+  1) DISAMBIGUATE first frame vs Arrow frame (no size jump),
+  2) COMPOSE first frame vs Arrow frame (no extra top/bottom),
+  3) controls visibly outside `drop-main`,
+  4) multiline compose growth still updates shell height correctly.
