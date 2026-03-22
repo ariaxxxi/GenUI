@@ -16,6 +16,13 @@ body {
   font-family: 'DM Mono', monospace;
   height: 100%;
   --panel-w: 360px;
+  --glass-stroke-angle: 170deg;
+  --glass-stroke-stop-0: rgba(255,255,255,1);
+  --glass-stroke-stop-50: rgba(120, 120, 120, 0.458);
+  --glass-stroke-stop-97: rgba(255, 255, 255, 0.327);
+  --glass-shell-stroke-stop-0: rgba(93, 93, 93, 0.36);
+  --glass-shell-stroke-stop-50: rgba(123, 123, 123, 0.183);
+  --glass-shell-stroke-stop-97: rgba(133, 133, 133, 0.006);
 }
 body[data-page-mode="ai"] #left-sidebar,
 body[data-page-mode="ai"] #sidebar {
@@ -370,11 +377,11 @@ body.mode-ai #ui-frame {
 .drop::before {
   content: ''; position: absolute; inset: 0; z-index: 10;
   border-radius: inherit; padding: 1px;
-  background: linear-gradient(135deg,
-    rgba(255,255,255,0.75) 0%,
-    rgba(180,180,180,0.20) 45%,
-    rgba(100,100,100,0.08) 75%,
-    rgba(255,255,255,0.12) 100%);
+  background: linear-gradient(var(--glass-stroke-angle),
+    var(--glass-shell-stroke-stop-0) 0%,
+    var(--glass-shell-stroke-stop-50) 50%,
+    var(--glass-shell-stroke-stop-97) 97%,
+    var(--glass-shell-stroke-stop-97) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: destination-out;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -527,9 +534,9 @@ body.mode-ai #ui-frame {
 #c-rich.visible { opacity: 1; pointer-events: auto; }
 #c-rich.glass-active {
   top: auto;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
   padding: 0;
   height: auto;
   justify-content: flex-end;
@@ -545,16 +552,52 @@ body.mode-ai #ui-frame {
 @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-.g-card-list { padding: 6px; }
+.g-card-list { padding: 0px; }
+.g-contact-row,
+.g-chip,
+.g-action-btn {
+  position: relative;
+  isolation: isolate;
+}
+.g-contact-row::before,
+.g-chip::before,
+.g-action-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  padding: var(--g-stroke-w, 1px);
+  background: linear-gradient(var(--glass-stroke-angle),
+    var(--glass-stroke-stop-0) 0%,
+    var(--glass-stroke-stop-50) 50%,
+    var(--glass-stroke-stop-97) 97%,
+    var(--glass-stroke-stop-97) 100%);
+  -webkit-mask: linear-gradient(#ffffffdd 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 240ms cubic-bezier(0.22,1,0.36,1);
+}
 .g-contact-row {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
   border-radius: 24px;
-  transition: background 0.2s;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  transition: background 240ms cubic-bezier(0.22,1,0.36,1), box-shadow 240ms cubic-bezier(0.22,1,0.36,1), border-radius 240ms cubic-bezier(0.22,1,0.36,1);
 }
-.g-contact-row.selected { background: rgba(255,255,255,0.05); }
+.g-contact-row.selected {
+  background: rgba(255, 255, 255, 0.084);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.2);
+  border-radius: 40px;
+}
+.g-contact-row.selected::before { opacity: 1; }
 .g-ava {
   width: 42px; height: 42px; border-radius: 50%;
   background: rgba(255,255,255,0.12);
@@ -567,12 +610,12 @@ body.mode-ai #ui-frame {
 .g-contact-name {
   font-family: 'DM Sans', sans-serif;
   font-size: 24px;
-  font-weight: 400;
+  font-weight: 500;
   color: rgba(255,255,255,0.50);
-  transition: all 0.2s;
+  transition: color 240ms cubic-bezier(0.22,1,0.36,1);
 }
 .g-contact-row.selected .g-contact-name {
-  font-weight: 600;
+  font-weight: 500;
   color: rgba(255,255,255,1);
 }
 .g-center-row {
@@ -595,7 +638,7 @@ body.mode-ai #ui-frame {
   color: rgba(255,255,255,1);
   line-height: 1.2;
   white-space: nowrap;
-    transform: translateY(2px);
+  transform: translateY(-2px);
 
 }
 .g-sent-emoji {
@@ -621,6 +664,9 @@ body.mode-ai #ui-frame {
   align-items: center;
   gap: 12px;
   margin-bottom: 14px;
+  padding-top:12px;
+  padding-left:6px;
+  padding-bottom: 12px;
 }
 .g-card-header .g-ava {
   width: 40px;
@@ -660,17 +706,19 @@ body.mode-ai #ui-frame {
   white-space: nowrap;
   font-family: 'DM Sans', sans-serif;
   font-weight: 400;
-  border: 1px solid rgba(255,255,255,0.10);
+  border: none;
   color: rgba(255,255,255,0.50);
-  background: rgba(255,255,255,0.03);
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.085);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+  transition: color 220ms cubic-bezier(0.22,1,0.36,1), background 220ms cubic-bezier(0.22,1,0.36,1), box-shadow 220ms cubic-bezier(0.22,1,0.36,1);
 }
 .g-chip.selected {
-  border: 1px solid rgba(255,255,255,0.28);
   color: rgba(255,255,255,1);
-  background: rgba(255,255,255,0.10);
-  font-weight: 500;
+  background: rgba(255,255,255,0.05);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.15);
+  font-weight: 400;
 }
+.g-chip.selected::before { opacity: 1; }
 .g-listen-field {
   border-radius: 22px;
   padding: 14px 16px;
@@ -738,26 +786,29 @@ body.mode-ai #ui-frame {
   display: flex;
   gap: 14px;
   justify-content: center;
-  animation: fadeUp 400ms ease both;
   margin-top: 0;
 }
+.g-action-row.enter { animation: fadeUp 400ms ease both; }
 .g-action-btn {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
+  border: none;
+  background: rgba(255, 255, 255, 0.047);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  transition: all 300ms cubic-bezier(0.35,0.23,0.13,0.98);
+  transition: transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1), box-shadow 240ms cubic-bezier(0.22,1,0.36,1);
 }
 .g-action-btn.selected {
-  border-color: rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.10);
+  --g-stroke-w: 2px;
+  background: rgba(255,255,255,0.05);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.20);
   transform: scale(1.12);
 }
+.g-action-btn.selected::before { opacity: 1; }
 
 /* Rich: shared */
 .rich-divider {
@@ -1114,7 +1165,7 @@ body.mode-ai #c-secondary {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 48px;
+  border-radius: 20px;
   pointer-events: none;
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,0.12),
@@ -5315,8 +5366,8 @@ const GLASS_CONTACTS = [
     ]},
 ];
 const GS = { IDLE:0, THINKING:1, DISAMBIGUATE:2, COMPOSE:3, CONFIRM:4, SENDING:5, SENT:6 };
-const GLASS_TOP_INSET = 20;
-const GLASS_BOTTOM_INSET = 20;
+const GLASS_TOP_INSET = 10;
+const GLASS_BOTTOM_INSET = 10;
 const GLASS_CONTROLS_GAP = 14;
 const GLASS_MIN_SHELL_H = 100;
 const GLASS_MAX_SHELL_H = 400;
@@ -5339,6 +5390,7 @@ let glassDotsTimer = null;
 let glassThinkingTimer = null;
 let glassSendTimer = null;
 let glassSentTimer = null;
+let glassControlsMode = '';
 
 function clearGlassTimers() {
   if (glassPauseTimer) { clearTimeout(glassPauseTimer); glassPauseTimer = null; }
@@ -5491,14 +5543,14 @@ function cancelGlassMeasureSettle() {
   glassMeasureSettleTimer = null;
 }
 
-function buildGlassControlsHtml() {
+function buildGlassControlsHtml(confirmEnter = false) {
   if (!glassUi.active) return '';
   if (glassUi.state === GS.COMPOSE) {
     return `<div class="g-glass-controls"><div class="g-checkmark ${glassUi.showCheck ? '' : 'hidden'}">✅</div></div>`;
   }
   if (glassUi.state === GS.CONFIRM) {
     const buttons = ['✈️', '✊', '❌'].map((emoji, i) => `<div class="g-action-btn ${i === glassUi.sel ? 'selected' : ''}">${emoji}</div>`).join('');
-    return `<div class="g-glass-controls"><div class="g-action-row">${buttons}</div></div>`;
+    return `<div class="g-glass-controls"><div class="g-action-row${confirmEnter ? ' enter' : ''}">${buttons}</div></div>`;
   }
   return '';
 }
@@ -5509,15 +5561,33 @@ function renderGlassControlsOverlay() {
   if (!glassUi.active) {
     layer.innerHTML = '';
     layer.classList.remove('visible');
+    glassControlsMode = '';
     return;
   }
-  const controlsHtml = buildGlassControlsHtml();
-  if (!controlsHtml) {
+
+  let mode = '';
+  if (glassUi.state === GS.COMPOSE) mode = 'compose';
+  else if (glassUi.state === GS.CONFIRM) mode = 'confirm';
+
+  if (!mode) {
     layer.innerHTML = '';
     layer.classList.remove('visible');
+    glassControlsMode = '';
     return;
   }
-  layer.innerHTML = controlsHtml;
+
+  const modeChanged = glassControlsMode !== mode;
+  if (modeChanged) {
+    layer.innerHTML = buildGlassControlsHtml(mode === 'confirm');
+    glassControlsMode = mode;
+  } else if (mode === 'compose') {
+    const mark = layer.querySelector('.g-checkmark');
+    if (mark) mark.classList.toggle('hidden', !glassUi.showCheck);
+  } else if (mode === 'confirm') {
+    const buttons = layer.querySelectorAll('.g-action-btn');
+    buttons.forEach((btn, idx) => btn.classList.toggle('selected', idx === glassUi.sel));
+  }
+
   const controls = layer.querySelector('.g-glass-controls');
   const stage = document.getElementById('stage');
   const main = document.getElementById('drop-main');
@@ -5532,6 +5602,27 @@ function renderGlassControlsOverlay() {
   controls.style.left = `${Math.round(centerX)}px`;
   controls.style.top = `${Math.round(topY)}px`;
   layer.classList.add('visible');
+}
+
+function updateGlassSelectionUiOnly() {
+  if (!glassUi.active) return false;
+  if (glassUi.state === GS.DISAMBIGUATE) {
+    const rows = C.rich.querySelectorAll('.g-contact-row');
+    if (!rows.length) return false;
+    rows.forEach((row, idx) => row.classList.toggle('selected', idx === glassUi.sel));
+    return true;
+  }
+  if (glassUi.state === GS.COMPOSE && glassUi.showChips && !String(glassUi.composeText || '').trim()) {
+    const chips = C.rich.querySelectorAll('.g-chip');
+    if (!chips.length) return false;
+    chips.forEach((chip, idx) => chip.classList.toggle('selected', idx === glassUi.sel));
+    return true;
+  }
+  if (glassUi.state === GS.CONFIRM) {
+    renderGlassControlsOverlay();
+    return true;
+  }
+  return false;
 }
 
 function buildGlassContent() {
@@ -7260,13 +7351,13 @@ document.addEventListener('keydown', e => {
     if (!focusedInTextInput && e.key === 'ArrowUp') {
       e.preventDefault();
       glassUi.sel = Math.max(0, glassUi.sel - 1);
-      glassRender(false);
+      if (!updateGlassSelectionUiOnly()) glassRender(false);
       return;
     }
     if (!focusedInTextInput && e.key === 'ArrowDown') {
       e.preventDefault();
       glassUi.sel = Math.min(maxGlassSel(), glassUi.sel + 1);
-      glassRender(false);
+      if (!updateGlassSelectionUiOnly()) glassRender(false);
       return;
     }
     if (!focusedInTextInput && e.code === 'Space') {
