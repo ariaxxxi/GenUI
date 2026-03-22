@@ -202,12 +202,33 @@ body.mode-ai #main-col {
 
 #intent-header {
   display: none;
-  align-items: center; gap: 10px;
+  align-items: flex-start; gap: 10px;
   height: 36px; margin-bottom: 12px;
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 420ms ease, transform 420ms cubic-bezier(0.22,1,0.36,1);
   pointer-events: none;
+}
+#intent-header.glass-intent {
+  position: absolute;
+  z-index: 30;
+  margin-bottom: 0;
+  height: auto;
+  gap: 0;
+  align-items: flex-start;
+}
+#intent-header.glass-intent #intent-step-dot,
+#intent-header.glass-intent #intent-step-lbl {
+  display: none;
+}
+#intent-header.glass-intent #intent-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255,255,255,0.6);
+  margin-left: 10px;
 }
 #intent-header.visible {
   opacity: 1; transform: translateY(0);
@@ -555,13 +576,15 @@ body.mode-ai #ui-frame {
 .g-card-list { padding: 0px; }
 .g-contact-row,
 .g-chip,
-.g-action-btn {
+.g-action-btn,
+.g-checkmark {
   position: relative;
   isolation: isolate;
 }
 .g-contact-row::before,
 .g-chip::before,
-.g-action-btn::before {
+.g-action-btn::before,
+.g-checkmark::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -584,22 +607,21 @@ body.mode-ai #ui-frame {
 .g-contact-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   padding: 12px 14px;
-  border-radius: 24px;
+  border-radius: 999px;
   background: transparent;
   box-shadow: none;
   border: none;
-  transition: background 240ms cubic-bezier(0.22,1,0.36,1), box-shadow 240ms cubic-bezier(0.22,1,0.36,1), border-radius 240ms cubic-bezier(0.22,1,0.36,1);
+  transition: background 200ms ease, box-shadow 200ms ease;
 }
 .g-contact-row.selected {
   background: rgba(255, 255, 255, 0.084);
   box-shadow: inset 0 0 20px rgba(255,255,255,0.2);
-  border-radius: 40px;
 }
 .g-contact-row.selected::before { opacity: 1; }
 .g-ava {
-  width: 42px; height: 42px; border-radius: 50%;
+  width: 48px; height: 48px; border-radius: 50%;
   background: rgba(255,255,255,0.12);
   display: flex; align-items: center; justify-content: center;
   font-family: 'DM Sans', sans-serif;
@@ -610,12 +632,12 @@ body.mode-ai #ui-frame {
 .g-contact-name {
   font-family: 'DM Sans', sans-serif;
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 400;
   color: rgba(255,255,255,0.50);
-  transition: color 240ms cubic-bezier(0.22,1,0.36,1);
+  transition: color 200ms ease, font-weight 200ms ease;
 }
 .g-contact-row.selected .g-contact-name {
-  font-weight: 500;
+  font-weight: 600;
   color: rgba(255,255,255,1);
 }
 .g-center-row {
@@ -710,13 +732,13 @@ body.mode-ai #ui-frame {
   color: rgba(255,255,255,0.50);
   background: rgba(255, 255, 255, 0.085);
   box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
-  transition: color 220ms cubic-bezier(0.22,1,0.36,1), background 220ms cubic-bezier(0.22,1,0.36,1), box-shadow 220ms cubic-bezier(0.22,1,0.36,1);
+  transition: color 200ms ease, background 200ms ease, box-shadow 200ms ease, font-weight 200ms ease;
 }
 .g-chip.selected {
   color: rgba(255,255,255,1);
   background: rgba(255,255,255,0.05);
   box-shadow: inset 0 0 20px rgba(255,255,255,0.15);
-  font-weight: 400;
+  font-weight: 500;
 }
 .g-chip.selected::before { opacity: 1; }
 .g-listen-field {
@@ -769,14 +791,16 @@ body.mode-ai #ui-frame {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.05);
+  border: none;
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.20);
   transform: scale(1.12);
   font-size: 20px;
   overflow: hidden;
-  transition: opacity 350ms ease, height 350ms ease, transform 350ms ease;
+  transition: opacity 500ms ease, height 500ms ease, transform 500ms ease;
   align-self: center;
 }
+.g-checkmark::before { opacity: 1; --g-stroke-w: 2px; }
 .g-checkmark.hidden {
   opacity: 0;
   height: 0;
@@ -2154,13 +2178,12 @@ body.bg-off .bg-blur-image { opacity: 0; }
   <div id="ui-frame">
     <div id="ui-frame-bg"></div>
     <div id="stage-wrap">
-      <div id="intent-header">
-        <span id="intent-label">Book a Flight</span>
-        <div id="intent-step-dot"></div>
-        <span id="intent-step-lbl"></span>
-      </div>
-
       <div id="stage">
+        <div id="intent-header">
+          <span id="intent-label">Book a Flight</span>
+          <div id="intent-step-dot"></div>
+          <span id="intent-step-lbl"></span>
+        </div>
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
           <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
@@ -5086,6 +5109,7 @@ function setIntentHeader(label, step) {
   const lbl  = document.getElementById('intent-label');
   const dot  = document.getElementById('intent-step-dot');
   const slbl = document.getElementById('intent-step-lbl');
+  if (!hdr || !lbl || !dot || !slbl) return;
   lbl.textContent = label;
   if (step) {
     slbl.textContent = step;
@@ -5094,11 +5118,58 @@ function setIntentHeader(label, step) {
     slbl.textContent = '';
     dot.classList.remove('visible');
   }
+  hdr.style.display = 'flex';
   hdr.classList.add('visible');
 }
 
+let intentHeaderTrackRaf = null;
+
+function cancelIntentHeaderTracking() {
+  if (!intentHeaderTrackRaf) return;
+  cancelAnimationFrame(intentHeaderTrackRaf);
+  intentHeaderTrackRaf = null;
+}
+
+function trackIntentHeaderForTransition(ms = animDur + 120) {
+  cancelIntentHeaderTracking();
+  const end = performance.now() + Math.max(120, ms);
+  const tick = () => {
+    const hdr = document.getElementById('intent-header');
+    if (!hdr || !hdr.classList.contains('glass-intent') || !hdr.classList.contains('visible')) return;
+    positionIntentHeaderAboveMain();
+    if (performance.now() < end) {
+      intentHeaderTrackRaf = requestAnimationFrame(tick);
+    } else {
+      intentHeaderTrackRaf = null;
+    }
+  };
+  intentHeaderTrackRaf = requestAnimationFrame(tick);
+}
+
+function positionIntentHeaderAboveMain() {
+  const hdr = document.getElementById('intent-header');
+  const stage = document.getElementById('stage');
+  const main = document.getElementById('drop-main');
+  if (!hdr || !stage || !main) return;
+  const stageRect = stage.getBoundingClientRect();
+  const mainRect = main.getBoundingClientRect();
+  const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
+  const gap = 10;
+  const left = Math.round(mainRect.left - stageRect.left + 2);
+  const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - gap));
+  hdr.style.left = `${left}px`;
+  hdr.style.top = `${top}px`;
+}
+
 function hideIntentHeader() {
-  document.getElementById('intent-header').classList.remove('visible');
+  const hdr = document.getElementById('intent-header');
+  if (!hdr) return;
+  hdr.classList.remove('visible');
+  hdr.classList.remove('glass-intent');
+  hdr.style.display = 'none';
+  hdr.style.left = '';
+  hdr.style.top = '';
+  cancelIntentHeaderTracking();
 }
 
 let siriRaf     = null;
@@ -5369,6 +5440,7 @@ const GS = { IDLE:0, THINKING:1, DISAMBIGUATE:2, COMPOSE:3, CONFIRM:4, SENDING:5
 const GLASS_TOP_INSET = 10;
 const GLASS_BOTTOM_INSET = 10;
 const GLASS_CONTROLS_GAP = 14;
+const GLASS_CONTROLS_LIFT = 78;
 const GLASS_MIN_SHELL_H = 100;
 const GLASS_MAX_SHELL_H = 400;
 const glassUi = {
@@ -5391,6 +5463,7 @@ let glassThinkingTimer = null;
 let glassSendTimer = null;
 let glassSentTimer = null;
 let glassControlsMode = '';
+let glassControlsTrackRaf = null;
 
 function clearGlassTimers() {
   if (glassPauseTimer) { clearTimeout(glassPauseTimer); glassPauseTimer = null; }
@@ -5497,12 +5570,15 @@ function glassDynamicGeo(shape, contentHeightPx) {
     GLASS_MIN_SHELL_H,
     GLASS_MAX_SHELL_H
   );
+  const controlsLift = (glassUi.state === GS.CONFIRM || (glassUi.state === GS.COMPOSE && glassUi.showCheck))
+    ? GLASS_CONTROLS_LIFT
+    : 0;
   return {
     ...base,
     main: {
       ...base.main,
       h: shellHeight,
-      ty: -(shellHeight / 2),
+      ty: -(shellHeight / 2) - controlsLift,
     },
   };
 }
@@ -5555,6 +5631,46 @@ function buildGlassControlsHtml(confirmEnter = false) {
   return '';
 }
 
+function cancelGlassControlsTracking() {
+  if (!glassControlsTrackRaf) return;
+  cancelAnimationFrame(glassControlsTrackRaf);
+  glassControlsTrackRaf = null;
+}
+
+function positionGlassControlsOverlay() {
+  const layer = C.glassControlsLayer;
+  if (!layer || !layer.classList.contains('visible')) return;
+  const controls = layer.querySelector('.g-glass-controls');
+  const stage = document.getElementById('stage');
+  const main = document.getElementById('drop-main');
+  if (!controls || !stage || !main) return;
+  const stageRect = stage.getBoundingClientRect();
+  const mainRect = main.getBoundingClientRect();
+  const controlsRect = controls.getBoundingClientRect();
+  const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
+  const unclampedTop = (mainRect.bottom - stageRect.top) + GLASS_CONTROLS_GAP;
+  const maxTop = Math.max(8, stageRect.height - controlsRect.height - 8);
+  const topY = Math.min(unclampedTop, maxTop);
+  controls.style.left = `${Math.round(centerX)}px`;
+  controls.style.top = `${Math.round(topY)}px`;
+}
+
+function trackGlassControlsForTransition(ms = animDur + 120) {
+  cancelGlassControlsTracking();
+  const end = performance.now() + Math.max(120, ms);
+  const tick = () => {
+    if (!glassUi.active) return;
+    if (!C.glassControlsLayer?.classList.contains('visible')) return;
+    positionGlassControlsOverlay();
+    if (performance.now() < end) {
+      glassControlsTrackRaf = requestAnimationFrame(tick);
+    } else {
+      glassControlsTrackRaf = null;
+    }
+  };
+  glassControlsTrackRaf = requestAnimationFrame(tick);
+}
+
 function renderGlassControlsOverlay() {
   const layer = C.glassControlsLayer;
   if (!layer) return;
@@ -5562,6 +5678,7 @@ function renderGlassControlsOverlay() {
     layer.innerHTML = '';
     layer.classList.remove('visible');
     glassControlsMode = '';
+    cancelGlassControlsTracking();
     return;
   }
 
@@ -5573,6 +5690,7 @@ function renderGlassControlsOverlay() {
     layer.innerHTML = '';
     layer.classList.remove('visible');
     glassControlsMode = '';
+    cancelGlassControlsTracking();
     return;
   }
 
@@ -5593,15 +5711,20 @@ function renderGlassControlsOverlay() {
   const main = document.getElementById('drop-main');
   if (!controls || !stage || !main) {
     layer.classList.remove('visible');
+    cancelGlassControlsTracking();
     return;
   }
-  const stageRect = stage.getBoundingClientRect();
-  const mainRect = main.getBoundingClientRect();
-  const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
-  const topY = (mainRect.bottom - stageRect.top) + GLASS_CONTROLS_GAP;
-  controls.style.left = `${Math.round(centerX)}px`;
-  controls.style.top = `${Math.round(topY)}px`;
   layer.classList.add('visible');
+  positionGlassControlsOverlay();
+  if (glassUi.state === GS.CONFIRM || (glassUi.state === GS.COMPOSE && glassUi.showCheck)) {
+    trackGlassControlsForTransition();
+  } else {
+    cancelGlassControlsTracking();
+  }
+  const hdr = document.getElementById('intent-header');
+  if (hdr && hdr.classList.contains('glass-intent') && hdr.classList.contains('visible')) {
+    positionIntentHeaderAboveMain();
+  }
 }
 
 function updateGlassSelectionUiOnly() {
@@ -5723,9 +5846,15 @@ function glassRender(shouldMorph = true) {
     const applyCardMorphFromBody = (force = false) => {
       const dynamicContentH = glassContentHeightPx();
       const geo = glassDynamicGeo(shape, dynamicContentH);
-      const currentH = getCurrentMainGeometry()?.h || 0;
-      if (force || Math.abs(geo.main.h - currentH) > 1) {
+      const currentGeo = getCurrentMainGeometry() || {};
+      const currentH = Number(currentGeo.h) || 0;
+      const currentTy = Number(currentGeo.ty) || 0;
+      if (force || Math.abs(geo.main.h - currentH) > 1 || Math.abs(geo.main.ty - currentTy) > 1) {
         morphTo(shape, { icon:'', primary:'', secondary:'', detail:'' }, geo);
+      }
+      const hdr = document.getElementById('intent-header');
+      if (hdr && hdr.classList.contains('glass-intent') && hdr.classList.contains('visible')) {
+        positionIntentHeaderAboveMain();
       }
       renderGlassControlsOverlay();
     };
@@ -5769,6 +5898,10 @@ function glassRender(shouldMorph = true) {
 
   if (glassUi.active && glassUi.state === GS.DISAMBIGUATE) {
     setIntentHeader('Which Hiro?', null);
+    const hdr = document.getElementById('intent-header');
+    if (hdr) hdr.classList.add('glass-intent');
+    positionIntentHeaderAboveMain();
+    trackIntentHeaderForTransition();
   } else {
     hideIntentHeader();
   }

@@ -1,7 +1,66 @@
 # Handoff
 
 ## Task title
-ai.html: Permanent Sim Panel + GlassOS Send Message Flow (together)
+send message flow visual/motion parity pass: gradients, selection smoothing, grouped floating, controls containment
+
+## Completion status
+- Completed
+
+## Summary
+- Updated selected-state stroke system to gradient-ring borders (masked pseudo-element) and removed flat selected borders.
+- Added shell-specific gradient stroke stops for outer container:
+  - `0% rgba(255,255,255,0.36)`
+  - `50% rgba(120,120,120,0.10)`
+  - `97% rgba(255,255,255,0.10)`
+- Set unselected behavior per latest direction:
+  - DISAMBIGUATE non-selected rows: transparent (no fill).
+  - Chips/buttons non-selected: no border, low-opacity fill + inner shadow.
+- Applied outer container inset change to `10px`:
+  - `#c-rich.glass-active` left/right/bottom = `10px`
+  - dynamic geometry insets `GLASS_TOP_INSET`/`GLASS_BOTTOM_INSET` = `10`.
+- Fixed selection animation behavior:
+  - persistent stroke layers with animated opacity on selected classes.
+  - Arrow selection uses in-place class toggles (`updateGlassSelectionUiOnly`) for DISAMBIGUATE/COMPOSE/CONFIRM, avoiding `#c-rich` remount on selection-only changes.
+  - restored font-weight transitions (rows `400→600`, chips `400→500`) and removed row corner morph snap.
+- Fixed CONFIRM control-row re-fade:
+  - controls overlay is mode-diffed and no longer remounted on every selection change.
+  - `.g-action-row` fade-up now entry-only (`.enter` class).
+- Fixed intent header visibility and placement:
+  - `setIntentHeader()` now sets `display:flex`; hide clears display.
+  - moved `#intent-header` inside `#stage` so it floats as part of the same group.
+  - added glass-intent anchored positioning above `#drop-main` with live tracking during transitions.
+- Fixed controls appearing outside stage before snapping:
+  - added live controls overlay tracking during transition (`requestAnimationFrame`) and stage-bound clamping.
+  - card morph now remorphs on `ty` change (not just `h`) so vertical lift updates immediately.
+- Visual token updates requested in recent iterations:
+  - “Which Hiro?” intent text uses DM Sans with left margin `10px`.
+  - DISAMBIGUATE avatar size set to `48x48`.
+  - list-item row corner set to capsule (`999px`) and row gap set to `16px`.
+  - COMPOSE checkmark uses selected action-button style (selected fill/inner shadow/2px gradient ring).
+  - checkmark show animation duration increased to `500ms`.
+
+## Files changed
+- `ai.html`
+
+## Validation performed
+- Inline JS parse checks repeatedly passed (`new Function(...)` on extracted inline script).
+- Smoke check repeatedly passed:
+  - `SMOKE_BASE_URL=http://localhost:5174 node test/smoke.mjs`
+  - result observed: `SHAPE:magic`, `LOGS:[]`.
+
+## Remaining issues / caveats
+- Visual validation for precise frame-by-frame alignment still requires manual browser check (sandbox Playwright intermittently fails with Chromium `SIGTRAP/EPERM`).
+- Recent fixes focus on layout/motion/UI parity only; no backend intent logic changes were introduced in this pass.
+
+## Recommended next step
+- Manual pass on `http://localhost:5174/ai.html`:
+  1) `send msg to hiro`
+  2) verify “Which Hiro?” stays directly above card during full float/morph
+  3) verify checkmark/action row never leaves stage bounds during appearance
+  4) verify row/chip highlight transitions are smooth with weight interpolation.
+
+## Task title
+ai.html: Permanent Sim Panel + send message flow Send Message Flow (together)
 
 ## Completion status
 - Partially done
@@ -11,15 +70,15 @@ ai.html: Permanent Sim Panel + GlassOS Send Message Flow (together)
 - Removed all legacy `#chat-panel`, `#input-area`, `#user-input`, `#send-btn`, and `#example-chips` HTML/CSS/JS references.
 - Rerouted chat output to simulator panel via `addSimLog()` + `setSimVoice()`.
 - Added simulator helpers: `setSimInputState()`, event log, voice output card, keyboard legend, and command input.
-- Implemented GlassOS send-message state machine in `ai.html`:
+- Implemented send message flow state machine in `ai.html`:
   IDLE → THINKING → DISAMBIGUATE → COMPOSE → CONFIRM → SENDING → SENT.
 - Added required seams/stubs:
   `onTranscriptUpdate(text)`, `speakOutput(text)`, `parseIntent(text)`.
-- Added GlassOS visual styles and rich-content rendering for contact list, chips, listening field, checkmark, confirm actions, sending, and sent states.
+- Added send message flow visual styles and rich-content rendering for contact list, chips, listening field, checkmark, confirm actions, sending, and sent states.
 - Updated quick action routing: message chip now calls `startGlassFlow()`.
 - Renamed simulator quick chip text to `"Send a message to Hiro"`.
-- Fixed typed-intent routing and contact matching for shorthand input (`"send msg to hiro"`), so direct Enter from `#sim-input` now starts GlassOS flow and reaches disambiguation.
-- Refactored GlassOS rendering architecture so stage content is shell-rooted:
+- Fixed typed-intent routing and contact matching for shorthand input (`"send msg to hiro"`), so direct Enter from `#sim-input` now starts send message flow and reaches disambiguation.
+- Refactored send message flow rendering architecture so stage content is shell-rooted:
   removed `g-root` / `g-compose-shell` wrappers and render content directly as shell content.
 - Moved DISAMBIGUATE prompt to existing `intent-header` (`Which Hiro?`) and removed in-card duplicate prompt node.
 - Final refactor per updated requirement: removed nested shell/chrome markup in `#c-rich` entirely.
@@ -61,7 +120,7 @@ Run manual acceptance pass for all Step 2/3 interactions in `context/task.md` (s
 ---
 
 ## Task title
-GlassOS: Fix top padding + stable dynamic height (content-measured)
+send message flow: Fix top padding + stable dynamic height (content-measured)
 
 ## Completion status
 - Completed
@@ -99,7 +158,7 @@ Manual verify on `:5174` for:
 ---
 
 ## Task title
-GlassOS layout parity fixes: entry sizing, multiline compose growth, external controls, blue glow ownership, disambiguate label spacing
+send message flow layout parity fixes: entry sizing, multiline compose growth, external controls, blue glow ownership, disambiguate label spacing
 
 ## Completion status
 - Completed
@@ -144,7 +203,7 @@ GlassOS layout parity fixes: entry sizing, multiline compose growth, external co
 ---
 
 ## Task title
-GlassOS: eliminate first-frame sizing drift and move controls fully outside shell
+send message flow: eliminate first-frame sizing drift and move controls fully outside shell
 
 ## Completion status
 - Completed
