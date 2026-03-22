@@ -206,7 +206,7 @@ body.mode-ai #main-col {
   opacity: 1; transform: translateY(0);
 }
 #stage-wrap.flow-active #intent-header {
-  margin-bottom: 100px;
+  margin-bottom: 16px;
 }
 #intent-label {
   font-size: 9px; letter-spacing: .32em;
@@ -290,6 +290,21 @@ body.mode-ai #sim-panel { display: flex; }
   font-size: 10px; color: rgba(100,150,255,0.30);
   margin-top: 4px; min-height: 14px;
   font-family: 'DM Sans', sans-serif;
+}
+#sim-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sim-quick-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.58);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
 }
 #sim-voice-out {
   background: rgba(255,255,255,0.02);
@@ -510,39 +525,21 @@ body.mode-ai #ui-frame {
   display: flex; flex-direction: column;
 }
 #c-rich.visible { opacity: 1; pointer-events: auto; }
+#c-rich.glass-active {
+  top: auto;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  padding: 0;
+  height: auto;
+  justify-content: flex-end;
+  gap: 14px;
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-.g-root {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-.g-label-above {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
-  color: rgba(255,255,255,0.50);
-  margin-bottom: 10px;
-  padding: 0 2px;
-}
-.g-card-shell {
-  position: relative;
-  border-radius: 30px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.03);
-  overflow: hidden;
-}
-.g-card-top-glow {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0.20) 50%, rgba(255,255,255,0.12) 70%, transparent 100%);
-  z-index: 2;
-}
 .g-card-list { padding: 6px; }
 .g-contact-row {
   display: flex;
@@ -590,16 +587,9 @@ body.mode-ai #ui-frame {
   border-top-color: rgba(255,255,255,0.6);
   animation: spin 0.8s linear infinite;
 }
-.g-compose-shell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
 .g-compose-card {
   width: 100%;
-  padding: 20px;
-  position: relative;
+  padding: 0;
 }
 .g-card-header {
   display: flex;
@@ -666,6 +656,18 @@ body.mode-ai #ui-frame {
   width: 100%;
 }
 .g-listen-field.has-text { min-height: 56px; }
+.g-listen-field.compose-input {
+  min-height: 96px;
+  background: linear-gradient(180deg, rgba(20,56,120,0.10) 0%, rgba(42,90,185,0.28) 100%);
+  border: 1px solid rgba(126,168,255,0.40);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -18px 32px rgba(96,150,255,0.30),
+    0 0 18px rgba(82,132,240,0.18);
+}
+.g-listen-field.compose-input.has-text {
+  min-height: 96px;
+}
 .g-listen-empty {
   font-family: 'DM Sans', sans-serif;
   font-size: 24px;
@@ -677,6 +679,15 @@ body.mode-ai #ui-frame {
   font-size: 24px;
   color: rgba(255,255,255,1);
   line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.g-glass-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+  width: 100%;
 }
 .g-checkmark {
   width: 48px;
@@ -691,6 +702,7 @@ body.mode-ai #ui-frame {
   font-size: 20px;
   overflow: hidden;
   transition: opacity 350ms ease, height 350ms ease, transform 350ms ease;
+  align-self: center;
 }
 .g-checkmark.hidden {
   opacity: 0;
@@ -702,6 +714,7 @@ body.mode-ai #ui-frame {
   gap: 14px;
   justify-content: center;
   animation: fadeUp 400ms ease both;
+  margin-top: 0;
 }
 .g-action-btn {
   width: 48px;
@@ -2017,6 +2030,9 @@ body.bg-off .bg-blur-image { opacity: 0; }
       <input id="sim-input" type="text" autocomplete="off" spellcheck="false" placeholder="Book a flight, send a message…"/>
     </div>
     <div id="sim-input-hint"></div>
+  </div>
+  <div id="sim-quick-chips">
+    <button class="sim-quick-chip" onclick="fireChip(this)">Send a message to Hiro</button>
   </div>
   <div id="sim-voice-out">
     <div id="sim-voice-label">🔊 AI</div>
@@ -4728,7 +4744,9 @@ function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 
       el.style.opacity = '0';
     });
     hideAllStageMedia();
-    hideRich();
+    if (!document.body.classList.contains('glass-flow-active')) {
+      hideRich();
+    }
   }
   applyTypographyStyles(shape);
   const mainLineWidth = lineTextWidth(shape, w);
@@ -4850,6 +4868,7 @@ function showRich(html) {
 }
 
 function hideRich() {
+  if (document.body.classList.contains('glass-flow-active')) return;
   if (richHideTimer) {
     clearTimeout(richHideTimer);
     richHideTimer = null;
@@ -5171,41 +5190,605 @@ const flightUi = {
   },
 };
 let flightThinkingTimer = null;
-let typingBubble = null;
 const API_BASE = location.protocol === 'file:' ? 'http://localhost:5180' : '';
 
 function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
-function chatPanelEl() {
-  return document.getElementById('chat-panel');
+function addSimLog(text, type = 'system') {
+  const log = document.getElementById('sim-log');
+  if (!log || !text) return;
+  const entries = log.querySelectorAll('.slog');
+  if (entries.length >= 24) entries[0].remove();
+  const el = document.createElement('div');
+  el.className = `slog slog-${type}`;
+  el.textContent = text;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setSimVoice(text) {
+  const out = document.getElementById('sim-voice-out');
+  const txt = document.getElementById('sim-voice-text');
+  if (!out || !txt) return;
+  if (text) {
+    txt.textContent = `"${text}"`;
+    out.classList.add('visible');
+  } else {
+    out.classList.remove('visible');
+    txt.textContent = '';
+  }
+}
+
+function setSimInputState({ label, placeholder, hint = '', dictating = false }) {
+  const lbl = document.getElementById('sim-input-label');
+  const inp = document.getElementById('sim-input');
+  const wrap = document.getElementById('sim-input-wrap');
+  const hnt = document.getElementById('sim-input-hint');
+  if (lbl) {
+    lbl.textContent = dictating ? '🎤 Voice Dictation' : label;
+    lbl.classList.toggle('dictating', dictating);
+  }
+  if (inp) {
+    inp.placeholder = placeholder;
+    inp.classList.toggle('dictating', dictating);
+  }
+  if (wrap) wrap.classList.toggle('dictating', dictating);
+  if (hnt) hnt.textContent = hint;
 }
 
 function addChatBubble(role, text) {
-  const panel = chatPanelEl();
-  if (!panel || !text) return;
-  const bubble = document.createElement('div');
-  bubble.className = `chat-bubble ${role}`;
-  bubble.textContent = text;
-  panel.appendChild(bubble);
-  panel.scrollTop = panel.scrollHeight;
+  if (!text) return;
+  addSimLog(text, role === 'user' ? 'user' : 'voice');
+  if (role === 'ai') setSimVoice(text);
 }
 
-function showTypingBubble() {
-  const panel = chatPanelEl();
-  if (!panel || typingBubble) return;
-  typingBubble = document.createElement('div');
-  typingBubble.className = 'chat-bubble ai typing';
-  typingBubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-  panel.appendChild(typingBubble);
-  panel.scrollTop = panel.scrollHeight;
+function showTypingBubble() { setSimVoice('...'); }
+function hideTypingBubble() {}
+function chatPanelEl() { return null; }
+
+const GLASS_CONTACTS = [
+  { id:1, name:'Hiro Tanaka', initials:'HT', relation:'Colleague · Design',
+    chips:[
+      { label:'Design review', message:'Hey, do you have time for a design review sometime?' },
+      { label:'Share a file', message:'I have a file to share with you — when\'s a good time?' },
+      { label:'Schedule a sync', message:'Want to schedule a quick sync this week?' },
+    ]},
+  { id:2, name:'Hiro Horri', initials:'HH', relation:'Friend',
+    chips:[
+      { label:'What\'s up?', message:'Hey! What\'s up? Haven\'t caught up in a while.' },
+      { label:'Lunch this week?', message:'Hey, want to grab lunch sometime this week?' },
+      { label:'Check this out', message:'Hey, I found something cool I wanted to share with you!' },
+    ]},
+];
+const GS = { IDLE:0, THINKING:1, DISAMBIGUATE:2, COMPOSE:3, CONFIRM:4, SENDING:5, SENT:6 };
+const GLASS_TOP_INSET = 20;
+const GLASS_BOTTOM_INSET = 20;
+const GLASS_MIN_SHELL_H = 100;
+const GLASS_MAX_SHELL_H = 400;
+const glassUi = {
+  active:false, state:GS.IDLE, sel:0,
+  contact:null, msg:'', composeText:'',
+  showChips:true, showCheck:false, aiVoice:'',
+};
+let glassLastContentHeightPx = 180;
+const glassHeightByState = {
+  [GS.DISAMBIGUATE]: 160,
+  [GS.COMPOSE]: 240,
+  [GS.CONFIRM]: 180,
+};
+let glassMeasureRaf = null;
+let glassRenderToken = 0;
+let glassPauseTimer = null;
+let glassDotsTimer = null;
+let glassThinkingTimer = null;
+let glassSendTimer = null;
+let glassSentTimer = null;
+
+function clearGlassTimers() {
+  if (glassPauseTimer) { clearTimeout(glassPauseTimer); glassPauseTimer = null; }
+  if (glassDotsTimer) { clearInterval(glassDotsTimer); glassDotsTimer = null; }
+  if (glassThinkingTimer) { clearTimeout(glassThinkingTimer); glassThinkingTimer = null; }
+  if (glassSendTimer) { clearTimeout(glassSendTimer); glassSendTimer = null; }
+  if (glassSentTimer) { clearTimeout(glassSentTimer); glassSentTimer = null; }
 }
 
-function hideTypingBubble() {
-  if (!typingBubble) return;
-  typingBubble.remove();
-  typingBubble = null;
+function addGlassLog(text, type = 'system') {
+  addSimLog(text, type);
+}
+
+function speakOutput(text) {
+  glassUi.aiVoice = text;
+  setSimVoice(text);
+}
+
+function setGlassOverlayOpacity(active) {
+  C.prim.style.opacity = active ? '0' : '';
+  C.sec.style.opacity = active ? '0' : '';
+  C.det.style.opacity = active ? '0' : '';
+  C.div.style.opacity = active ? '0' : '';
+}
+
+function glassStateShape(state) {
+  if (state === GS.IDLE) return 'circle';
+  if (state === GS.THINKING) return 'magic';
+  if (state === GS.DISAMBIGUATE) return 'card-list';
+  if (state === GS.COMPOSE) return 'card-form';
+  if (state === GS.CONFIRM) return 'card';
+  if (state === GS.SENDING) return 'pill';
+  if (state === GS.SENT) return 'pill';
+  return 'circle';
+}
+
+function maxGlassSel() {
+  if (glassUi.state === GS.DISAMBIGUATE) return GLASS_CONTACTS.length - 1;
+  if (glassUi.state === GS.COMPOSE && glassUi.showChips && !glassUi.composeText) {
+    return Math.max(0, (glassUi.contact?.chips || []).length - 1);
+  }
+  if (glassUi.state === GS.CONFIRM) return 2;
+  return 0;
+}
+
+function glassComposeHint() {
+  if (glassUi.showCheck) return 'Keep talking to edit · Space = confirm · say "send"';
+  return 'Type → glass · 3s pause = ✅ · Enter = done';
+}
+
+function isGlassCardState(state = glassUi.state) {
+  return state === GS.DISAMBIGUATE || state === GS.COMPOSE || state === GS.CONFIRM;
+}
+
+function glassContentHeightPx() {
+  const body = C.rich.querySelector('[data-glass-body]');
+  if (body) {
+    const rectHeight = Math.ceil(body.getBoundingClientRect().height || 0);
+    const offsetHeight = Math.ceil(body.offsetHeight || 0);
+    const raw = Math.max(rectHeight, offsetHeight);
+    if (raw > 0) {
+      glassLastContentHeightPx = raw;
+      if (isGlassCardState(glassUi.state)) {
+        glassHeightByState[glassUi.state] = raw;
+      }
+      return raw;
+    }
+  }
+  if (isGlassCardState(glassUi.state) && Number.isFinite(glassHeightByState[glassUi.state])) {
+    return clamp(glassHeightByState[glassUi.state], 60, GLASS_MAX_SHELL_H - GLASS_TOP_INSET - GLASS_BOTTOM_INSET);
+  }
+  return clamp(glassLastContentHeightPx, 60, GLASS_MAX_SHELL_H - GLASS_TOP_INSET - GLASS_BOTTOM_INSET);
+}
+
+function glassDynamicGeo(shape, contentHeightPx) {
+  const base = SHAPES[shape] || SHAPES.card;
+  const shellHeight = clamp(
+    Math.round(contentHeightPx + GLASS_TOP_INSET + GLASS_BOTTOM_INSET),
+    GLASS_MIN_SHELL_H,
+    GLASS_MAX_SHELL_H
+  );
+  return {
+    ...base,
+    main: {
+      ...base.main,
+      h: shellHeight,
+      ty: -(shellHeight / 2),
+    },
+  };
+}
+
+function cancelGlassMeasure() {
+  if (!glassMeasureRaf) return;
+  cancelAnimationFrame(glassMeasureRaf);
+  glassMeasureRaf = null;
+}
+
+function buildGlassContent() {
+  if (glassUi.state === GS.IDLE) {
+    return '';
+  }
+  if (glassUi.state === GS.THINKING) {
+    return `
+      <div class="g-center-row">
+        <div class="g-spinner"></div>
+        <span id="g-thinking-dots">·</span>
+      </div>
+    `;
+  }
+  if (glassUi.state === GS.DISAMBIGUATE) {
+    const rows = GLASS_CONTACTS.map((contact, i) => `
+      <div class="g-contact-row ${i === glassUi.sel ? 'selected' : ''}" data-g-contact="${i}">
+        <div class="g-ava">${contact.initials}</div>
+        <div class="g-contact-name">${contact.name}</div>
+      </div>
+    `).join('');
+    return `
+      <div data-glass-body>
+        <div class="g-card-list">${rows}</div>
+      </div>
+    `;
+  }
+  if (glassUi.state === GS.COMPOSE) {
+    const contact = glassUi.contact || GLASS_CONTACTS[0];
+    const chips = (contact.chips || []).map((chip, i) => `
+      <div class="g-chip ${i === glassUi.sel ? 'selected' : ''}">${chip.label}</div>
+    `).join('');
+    const hasText = !!String(glassUi.composeText || '').trim();
+    return `
+      <div data-glass-body>
+        <div class="g-compose-card">
+          <div class="g-card-header">
+            <div class="g-ava">${contact.initials}</div>
+            <div class="g-to-text">To: <span class="g-to-name">${contact.name}</span></div>
+          </div>
+          <div class="g-chips-wrap ${glassUi.showChips && !hasText ? '' : 'collapsed'}">
+            <div class="g-chips">${chips}</div>
+          </div>
+          <div class="g-listen-field compose-input ${hasText ? 'has-text' : ''}">
+            ${hasText ? `<div class="g-listen-text">${glassUi.composeText}</div>` : '<div class="g-listen-empty">Listening...</div>'}
+          </div>
+        </div>
+      </div>
+      <div data-glass-controls class="g-glass-controls">
+        <div class="g-checkmark ${glassUi.showCheck ? '' : 'hidden'}">✅</div>
+      </div>
+    `;
+  }
+  if (glassUi.state === GS.CONFIRM) {
+    const contact = glassUi.contact || GLASS_CONTACTS[0];
+    const buttons = ['✈️', '✊', '❌'].map((emoji, i) => `<div class="g-action-btn ${i === glassUi.sel ? 'selected' : ''}">${emoji}</div>`).join('');
+    return `
+      <div data-glass-body>
+        <div class="g-compose-card">
+          <div class="g-card-header">
+            <div class="g-ava">${contact.initials}</div>
+            <div class="g-to-text">To: <span class="g-to-name">${contact.name}</span></div>
+          </div>
+          <div class="g-listen-field" style="box-shadow:inset 0 1px 4px rgba(255,255,255,0.06), inset 0 0 20px rgba(255,255,255,0.02);">
+            <div class="g-listen-text">${glassUi.msg || ''}</div>
+          </div>
+        </div>
+      </div>
+      <div data-glass-controls class="g-glass-controls">
+        <div class="g-action-row">${buttons}</div>
+      </div>
+    `;
+  }
+  if (glassUi.state === GS.SENDING) {
+    return `<div class="g-center-row"><div class="g-spinner" style="width:20px;height:20px;"></div><span style="font-size:20px;">Sending…</span></div>`;
+  }
+  if (glassUi.state === GS.SENT) {
+    return `<div class="g-center-row"><span style="font-size:20px;">✅</span><span style="font-size:24px;color:rgba(255,255,255,1);font-weight:500;">Message sent</span></div>`;
+  }
+  return '';
+}
+
+function glassRender(shouldMorph = true) {
+  glassRenderToken += 1;
+  const renderToken = glassRenderToken;
+  const shape = glassStateShape(glassUi.state);
+  document.body.classList.toggle('glass-flow-active', glassUi.active);
+  C.rich.innerHTML = buildGlassContent();
+  C.rich.classList.toggle('visible', glassUi.active);
+  C.rich.classList.toggle('glass-active', glassUi.active);
+  C.rich.dataset.glassState = glassUi.active ? String(glassUi.state) : '';
+  C.rich.style.opacity = glassUi.active ? '1' : '';
+
+  cancelGlassMeasure();
+  if (glassUi.active && isGlassCardState(glassUi.state)) {
+    const applyCardMorphFromBody = (force = false) => {
+      const dynamicContentH = glassContentHeightPx();
+      const geo = glassDynamicGeo(shape, dynamicContentH);
+      const currentH = getCurrentMainGeometry()?.h || 0;
+      if (force || Math.abs(geo.main.h - currentH) > 1) {
+        morphTo(shape, { icon:'', primary:'', secondary:'', detail:'' }, geo);
+      }
+    };
+    // Pass A: immediate settle right after content commit.
+    applyCardMorphFromBody(shouldMorph);
+    // Pass B: one more settle after next frame to absorb late layout/font changes.
+    glassMeasureRaf = requestAnimationFrame(() => {
+      glassMeasureRaf = null;
+      if (renderToken !== glassRenderToken) return;
+      if (!glassUi.active || !isGlassCardState(glassUi.state)) return;
+      applyCardMorphFromBody(false);
+    });
+  } else if (glassUi.active) {
+    if (shouldMorph) {
+      morphTo(shape, { icon:'', primary:'', secondary:'', detail:'' });
+    }
+  } else if (shouldMorph) {
+    morphTo(shape, { icon:'', primary:'', secondary:'', detail:'' });
+  }
+
+  setGlassOverlayOpacity(glassUi.active);
+  const glow = document.getElementById('home-glow-layer');
+  if (glow) glow.style.opacity = '0';
+
+  if (glassUi.active && glassUi.state === GS.DISAMBIGUATE) {
+    setIntentHeader('Which Hiro?', null);
+  } else {
+    hideIntentHeader();
+  }
+
+  if (!glassUi.active) {
+    setSimInputState({ label: 'Voice Command', placeholder: 'Book a flight, send a message…', hint: '', dictating: false });
+  } else if (glassUi.state === GS.IDLE) {
+    setSimInputState({ label: 'Voice Command', placeholder: 'Send a message to Hiro…', hint: '', dictating: false });
+  } else if (glassUi.state === GS.THINKING) {
+    setSimInputState({ label: 'Voice Command', placeholder: '', hint: '', dictating: false });
+  } else if (glassUi.state === GS.DISAMBIGUATE) {
+    setSimInputState({ label: 'Voice Command', placeholder: 'Say a name, e.g. "Tanaka"', hint: '', dictating: false });
+  } else if (glassUi.state === GS.COMPOSE) {
+    setSimInputState({ label: '🎤 Voice Dictation', placeholder: 'Speak (type to simulate)…', hint: glassComposeHint(), dictating: true });
+  } else if (glassUi.state === GS.CONFIRM) {
+    setSimInputState({ label: 'Voice Command', placeholder: '"send", "edit", or "cancel"', hint: '', dictating: false });
+  }
+
+  if (glassUi.state === GS.THINKING) {
+    let frame = 0;
+    const el = document.getElementById('g-thinking-dots');
+    if (el) el.textContent = '·';
+    glassDotsTimer = setInterval(() => {
+      const dots = document.getElementById('g-thinking-dots');
+      if (!dots) return;
+      frame += 1;
+      dots.textContent = ['·', '· ·', '· · ·'][frame % 3];
+    }, 400);
+  }
+}
+
+function glassTransitionTo(state, voiceOutput = '') {
+  if (glassDotsTimer) { clearInterval(glassDotsTimer); glassDotsTimer = null; }
+  glassUi.state = state;
+  glassUi.sel = 0;
+  speakOutput(voiceOutput || '');
+  glassRender(true);
+}
+
+function glassReset() {
+  clearGlassTimers();
+  cancelGlassMeasure();
+  glassUi.active = false;
+  glassUi.state = GS.IDLE;
+  glassUi.sel = 0;
+  glassUi.contact = null;
+  glassUi.msg = '';
+  glassUi.composeText = '';
+  glassUi.showChips = true;
+  glassUi.showCheck = false;
+  glassUi.aiVoice = '';
+  speakOutput('');
+  glassRender(true);
+}
+
+async function parseIntent(text) {
+  const lower = String(text || '').toLowerCase().trim();
+  if (/\b(send|message|text|msg)\b/.test(lower)) {
+    const match = lower.match(/\bto\s+(\w+)/i);
+    const recipient = match ? match[1] : '';
+    return { intent: 'send_message', recipient, confidence: 1.0 };
+  }
+  return { intent: 'unknown', recipient: '', confidence: 0 };
+}
+
+function isMessageIntent(text) {
+  return /\b(send|message|text|msg)\b/i.test(String(text || ''));
+}
+
+function onTranscriptUpdate(text) {
+  if (glassUi.state === GS.COMPOSE) {
+    handleGlassInputChange(text);
+  }
+}
+
+function startGlassFlow() {
+  if (flightUi.active) resetFlightFlowToHome();
+  clearGlassTimers();
+  glassUi.active = true;
+  glassUi.state = GS.IDLE;
+  glassUi.sel = 0;
+  glassUi.contact = null;
+  glassUi.msg = '';
+  glassUi.composeText = '';
+  glassUi.showChips = true;
+  glassUi.showCheck = false;
+  speakOutput('');
+  glassRender(true);
+  setTimeout(() => input.focus(), 50);
+}
+
+function findContacts(recipientHint = '', fullText = '') {
+  const query = String(recipientHint || fullText || '').toLowerCase().trim();
+  const pool = GLASS_CONTACTS.filter((c) => c.name.toLowerCase().includes('hiro'));
+  if (!query) return pool;
+  const tokens = query.split(/\s+/).filter((tok) => tok.length >= 2);
+  return pool.filter((contact) => {
+    const name = contact.name.toLowerCase();
+    if (name.includes(query)) return true;
+    return tokens.some((tok) => name.includes(tok));
+  });
+}
+
+function beginComposeForContact(contact, voiceText) {
+  glassUi.contact = contact;
+  glassUi.composeText = '';
+  glassUi.msg = '';
+  glassUi.showChips = true;
+  glassUi.showCheck = false;
+  glassTransitionTo(GS.COMPOSE, voiceText);
+  setTimeout(() => input.focus(), 200);
+}
+
+function doGlassAction(index) {
+  if (index === 0) {
+    glassTransitionTo(GS.SENDING, '');
+    glassSendTimer = setTimeout(() => {
+      glassTransitionTo(GS.SENT, 'Sent.');
+      addGlassLog(`✓ Delivered to ${glassUi.contact?.name || 'contact'}`, 'success');
+      glassSentTimer = setTimeout(() => glassReset(), 2500);
+    }, 900);
+    return;
+  }
+  if (index === 1) {
+    glassUi.showChips = false;
+    glassUi.showCheck = false;
+    glassUi.composeText = glassUi.msg || glassUi.composeText;
+    glassTransitionTo(GS.COMPOSE, 'Edit your message.');
+    setTimeout(() => input.focus(), 200);
+    return;
+  }
+  glassReset();
+}
+
+function glassConfirm() {
+  if (!glassUi.active) return;
+  if (glassUi.state === GS.DISAMBIGUATE) {
+    const c = GLASS_CONTACTS[glassUi.sel];
+    if (!c) return;
+    glassUi.contact = c;
+    addGlassLog(`Selected: ${c.name}`, 'action');
+    glassTransitionTo(GS.THINKING, '');
+    glassThinkingTimer = setTimeout(() => {
+      beginComposeForContact(c, `What would you like to say to ${c.name.split(' ')[0]}?`);
+    }, 700);
+    return;
+  }
+  if (glassUi.state === GS.COMPOSE && glassUi.showChips && !glassUi.composeText) {
+    const chip = glassUi.contact?.chips?.[glassUi.sel];
+    if (!chip) return;
+    glassUi.composeText = chip.message;
+    glassUi.msg = chip.message;
+    glassUi.showChips = false;
+    glassUi.showCheck = true;
+    addGlassLog(`Chip: "${chip.label}"`, 'action');
+    glassRender(false);
+    return;
+  }
+  if (glassUi.state === GS.COMPOSE && glassUi.showCheck) {
+    glassUi.msg = String(glassUi.composeText || glassUi.msg || '').trim();
+    glassTransitionTo(GS.CONFIRM, `Send to ${glassUi.contact?.name?.split(' ')[0] || 'contact'}?`);
+    input.blur();
+    return;
+  }
+  if (glassUi.state === GS.CONFIRM) {
+    doGlassAction(glassUi.sel);
+  }
+}
+
+function glassDismiss() {
+  if (!glassUi.active) return;
+  if (glassUi.state === GS.CONFIRM) {
+    glassUi.showChips = false;
+    glassUi.showCheck = false;
+    glassUi.composeText = glassUi.msg || glassUi.composeText;
+    glassTransitionTo(GS.COMPOSE, 'Edit your message.');
+    setTimeout(() => input.focus(), 200);
+    return;
+  }
+  if (glassUi.state === GS.COMPOSE || glassUi.state === GS.DISAMBIGUATE) {
+    glassReset();
+  }
+}
+
+function parseGlassVoice(text) {
+  const lower = String(text || '').toLowerCase().trim();
+  if (!lower) return false;
+  if (glassUi.state === GS.CONFIRM) {
+    if (/\b(send|yes|confirm)\b/.test(lower)) { doGlassAction(0); return true; }
+    if (/\b(edit|change)\b/.test(lower)) { doGlassAction(1); return true; }
+    if (/\b(cancel|nevermind|never mind)\b/.test(lower)) { doGlassAction(2); return true; }
+  }
+  if (glassUi.state === GS.COMPOSE && glassUi.showCheck && /\b(send|yes)\b/.test(lower)) {
+    doGlassAction(0);
+    return true;
+  }
+  if (glassUi.state === GS.DISAMBIGUATE) {
+    const idx = GLASS_CONTACTS.findIndex((c) => c.name.toLowerCase().includes(lower));
+    if (idx >= 0) {
+      glassUi.sel = idx;
+      glassConfirm();
+      return true;
+    }
+  }
+  if (glassUi.state === GS.COMPOSE && glassUi.showChips && !glassUi.composeText) {
+    const idx = (glassUi.contact?.chips || []).findIndex((chip) => lower.includes(chip.label.toLowerCase()));
+    if (idx >= 0) {
+      glassUi.sel = idx;
+      glassConfirm();
+      return true;
+    }
+  }
+  return false;
+}
+
+function handleGlassInputChange(val) {
+  const text = String(val || '');
+  glassUi.composeText = text;
+  if (text.trim()) {
+    glassUi.showChips = false;
+    glassUi.showCheck = false;
+    if (glassPauseTimer) clearTimeout(glassPauseTimer);
+    glassPauseTimer = setTimeout(() => {
+      if (!glassUi.active || glassUi.state !== GS.COMPOSE) return;
+      glassUi.showCheck = true;
+      glassUi.msg = glassUi.composeText.trim();
+      glassRender(false);
+    }, 3000);
+  } else {
+    glassUi.showChips = true;
+    glassUi.showCheck = false;
+    if (glassPauseTimer) { clearTimeout(glassPauseTimer); glassPauseTimer = null; }
+  }
+  glassRender(false);
+}
+
+async function handleGlassInputSubmit() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addGlassLog(text, 'user');
+
+  if (glassUi.state === GS.COMPOSE) {
+    glassUi.composeText = text;
+    glassUi.msg = text;
+    glassUi.showChips = false;
+    glassUi.showCheck = true;
+    glassRender(false);
+    input.blur();
+    return;
+  }
+
+  if (parseGlassVoice(text)) {
+    input.value = '';
+    input.blur();
+    return;
+  }
+
+  if (glassUi.state === GS.IDLE || glassUi.state === GS.DISAMBIGUATE) {
+    glassTransitionTo(GS.THINKING, '');
+    const intent = await parseIntent(text);
+    const matches = findContacts(intent.recipient, text);
+    glassThinkingTimer = setTimeout(() => {
+      const fallbackMatches = matches.length > 0
+        ? matches
+        : GLASS_CONTACTS.filter((c) => c.name.toLowerCase().includes('hiro'));
+      if (fallbackMatches.length === 1) {
+        beginComposeForContact(fallbackMatches[0], `Message to ${fallbackMatches[0].name.split(' ')[0]}. What would you like to say?`);
+      } else if (fallbackMatches.length > 1) {
+        glassTransitionTo(GS.DISAMBIGUATE, 'Which Hiro?');
+      } else {
+        speakOutput('Contact not found.');
+        addGlassLog('Contact not found', 'system');
+        glassReset();
+      }
+    }, 1000);
+    input.value = '';
+    input.blur();
+    return;
+  }
+
+  input.value = '';
+  input.blur();
 }
 
 function flightStep() {
@@ -5889,7 +6472,6 @@ function resetFlightFlowToHome() {
   morphTo('circle', { icon: '', primary: '', secondary: '', detail: '' });
   document.getElementById('stage').classList.remove('flow-active');
   document.getElementById('stage-wrap')?.classList.remove('flow-active');
-  document.getElementById('input-area').classList.remove('hidden');
 }
 
 function cancelFlightFlow() {
@@ -5905,8 +6487,6 @@ function startFlightFlow(seedText = '') {
   flightUi.focused = 0;
   document.getElementById('stage').classList.add('flow-active');
   document.getElementById('stage-wrap')?.classList.add('flow-active');
-  const panel = chatPanelEl();
-  if (panel) panel.innerHTML = '';
   renderFlightStep(false);
   if (seedText && /\bto\s+[a-zA-Z]/i.test(seedText)) {
     addChatBubble('user', seedText);
@@ -5968,7 +6548,18 @@ Stage override: ${stageOverride}
         const payload = await response.json().catch(() => ({}));
         const raw = String(payload?.text || '').trim();
         const match = raw.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error('No JSON object');
+        if (!match) {
+          return {
+            scenarioId: fallbackScenario?.id || null,
+            shape: fallbackShape,
+            content: {
+              ...fallbackBase,
+              primary: fallbackBase.primary || (fallbackScenario?.name || 'Generated response'),
+              secondary: raw || fallbackBase.secondary || `User: ${text}`,
+              detail: fallbackBase.detail || '',
+            },
+          };
+        }
         const parsed = JSON.parse(match[0]);
         const shapeCandidate = String(parsed?.shape || fallbackShape);
         const safeShape = SCENARIO_SHAPES.includes(shapeCandidate) ? shapeCandidate : fallbackShape;
@@ -5984,7 +6575,7 @@ Stage override: ${stageOverride}
           },
         };
       } catch (err) {
-        console.warn('Gemini resolve fallback', err);
+        console.warn('Gemini resolve fallback');
         return {
           scenarioId: fallbackScenario?.id || null,
           shape: fallbackShape,
@@ -6072,6 +6663,14 @@ async function handleAiRequest(userText) {
 }
 
 async function processRequest(userText) {
+  if (!glassUi.active && isMessageIntent(userText)) {
+    startGlassFlow();
+    setTimeout(() => {
+      input.value = String(userText || '');
+      void handleGlassInputSubmit();
+    }, 60);
+    return;
+  }
   if (flightUi.active) {
     await handleFlightUserInput(userText);
     return;
@@ -6270,7 +6869,6 @@ function manualShape(shape) {
   hideIntentHeader();
   document.getElementById('stage').classList.remove('flow-active');
   document.getElementById('stage-wrap')?.classList.remove('flow-active');
-  document.getElementById('input-area').classList.remove('hidden');
   const leavingSplit = currentShape === 'split' && shape !== 'split';
   const leavingList = currentShape === 'list' && shape !== 'list';
   if (!leavingList) clearListPills();
@@ -6367,20 +6965,20 @@ function applyCustomShape() {
   applyContentPositions('custom', w, h);
 }
 
-const input   = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-
-input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); handleSend(); }
-  e.stopPropagation();
-});
+const input = document.getElementById('sim-input');
 
 function handleSend() {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  sendBtn.classList.remove('active');
+  if (!glassUi.active && /\b(send|message|text|msg)\b/i.test(text)) {
+    startGlassFlow();
+    setTimeout(() => {
+      input.value = text;
+      void handleGlassInputSubmit();
+    }, 60);
+    return;
+  }
   void processRequest(text);
 }
 
@@ -6407,11 +7005,6 @@ function handleChipQuickAction(text) {
       },
       triggers: [],
     }));
-    return true;
-  }
-  if (/\bmessage\b|\btext\b/.test(t)) {
-    // message quick-action should trigger the manual preview path (show card scenario)
-    handleManualRequest('send a message to alice');
     return true;
   }
   if (/\btimer\b/.test(t)) {
@@ -6449,16 +7042,67 @@ function fireChip(el) {
   const text = el.textContent.trim();
   if (flightUi.active) resetFlightFlowToHome();
   input.value = text;
-  sendBtn.classList.add('active');
   setTimeout(() => {
+    if (/^send a message to hiro$/i.test(text)) {
+      handleSend();
+      return;
+    }
     input.value = '';
-    sendBtn.classList.remove('active');
     if (handleChipQuickAction(text)) return;
     void processRequest(text);
   }, 120);
 }
 
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (glassUi.active) {
+      void handleGlassInputSubmit();
+    } else {
+      handleSend();
+    }
+  }
+  if (e.key === 'Escape' && glassUi.active) {
+    e.preventDefault();
+    glassDismiss();
+    input.blur();
+  }
+  e.stopPropagation();
+});
+input.addEventListener('input', e => {
+  if (glassUi.active && glassUi.state === GS.COMPOSE) {
+    onTranscriptUpdate(e.target.value);
+  }
+});
+
 document.addEventListener('keydown', e => {
+  const focusedInTextInput = document.activeElement === input;
+
+  if (glassUi.active) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      glassDismiss();
+      return;
+    }
+    if (!focusedInTextInput && e.key === 'ArrowUp') {
+      e.preventDefault();
+      glassUi.sel = Math.max(0, glassUi.sel - 1);
+      glassRender(false);
+      return;
+    }
+    if (!focusedInTextInput && e.key === 'ArrowDown') {
+      e.preventDefault();
+      glassUi.sel = Math.min(maxGlassSel(), glassUi.sel + 1);
+      glassRender(false);
+      return;
+    }
+    if (!focusedInTextInput && e.code === 'Space') {
+      e.preventDefault();
+      glassConfirm();
+      return;
+    }
+  }
+
   const activeInInput = document.activeElement?.matches?.('input, textarea, select');
 
   if (flightUi.active) {
@@ -6505,7 +7149,6 @@ document.addEventListener('keydown', e => {
   if (e.key === '7') openCustom();
   if (e.key === 'Escape') {
     document.getElementById('stage').classList.remove('flow-active');
-    document.getElementById('input-area').classList.remove('hidden');
     hideRich(); hideIntentHeader();
     if (responseMode === RESPONSE_MODE.AI) {
       manualShape('circle');
@@ -6644,7 +7287,6 @@ if (UI.modeToggle && !PAGE_MODE_OVERRIDE) {
       hideRich();
       hideIntentHeader();
       document.getElementById('stage').classList.remove('flow-active');
-      document.getElementById('input-area').classList.remove('hidden');
       previewAiStageOverride();
     }
   });

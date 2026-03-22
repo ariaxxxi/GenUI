@@ -96,7 +96,7 @@ async function createTarget() {
     await page.goto(url, {waitUntil:'domcontentloaded', timeout: 15000});
     await page.waitForTimeout(400);
 
-    const chip = await page.$('//button[contains(normalize-space(.), "Send a message to Alice")]');
+    const chip = await page.$('//button[contains(normalize-space(.), "Send a message to Hiro")]');
     if (!chip) {
       console.log('MISSING_CHIP');
       console.log(JSON.stringify({ logs, serverLogs }, null, 2));
