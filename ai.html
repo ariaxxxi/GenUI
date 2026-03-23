@@ -502,10 +502,10 @@ body.mode-ai #ui-frame {
   opacity: 0;
   z-index: 9;
   box-shadow:
-    inset 0 -22px 29.8px -2px rgba(192,213,255,0.15),
-    inset 0 -8px 20px -6px rgba(225,231,255,0.70),
-    inset 0 10px 18.4px -10px rgba(255,255,255,0.40),
-    inset 0 -3px 60px -30px rgba(19,75,192,1);
+    inset 0 4px 29.8px -2px rgba(192,213,255,0.15),
+    inset 0 -7px 20px -6px rgba(225,231,255,0.60),
+    inset 0 6px 18.4px -10px rgba(255,255,255,0.20),
+    inset 0 -3px 60px -30px #134BC0;
   transition: opacity 500ms ease var(--home-glow-delay, 0ms);
 }
 #c-primary {
@@ -871,10 +871,10 @@ body.mode-ai #ui-frame {
   background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.02) 100%);
   border: 1px solid rgba(126,168,255,0.15);
   box-shadow:
-    inset 0 -22px 29.8px -2px rgba(192,213,255,0.15),
-    inset 0 -8px 20px -6px rgba(225,231,255,0.70),
-    inset 0 10px 18.4px -10px rgba(255,255,255,0.40),
-    inset 0 -3px 60px -30px rgba(19,75,192,1);
+    inset 0 4px 29.8px -2px rgba(192,213,255,0.15),
+    inset 0 -7px 20px -6px rgba(225,231,255,0.60),
+    inset 0 6px 18.4px -10px rgba(255,255,255,0.20),
+    inset 0 -3px 60px -30px #134BC0;
 }
 .g-listen-field.compose-input.has-text {
   min-height: 96px;
@@ -933,8 +933,12 @@ body.mode-ai #ui-frame {
   height: 48px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.047);
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+  background: #000;
+  box-shadow:
+    inset 0 -5px 6px -2px rgba(70,132,255,0.15),
+    inset 0 -6px 7.8px -8px rgba(172,188,247,0.50),
+    inset 0 -1px 14.4px -6px rgba(255,255,255,0.40),
+    inset 0 -6px 47.4px -30px #134BC0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5612,25 +5616,57 @@ function lerpShadow(t) {
   const lc = (r0,g0,b0,a0, r1,g1,b1,a1) =>
     `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
   return [
-    `inset 0 ${lr(-22,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`,
-    `inset 0 ${lr(-8,-11)}px 20px -6px ${lc(225,231,255,0.70, 255,255,255,0.40)}`,
-    `inset 0 ${lr(10,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.40, 172,188,247,0.50)}`,
+    `inset 0 ${lr(4,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`,
+    `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`,
+    `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`,
     `inset 0 ${lr(-3,-56)}px 60px -30px rgba(19,75,192,1)`,
+  ].join(', ');
+}
+
+function lerpButtonShadow(t) {
+  const lr = (a, b) => (a + (b - a) * t).toFixed(2);
+  const lc = (r0,g0,b0,a0, r1,g1,b1,a1) =>
+    `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
+  return [
+    `inset 0 ${lr(-5,6)}px ${lr(6,6)}px -2px ${lc(70,132,255,0.15, 34,105,245,0.15)}`,
+    `inset 0 ${lr(-6,-11)}px ${lr(7.8,20)}px -8px ${lc(172,188,247,0.50, 255,255,255,0.40)}`,
+    `inset 0 ${lr(-1,10)}px ${lr(14.4,30)}px -6px ${lc(255,255,255,0.40, 172,188,247,0.50)}`,
+    `inset 0 ${lr(-6,-56)}px ${lr(47.4,60)}px -30px rgba(19,75,192,1)`,
   ].join(', ');
 }
 
 let _voiceVizDictationStart = 0;
 
+function lerpGlowShadow(t) {
+  return `0 0 ${(t * 12).toFixed(1)}px ${(t * 3).toFixed(1)}px rgba(34,105,245,${(t * 0.45).toFixed(3)})`;
+}
+
 function applyVoiceVisualization(level) {
   const shadow = lerpShadow(level);
+  const glow = lerpGlowShadow(level);
+
   if (voiceEngine.mode === 'command') {
-    const glow = document.getElementById('home-glow-layer');
-    if (glow) glow.style.boxShadow = shadow;
+    const glowEl = document.getElementById('home-glow-layer');
+    if (glowEl) glowEl.style.boxShadow = shadow;
+
+    if (glassUi.state === GS.DISAMBIGUATE) {
+      const dropMain = document.getElementById('drop-main');
+      if (dropMain) {
+        dropMain.style.boxShadow = lerpShadow(level);
+      }
+    }
+
+    if (glassUi.state === GS.CONFIRM) {
+      document.querySelectorAll('.g-action-btn').forEach(btn => {
+        btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)';
+        btn.style.boxShadow = lerpButtonShadow(level);
+      });
+    }
   }
+
   if (voiceEngine.mode === 'dictation' && Date.now() - _voiceVizDictationStart > 600) {
     const field = document.querySelector('.g-listen-field.compose-input');
     if (field) {
-      // Suppress box-shadow CSS transition so viz updates are instant
       field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease';
       field.style.boxShadow = shadow;
     }
@@ -5642,6 +5678,7 @@ let _vizLevel = 0;
 function startVoiceViz() {
   if (!voiceEngine.analyser) return;
   if (voiceEngine.vizRaf) cancelAnimationFrame(voiceEngine.vizRaf);
+  _vizLevel = 0;
   const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
   function tick() {
     if (!voiceEngine.active || voiceEngine.mode === 'off') {
@@ -5660,10 +5697,15 @@ function startVoiceViz() {
 
 function stopVoiceViz() {
   if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
-  const glow = document.getElementById('home-glow-layer');
-  if (glow) glow.style.boxShadow = '';
+  const glowEl = document.getElementById('home-glow-layer');
+  if (glowEl) glowEl.style.boxShadow = '';
   const field = document.querySelector('.g-listen-field.compose-input');
   if (field) { field.style.transition = ''; field.style.boxShadow = ''; }
+  if (glassUi.state !== GS.DISAMBIGUATE) {
+    const dropMain = document.getElementById('drop-main');
+    if (dropMain) dropMain.style.boxShadow = '';
+  }
+  document.querySelectorAll('.g-action-btn').forEach(btn => { btn.style.transition = ''; btn.style.boxShadow = ''; });
 }
 
 function initVoiceEngine() {
@@ -6248,11 +6290,19 @@ function glassRender(shouldMorph = true) {
 }
 
 function _applyVoiceModeForState(state) {
+  const dropMain = document.getElementById('drop-main');
   if (state === GS.IDLE || state === GS.DISAMBIGUATE || state === GS.CONFIRM) {
     voiceEngine.start('command');
+    if (state === GS.DISAMBIGUATE) {
+      if (dropMain) dropMain.style.boxShadow = lerpShadow(0);
+    } else {
+      if (dropMain) dropMain.style.boxShadow = '';
+    }
   } else if (state === GS.COMPOSE) {
+    if (dropMain) dropMain.style.boxShadow = '';
     voiceEngine.start('dictation');
   } else {
+    if (dropMain) dropMain.style.boxShadow = '';
     voiceEngine.stop();
   }
 }
@@ -6336,7 +6386,12 @@ function onTranscriptUpdate(text, isFinal = false) {
     case GS.DISAMBIGUATE:
       if (isFinal && text) {
         const idx = parseDisambiguateVoice(text, glassUi.disambiguateContacts);
-        if (idx >= 0) { glassUi.sel = idx; input.value = ''; glassConfirm(); }
+        if (idx >= 0) {
+          glassUi.sel = idx;
+          input.value = '';
+          updateGlassSelectionUiOnly();
+          setTimeout(() => glassConfirm(), 400);
+        }
         else { addGlassLog(`No match for "${text}" — try a name or "the first one"`, 'system'); }
       }
       break;
@@ -6398,6 +6453,8 @@ function glassAnimateToCompose(contact, voiceText) {
   glassUi.state = GS.COMPOSE;
   glassPrevState = GS.COMPOSE;       // suppress normal _enteringCompose rAF
   glassManualComposeEntry = true;
+  const _dm = document.getElementById('drop-main');
+  if (_dm) _dm.style.boxShadow = '';
   voiceEngine.start('dictation');
 
   // Measure compose height off-screen before rebuilding live DOM
