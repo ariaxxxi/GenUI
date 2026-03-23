@@ -59,8 +59,13 @@ export function initAnimControls({ document, clamp }) {
   }
 
   function applyEasingPresetDefaults(preset) {
-    if (preset === 'custom') return void setAnimDuration(600);
-    if (preset === 'spring') setAnimDuration(900);
+    if (preset === 'custom') {
+      setAnimDuration(450);
+      return;
+    }
+    if (preset === 'spring') {
+      setAnimDuration(900);
+    }
   }
 
   function bind() {
@@ -79,6 +84,7 @@ export function initAnimControls({ document, clamp }) {
     syncAnimationEasingUi(defaultCurve);
     const normalized = formatBezierValues(getCustomBezierValues());
     bezierInputs().forEach((input) => { input.value = normalized; });
+    setAnimDuration(animDur);
   }
 
   function initStarfield() {

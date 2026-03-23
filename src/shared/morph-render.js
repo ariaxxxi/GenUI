@@ -4,6 +4,7 @@ export function createMorphRender(ctx) {
   const { DROPS, C, constants, callbacks, state, layout, bridges } = ctx;
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
   const uiFadeTimers = state.uiFadeTimers;
+  let richHideTimer = null;
 
   function applyGeometry(shape, resolvedGeo, stageId = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
@@ -143,7 +144,17 @@ export function createMorphRender(ctx) {
 
   function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
     const root = document.documentElement;
-    const transitionMs = bridges.transitionAnimMs(fromShape, toShape, callbacks.getAnimDuration(), fromGeo, toGeo);
+    let transitionMs = bridges.transitionAnimMs(fromShape, toShape, callbacks.getAnimDuration(), fromGeo, toGeo);
+    const isHomeThinkingPair = (
+      (fromShape === 'circle' && toShape === 'ai') ||
+      (fromShape === 'ai' && toShape === 'circle') ||
+      (fromShape === 'magic' && toShape === 'ai') ||
+      (fromShape === 'ai' && toShape === 'magic')
+    );
+    if (isHomeThinkingPair) {
+      transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
+    }
+    const geometryEase = isHomeThinkingPair ? 'cubic-bezier(0.42,0,0.2,1)' : 'var(--spring)';
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
@@ -156,8 +167,8 @@ export function createMorphRender(ctx) {
     if ((fromShape === 'idle' && toShape === 'dot') || (fromShape === 'dot' && toShape === 'idle')) thumbFadeMs = 200;
     state.contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
     state.currentContentFadeMs = contentFadeMs; state.currentDetailFadeMs = detailFadeMs; state.currentMediaFadeMs = mediaFadeMs; state.currentTransitionAnimMs = transitionMs;
-    [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', transitionMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms var(--spring)`));
-    root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`); root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`); root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`); root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`); root.style.setProperty('--content-move-t', `${contentMoveMs}ms var(--spring)`); root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`); root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
+    [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', transitionMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
+    root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`); root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`); root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`); root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`); root.style.setProperty('--content-move-t', `${contentMoveMs}ms ${geometryEase}`); root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`); root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
   }
 
   function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
@@ -165,12 +176,24 @@ export function createMorphRender(ctx) {
     C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
     applyThumbVisualMode(shape);
     let thumbOpacity = pos.thumb.op;
-    if ((shape === 'circle' || shape === 'listening') && state.thumbContentState.kind === 'none') thumbOpacity = 0;
+    if (shape === 'circle') thumbOpacity = 0;
+    else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
     const setEl = (el, p, customInDelayMs = fadeInDelayMs) => { el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`; setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs); if (p.fs) el.style.fontSize = `${p.fs}px`; };
     setEl(C.prim, pos.prim);
     setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.secondaryInAdvanceMs || 0)));
     setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.detailInAdvanceMs || 0)));
+    if (shape === 'ai' || shape === 'magic') {
+      [C.thumb, C.prim, C.sec, C.det, C.div].forEach((el) => {
+        if (!el) return;
+        el.style.transitionDelay = '0ms';
+        el.style.opacity = '0';
+      });
+      hideAllStageMedia();
+      if (!document.body.classList.contains('glass-flow-active')) {
+        hideRich();
+      }
+    }
     applyTypographyStyles(shape);
     const mainLineWidth = layout.lineTextWidth(shape, w);
     ['prim', 'sec'].forEach((key) => {
@@ -218,6 +241,10 @@ export function createMorphRender(ctx) {
   }
 
   function showRich(html) {
+    if (richHideTimer) {
+      clearTimeout(richHideTimer);
+      richHideTimer = null;
+    }
     C.rich.style.opacity = '0';
     C.rich.innerHTML = html;
     C.rich.classList.add('visible');
@@ -225,10 +252,15 @@ export function createMorphRender(ctx) {
   }
 
   function hideRich() {
-    if (callbacks.shouldPreserveRich?.()) return;
+    if (document.body.classList.contains('glass-flow-active') || callbacks.shouldPreserveRich?.()) return;
+    if (richHideTimer) {
+      clearTimeout(richHideTimer);
+      richHideTimer = null;
+    }
     C.rich.style.opacity = '0';
-    setTimeout(() => {
-      if (callbacks.shouldPreserveRich?.()) return;
+    richHideTimer = setTimeout(() => {
+      richHideTimer = null;
+      if (document.body.classList.contains('glass-flow-active') || callbacks.shouldPreserveRich?.()) return;
       C.rich.classList.remove('visible');
       C.rich.innerHTML = '';
     }, 220);
@@ -249,25 +281,25 @@ export function createMorphRender(ctx) {
     const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
     const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
     state.currentShape = shape;
+    document.body.dataset.currentShape = shape;
     applyGeometry(shape, nextGeo, stageId);
-    const isHomeShape = shape === 'circle' || shape === 'listening';
-    const isMagicShape = shape === 'magic';
-    const goingHome = isHomeShape && fromShape !== shape;
+    DROPS.main.classList.toggle('home-blur', shape === 'magic');
+    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
+    const goingHome = enteringHomeLike;
     if (goingHome) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
       DROPS.main.classList.remove('home-glow');
       void DROPS.main.offsetWidth;
-      DROPS.main.classList.add('home-glow');
+      if (shape === 'listening' || shape === 'magic') DROPS.main.classList.add('home-glow');
     } else {
       DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-      DROPS.main.classList.toggle('home-glow', isHomeShape || isMagicShape);
+      DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
     }
-    DROPS.main.classList.toggle('magic-glow', isMagicShape);
+    DROPS.main.classList.toggle('magic-glow', shape === 'magic');
     DROPS.main.classList.toggle('listening-orb', shape === 'listening');
     if (contentData) applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
     if (!skipActiveUpdate) callbacks.updateActive(shape);
-    bridges.runMainDeformation(fromShape, shape, prevGeo, nextGeo.main);
   }
 
   return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, morphCore };

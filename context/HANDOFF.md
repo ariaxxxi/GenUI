@@ -313,3 +313,89 @@ send message flow: eliminate first-frame sizing drift and move controls fully ou
   2) COMPOSE first frame vs Arrow frame (no extra top/bottom),
   3) controls visibly outside `drop-main`,
   4) multiline compose growth still updates shell height correctly.
+
+---
+
+## Task title
+Exact AI Motion/Visual Parity With `main:ai.html` (Commit `e918410`)
+
+## Completion status
+- Completed with validation caveat
+
+## Summary
+- Restored AI base stylesheet parity by replacing `src/styles/ai.css` with the extracted `main:ai.html` base style block.
+- Removed post-base AI flow CSS overrides to preserve single-style cascade semantics:
+  - `src/styles/message-flow.css` now intentionally empty.
+  - `src/styles/flight-flow.css` now intentionally empty.
+- Restored animation control behavior to match main defaults/preset logic:
+  - `animDur` base remains `600`.
+  - preset defaults: `custom -> 450`, `spring -> 900`.
+  - init ordering now calls `setAnimDuration(animDur)` during bind, matching main startup behavior.
+- Restored bridge/deformation parity in modular runtime:
+  - removed AI-only deformation suppression in `src/shared/morph-bridges.js`.
+- Restored motion profile synthesis and content choreography in `src/shared/morph-render.js`:
+  - home/thinking multiplier and `geometryEase` behavior restored.
+  - `--content-move-t` now uses main-equivalent geometry easing path.
+  - restored ai/magic content fade suppression block from main.
+  - restored rich hide/show timer semantics from main (`richHideTimer` lifecycle).
+  - removed non-main deformation call from `morphCore` that introduced end-of-transition bounce/jitter.
+- Reverted AI panel defaults in `ai.html` to main-equivalent initial values/select state.
+- Preserved functional non-visual fixes (including `clamp` fallback wiring in message send render).
+
+## Files changed
+- `ai.html`
+- `src/shared/anim-controls.js`
+- `src/shared/morph-bridges.js`
+- `src/shared/morph-render.js`
+- `src/styles/ai.css`
+- `src/styles/message-flow.css`
+- `src/styles/flight-flow.css`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+- Runtime browser probe executed to inspect AI page timing variables (sandbox caveat on direct `file://` loading means module init is not authoritative in that mode).
+- Verified key parity hooks now present in source:
+  - `anim-controls` init uses `setAnimDuration(animDur)`.
+  - `morphCore` no longer invokes extra deformation pass.
+  - ai/magic content suppression block restored.
+
+## Remaining issues / caveats
+- Full frame-by-frame pixel diff against a temporary served `main:ai.html` baseline was not completed in this pass.
+- Browser runtime checks should be executed against served pages (not `file://`) for final parity sign-off.
+
+## Recommended next step
+1. Run side-by-side served comparison (`current ai.html` vs temporary `main:ai.html` baseline) with fixed timestamp screenshots (0/200/400/600ms) and pixel diff threshold.
+2. If any residual drift remains, reconcile remaining differences in `src/flows/message-send-render.js` and `src/ai/ai-shell.js` against `main` choreography values.
+
+---
+
+## Task title
+AI message flow polish: stage-scoped voice viz + confirm-shell lift
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed stage-specific voice visualization ownership in `src/ai/voice-engine.js`:
+  - During command mode, drop-main/glow shadow now applies only in `DISAMBIGUATE`.
+  - During `COMPOSE` dictation mode, drop-main/glow/action-button shadows are cleared; only compose field receives voice viz.
+  - During `CONFIRM`, action-button shadow pulse remains active, while drop-main shadow stays off.
+- Fixed confirm-stage shell overlap in `src/flows/message-send-render.js`:
+  - Replaced static-only control lift with measured controls-aware lift.
+  - `drop-main` now lifts by `max(78, controlsHeight + 14 + 18)` when external controls are shown (`CONFIRM` or compose-check state), preventing overlap with the 3-button row.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Visual verification still needs manual browser pass for exact perceived match in your target environment.
+
+## Recommended next step
+1. Run `send msg to hiro` flow and verify:
+   - DISAMBIGUATE: drop-main has voice viz.
+   - COMPOSE: only compose field has voice viz.
+   - CONFIRM: shell sits above buttons with no overlap.

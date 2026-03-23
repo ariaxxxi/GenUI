@@ -167,8 +167,6 @@ export function createMorphBridges(ctx) {
 
   function runMainDeformation(fromShape, toShape, fromMain, toMain) {
     const main = DROPS.main;
-    const pageMode = document.body?.dataset?.pageMode || '';
-    if (pageMode === 'ai') return;
     if (!main || !fromMain || !toMain || state.suppressDeformation || toShape === 'split' || (fromMain.op ?? 1) <= 0.01 || (toMain.op ?? 1) <= 0.01) return;
     const dw = toMain.w - fromMain.w;
     const dh = toMain.h - fromMain.h;

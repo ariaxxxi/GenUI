@@ -2130,3 +2130,4 @@ body.bg-off .bg-blur-image { opacity: 0; }
   gap: 10px;
 }
 .layer-row:not(.expanded) .layer-row-body { display: none; }
+

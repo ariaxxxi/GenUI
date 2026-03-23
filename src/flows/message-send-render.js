@@ -19,6 +19,7 @@ export function createMessageSendRender({
   const TOP = 10;
   const BOTTOM = 10;
   const CONTROLS_LIFT = 78;
+  const CONTROLS_GAP = 14;
   const MIN_H = 100;
   const MAX_H = 400;
   let lastContentHeight = 180;
@@ -46,7 +47,14 @@ export function createMessageSendRender({
     const flow = getFlow();
     const base = SHAPES[shape] || SHAPES.card;
     const shellHeight = clampFn(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
-    const controlsLift = (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && flow.showCheck)) ? CONTROLS_LIFT : 0;
+    const hasExternalControls = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && flow.showCheck);
+    let controlsLift = 0;
+    if (hasExternalControls) {
+      controlsLift = CONTROLS_LIFT;
+      const controlsEl = C.glassControlsLayer?.querySelector(".g-glass-controls");
+      const controlsH = controlsEl ? Math.ceil(Math.max(controlsEl.getBoundingClientRect().height || 0, controlsEl.offsetHeight || 0)) : 0;
+      if (controlsH > 0) controlsLift = Math.max(controlsLift, controlsH + CONTROLS_GAP + 18);
+    }
     return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
   }
 

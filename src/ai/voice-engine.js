@@ -32,11 +32,30 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   function applyVoiceVisualization(level) {
     const glassUi = getGlassUi();
     const GS = getGlassState();
+    const state = glassUi?.state;
+    const glowEl = document.getElementById('home-glow-layer');
+    const dropMain = document.getElementById('drop-main');
     if (voiceEngine.mode === 'command') {
-      const glowEl = document.getElementById('home-glow-layer');
-      if (glowEl) glowEl.style.boxShadow = shadow(level);
-      if (glassUi?.state === GS.DISAMBIGUATE) document.getElementById('drop-main')?.style.setProperty('box-shadow', shadow(level));
-      if (glassUi?.state === GS.CONFIRM) document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)'; btn.style.boxShadow = buttonShadow(level); });
+      if (state === GS.DISAMBIGUATE) {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
+        if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
+      } else {
+        if (glowEl) glowEl.style.boxShadow = '';
+        if (dropMain) dropMain.style.setProperty('box-shadow', '');
+      }
+      if (state === GS.CONFIRM) {
+        document.querySelectorAll('.g-action-btn').forEach((btn) => {
+          btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)';
+          btn.style.boxShadow = buttonShadow(level);
+        });
+      } else {
+        document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+      }
+    }
+    if (voiceEngine.mode === 'dictation') {
+      if (glowEl) glowEl.style.boxShadow = '';
+      if (dropMain) dropMain.style.setProperty('box-shadow', '');
+      document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
       const field = document.querySelector('.g-listen-field.compose-input');
