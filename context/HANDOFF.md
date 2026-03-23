@@ -9,6 +9,8 @@ Refactor: extract page CSS and JS entrypoints from `ai.html` and `index.html`
 ## Summary
 - Reduced `ai.html` from 9,227 lines to 489 lines by extracting the full inline style block and the full inline module script into external files.
 - Reduced `index.html` from 6,165 lines to 419 lines by extracting the full inline style block and the full inline script into external files.
+- Extracted shared app-state helpers into `src/app-state.js` and wired both page modules to use the shared constants/loaders instead of carrying duplicate local definitions.
+- Extracted simulator panel helpers into `src/sim-panel.js` and wired `src/ai-app.js` to use the shared module.
 - Added external page entrypoints:
   - `src/ai-app.js`
   - `src/index-app.js`
@@ -33,6 +35,8 @@ Refactor: extract page CSS and JS entrypoints from `ai.html` and `index.html`
 - `src/ai-app.js`
 - `src/index-app.js`
 - `src/events.js`
+- `src/app-state.js`
+- `src/sim-panel.js`
 - `src/styles/ai.css`
 - `src/styles/editor.css`
 - `src/styles/shared.css`
@@ -51,6 +55,16 @@ Refactor: extract page CSS and JS entrypoints from `ai.html` and `index.html`
 
 ## Remaining issues / caveats
 - This pass extracted page assets and entrypoints, but did not yet finish the deeper shared-module split requested in `context/task.md` (`src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, `src/flows/*` are still not created/consumed as final shared modules).
+- `src/sim-panel.js` is now created and consumed. Remaining large extractions are still pending:
+  - `src/morph.js`
+  - `src/sidebar.js`
+  - `src/voice-engine.js`
+  - `src/flows/message-send.js`
+  - `src/flows/flight-booking.js`
+  - `src/scenario-data.js`
+  - `src/ui-actions.js`
+  - `src/demo-ui.js`
+  - `src/anim-controls.js`
 - `index.html` was not runtime-validated in Playwright because headless Chromium crashes in this sandbox (`SIGTRAP`); only syntax/static checks were completed for the extracted manual-page module.
 - `context/task.md` was already dirty before this pass and was not modified by this implementation step.
 

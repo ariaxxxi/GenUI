@@ -11,6 +11,24 @@ import {
   normalizeTypography,
   normalizeTypographyByShape,
 } from './shapes.js';
+import {
+  STORAGE_KEYS,
+  RESPONSE_MODE,
+  PAGE_MODE_OVERRIDE,
+  AI_STAGE_OVERRIDE,
+  readStoredJson,
+  loadCanvasSettings,
+  loadResponseMode,
+  loadAiStageOverride,
+} from './app-state.js';
+import {
+  addSimLog,
+  setSimVoice,
+  setSimInputState,
+  addChatBubble,
+  showTypingBubble,
+  hideTypingBubble,
+} from './sim-panel.js';
 
 const P   = 20;
 const PILL_NO_ICON_P = 32;
@@ -28,29 +46,6 @@ const TS  = 60;
 const TBR = '30px';
 const GAP = 8;
 
-const STORAGE_KEYS = {
-  scenarios: 'genui.scenarios.v1',
-  stages: 'genui.stages.v1',
-  settings: 'genui.settings.v1',
-  mode: 'genui.mode.v1',
-  aiStage: 'genui.ai-stage.v1',
-};
-const RESPONSE_MODE = Object.freeze({
-  MANUAL: 'manual',
-  AI: 'ai',
-});
-const PAGE_MODE_OVERRIDE = (() => {
-  const raw = String(document.body?.dataset?.pageMode || '').trim().toLowerCase();
-  if (raw === 'ai') return RESPONSE_MODE.AI;
-  if (raw === 'manual' || raw === 'prototype') return RESPONSE_MODE.MANUAL;
-  return null;
-})();
-const AI_STAGE_OVERRIDE = Object.freeze({
-  AUTO: 'auto',
-  DOT: 'dot',
-  PILL: 'pill',
-  CARD: 'card',
-});
 const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: [] },
   { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon'] },
@@ -465,16 +460,6 @@ function defaultScenarioLibrary() {
   ];
 }
 
-function readStoredJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-
 function contentPos(shape, w, h) {
   if (shape === 'idle') return {
     thumb:  { x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 },
@@ -698,34 +683,6 @@ document.body.appendChild(detailMeasureEl);
 
 function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
-}
-
-function loadCanvasSettings() {
-  const stored = readStoredJson(STORAGE_KEYS.settings, null);
-  return {
-    backgroundEnabled: stored?.backgroundEnabled !== false,
-    floatingEnabled: stored?.floatingEnabled !== false,
-    bottomAlign: stored?.bottomAlign !== false,
-    frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
-    phoneBgEnabled: stored?.phoneBgEnabled !== false,
-    phoneFrameWidth: clamp(parseInt(stored?.phoneFrameWidth, 10) || 390, 240, 600),
-    phoneFrameHeight: clamp(parseInt(stored?.phoneFrameHeight, 10) || 838, 420, 1200),
-    frameCornerRadius: clamp(parseInt(stored?.frameCornerRadius, 10) || 48, 0, 120),
-    phoneFrameBackground: normalizeStageImage(stored?.phoneFrameBackground),
-  };
-}
-
-function loadResponseMode() {
-  if (PAGE_MODE_OVERRIDE) return PAGE_MODE_OVERRIDE;
-  const stored = readStoredJson(STORAGE_KEYS.mode, null);
-  return stored === RESPONSE_MODE.AI ? RESPONSE_MODE.AI : RESPONSE_MODE.MANUAL;
-}
-
-function loadAiStageOverride() {
-  const stored = readStoredJson(STORAGE_KEYS.aiStage, null);
-  return Object.values(AI_STAGE_OVERRIDE).includes(stored)
-    ? stored
-    : AI_STAGE_OVERRIDE.AUTO;
 }
 
 function loadScenarioLibrary() {
@@ -2931,56 +2888,6 @@ function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
-function addSimLog(text, type = 'system') {
-  const log = document.getElementById('sim-log');
-  if (!log || !text) return;
-  const entries = log.querySelectorAll('.slog');
-  if (entries.length >= 24) entries[0].remove();
-  const el = document.createElement('div');
-  el.className = `slog slog-${type}`;
-  el.textContent = text;
-  log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
-}
-
-function setSimVoice(text) {
-  const out = document.getElementById('sim-voice-out');
-  const txt = document.getElementById('sim-voice-text');
-  if (!out || !txt) return;
-  if (text) {
-    txt.textContent = `"${text}"`;
-    out.classList.add('visible');
-  } else {
-    out.classList.remove('visible');
-    txt.textContent = '';
-  }
-}
-
-function setSimInputState({ label, placeholder, hint = '', dictating = false }) {
-  const lbl = document.getElementById('sim-input-label');
-  const inp = document.getElementById('sim-input');
-  const wrap = document.getElementById('sim-input-wrap');
-  const hnt = document.getElementById('sim-input-hint');
-  if (lbl) {
-    lbl.textContent = dictating ? '🎤 Voice Dictation' : label;
-    lbl.classList.toggle('dictating', dictating);
-  }
-  if (inp) {
-    inp.placeholder = placeholder;
-    inp.classList.toggle('dictating', dictating);
-  }
-  if (wrap) wrap.classList.toggle('dictating', dictating);
-  if (hnt) hnt.textContent = hint;
-}
-
-function addChatBubble(role, text) {
-  if (!text) return;
-  addSimLog(text, role === 'user' ? 'user' : 'voice');
-  if (role === 'ai') setSimVoice(text);
-}
-
-function showTypingBubble() { setSimVoice('...'); }
-function hideTypingBubble() {}
 function chatPanelEl() { return null; }
 
 const GLASS_CONTACTS = [

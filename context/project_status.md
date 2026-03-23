@@ -23,6 +23,8 @@
   - `src/styles/flight-flow.css`
   - `src/ai-app.js`
   - `src/index-app.js`
+  - `src/app-state.js`
+  - `src/sim-panel.js`
 - Smoke test (`test/smoke.mjs`) validates `ai.html` loads, chip exists, and shape animates on click
 - Smoke test can self-host `server.mjs` on a free local port or target `SMOKE_BASE_URL` env var
 - `server.mjs` routes AI requests to OpenAI / Anthropic / Gemini with per-provider retry and auth logic
@@ -44,10 +46,13 @@
 - The task-defined shared modules are not fully landed yet:
   - `src/morph.js`
   - `src/sidebar.js`
-  - `src/sim-panel.js`
   - `src/voice-engine.js`
   - `src/flows/message-send.js`
   - `src/flows/flight-booking.js`
+  - `src/scenario-data.js`
+  - `src/ui-actions.js`
+  - `src/demo-ui.js`
+  - `src/anim-controls.js`
 - No error boundary for full or corrupted localStorage — silent failures
 - Pixel-perfect visual parity to Figma is still iterative (manual visual checks required for animation timing/placement nuances)
 - AI trigger phrases in `ai.html` are still implicit in code (not documented for new devs)

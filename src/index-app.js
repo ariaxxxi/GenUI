@@ -1,3 +1,18 @@
+import {
+  STORAGE_KEYS,
+  RESPONSE_MODE,
+  PAGE_MODE_OVERRIDE,
+  AI_STAGE_OVERRIDE,
+  readStoredJson,
+  loadCanvasSettings,
+  loadResponseMode,
+  loadAiStageOverride,
+} from './app-state.js';
+import { initMorph } from './morph.js';
+import { initScenarioData } from './scenario-data.js';
+import { normalizeTypography } from './shapes.js';
+import { buildUiRefs, initSidebar } from './sidebar.js';
+
 const P   = 20;
 const PILL_NO_ICON_P = 32;
 const PILL_ICON_P = 16;
@@ -13,626 +28,6 @@ const CARD_MEDIA_STACK_GAP = 8;
 const TS  = 60;
 const TBR = '30px';
 const GAP = 8;
-
-const SHAPES = {
-  idle: {
-    main:  { w:0, h:0, br:'0px', tx:0, ty:0, op:0 },
-    left:  { w:0, h:0, br:'0px', tx:0, ty:0, op:0 },
-    right: { w:0, h:0, br:'0px', tx:0, ty:0, op:0 },
-  },
-  circle: {
-    main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-  },
-  dot: {
-    main:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50,  ty:-50,  op:0 },
-  },
-  pill: {
-    main:  { w:420, h:100, br:'60px', tx:-210, ty:-50,  op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:60,   ty:-50,  op:0 },
-  },
-  split: {
-    main:  { w:96, h:96, br:'48px', tx:-48, ty:-48, op:0 },
-    left:  { w:96, h:96, br:'48px', tx:-108, ty:-48, op:1 },
-    right: { w:96, h:96, br:'48px', tx:12, ty:-48, op:1 },
-  },
-  card: {
-    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  'card-s': {
-    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  image: {
-    main:  { w:420, h:260, br:'30px', tx:-210, ty:-130, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  ai: {
-    main:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
-    right: { w:100, h:100, br:'50px', tx:-50, ty:-50, op:0 },
-  },
-  'card-form': {
-    main:  { w:420, h:400, br:'30px', tx:-210, ty:-200, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-  'card-list': {
-    main:  { w:420, h:360, br:'30px', tx:-210, ty:-180, op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-210, ty:-50,  op:0 },
-    right: { w:100, h:100, br:'50px', tx:110,  ty:-50,  op:0 },
-  },
-};
-
-const STORAGE_KEYS = {
-  scenarios: 'genui.scenarios.v1',
-  stages: 'genui.stages.v1',
-  settings: 'genui.settings.v1',
-  mode: 'genui.mode.v1',
-  aiStage: 'genui.ai-stage.v1',
-};
-const RESPONSE_MODE = Object.freeze({
-  MANUAL: 'manual',
-  AI: 'ai',
-});
-const PAGE_MODE_OVERRIDE = (() => {
-  const raw = String(document.body?.dataset?.pageMode || '').trim().toLowerCase();
-  if (raw === 'ai') return RESPONSE_MODE.AI;
-  if (raw === 'manual' || raw === 'prototype') return RESPONSE_MODE.MANUAL;
-  return null;
-})();
-const AI_STAGE_OVERRIDE = Object.freeze({
-  AUTO: 'auto',
-  DOT: 'dot',
-  PILL: 'pill',
-  CARD: 'card',
-});
-const BUILTIN_STAGE_DEFS = Object.freeze([
-  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: [] },
-  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, components: ['icon', 'primary', 'secondary'] },
-  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: ['image'] },
-]);
-const SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
-const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
-
-function defaultTypographyForShape(shape = 'pill') {
-  return {
-    icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: shape === 'card' ? 40 : 28, color: '#ffffff' },
-    secondary: { size: 24, color: '#d4d4d4' },
-    detail: { size: 24, color: '#a3a3a3' },
-  };
-}
-
-function normalizeTypography(value = {}, shape = 'pill') {
-  const defaults = defaultTypographyForShape(shape);
-  const output = {};
-  TYPOGRAPHY_LAYERS.forEach((layer) => {
-    const src = value?.[layer] || {};
-    const fallback = defaults[layer];
-    const size = Number(src.size);
-    output[layer] = {
-      size: Number.isFinite(size) ? clamp(Math.round(size), 12, 96) : fallback.size,
-      color: /^#[0-9a-f]{6}$/i.test(String(src.color || '')) ? String(src.color) : fallback.color,
-    };
-  });
-  return output;
-}
-
-function normalizeTypographyByShape(value = {}, fallbackShape = 'pill') {
-  const legacyTypography = value && TYPOGRAPHY_LAYERS.some((layer) => value[layer]);
-  const output = {};
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  stageIds.forEach((shape) => {
-    const renderShape = renderShapeForStageId(shape) || shape;
-    const source = legacyTypography
-      ? (shape === fallbackShape ? value : {})
-      : (value?.[shape] || {});
-    output[shape] = normalizeTypography(source, renderShape);
-  });
-  return output;
-}
-
-function stageId() {
-  return 'stage-' + Math.random().toString(36).slice(2, 10);
-}
-
-function defaultStageLibrary() {
-  return BUILTIN_STAGE_DEFS.map((stage) => ({
-    ...stage,
-    components: [...stage.components],
-  }));
-}
-
-function normalizeStage(raw, fallback) {
-  const fallbackStage = fallback || BUILTIN_STAGE_DEFS[0];
-  const id = String(raw?.id || fallbackStage.id);
-  const preset = !!raw?.preset;
-  const renderShape = String(raw?.renderShape || fallbackStage.renderShape || 'card');
-  const name = String(raw?.name || fallbackStage.name || id);
-  const fallbackCorner = Number.isFinite(Number(fallbackStage.cornerRadius)) ? Number(fallbackStage.cornerRadius) : 30;
-  const rawCorner = Number(raw?.cornerRadius);
-  const cornerRadius = Number.isFinite(rawCorner)
-    ? clamp(Math.round(rawCorner), 0, 120)
-    : clamp(Math.round(fallbackCorner), 0, 120);
-  const rawWidth = Number(raw?.widthOverride);
-  const rawHeight = Number(raw?.heightOverride);
-  const widthOverride = Number.isFinite(rawWidth) && rawWidth > 0 ? clamp(Math.round(rawWidth), 40, 1400) : null;
-  const heightOverride = Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null;
-  const fallbackGap = Number(fallbackStage?.iconTextGap);
-  const rawGap = Number(raw?.iconTextGap ?? fallbackGap);
-  const iconTextGap = Number.isFinite(rawGap) && rawGap >= 0 ? clamp(Math.round(rawGap), 0, 80) : null;
-  const fallbackIconPad = Number(fallbackStage?.iconLeftPadding);
-  const rawIconPad = Number(raw?.iconLeftPadding ?? fallbackIconPad);
-  const iconLeftPadding = Number.isFinite(rawIconPad) && rawIconPad >= 0 ? clamp(Math.round(rawIconPad), 0, 120) : null;
-  const phoneBgBlur = raw?.phoneBgBlur === undefined
-    ? !!fallbackStage.phoneBgBlur
-    : raw?.phoneBgBlur === true;
-  const components = Array.isArray(raw?.components)
-    ? raw.components.map((item) => String(item || '')).filter((item) => STAGE_COMPONENT_TYPES.includes(item))
-    : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, components };
-}
-
-function loadStageLibrary() {
-  const stored = readStoredJson(STORAGE_KEYS.stages, null);
-  if (!Array.isArray(stored)) return defaultStageLibrary();
-  const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
-  const normalized = stored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
-  const ids = new Set(normalized.map((stage) => stage.id));
-  BUILTIN_STAGE_DEFS.forEach((builtin) => {
-    if (!ids.has(builtin.id)) normalized.unshift(normalizeStage(builtin, builtin));
-  });
-  return normalized;
-}
-
-function persistStageLibrary() {
-  try {
-    localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(stageLibrary));
-  } catch (err) {
-    console.warn('Unable to persist stage library', err);
-  }
-}
-
-function stageById(id) {
-  return stageLibrary.find((stage) => stage.id === id) || stageLibrary.find((stage) => stage.id === 'pill') || stageLibrary[0];
-}
-
-function builtinStageById(id) {
-  return BUILTIN_STAGE_DEFS.find((stage) => stage.id === id) || null;
-}
-
-function renderShapeForStageId(id) {
-  const stage = stageById(id);
-  return stage?.renderShape || 'pill';
-}
-
-function availableScenarioShapes() {
-  return stageLibrary.map((stage) => stage.id);
-}
-
-function stageComponentCounts(stage) {
-  const counts = Object.fromEntries(STAGE_COMPONENT_TYPES.map((type) => [type, 0]));
-  (stage?.components || []).forEach((component) => {
-    if (counts[component] !== undefined) counts[component] += 1;
-  });
-  return counts;
-}
-
-function stageHasComponent(stage, component) {
-  return stageComponentCounts(stage)[component] > 0;
-}
-
-function stageVisibleEditorFields(stage) {
-  const fields = new Set();
-  if (stageHasComponent(stage, 'primary')) fields.add('primary');
-  if (stageHasComponent(stage, 'secondary')) fields.add('secondary');
-  if (stageHasComponent(stage, 'detail')) fields.add('detail');
-  return fields;
-}
-
-function scenarioId() {
-  return 'scenario-' + Math.random().toString(36).slice(2, 10);
-}
-
-function createIcon(kind = 'none', value = '') {
-  return { kind, value: String(value || '') };
-}
-
-function normalizeStageImage(value) {
-  if (!value || typeof value !== 'object') return null;
-  const src = String(value.src || '').trim();
-  const width = Number(value.width);
-  const height = Number(value.height);
-  if (!src || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
-  return { src, width, height };
-}
-
-function normalizeStageImages(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map(normalizeStageImage).filter(Boolean);
-}
-
-function normalizeIconByShape(value = {}, fallbackShape = 'pill', legacyIcon = null) {
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  const output = {};
-  stageIds.forEach((shape) => {
-    const stageValue = value?.[shape];
-    const resolved = stageValue !== undefined ? stageValue : legacyIcon;
-    output[shape] = normalizeIcon(resolved);
-  });
-  return output;
-}
-
-function normalizeImagesByShape(value = {}, fallbackShape = 'pill', legacyImages = []) {
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  const output = {};
-  stageIds.forEach((shape) => {
-    output[shape] = normalizeStageImages(value?.[shape] || (shape === fallbackShape ? legacyImages : []));
-  });
-  return output;
-}
-
-function normalizeStageTextEntry(value = {}, fallback = {}) {
-  return {
-    primary: String(value?.primary ?? fallback?.primary ?? ''),
-    secondary: String(value?.secondary ?? fallback?.secondary ?? ''),
-    detail: String(value?.detail ?? fallback?.detail ?? ''),
-  };
-}
-
-function hasMeaningfulStageText(value = {}) {
-  const entry = normalizeStageTextEntry(value);
-  return !!(entry.primary.trim() || entry.secondary.trim() || entry.detail.trim());
-}
-
-function defaultStageTextFallback(shape) {
-  const renderShape = renderShapeForStageId(shape) || shape;
-  if (renderShape === 'pill') {
-    return {
-      primary: 'Primary text',
-      secondary: 'Secondary text',
-      detail: '',
-    };
-  }
-  if (renderShape === 'card') {
-    return {
-      primary: 'Primary text',
-      secondary: 'Secondary text',
-      detail: 'Detail text example',
-    };
-  }
-  if (renderShape === 'card-s') {
-    return {
-      primary: 'Primary text',
-      secondary: 'Secondary text',
-      detail: 'Detail text example',
-    };
-  }
-  return { primary: '', secondary: '', detail: '' };
-}
-
-function isPlaceholderStageText(entry, shape) {
-  const normalized = normalizeStageTextEntry(entry);
-  const placeholder = normalizeStageTextEntry(defaultStageTextFallback(shape));
-  return normalized.primary === placeholder.primary
-    && normalized.secondary === placeholder.secondary
-    && normalized.detail === placeholder.detail;
-}
-
-function normalizeStageTextByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  const output = {};
-  const legacyEntry = normalizeStageTextEntry(legacy);
-  const useLegacyByDefault = hasMeaningfulStageText(legacyEntry);
-  stageIds.forEach((shape) => {
-    const rawEntry = value?.[shape];
-    if (rawEntry !== undefined) {
-      const normalized = normalizeStageTextEntry(rawEntry);
-      if (useLegacyByDefault && isPlaceholderStageText(normalized, shape)) {
-        output[shape] = normalizeStageTextEntry(undefined, legacyEntry);
-      } else {
-        output[shape] = normalized;
-      }
-      return;
-    }
-    const fallback = useLegacyByDefault ? legacyEntry : defaultStageTextFallback(shape);
-    output[shape] = normalizeStageTextEntry(undefined, fallback);
-  });
-  return output;
-}
-
-function normalizeScenarioCanvas(value = {}, fallback = {}) {
-  const rawMode = String(value?.frameMode || fallback?.frameMode || 'none');
-  const frameMode = ['none', 'glasses', 'phone'].includes(rawMode) ? rawMode : 'none';
-  return { frameMode };
-}
-
-function normalizeStageSizeEntry(value = {}, fallback = {}) {
-  const rawWidth = Number(value?.widthOverride ?? fallback?.widthOverride);
-  const rawHeight = Number(value?.heightOverride ?? fallback?.heightOverride);
-  return {
-    widthOverride: Number.isFinite(rawWidth) && rawWidth > 0 ? clamp(Math.round(rawWidth), 40, 1400) : null,
-    heightOverride: Number.isFinite(rawHeight) && rawHeight > 0 ? clamp(Math.round(rawHeight), 40, 1400) : null,
-  };
-}
-
-function normalizeStageSizeByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
-  const stageIds = Array.from(new Set([
-    ...SCENARIO_SHAPES,
-    ...availableScenarioShapes(),
-    ...Object.keys(value || {}),
-    fallbackShape,
-  ].filter(Boolean)));
-  const output = {};
-  stageIds.forEach((shape) => {
-    output[shape] = normalizeStageSizeEntry(
-      value?.[shape],
-      shape === fallbackShape ? legacy : {}
-    );
-  });
-  return output;
-}
-
-function scenarioStageSizeOverride(scenario, shape) {
-  return normalizeStageSizeEntry(scenario?.content?.sizeByShape?.[shape]);
-}
-
-function stageDefaultMainSize(stageId) {
-  const renderShape = renderShapeForStageId(stageId);
-  const base = SHAPES[renderShape] || SHAPES.pill;
-  const width = Number(base?.main?.w);
-  const height = Number(base?.main?.h);
-  return {
-    width: Number.isFinite(width) ? width : 420,
-    height: Number.isFinite(height) ? height : 120,
-  };
-}
-
-function stageMainSize(stage, scenario = selectedScenario()) {
-  const defaults = stageDefaultMainSize(stage?.id);
-  const sizeOverride = scenarioStageSizeOverride(scenario, stage?.id);
-  const renderShape = stage?.renderShape || renderShapeForStageId(stage?.id);
-  const frameMode = normalizeScenarioCanvas(
-    scenario?.content?.canvas,
-    { frameMode: canvasSettings?.frameMode || 'none' }
-  ).frameMode;
-  const phoneDefaultWidth = clamp((Number(canvasSettings?.phoneFrameWidth) || 390) - 20, 40, 1400);
-  const usePhoneDefaultWidth = frameMode === 'phone' && ['pill', 'card', 'card-s', 'image'].includes(renderShape);
-  const defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
-  return {
-    width: Number.isFinite(sizeOverride.widthOverride)
-      ? sizeOverride.widthOverride
-      : defaultWidth,
-    height: Number.isFinite(sizeOverride.heightOverride)
-      ? sizeOverride.heightOverride
-      : defaults.height,
-  };
-}
-
-function stageIconTextGap(stageId, renderShape) {
-  if (renderShape !== 'pill' && renderShape !== 'card-s') return GAP;
-  const stage = stageId ? stageById(stageId) : null;
-  const value = Number(stage?.iconTextGap);
-  return Number.isFinite(value) ? clamp(Math.round(value), 0, 80) : GAP;
-}
-
-function stageIconLeftPadding(stageId, renderShape) {
-  if (renderShape !== 'pill' && renderShape !== 'card-s') return renderShape === 'pill' ? PILL_ICON_P : CARD_P;
-  const stage = stageId ? stageById(stageId) : null;
-  const value = Number(stage?.iconLeftPadding);
-  const fallback = (renderShape === 'pill' || renderShape === 'card-s') ? PILL_ICON_P : CARD_P;
-  return Number.isFinite(value) ? clamp(Math.round(value), 0, 120) : fallback;
-}
-
-function stageTextForShape(scenario, shape) {
-  const legacy = {
-    primary: String(scenario?.content?.primary || ''),
-    secondary: String(scenario?.content?.secondary || ''),
-    detail: String(scenario?.content?.detail || ''),
-  };
-  return normalizeStageTextEntry(scenario?.content?.textByShape?.[shape], legacy);
-}
-
-function stageIconForShape(scenario, shape) {
-  const iconByShape = scenario?.content?.iconByShape || {};
-  if (iconByShape[shape] !== undefined) {
-    return normalizeIcon(iconByShape[shape]);
-  }
-  const legacy = normalizeIcon(scenario?.content?.icon);
-  if (legacy.kind !== 'none' && legacy.value) return legacy;
-  const firstDefined = Object.values(iconByShape)
-    .map((value) => normalizeIcon(value))
-    .find((value) => value.kind !== 'none' && value.value);
-  return firstDefined || createIcon('none', '');
-}
-
-function stageImagesForShape(scenario, shape) {
-  return normalizeStageImages(
-    scenario?.content?.imagesByShape?.[shape] || scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : [])
-  );
-}
-
-function createScenario({
-  id = scenarioId(),
-  name = 'New Scenario',
-  shape = 'pill',
-  content = {},
-  triggers = [],
-} = {}) {
-  return {
-    id,
-    name,
-    shape: availableScenarioShapes().includes(shape) ? shape : 'pill',
-    content: {
-      icon: normalizeIcon(content.icon),
-      iconByShape: normalizeIconByShape(content.iconByShape, shape, content.icon),
-      primary: String(content.primary || ''),
-      secondary: String(content.secondary || ''),
-      detail: String(content.detail || ''),
-      textByShape: normalizeStageTextByShape(content.textByShape, shape, {
-        primary: String(content.primary || ''),
-        secondary: String(content.secondary || ''),
-        detail: String(content.detail || ''),
-      }),
-      images: normalizeStageImages(content.images || (content.image ? [content.image] : [])),
-      imagesByShape: normalizeImagesByShape(
-        content.imagesByShape,
-        shape,
-        normalizeStageImages(content.images || (content.image ? [content.image] : []))
-      ),
-      typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
-      sizeByShape: normalizeStageSizeByShape(content.sizeByShape, shape, {
-        widthOverride: content.widthOverride,
-        heightOverride: content.heightOverride,
-      }),
-      canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
-    },
-    triggers: normalizeTriggers(triggers),
-  };
-}
-
-function normalizeTriggers(value) {
-  if (Array.isArray(value)) return value.map(v => String(v || '').trim()).filter(Boolean);
-  return String(value || '')
-    .split(/[\n,]/)
-    .map(v => v.trim())
-    .filter(Boolean);
-}
-
-function normalizeIcon(value) {
-  if (value && typeof value === 'object') {
-    const kind = ['emoji', 'image', 'none'].includes(value.kind) ? value.kind : 'none';
-    return createIcon(kind, value.value || '');
-  }
-  const text = String(value || '').trim();
-  return text ? createIcon('emoji', text) : createIcon('none', '');
-}
-
-function normalizeScenario(raw, index = 0) {
-  const fallbackNames = ['Weather', 'Message', 'QR Access'];
-  return createScenario({
-    id: raw?.id || scenarioId(),
-    name: raw?.name || fallbackNames[index] || `Scenario ${index + 1}`,
-    shape: raw?.shape || 'pill',
-    content: raw?.content || {},
-    triggers: raw?.triggers || [],
-  });
-}
-
-function defaultScenarioLibrary() {
-  return [
-    createScenario({
-      name: 'Weather Snapshot',
-      shape: 'pill',
-      content: {
-        icon: createIcon('emoji', '🌤'),
-        primary: '21° Sunny',
-        secondary: 'San Francisco',
-        textByShape: {
-          card: {
-            primary: '21° Sunny',
-            secondary: 'San Francisco',
-            detail: 'H:24°  L:16° · Humidity 68%',
-          },
-          'card-s': {
-            primary: '21° Sunny',
-            secondary: 'San Francisco',
-            detail: 'H:24°  L:16° · Humidity 68%',
-          },
-        },
-      },
-      triggers: ['weather', 'temperature', 'forecast'],
-    }),
-    createScenario({
-      name: 'Incoming Message',
-      shape: 'card',
-      content: {
-        icon: createIcon('emoji', '✉'),
-        primary: 'New Message',
-        secondary: 'Alice wants to meet',
-        detail: 'Unread · 2 mins ago',
-      },
-      triggers: ['message', 'text', 'notification'],
-    }),
-    createScenario({
-      name: 'QR Access Pass',
-      shape: 'card',
-      content: {
-        icon: createIcon('emoji', '▣'),
-        primary: 'Gate A12',
-        secondary: 'Show QR at entry',
-        detail: 'Boarding 18:40 · Seat 14C',
-      },
-      triggers: ['qr', 'boarding pass', 'ticket', 'check in'],
-    }),
-    createScenario({
-      name: 'Card-S Promo',
-      shape: 'card-s',
-      content: {
-        icon: createIcon('emoji', '🎟'),
-        primary: 'Event Access',
-        secondary: 'Hall B · 19:30',
-        detail: 'Show this pass at entry',
-      },
-      triggers: ['event', 'pass', 'entry'],
-    }),
-    createScenario({
-      name: 'Image Hero',
-      shape: 'image',
-      content: {
-        image: {
-          src: 'https://images.unsplash.com/photo-1495567720989-cebdbdd97913?auto=format&fit=crop&w=1200&q=80',
-          width: 1200,
-          height: 800,
-        },
-      },
-      triggers: ['photo', 'hero image', 'cover'],
-    }),
-  ];
-}
-
-function readStoredJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
 
 function contentPos(shape, w, h) {
   if (shape === 'idle') return {
@@ -762,63 +157,7 @@ const C = {
   media: document.getElementById('c-media'),
   rich:  document.getElementById('c-rich'),
 };
-const UI = {
-  modeToggle: document.getElementById('mode-toggle'),
-  bgToggle: document.getElementById('bg-toggle'),
-  floatToggle: document.getElementById('float-toggle'),
-  alignBottomToggle: document.getElementById('align-bottom-toggle'),
-  frameGlassesToggle: document.getElementById('frame-glasses-toggle'),
-  framePhoneToggle: document.getElementById('frame-phone-toggle'),
-  phoneFrameControls: document.getElementById('phone-frame-controls'),
-  phoneFrameWidth: document.getElementById('phone-frame-width'),
-  phoneFrameHeight: document.getElementById('phone-frame-height'),
-  frameCornerRadius: document.getElementById('frame-corner-radius'),
-  phoneBgUpload: document.getElementById('phone-bg-upload'),
-  phoneBgReset: document.getElementById('phone-bg-reset'),
-  phoneBgState: document.getElementById('phone-bg-state'),
-  phoneBgVisibleToggle: document.getElementById('phone-bg-visible-toggle'),
-  phoneSceneVisibleRow: document.getElementById('phone-scene-visible-row'),
-  aiStageButtons: Array.from(document.querySelectorAll('[data-ai-stage]')),
-  scenarioList: document.getElementById('scenario-list'),
-  scenarioAdd: document.getElementById('scenario-add'),
-  scenarioDuplicate: document.getElementById('scenario-duplicate'),
-  scenarioDelete: document.getElementById('scenario-delete'),
-  scenarioName: document.getElementById('scenario-name'),
-  stageAdd: document.getElementById('stage-add'),
-  stageDelete: document.getElementById('stage-delete'),
-  stageReset: document.getElementById('stage-reset'),
-  stageNameInput: document.getElementById('stage-name-input'),
-  stageRadiusInput: document.getElementById('stage-radius-input'),
-  stageWidthInput: document.getElementById('stage-width-input'),
-  stageHeightInput: document.getElementById('stage-height-input'),
-  stageGapInput: document.getElementById('stage-gap-input'),
-  stageIconPadInput: document.getElementById('stage-icon-pad-input'),
-  stagePhoneBlurToggle: document.getElementById('stage-phone-blur-toggle'),
-  stageComponentsPanel: document.getElementById('stage-components-panel'),
-  stageComponentControls: document.getElementById('stage-component-controls'),
-  scenarioShapeRow: document.getElementById('scenario-shape-row'),
-  scenarioTriggers: document.getElementById('scenario-triggers'),
-  scenarioIconInput: document.getElementById('scenario-icon-input'),
-  scenarioIconUpload: document.getElementById('scenario-icon-upload'),
-  scenarioIconReset: document.getElementById('scenario-icon-reset'),
-  scenarioIconMode: document.getElementById('scenario-icon-mode'),
-  scenarioIconSize: document.getElementById('scenario-icon-size'),
-  scenarioIconColor: document.getElementById('scenario-icon-color'),
-  scenarioPrimary: document.getElementById('scenario-primary'),
-  scenarioPrimarySize: document.getElementById('scenario-primary-size'),
-  scenarioPrimaryColor: document.getElementById('scenario-primary-color'),
-  scenarioSecondary: document.getElementById('scenario-secondary'),
-  scenarioSecondarySize: document.getElementById('scenario-secondary-size'),
-  scenarioSecondaryColor: document.getElementById('scenario-secondary-color'),
-  scenarioDetail: document.getElementById('scenario-detail'),
-  scenarioDetailSize: document.getElementById('scenario-detail-size'),
-  scenarioDetailColor: document.getElementById('scenario-detail-color'),
-  scenarioMediaList: document.getElementById('scenario-media-list'),
-  editorPrimary: document.getElementById('editor-primary-field'),
-  editorSecondary: document.getElementById('editor-secondary-field'),
-  editorDetail: document.getElementById('editor-detail-field'),
-  editorMedia: document.getElementById('editor-media-field'),
-};
+const UI = buildUiRefs(document);
 
 let currentShape = 'circle';
 let lastMainGeo = { ...SHAPES.circle.main };
@@ -839,6 +178,7 @@ let aiStageOverride = loadAiStageOverride();
 let stageLibrary = loadStageLibrary();
 let scenarioLibrary = loadScenarioLibrary();
 let selectedScenarioId = scenarioLibrary[0]?.id || '';
+let morphApi = null;
 const detailMeasureEl = document.createElement('div');
 detailMeasureEl.style.position = 'fixed';
 detailMeasureEl.style.left = '-9999px';
@@ -855,33 +195,53 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-function loadCanvasSettings() {
-  const stored = readStoredJson(STORAGE_KEYS.settings, null);
-  return {
-    backgroundEnabled: stored?.backgroundEnabled !== false,
-    floatingEnabled: stored?.floatingEnabled !== false,
-    bottomAlign: stored?.bottomAlign !== false,
-    frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
-    phoneBgEnabled: stored?.phoneBgEnabled !== false,
-    phoneFrameWidth: clamp(parseInt(stored?.phoneFrameWidth, 10) || 390, 240, 600),
-    phoneFrameHeight: clamp(parseInt(stored?.phoneFrameHeight, 10) || 838, 420, 1200),
-    frameCornerRadius: clamp(parseInt(stored?.frameCornerRadius, 10) || 48, 0, 120),
-    phoneFrameBackground: normalizeStageImage(stored?.phoneFrameBackground),
-  };
-}
+const scenarioData = initScenarioData({
+  getStageLibrary: () => stageLibrary,
+  getCanvasSettings: () => canvasSettings,
+  clampFn: clamp,
+});
 
-function loadResponseMode() {
-  if (PAGE_MODE_OVERRIDE) return PAGE_MODE_OVERRIDE;
-  const stored = readStoredJson(STORAGE_KEYS.mode, null);
-  return stored === RESPONSE_MODE.AI ? RESPONSE_MODE.AI : RESPONSE_MODE.MANUAL;
-}
-
-function loadAiStageOverride() {
-  const stored = readStoredJson(STORAGE_KEYS.aiStage, null);
-  return Object.values(AI_STAGE_OVERRIDE).includes(stored)
-    ? stored
-    : AI_STAGE_OVERRIDE.AUTO;
-}
+const {
+  BUILTIN_STAGE_DEFS,
+  SCENARIO_SHAPES,
+  STAGE_COMPONENT_TYPES,
+  TYPOGRAPHY_LAYERS,
+  SHAPES,
+  defaultTypographyForShape,
+  normalizeTypographyByShape,
+  normalizeStage,
+  normalizeStageImage,
+  normalizeStageImages,
+  normalizeIcon,
+  normalizeIconByShape,
+  normalizeImagesByShape,
+  stageId,
+  loadStageLibrary,
+  stageById,
+  builtinStageById,
+  renderShapeForStageId,
+  availableScenarioShapes,
+  stageComponentCounts,
+  stageHasComponent,
+  stageVisibleEditorFields,
+  scenarioId,
+  createIcon,
+  normalizeStageTextByShape,
+  normalizeScenarioCanvas,
+  normalizeStageSizeEntry,
+  normalizeStageSizeByShape,
+  scenarioStageSizeOverride,
+  stageMainSize,
+  stageIconTextGap,
+  stageIconLeftPadding,
+  stageTextForShape,
+  stageIconForShape,
+  stageImagesForShape,
+  createScenario,
+  normalizeTriggers,
+  normalizeScenario,
+  defaultScenarioLibrary,
+} = scenarioData;
 
 function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
@@ -1345,191 +705,6 @@ function applyResponseModeUi() {
   if (UI.modeToggle) UI.modeToggle.checked = isAi;
 }
 
-function renderAiStageOverrideUi() {
-  UI.aiStageButtons.forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.aiStage === aiStageOverride);
-  });
-}
-
-function previewAiStageOverride() {
-  if (responseMode !== RESPONSE_MODE.AI) return;
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  if (aiStageOverride === AI_STAGE_OVERRIDE.AUTO) {
-    previewScenario(scenario);
-    return;
-  }
-  const overrideShape = availableScenarioShapes().includes(aiStageOverride) ? aiStageOverride : scenario.shape;
-  const preview = createScenario({
-    ...scenario,
-    shape: overrideShape,
-    content: scenario.content,
-    triggers: scenario.triggers,
-  });
-  previewScenario(preview);
-}
-
-function renderScenarioList() {
-  if (!UI.scenarioList) return;
-  UI.scenarioList.innerHTML = '';
-  scenarioLibrary.forEach((scenario) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'scenario-item' + (scenario.id === selectedScenarioId ? ' active' : '');
-    const stage = stageById(scenario.shape);
-    button.innerHTML = `
-      <span class="scenario-item-name">${scenario.name}</span>
-      <span class="scenario-item-meta">${stage?.name || scenario.shape}</span>
-    `;
-    button.addEventListener('click', () => selectScenario(scenario.id));
-    UI.scenarioList.appendChild(button);
-  });
-  if (UI.scenarioDuplicate) UI.scenarioDuplicate.disabled = !selectedScenario();
-  if (UI.scenarioDelete) UI.scenarioDelete.disabled = scenarioLibrary.length <= 1;
-}
-
-function renderScenarioStageChips() {
-  if (!UI.scenarioShapeRow) return;
-  const scenario = selectedScenario();
-  UI.scenarioShapeRow.innerHTML = '';
-  stageLibrary.forEach((stage) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'shape-chip' + (scenario?.shape === stage.id ? ' active' : '');
-    button.dataset.scenarioShape = stage.id;
-    button.textContent = stage.name;
-    button.title = stage.id;
-    UI.scenarioShapeRow.appendChild(button);
-  });
-}
-
-function renderStageComponentControls(stage) {
-  if (!UI.stageComponentControls) return;
-  UI.stageComponentControls.innerHTML = '';
-  if (!stage) return;
-  const list = document.createElement('div');
-  list.className = 'stage-comp-list';
-  const counts = stageComponentCounts(stage);
-  STAGE_COMPONENT_TYPES.forEach((type) => {
-    const row = document.createElement('div');
-    const isSingleToggle = type === 'icon' || type === 'primary' || type === 'secondary' || type === 'detail';
-    row.className = 'stage-comp-row' + (isSingleToggle ? ' toggle' : '');
-    if (isSingleToggle) {
-      row.innerHTML = `
-        <span class="stage-comp-label">${type}</span>
-        <input class="stage-comp-check" type="checkbox" data-stage-comp-toggle="${type}" ${counts[type] > 0 ? 'checked' : ''}/>
-      `;
-    } else {
-      row.innerHTML = `
-        <span class="stage-comp-label">${type}</span>
-        <button type="button" class="stage-comp-btn" data-stage-comp-action="remove" data-stage-comp-type="${type}">-</button>
-        <span class="stage-comp-count">${counts[type]}</span>
-        <button type="button" class="stage-comp-btn" data-stage-comp-action="add" data-stage-comp-type="${type}">+</button>
-      `;
-      const removeBtn = row.querySelector('[data-stage-comp-action="remove"]');
-      if (removeBtn) removeBtn.disabled = counts[type] <= 0;
-    }
-    list.appendChild(row);
-  });
-  UI.stageComponentControls.appendChild(list);
-}
-
-function renderStageConfigPanel() {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  const builtin = builtinStageById(stage?.id);
-  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-  if (UI.stageNameInput) UI.stageNameInput.value = stage?.name || '';
-  if (UI.stageRadiusInput) UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
-  if (UI.stageWidthInput) UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
-  if (UI.stageHeightInput) UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
-  if (UI.stageGapInput) UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
-  if (UI.stageIconPadInput) UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
-  if (UI.stagePhoneBlurToggle) UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
-  if (UI.stageComponentsPanel) UI.stageComponentsPanel.classList.remove('hidden');
-  if (UI.stageDelete) UI.stageDelete.disabled = !stage || !!stage.preset;
-  if (UI.stageReset) UI.stageReset.disabled = !stage || !builtin;
-  renderStageComponentControls(stage);
-}
-
-function getScenarioImagesForStage(scenario, stage) {
-  const count = Math.max(0, stageComponentCounts(stage).image || 0);
-  const source = stageImagesForShape(scenario, scenario?.shape);
-  const output = [];
-  for (let i = 0; i < count; i += 1) {
-    output.push(source[i] || null);
-  }
-  return output;
-}
-
-function renderScenarioMediaEditor(scenario, stage) {
-  if (!UI.scenarioMediaList) return;
-  UI.scenarioMediaList.innerHTML = '';
-  const images = getScenarioImagesForStage(scenario, stage);
-  if (!images.length) return;
-  images.forEach((image, index) => {
-    const row = document.createElement('div');
-    row.className = 'media-upload-row';
-    const inputId = `scenario-media-upload-${index}`;
-    row.innerHTML = `
-      <label class="sb-mini-btn upload-btn" for="${inputId}">PNG/GIF ${index + 1}<input id="${inputId}" data-media-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>
-      <button class="sb-mini-btn" type="button" data-media-reset-index="${index}">Reset</button>
-    `;
-    UI.scenarioMediaList.appendChild(row);
-    const badge = document.createElement('div');
-    badge.className = 'icon-mode-badge';
-    badge.textContent = image ? 'loaded' : 'empty';
-    UI.scenarioMediaList.appendChild(badge);
-  });
-}
-
-function renderScenarioEditor() {
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  const stageText = stageTextForShape(scenario, scenario.shape);
-  const stageIcon = stageIconForShape(scenario, scenario.shape);
-  UI.scenarioName.value = scenario.name;
-  UI.scenarioTriggers.value = scenario.triggers.join(', ');
-  UI.scenarioIconInput.value = stageIcon.kind === 'emoji' ? stageIcon.value : '';
-  UI.scenarioPrimary.value = stageText.primary;
-  UI.scenarioSecondary.value = stageText.secondary;
-  UI.scenarioDetail.value = stageText.detail;
-  const typography = getScenarioTypography(scenario, scenario.shape);
-  UI.scenarioIconSize.value = typography.icon.size;
-  UI.scenarioIconColor.value = typography.icon.color;
-  UI.scenarioPrimarySize.value = typography.primary.size;
-  UI.scenarioPrimaryColor.value = typography.primary.color;
-  UI.scenarioSecondarySize.value = typography.secondary.size;
-  UI.scenarioSecondaryColor.value = typography.secondary.color;
-  UI.scenarioDetailSize.value = typography.detail.size;
-  UI.scenarioDetailColor.value = typography.detail.color;
-  UI.scenarioIconMode.textContent = stageIcon.kind === 'image' ? 'png' : (stageIcon.kind === 'emoji' ? 'emoji' : 'empty');
-  const iconTextEditable = stageIcon.kind !== 'image';
-  UI.scenarioIconInput.disabled = !iconTextEditable;
-  UI.scenarioIconColor.disabled = !iconTextEditable;
-  UI.scenarioIconInput.placeholder = iconTextEditable ? 'Emoji or glyph' : 'PNG icon active';
-  renderScenarioStageChips();
-  renderStageConfigPanel();
-  const stage = stageById(scenario.shape);
-  const visibleFields = stageVisibleEditorFields(stage);
-  renderScenarioMediaEditor(scenario, stage);
-  const iconLayerRow = document.getElementById('editor-icon-layer');
-  if (iconLayerRow) iconLayerRow.classList.toggle('hidden', !visibleFields.has('primary') && !stageHasComponent(stage, 'icon'));
-  UI.editorPrimary.classList.toggle('hidden', !visibleFields.has('primary'));
-  UI.editorSecondary.classList.toggle('hidden', !visibleFields.has('secondary'));
-  UI.editorDetail.classList.toggle('hidden', !visibleFields.has('detail'));
-  UI.editorMedia.classList.toggle('hidden', !stageHasComponent(stage, 'image'));
-  updateLayerPreviews();
-}
-
-function renderScenarioUi() {
-  renderScenarioList();
-  renderScenarioEditor();
-  renderAiStageOverrideUi();
-  applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
-}
-
 function previewScenario(scenario) {
   if (!scenario) return;
   if (flightUi.active) {
@@ -1584,9 +759,15 @@ function previewScenarioInstant(scenario) {
   DROPS.main.classList.toggle('home-glow', shape === 'circle');
   applyContent(content);
   applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
+  if (morphApi) {
+    morphApi.setSuppressDeformation(suppressDeformation);
+    morphApi.setCurrentShape(shape);
+    morphApi.setLastMainGeo({ ...geo.main });
+  }
   updateActive(shape);
 
   suppressDeformation = prevSuppress;
+  if (morphApi) morphApi.setSuppressDeformation(prevSuppress);
   root.style.removeProperty('--anim-w');
   root.style.removeProperty('--anim-h');
   root.style.removeProperty('--anim-br');
@@ -1600,153 +781,119 @@ function previewScenarioInstant(scenario) {
   root.style.removeProperty('--text-size-anim-ms');
 }
 
-function selectScenario(id) {
-  if (!scenarioLibrary.some(item => item.id === id)) return;
-  selectedScenarioId = id;
-  renderScenarioUi();
-  previewScenario(selectedScenario());
+function syncMorphState() {
+  if (!morphApi) return;
+  currentShape = morphApi.getCurrentShape();
+  lastMainGeo = morphApi.getLastMainGeo();
+  suppressDeformation = morphApi.getSuppressDeformation();
+  splitBridgeTimer = morphApi.getSplitBridgeTimer();
+  listBridgeTimer = morphApi.getListBridgeTimer();
+  thinkingBridgeTimer = morphApi.getThinkingBridgeTimer();
 }
 
-function commitScenarioChange(mutator) {
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  mutator(scenario);
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(scenario);
-}
+morphApi = initMorph({
+  DROPS,
+  C,
+  detailMeasureEl,
+  callbacks: {
+    clamp,
+    selectedScenario,
+    stageById,
+    updateActive,
+    stopSiriOrb,
+    startSiriOrb,
+    showAiIdle,
+    collapseListStack,
+    animateSplitMetaball,
+    normalizeStageSizeEntry,
+    scenarioStageSizeOverride,
+    stageMainSize,
+    stageIconTextGap,
+    stageIconLeftPadding,
+    renderShapeForStageId,
+    getCanvasSettings: () => canvasSettings,
+    stageComponentCounts,
+    stageTextForShape,
+    stageIconForShape,
+    stageImagesForShape,
+    createIcon,
+    getAnimDuration: () => animDur,
+    getEasingFns: () => EASING_FN,
+  },
+});
 
-function commitStageChange(stageId, mutator) {
-  const index = stageLibrary.findIndex((stage) => stage.id === stageId);
-  if (index < 0) return;
-  const stage = { ...stageLibrary[index], components: [...stageLibrary[index].components] };
-  mutator(stage);
-  stageLibrary[index] = normalizeStage(stage, stageLibrary[index]);
-  persistStageLibrary();
-  scenarioLibrary = scenarioLibrary.map((scenario) => createScenario(scenario));
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(selectedScenario());
-}
+const sidebar = initSidebar({
+  UI,
+  RESPONSE_MODE,
+  AI_STAGE_OVERRIDE,
+  clamp,
+  selectedScenario,
+  stageById,
+  availableScenarioShapes,
+  persistScenarios,
+  persistStageLibrary,
+  persistCanvasSettings,
+  persistResponseMode,
+  persistAiStageOverride,
+  previewScenario,
+  applyCanvasSettings,
+  applyStagePhoneBlur,
+  applyResponseModeUi,
+  hideRich,
+  hideIntentHeader,
+  getScenarioTypography,
+  createScenario,
+  stageComponentCounts,
+  STAGE_COMPONENT_TYPES,
+  builtinStageById,
+  scenarioStageSizeOverride,
+  stageVisibleEditorFields,
+  stageHasComponent,
+  stageTextForShape,
+  stageIconForShape,
+  stageImagesForShape,
+  normalizeTriggers,
+  normalizeIconByShape,
+  createIcon,
+  normalizeStageTextByShape,
+  normalizeTypographyByShape,
+  normalizeStageSizeByShape,
+  normalizeImagesByShape,
+  normalizeStage,
+  stageId,
+  getScenarioLibrary: () => scenarioLibrary,
+  setScenarioLibrary: (value) => { scenarioLibrary = value; },
+  getStageLibrary: () => stageLibrary,
+  setStageLibrary: (value) => { stageLibrary = value; },
+  getSelectedScenarioId: () => selectedScenarioId,
+  setSelectedScenarioId: (value) => { selectedScenarioId = value; },
+  getResponseMode: () => responseMode,
+  getAiStageOverride: () => aiStageOverride,
+});
 
-function addStage() {
-  const scenario = selectedScenario();
-  const baseStage = stageById(scenario?.shape || 'card');
-  const stage = normalizeStage({
-    id: stageId(),
-    name: 'New Stage',
-    preset: false,
-    renderShape: baseStage?.renderShape || 'card',
-    cornerRadius: Number.isFinite(baseStage?.cornerRadius) ? baseStage.cornerRadius : 30,
-    widthOverride: null,
-    heightOverride: null,
-    iconTextGap: Number.isFinite(baseStage?.iconTextGap) ? baseStage.iconTextGap : null,
-    iconLeftPadding: Number.isFinite(baseStage?.iconLeftPadding) ? baseStage.iconLeftPadding : null,
-    components: (baseStage?.components?.length ? [...baseStage.components] : ['icon', 'primary', 'secondary']),
-  }, baseStage);
-  stageLibrary.push(stage);
-  persistStageLibrary();
-  commitScenarioChange((active) => {
-    active.shape = stage.id;
-    active.content.typographyByShape = normalizeTypographyByShape(
-      active.content.typographyByShape,
-      stage.id
-    );
-    active.content.sizeByShape = normalizeStageSizeByShape(
-      active.content.sizeByShape,
-      stage.id,
-      active.content
-    );
-  });
-}
-
-function deleteCurrentStage() {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage || stage.preset) return;
-  const fallbackId = stageById('pill')?.id || stageLibrary.find((item) => item.id !== stage.id)?.id;
-  if (!fallbackId) return;
-  stageLibrary = stageLibrary.filter((item) => item.id !== stage.id);
-  scenarioLibrary = scenarioLibrary.map((item) => {
-    if (item.shape !== stage.id) return item;
-    return createScenario({
-      ...item,
-      shape: fallbackId,
-      content: item.content,
-      triggers: item.triggers,
-    });
-  });
-  if (scenario?.shape === stage.id) {
-    selectedScenarioId = scenario.id;
-  }
-  persistStageLibrary();
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(selectedScenario());
-}
-
-function resetCurrentStageToDefault() {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  const builtin = builtinStageById(stage.id);
-  if (!builtin) return;
-  const index = stageLibrary.findIndex((item) => item.id === stage.id);
-  if (index < 0) return;
-  stageLibrary[index] = normalizeStage(builtin, builtin);
-  persistStageLibrary();
-  scenarioLibrary = scenarioLibrary.map((item) => createScenario(item));
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(selectedScenario());
-}
-
-function addScenario(shape = 'pill') {
-  const scenario = createScenario({
-    name: shape === 'card' ? 'New Card' : (shape === 'dot' ? 'New Dot' : 'New Scenario'),
-    shape,
-    content: {
-      icon: createIcon('emoji', shape === 'dot' ? '•' : '◉'),
-      primary: '',
-      secondary: '',
-      detail: '',
-    },
-  });
-  scenarioLibrary.push(scenario);
-  selectedScenarioId = scenario.id;
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(scenario);
-}
-
-function duplicateScenario() {
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  const copy = createScenario({
-    name: `${scenario.name} Copy`,
-    shape: scenario.shape,
-    content: typeof structuredClone === 'function'
-      ? structuredClone(scenario.content)
-      : JSON.parse(JSON.stringify(scenario.content)),
-    triggers: [...scenario.triggers],
-  });
-  scenarioLibrary.push(copy);
-  selectedScenarioId = copy.id;
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(copy);
-}
-
-function deleteScenario() {
-  if (scenarioLibrary.length <= 1) return;
-  const idx = scenarioLibrary.findIndex(item => item.id === selectedScenarioId);
-  if (idx < 0) return;
-  scenarioLibrary.splice(idx, 1);
-  selectedScenarioId = scenarioLibrary[Math.max(0, idx - 1)]?.id || scenarioLibrary[0]?.id || '';
-  persistScenarios();
-  renderScenarioUi();
-  previewScenario(selectedScenario());
-}
+const {
+  renderAiStageOverrideUi,
+  previewAiStageOverride,
+  renderScenarioUi,
+  renderScenarioList,
+  renderScenarioEditor,
+  updateLayerPreviews,
+  initSidebarTabs,
+  initLayerRowToggles,
+  initSidebarCollapsibleSections,
+  bindTypographyInputs,
+  isSupportedAssetFile,
+  selectScenario,
+  commitScenarioChange,
+  commitStageChange,
+  addStage,
+  deleteCurrentStage,
+  resetCurrentStageToDefault,
+  addScenario,
+  duplicateScenario,
+  deleteScenario,
+  getScenarioImagesForStage,
+} = sidebar;
 
 function scenarioMatchesText(scenario, text) {
   const haystack = String(text || '').toLowerCase();
@@ -2079,6 +1226,7 @@ function runMainDeformation(fromShape, toShape, fromMain, toMain) {
     mainDeformAnim.cancel();
     mainDeformAnim = null;
   }
+  if (morphApi) morphApi.cancelMainDeformation();
   main.style.scale = '1 1';
 
   const intensity = deformationIntensity(fromShape, toShape, fromMain, toMain);
@@ -2584,96 +1732,13 @@ function hideRich() {
 }
 
 function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null, stageId = null) {
-  clearUiFadeTimers();
-  const fromShape = currentShape;
-  const prevStageMedia = Array.isArray(stageMediaState) ? stageMediaState.map((item) => ({ ...item })) : [];
-  const prevCardTypography = fromShape === 'card'
-    ? normalizeTypography(contentTypographyState, 'card')
-    : null;
-  const prevGeo = getCurrentMainGeometry();
-  const nextGeo = resolveGeometryForContent(shape, contentData, customGeo, stageId);
-  setUiMotionProfile(fromShape, shape, prevGeo, nextGeo);
-  const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
-  const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
-  const autoInDelay = fromShape === 'dot' && shape === 'pill'
-    ? 180
-    : (fromShape === 'idle' && shape === 'dot')
-      ? 0
-    : (fromShape === 'dot' && (shape === 'card' || shape === 'card-s'))
-      ? 200
-      : (nextArea > prevArea * 1.08 ? 300 : 0);
-  const autoOutDelay = (
-    (fromShape === 'pill' && shape === 'dot') ||
-    (fromShape === 'card' && shape === 'dot') ||
-    (fromShape === 'card-s' && shape === 'dot') ||
-    (fromShape === 'card' && shape === 'pill') ||
-    (fromShape === 'card-s' && shape === 'pill') ||
-    (fromShape === 'dot' && shape === 'idle')
-  )
-    ? 0
-    : (nextArea < prevArea * 0.92 ? 120 : 0);
-  const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
-  const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
-
-  currentShape = shape;
-  const geo = nextGeo;
-  const mw = geo.main.w, mh = geo.main.h;
-  applyGeometry(shape, geo, stageId);
-  const goingHome = shape === 'circle' && fromShape !== 'circle';
-  if (goingHome) {
-    DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, currentTransitionAnimMs - 500)}ms`);
-    DROPS.main.classList.remove('home-glow');
-    void DROPS.main.offsetWidth;
-    DROPS.main.classList.add('home-glow');
-  } else {
-    DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-    DROPS.main.classList.toggle('home-glow', shape === 'circle');
-  }
-  if (contentData) applyContent(contentData);
-  applyContentPositions(shape, mw, mh, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
-  if (!skipActiveUpdate) updateActive(shape);
+  morphApi.morphCore(shape, contentData, customGeo, skipActiveUpdate, uiFadeDelayMs, stageId);
+  syncMorphState();
 }
 
 function morphTo(shape, contentData, customGeo, stageId = null) {
-  if (splitBridgeTimer) {
-    clearTimeout(splitBridgeTimer);
-    splitBridgeTimer = null;
-  }
-  if (listBridgeTimer) {
-    clearTimeout(listBridgeTimer);
-    listBridgeTimer = null;
-  }
-  if (thinkingBridgeTimer) {
-    clearTimeout(thinkingBridgeTimer);
-    thinkingBridgeTimer = null;
-  }
-
-  const inAiIdleState = currentShape === 'idle' && document.getElementById('drop-main')?.classList.contains('ai-mode');
-  if ((currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {
-    if (shape === 'circle') {
-      bridgeThinkingToHome(contentData, customGeo, stageId);
-      return;
-    }
-    bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId);
-    return;
-  }
-
-  if (currentShape === 'split' && shape !== 'split') {
-    bridgeFromSplitToTarget(shape, contentData, customGeo, stageId);
-    return;
-  }
-
-  if (currentShape === 'list' && shape !== 'list') {
-    bridgeFromListToTarget(shape, contentData, customGeo, stageId);
-    return;
-  }
-
-  if (shape === 'split' && currentShape !== 'split') {
-    bridgeToSplitViaDot();
-    return;
-  }
-
-  morphCore(shape, contentData, customGeo, false, null, stageId);
+  morphApi.morphTo(shape, contentData, customGeo, stageId);
+  syncMorphState();
 }
 
 function setIntentHeader(label, step) {
@@ -3349,6 +2414,11 @@ function animateSplitMetaball() {
 
       currentShape = 'split';
       lastMainGeo = { ...SHAPES.split.main };
+      if (morphApi) {
+        morphApi.setCurrentShape('split');
+        morphApi.setLastMainGeo({ ...SHAPES.split.main });
+        morphApi.setSuppressDeformation(false);
+      }
       updateActive('split');
       main.classList.remove('metaball-prep');
       main.style.filter = '';
@@ -3425,6 +2495,7 @@ function manualShape(shape) {
 }
 
 function updateActive(shape) {
+  syncMorphState();
   document.querySelectorAll('.sb-shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
 }
 
@@ -3525,124 +2596,6 @@ document.addEventListener('keydown', e => {
 });
 
 document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
-
-function bindTypographyInputs(layer, sizeInput, colorInput) {
-  const commitSize = (rawValue) => {
-    const parsed = parseInt(String(rawValue || '').trim(), 10);
-    if (!Number.isFinite(parsed)) return;
-    commitScenarioChange((scenario) => {
-      scenario.content.typographyByShape = normalizeTypographyByShape(
-        scenario.content.typographyByShape,
-        scenario.shape
-      );
-      scenario.content.typographyByShape[scenario.shape][layer].size = clamp(
-        parsed,
-        12,
-        96
-      );
-    });
-  };
-  sizeInput.addEventListener('change', (e) => commitSize(e.target.value));
-  sizeInput.addEventListener('blur', (e) => {
-    const value = String(e.target.value || '').trim();
-    if (!value) {
-      const scenario = selectedScenario();
-      if (!scenario) return;
-      e.target.value = String(getScenarioTypography(scenario, scenario.shape)[layer].size);
-      return;
-    }
-    commitSize(value);
-  });
-  colorInput.addEventListener('input', (e) => {
-    commitScenarioChange((scenario) => {
-      scenario.content.typographyByShape = normalizeTypographyByShape(
-        scenario.content.typographyByShape,
-        scenario.shape
-      );
-      scenario.content.typographyByShape[scenario.shape][layer].color = e.target.value;
-    });
-  });
-}
-
-// ── Sidebar tab switching ──
-function initSidebarTabs() {
-  const tabBar = document.getElementById('sb-tab-bar');
-  if (!tabBar) return;
-  tabBar.addEventListener('click', (e) => {
-    const tab = e.target.closest('.sb-tab');
-    if (!tab) return;
-    const targetPanel = tab.dataset.tab;
-    // Update tab active state
-    tabBar.querySelectorAll('.sb-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === targetPanel));
-    // Show / hide panels
-    document.querySelectorAll('#sidebar .sb-tab-panel[data-panel]').forEach(panel => {
-      panel.classList.toggle('sb-tab-panel-hidden', panel.dataset.panel !== targetPanel);
-    });
-  });
-}
-
-// ── Layer row collapsible toggle ──
-function initLayerRowToggles() {
-  const sidebar = document.getElementById('sidebar');
-  if (!sidebar) return;
-  sidebar.addEventListener('click', (e) => {
-    const header = e.target.closest('.layer-row-header');
-    if (!header) return;
-    const row = header.closest('.layer-row');
-    if (!row) return;
-    row.classList.toggle('expanded');
-  });
-}
-
-// ── Layer row preview updates ──
-function updateLayerPreviews() {
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  const typography = getScenarioTypography(scenario, scenario.shape);
-  const stageIcon = stageIconForShape(scenario, scenario.shape);
-  const stageText = stageTextForShape(scenario, scenario.shape);
-
-  function setPreview(textId, sizeId, colorId, text, size, color) {
-    const textEl = document.getElementById(textId);
-    const sizeEl = document.getElementById(sizeId);
-    const colorEl = document.getElementById(colorId);
-    if (textEl) textEl.textContent = text || '—';
-    if (sizeEl) sizeEl.textContent = size ? `${size}px` : '';
-    if (colorEl) colorEl.style.background = color || '#fff';
-  }
-
-  const iconText = stageIcon.kind === 'emoji' ? stageIcon.value : (stageIcon.kind === 'image' ? 'PNG' : '—');
-  setPreview('layer-preview-icon-text', 'layer-preview-icon-size', 'layer-preview-icon-color',
-    iconText, typography.icon.size, typography.icon.color);
-  setPreview('layer-preview-primary-text', 'layer-preview-primary-size', 'layer-preview-primary-color',
-    stageText.primary, typography.primary.size, typography.primary.color);
-  setPreview('layer-preview-secondary-text', 'layer-preview-secondary-size', 'layer-preview-secondary-color',
-    stageText.secondary, typography.secondary.size, typography.secondary.color);
-  setPreview('layer-preview-detail-text', 'layer-preview-detail-size', 'layer-preview-detail-color',
-    stageText.detail, typography.detail.size, typography.detail.color);
-}
-
-function initSidebarCollapsibleSections() {
-  const sidebars = [document.getElementById('left-sidebar'), document.getElementById('sidebar')].filter(Boolean);
-  if (!sidebars.length) return;
-  sidebars.forEach((sidebar) => {
-    sidebar.addEventListener('click', (e) => {
-      const toggle = e.target.closest('.sb-section-toggle');
-      if (!toggle) return;
-      const section = toggle.closest('.sb-section');
-      if (!section || section.dataset.collapsible !== '1') return;
-      section.classList.toggle('collapsed');
-    });
-  });
-}
-
-function isSupportedAssetFile(file) {
-  if (!file) return false;
-  const type = String(file.type || '').toLowerCase();
-  if (type === 'image/png' || type === 'image/gif') return true;
-  const name = String(file.name || '').toLowerCase();
-  return name.endsWith('.png') || name.endsWith('.gif');
-}
 
 if (UI.modeToggle && !PAGE_MODE_OVERRIDE) {
   UI.modeToggle.addEventListener('change', () => {
