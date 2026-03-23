@@ -216,30 +216,61 @@ export function createMorphLayout(ctx) {
       const nextRadius = stageCornerRadiusPx(stageId, geo.main.br);
       return nextRadius === geo.main.br ? geo : { ...geo, main:{ ...geo.main, br: nextRadius } };
     };
-    if (shape === 'card' && !hasHeightOverride) {
-      const typography = contentData?.typography ? normalizeTypography(contentData.typography, 'card') : normalizeTypography(state.contentTypographyState, 'card');
-      const detailText = contentData?.detail ?? C.det.textContent;
-      const mediaValue = contentData?.images !== undefined ? contentData.images : (contentData?.image !== undefined ? contentData.image : state.stageMediaState);
-      const metrics = getCardLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue, contentData?.primary ?? C.prim.textContent, contentData?.secondary ?? C.sec.textContent, contentData?.icon !== undefined ? contentData.icon : state.thumbContentState);
-      return withStageRadius({ ...baseGeo, main:{ ...baseGeo.main, h: Math.max(baseGeo.main.h, metrics.neededHeight), ty: -Math.max(baseGeo.main.h, metrics.neededHeight) / 2 } });
+    if ((shape !== 'card' && shape !== 'card-s' && shape !== 'image') || customGeo) {
+      return withStageRadius(baseGeo);
     }
-    if (shape === 'card-s' && !hasHeightOverride) {
-      const typography = contentData?.typography ? normalizeTypography(contentData.typography, 'card-s') : normalizeTypography(state.contentTypographyState, 'card-s');
-      const detailText = contentData?.detail ?? C.det.textContent;
-      const mediaValue = contentData?.images !== undefined ? contentData.images : (contentData?.image !== undefined ? contentData.image : state.stageMediaState);
-      const metrics = getCardSLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue, contentData?.primary ?? C.prim.textContent, contentData?.secondary ?? C.sec.textContent, contentData?.icon !== undefined ? contentData.icon : state.thumbContentState);
-      return withStageRadius({ ...baseGeo, main:{ ...baseGeo.main, h: Math.max(baseGeo.main.h, metrics.neededHeight), ty: -Math.max(baseGeo.main.h, metrics.neededHeight) / 2 } });
+
+    const detailText = contentData?.detail !== undefined ? contentData.detail : C.det.textContent;
+    const typography = normalizeTypography(contentData?.typography || state.contentTypographyState, shape);
+    const mediaValue = contentData?.images !== undefined
+      ? contentData.images
+      : (contentData?.image !== undefined ? [contentData.image] : state.stageMediaState);
+    const primaryText = contentData?.primary !== undefined ? contentData.primary : C.prim.textContent;
+    const secondaryText = contentData?.secondary !== undefined ? contentData.secondary : C.sec.textContent;
+    const iconValue = contentData?.icon !== undefined ? contentData.icon : state.thumbContentState;
+
+    if (shape === 'image') {
+      if (hasHeightOverride) return withStageRadius(baseGeo);
+      const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image'));
+      if (!mediaHeight) return withStageRadius(baseGeo);
+      const neededHeight = mediaHeight + CARD_P * 2;
+      if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
+      return withStageRadius({
+        ...baseGeo,
+        main: {
+          ...baseGeo.main,
+          h: neededHeight,
+          ty: -(neededHeight / 2),
+        },
+      });
     }
-    if (shape === 'image' && !hasHeightOverride) {
-      const mediaValue = contentData?.images !== undefined ? contentData.images : (contentData?.image !== undefined ? contentData.image : state.stageMediaState);
-      const mediaHeights = measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image');
-      const totalMediaHeight = mediaStackHeight(mediaHeights);
-      if (totalMediaHeight > 0) {
-        const neededHeight = totalMediaHeight + CARD_P * 2;
-        return withStageRadius({ ...baseGeo, main:{ ...baseGeo.main, h: Math.max(baseGeo.main.h, neededHeight), ty: -Math.max(baseGeo.main.h, neededHeight) / 2 } });
-      }
-    }
-    return withStageRadius(baseGeo);
+
+    const layoutMetrics = shape === 'card-s'
+      ? getCardSLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue, primaryText, secondaryText, iconValue)
+      : getCardLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue, primaryText, secondaryText, iconValue);
+    const hasDetailText = String(detailText || '').trim().length > 0;
+    const hasMedia = layoutMetrics.mediaHeight > 0;
+    const baselineLayout = shape === 'card-s'
+      ? getCardSLayoutMetrics(baseGeo.main.w, defaultTypographyForShape(shape), detailText, mediaValue, primaryText, secondaryText, iconValue)
+      : getCardLayoutMetrics(baseGeo.main.w, defaultTypographyForShape(shape), detailText, mediaValue, primaryText, secondaryText, iconValue);
+    const neededHeight = (shape === 'card-s')
+      ? Math.ceil(layoutMetrics.neededHeight)
+      : (!hasDetailText && !hasMedia)
+      ? Math.ceil(layoutMetrics.neededHeight)
+      : Math.max(
+        Math.round(baseGeo.main.h + (layoutMetrics.neededHeight - baselineLayout.neededHeight)),
+        Math.ceil(layoutMetrics.neededHeight)
+      );
+    if (hasHeightOverride) return withStageRadius(baseGeo);
+    if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
+    return withStageRadius({
+      ...baseGeo,
+      main: {
+        ...baseGeo.main,
+        h: neededHeight,
+        ty: -(neededHeight / 2),
+      },
+    });
   }
 
   function scenarioToRenderContent(scenario) {

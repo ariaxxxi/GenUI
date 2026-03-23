@@ -222,7 +222,8 @@ function previewScenarioInstant(scenario) {
   morphApi.setCurrentShape(shape);
   morphApi.applyGeometry(shape, geo, scenario.shape);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'circle');
+  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
+  DROPS.main.classList.toggle('magic-glow', shape === 'magic');
   morphApi.applyContent(content);
   morphApi.applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
   morphApi.setLastMainGeo({ ...geo.main });

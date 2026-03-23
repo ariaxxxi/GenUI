@@ -1,3 +1,5 @@
+import { speakAiText, stopAiSpeech } from './ai/tts-player.js';
+
 export function addSimLog(text, type = 'system') {
   const log = document.getElementById('sim-log');
   if (!log || !text) return;
@@ -17,9 +19,11 @@ export function setSimVoice(text) {
   if (text) {
     txt.textContent = `"${text}"`;
     out.classList.add('visible');
+    void speakAiText(text);
   } else {
     out.classList.remove('visible');
     txt.textContent = '';
+    stopAiSpeech();
   }
 }
 

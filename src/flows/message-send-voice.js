@@ -1,11 +1,26 @@
 export function createMessageSendVoice({ contacts }) {
+  function normalizeMessageBody(rawBody) {
+    const raw = String(rawBody || "").trim();
+    if (!raw) return "";
+    const compact = raw.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+    if (!compact) return "";
+
+    const placeholderPatterns = [
+      /^(?:a|an|the)?\s*(?:msg|message|text)s?$/,
+      /^(?:some|any)\s+(?:msg|message|text)s?$/,
+      /^(?:a|an|the)?\s*(?:new|quick|short)?\s*(?:msg|message|text)s?$/,
+    ];
+    if (placeholderPatterns.some((pattern) => pattern.test(compact))) return "";
+    return raw;
+  }
+
   async function parseIntent(text) {
     const lower = String(text || "").toLowerCase().trim();
     if (/\b(send|message|text|msg)\b/.test(lower)) {
       const toMatch = lower.match(/\bto\s+(.+)/i);
       const recipient = toMatch ? toMatch[1].trim() : "";
       const bodyMatch = lower.match(/\b(?:send|message|text|msg)\s+(.+?)\s+to\s+/i);
-      const messageBody = bodyMatch ? bodyMatch[1].trim() : "";
+      const messageBody = bodyMatch ? normalizeMessageBody(bodyMatch[1]) : "";
       return { intent: "send_message", recipient, messageBody, confidence: 1 };
     }
     return { intent: "unknown", recipient: "", messageBody: "", confidence: 0 };

@@ -19,7 +19,6 @@ export function createMessageSendRender({
   const TOP = 10;
   const BOTTOM = 10;
   const CONTROLS_LIFT = 78;
-  const CONTROLS_GAP = 14;
   const MIN_H = 100;
   const MAX_H = 400;
   let lastContentHeight = 180;
@@ -28,6 +27,7 @@ export function createMessageSendRender({
   let settleTimer = null;
   let renderToken = 0;
   let prevState = GS.IDLE;
+  let manualComposeEntry = false;
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
@@ -47,14 +47,7 @@ export function createMessageSendRender({
     const flow = getFlow();
     const base = SHAPES[shape] || SHAPES.card;
     const shellHeight = clampFn(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
-    const hasExternalControls = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && flow.showCheck);
-    let controlsLift = 0;
-    if (hasExternalControls) {
-      controlsLift = CONTROLS_LIFT;
-      const controlsEl = C.glassControlsLayer?.querySelector(".g-glass-controls");
-      const controlsH = controlsEl ? Math.ceil(Math.max(controlsEl.getBoundingClientRect().height || 0, controlsEl.offsetHeight || 0)) : 0;
-      if (controlsH > 0) controlsLift = Math.max(controlsLift, controlsH + CONTROLS_GAP + 18);
-    }
+    const controlsLift = (shape === "card" || (shape === "card-form" && flow.showCheck)) ? CONTROLS_LIFT : 0;
     return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
   }
 
@@ -135,7 +128,16 @@ export function createMessageSendRender({
     const shape = glassStateShape(flow.state);
     document.body.classList.toggle("glass-flow-active", flow.active);
     C.rich.innerHTML = buildContent();
+    const enteringCompose = flow.state === GS.COMPOSE && prevState !== GS.COMPOSE && !manualComposeEntry;
     prevState = flow.state;
+    if (enteringCompose) {
+      const field = C.rich.querySelector(".g-listen-field");
+      if (field) {
+        field.classList.remove("compose-input");
+        void field.offsetHeight;
+        requestAnimationFrame(() => field.classList.add("compose-input"));
+      }
+    }
     C.rich.classList.toggle("visible", flow.active);
     C.rich.classList.toggle("glass-active", flow.active);
     C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT);
@@ -189,6 +191,8 @@ export function createMessageSendRender({
     C.sec.style.opacity = flow.active ? "0" : "";
     C.det.style.opacity = flow.active ? "0" : "";
     C.div.style.opacity = flow.active ? "0" : "";
+    const glow = document.getElementById("home-glow-layer");
+    if (glow) glow.style.opacity = "";
     updateOrbLabel();
 
     if (flow.active && flow.state === GS.DISAMBIGUATE) {
@@ -208,7 +212,7 @@ export function createMessageSendRender({
     } else if (flow.state === GS.DISAMBIGUATE) {
       setSimInputState({ label: "Voice Command", placeholder: 'Say a name, e.g. "Tanaka"', hint: "", dictating: false });
     } else if (flow.state === GS.COMPOSE) {
-      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: flow.showCheck ? 'Keep talking to edit · Space = confirm · say "send"' : "Type → glass · 2s pause = ✅ · Enter = done", dictating: true });
+      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: 'Keep talking to edit · Space = confirm · say "send"', dictating: true });
     } else if (flow.state === GS.CONFIRM) {
       setSimInputState({ label: "Voice Command", placeholder: '"send", "edit", or "cancel"', hint: "", dictating: false });
     }
@@ -222,6 +226,12 @@ export function createMessageSendRender({
     contentHeightPx,
     buildContent,
     render,
+    setManualComposeEntry(flag) {
+      manualComposeEntry = !!flag;
+    },
+    markStateCommitted() {
+      prevState = getFlow().state;
+    },
     updateSelectionUiOnly() {
       const flow = getFlow();
       if (!flow.active) return false;

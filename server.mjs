@@ -141,6 +141,41 @@ async function callGemini({ apiKey, model, maxTokens, systemPrompt, userText }) 
   return data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('') || '{}';
 }
 
+async function callGeminiTTS({ apiKey, model, text, voiceName }) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text }] }],
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName,
+            },
+          },
+        },
+      },
+      model,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = data?.error?.message || `Gemini TTS ${res.status}`;
+    throw new Error(message);
+  }
+  const part = data?.candidates?.[0]?.content?.parts?.find((p) => p?.inlineData?.data);
+  const audioBase64 = part?.inlineData?.data || '';
+  const mimeType = part?.inlineData?.mimeType || 'audio/pcm;rate=24000';
+  if (!audioBase64) throw new Error('Gemini TTS returned no audio');
+  return { audioBase64, mimeType };
+}
+
 async function handleAiRoute(req, res) {
   let body;
   try {
@@ -271,6 +306,48 @@ async function handleGeminiRoute(req, res) {
   json(res, 502, { error: 'Upstream retries exhausted', code: 'GEMINI_RETRY_FAILED' });
 }
 
+async function handleTtsRoute(req, res) {
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (err) {
+    json(res, 400, { error: String(err.message || err), code: 'INVALID_REQUEST' });
+    return;
+  }
+
+  const apiKey = String(process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '').trim();
+  if (!apiKey) {
+    json(res, 500, { error: 'Missing GEMINI_API_KEY on server', code: 'MISSING_CONFIG' });
+    return;
+  }
+
+  const text = String(body.text || '').trim();
+  if (!text) {
+    json(res, 400, { error: 'Missing text', code: 'INVALID_REQUEST' });
+    return;
+  }
+  if (text.length > 1200) {
+    json(res, 400, { error: 'Text too long for TTS request', code: 'INVALID_REQUEST' });
+    return;
+  }
+
+  try {
+    const model = String(body.model || process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts');
+    const voiceName = String(body.voiceName || process.env.GEMINI_TTS_VOICE || 'Kore');
+    const { audioBase64, mimeType } = await callGeminiTTS({ apiKey, model, text, voiceName });
+    json(res, 200, {
+      audioBase64,
+      mimeType,
+      sampleRate: 24000,
+      provider: 'gemini-tts',
+      model,
+      voiceName,
+    });
+  } catch (err) {
+    json(res, 502, { error: String(err.message || err), code: 'TTS_ERROR' });
+  }
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -317,6 +394,10 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === 'POST' && req.url.startsWith('/api/gemini')) {
     await handleGeminiRoute(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url.startsWith('/api/tts')) {
+    await handleTtsRoute(req, res);
     return;
   }
 

@@ -399,3 +399,185 @@ AI message flow polish: stage-scoped voice viz + confirm-shell lift
    - DISAMBIGUATE: drop-main has voice viz.
    - COMPOSE: only compose field has voice viz.
    - CONFIRM: shell sits above buttons with no overlap.
+
+---
+
+## Task title
+AI message flow follow-up: restore listening orb viz + fix confirm overlap via flow-active lifecycle
+
+## Completion status
+- Completed
+
+## Summary
+- Restored command-mode listening/orb visualization responsiveness by re-enabling home-glow shadow interpolation in command mode.
+- Kept stage-scoped shell behavior so only DISAMBIGUATE applies shell (`drop-main`) voice shadow; compose/confirm keep shell shadow cleared.
+- Fixed confirm overlap root cause by restoring message-flow lifecycle control of stage sizing classes:
+  - add `flow-active` to `#stage`/`#stage-wrap` on flow start.
+  - remove `flow-active` on flow reset.
+- This re-applies the dedicated flow stage height (`#stage.flow-active { height: 420px; }`) so controls are no longer forced to clamp into the shell area.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Manual visual verification still needed for exact overlap clearance and live mic-reactivity in your browser/hardware environment.
+
+## Recommended next step
+1. Re-test `send msg to hiro` flow in browser:
+   - listening/orb reacts to mic level.
+   - compose: only field pulses.
+   - confirm: shell sits above the 3 buttons with no overlap.
+
+---
+
+## Task title
+AI parity pass: disambiguate→compose choreography + chip-select motion + listening/thinking glow class parity
+
+## Completion status
+- Completed
+
+## Summary
+- Restored `main`-style disambiguate→compose choreography in `src/flows/message-send.js`:
+  - Added `animateToCompose(...)` sequence with `main` timing/cascade points:
+    - `t=0`: intent header exit + contact row staggered exits, COMPOSE state setup, immediate morph to measured compose height.
+    - `t=220ms`: rebuild compose DOM with hidden targets.
+    - `t=280ms`: header fade-up (`header-enter`).
+    - `t=380ms`: chip stagger-in (`chip-enter`, 70ms stagger).
+    - `t=460ms`: field fade-in (`field-enter`).
+    - `t=560ms`: compose blue-shadow activation (`compose-input` re-apply).
+- Restored `main`-style chip-select choreography in `src/flows/message-send.js` via `selectChipWithAnimation(...)`:
+  - `t=0`: staggered chip exits + chip-wrap collapse + empty-text fade + immediate container re-morph.
+  - `t=300ms`: swap in selected chip message with text magic + field pulse.
+  - `t=560ms`: show checkmark, force controls overlay rebuild, re-morph with controls lift.
+- Restored compose-entry render semantics in `src/flows/message-send-render.js`:
+  - Added `manualComposeEntry` suppression hook (`setManualComposeEntry`) to match `main` behavior during choreographed compose transition.
+  - Kept normal auto compose-input re-trigger for non-manual compose entries.
+- Added `home-glow-layer` opacity reset in message flow render parity path.
+- Fixed startup home/thinking glow class parity regression in `src/tool/index-app.js`:
+  - Changed `home-glow` toggle from `shape === 'circle'` to `shape === 'listening' || shape === 'magic'`.
+  - Added `magic-glow` toggle for `shape === 'magic'`.
+  - This aligns with `main` class behavior and restores vivid listening/thinking blue-layer glow visibility.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/tool/index-app.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+- Source parity checks against `main:ai.html` for:
+  - `glassAnimateToCompose` timing path
+  - `glassChipSelect` timing path
+  - compose-entry suppression behavior
+  - home/thinking glow class toggles
+
+## Remaining issues / caveats
+- Exact frame-by-frame browser pixel diff against served `main:ai.html` baseline not run in this pass.
+- Final perceptual parity still requires manual A/B run on your machine for the specific transition steps.
+
+## Recommended next step
+1. A/B test only these flows side-by-side with `main:ai.html` baseline:
+   - DISAMBIGUATE -> COMPOSE transition
+   - chip select in COMPOSE
+   - listening/thinking glow intensity response
+2. If any residual drift remains, I will patch the last mismatched selectors/timers to exact baseline values.
+
+---
+
+## Task title
+Compose step UX tweak: single confirm button always visible
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the 2s no-input gate for compose confirmation.
+- In compose step, the single check/confirm button now remains visible immediately and continuously.
+- Updated compose input hint text to remove the old "2s pause" behavior reference.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- None identified in this scoped change.
+
+## Recommended next step
+1. Manual verify in AI page compose step:
+   - check button is present immediately on entry
+   - check button does not wait for pause
+   - check button remains visible while typing/clearing text
+
+---
+
+## Task title
+AI flow parity follow-up: compose->confirm transition, thinking glow reset, line-icon confirm actions
+
+## Completion status
+- Completed
+
+## Summary
+- Restored `main` compose->non-compose transition handoff in `transitionTo(...)`:
+  - when leaving COMPOSE and field has `.compose-input`, remove class and delay state switch/render by `380ms` before transitioning.
+  - this restores missing header/field handoff motion when entering CONFIRM.
+- Updated confirm action buttons to `main` line-SVG icons (send/edit/cancel), replacing emoji glyphs.
+- Added thinking-entry glow normalization:
+  - on THINKING transition, clear inline `#home-glow-layer`/`#drop-main` box-shadow overrides so base vivid layered glow style is restored.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Final visual sign-off still needs manual browser verification for perceived glow intensity.
+
+## Recommended next step
+1. Re-test:
+   - COMPOSE -> CONFIRM: header + field handoff should animate smoothly.
+   - THINKING: vivid multi-layer blue glow should no longer appear dim.
+   - CONFIRM: buttons should render as line SVG icons.
+
+---
+
+## Task title
+AI spoken responses via Gemini TTS
+
+## Completion status
+- Completed
+
+## Summary
+- Added server-side Gemini TTS endpoint `POST /api/tts` that uses `GEMINI_API_KEY` from `.env` and returns generated audio payload.
+- Added client TTS player module to:
+  - request Gemini TTS audio,
+  - decode PCM audio and play it in browser,
+  - dedupe repeated speech,
+  - stop current speech on clear,
+  - fallback to browser `speechSynthesis` if Gemini TTS fails.
+- Wired spoken output to existing `setSimVoice(...)` path so AI responses are automatically read aloud.
+- Updated `.env.example` with Gemini TTS config keys.
+
+## Files changed
+- `server.mjs`
+- `src/ai/tts-player.js` (new)
+- `src/sim-panel.js`
+- `.env.example`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Gemini TTS model availability depends on API project access/preview entitlement.
+- If upstream TTS fails, browser voice fallback is used.
+
+## Recommended next step
+1. Start server and run AI flow; confirm spoken output for AI responses.
+2. If desired, tune voice via `GEMINI_TTS_VOICE` and model via `GEMINI_TTS_MODEL` in `.env`.

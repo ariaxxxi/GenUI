@@ -2,6 +2,28 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
   let dictationStart = 0;
   let vizLevel = 0;
+  let ttsSpeaking = false;
+  let pausedModeForTts = '';
+  let ttsCooldownUntil = 0;
+  let lastTtsTextNorm = '';
+
+  function normalizeSpeechText(text) {
+    return String(text || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function shouldIgnoreAsTtsEcho(transcript) {
+    const now = Date.now();
+    const normalized = normalizeSpeechText(transcript);
+    if (!normalized) return true;
+    if (ttsSpeaking) return true;
+    if (now > ttsCooldownUntil) return false;
+    if (!lastTtsTextNorm) return true;
+    return normalized.includes(lastTtsTextNorm) || lastTtsTextNorm.includes(normalized);
+  }
   const glowShadow = (t) => `0 0 ${(t * 12).toFixed(1)}px ${(t * 3).toFixed(1)}px rgba(34,105,245,${(t * 0.45).toFixed(3)})`;
   const shadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
@@ -36,11 +58,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
     if (voiceEngine.mode === 'command') {
+      if (glowEl) glowEl.style.boxShadow = shadow(level);
       if (state === GS.DISAMBIGUATE) {
-        if (glowEl) glowEl.style.boxShadow = shadow(level);
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
       } else {
-        if (glowEl) glowEl.style.boxShadow = '';
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
       }
       if (state === GS.CONFIRM) {
@@ -59,7 +80,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
       const field = document.querySelector('.g-listen-field.compose-input');
-      if (field) { field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease'; field.style.boxShadow = shadow(level); }
+      if (field && field.dataset.pulseLock !== '1') {
+        field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease';
+        field.style.boxShadow = shadow(level);
+      }
     }
   }
 
@@ -101,8 +125,39 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function onVoiceResult(transcript, isFinal) {
+    if (shouldIgnoreAsTtsEcho(transcript)) return;
     if (input) input.value = transcript;
     onTranscriptUpdate(transcript, isFinal);
+  }
+
+  function handleTtsStateChange(event) {
+    const active = event?.detail?.active === true;
+    const spokenTextNorm = normalizeSpeechText(event?.detail?.text || '');
+    ttsSpeaking = active;
+    if (active) {
+      lastTtsTextNorm = spokenTextNorm || lastTtsTextNorm;
+      ttsCooldownUntil = Date.now() + 2200;
+      if (voiceEngine.active && voiceEngine.mode !== 'off') {
+        pausedModeForTts = voiceEngine.mode;
+        stopVoiceViz();
+        voiceEngine.restartOnEnd = false;
+        if (voiceEngine.recognition && voiceEngine.active) {
+          try { voiceEngine.recognition.stop(); } catch {}
+        }
+        voiceEngine.active = false;
+        updateMicIndicator();
+      }
+      return;
+    }
+
+    ttsCooldownUntil = Date.now() + 1200;
+    if (!pausedModeForTts) return;
+    const resumeMode = pausedModeForTts;
+    pausedModeForTts = '';
+    if (!getGlassUi()?.active) return;
+    setTimeout(() => {
+      if (!ttsSpeaking && getGlassUi()?.active) voiceEngine.start(resumeMode);
+    }, 120);
   }
 
   function init() {
@@ -151,5 +206,6 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   };
 
   init();
+  window.addEventListener('ai-tts-state', handleTtsStateChange);
   return { voiceEngine, initVoiceAnalyser, updateMicIndicator };
 }
