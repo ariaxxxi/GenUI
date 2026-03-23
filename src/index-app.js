@@ -10,176 +10,33 @@ import {
 } from './app-state.js';
 import { initMorph } from './morph.js';
 import { initScenarioData } from './scenario-data.js';
-import { normalizeTypography } from './shapes.js';
 import { buildUiRefs, initSidebar } from './sidebar.js';
-
-const P   = 20;
-const PILL_NO_ICON_P = 32;
-const PILL_ICON_P = 16;
-const CARD_P = 24;
-const BOTTOM_ALIGN_REF_H = 580;
-const CARD_MEDIA_BOTTOM_P = CARD_P + 6;
-const CARD_DIVIDER_GAP = 10;
-const CARD_PRIMARY_GAP = 14;
-const CARD_PRIMARY_TO_SECONDARY_GAP = 8;
-const CARD_SECONDARY_TO_DETAIL_GAP = 8;
-const CARD_DETAIL_TO_MEDIA_GAP = 24;
-const CARD_MEDIA_STACK_GAP = 8;
-const TS  = 60;
-const TBR = '30px';
-const GAP = 8;
-
-function contentPos(shape, w, h) {
-  if (shape === 'idle') return {
-    thumb:  { x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 },
-    prim:   { x:w/2, y:h/2, op:0, fs:28, cx:true },
-    sec:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
-    div:    { x:w/2, y:h/2, dw:0, op:0 },
-    det:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
-  };
-  if (shape === 'circle' || shape === 'dot') return {
-    thumb:  { x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 },
-    prim:   { x:w/2, y:h/2, op:0, fs:28, cx:true },
-    sec:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
-    div:    { x:P, y:h/2, dw:0, op:0 },
-    det:    { x:w/2, y:h/2, op:0, fs:24, cx:true },
-  };
-  if (shape === 'pill') {
-    const typography = normalizeTypography(contentTypographyState, 'pill');
-    const gap = stageIconTextGap(selectedScenario()?.shape, 'pill');
-    const iconLeft = stageIconLeftPadding(selectedScenario()?.shape, 'pill');
-    const hasIcon = hasIconContent(thumbContentState);
-    const textX = hasIcon ? (iconLeft + TS + gap) : PILL_NO_ICON_P;
-    const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
-    const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
-    const rowGap = 4;
-    const tY = (h-TS)/2;
-    const iconMidY = tY + TS/2;
-    const hasPrimary = !!String(C.prim.textContent || '').trim();
-    const hasSecondary = !!String(C.sec.textContent || '').trim();
-    let pY = Math.round(iconMidY - primaryHeight/2);
-    let sY = pY + primaryHeight + rowGap;
-    if (hasPrimary && hasSecondary) {
-      const groupHeight = primaryHeight + rowGap + secondaryHeight;
-      pY = Math.round(iconMidY - groupHeight/2);
-      sY = pY + primaryHeight + rowGap;
-    } else if (!hasPrimary && hasSecondary) {
-      sY = Math.round(iconMidY - secondaryHeight/2);
-      pY = sY;
-    }
-    return {
-      thumb:  { x:iconLeft, y:tY, w:TS, h:TS, br:TBR, op:hasIcon ? 1 : 0 },
-      prim:   { x:textX, y:pY, op:1, fs:typography.primary.size, cx:false },
-      sec:    { x:textX, y:sY, op:1, fs:typography.secondary.size, cx:false },
-      div:    { x:P, y:h/2, dw:0, op:0 },
-      det:    { x:textX, y:sY, op:0, fs:typography.detail.size, cx:false },
-    };
-  }
-  if (shape === 'card') {
-    const typography = normalizeTypography(contentTypographyState, 'card');
-    const layout = getCardLayoutMetrics(
-      w,
-      typography,
-      C.det.textContent,
-      stageMediaState,
-      C.prim.textContent,
-      C.sec.textContent,
-      thumbContentState
-    );
-    const cardTextX = CARD_P;
-    const hasPrimary = !!String(C.prim.textContent || '').trim();
-    const hasSecondary = !!String(C.sec.textContent || '').trim();
-    const hasIcon = hasIconContent(thumbContentState);
-    return {
-      thumb:  { x:CARD_P, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIcon ? 1 : 0 },
-      prim:   { x:cardTextX, y:layout.primaryTop, op:hasPrimary ? 1 : 0, fs:typography.primary.size, cx:false },
-      sec:    { x:cardTextX, y:layout.secondaryTop, op:hasSecondary ? 1 : 0, fs:typography.secondary.size, cx:false },
-      div:    { x:CARD_P, y:layout.dividerY, dw:w-CARD_P*2, op:layout.hasTopRow ? 1 : 0 },
-      det:    { x:CARD_P, y:layout.detailTop, op:String(C.det.textContent || '').trim() ? 1 : 0, fs:typography.detail.size, cx:false },
-    };
-  }
-  if (shape === 'card-s') {
-    const typography = normalizeTypography(contentTypographyState, 'card-s');
-    const gap = stageIconTextGap(selectedScenario()?.shape, 'card-s');
-    const iconLeft = stageIconLeftPadding(selectedScenario()?.shape, 'card-s');
-    const layout = getCardSLayoutMetrics(
-      w,
-      typography,
-      C.det.textContent,
-      stageMediaState,
-      C.prim.textContent,
-      C.sec.textContent,
-      thumbContentState
-    );
-    const hasIcon = hasIconContent(thumbContentState);
-    const textX = hasIcon ? (iconLeft + TS + gap) : CARD_P;
-    const hasPrimary = !!String(C.prim.textContent || '').trim();
-    const hasSecondary = !!String(C.sec.textContent || '').trim();
-    return {
-      thumb:  { x:iconLeft, y:CARD_P, w:TS, h:TS, br:TBR, op:layout.hasTopRow && hasIcon ? 1 : 0 },
-      prim:   { x:textX, y:layout.primaryTop, op:layout.hasTopRow && hasPrimary ? 1 : 0, fs:typography.primary.size, cx:false },
-      sec:    { x:textX, y:layout.secondaryTop, op:layout.hasTopRow && hasSecondary ? 1 : 0, fs:typography.secondary.size, cx:false },
-      div:    { x:CARD_P, y:layout.dividerY, dw:w-CARD_P*2, op:layout.hasTopRow ? 1 : 0 },
-      det:    { x:CARD_P, y:layout.detailTop, op:String(C.det.textContent || '').trim() ? 1 : 0, fs:typography.detail.size, cx:false },
-    };
-  }
-  if (shape === 'image') {
-    return {
-      thumb:  { x:CARD_P, y:CARD_P, w:0, h:0, br:'0px', op:0 },
-      prim:   { x:CARD_P, y:CARD_P, op:0, fs:28, cx:false },
-      sec:    { x:CARD_P, y:CARD_P, op:0, fs:24, cx:false },
-      div:    { x:CARD_P, y:CARD_P, dw:0, op:0 },
-      det:    { x:CARD_P, y:CARD_P, op:0, fs:24, cx:false },
-    };
-  }
-  return {
-    thumb:  { x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 },
-    prim:   { x:P, y:P, op:0, fs:28, cx:false },
-    sec:    { x:P, y:P+40, op:0, fs:24, cx:false },
-    div:    { x:P, y:P+TS+8, dw:0, op:0 },
-    det:    { x:P, y:P+80, op:0, fs:24, cx:false },
-  };
-}
+import { initAnimControls } from './anim-controls.js';
+import { initOrbController } from './orb-controller.js';
+import { initManualFlight } from './manual-flight.js';
+import { initManualDemo } from './manual-demo.js';
+import { initManualActions } from './manual-actions.js';
+import { initManualBindings } from './manual-bindings.js';
 
 const DROPS = {
-  main:  document.getElementById('drop-main'),
-  left:  document.getElementById('drop-left'),
+  main: document.getElementById('drop-main'),
+  left: document.getElementById('drop-left'),
   right: document.getElementById('drop-right'),
 };
 const C = {
   thumb: document.getElementById('c-thumb'),
   thumbLabel: document.getElementById('c-thumb-label'),
   thumbImg: document.getElementById('c-thumb-img'),
-  prim:  document.getElementById('c-primary'),
-  sec:   document.getElementById('c-secondary'),
-  div:   document.getElementById('c-divider'),
-  det:   document.getElementById('c-detail'),
+  prim: document.getElementById('c-primary'),
+  sec: document.getElementById('c-secondary'),
+  div: document.getElementById('c-divider'),
+  det: document.getElementById('c-detail'),
   media: document.getElementById('c-media'),
-  rich:  document.getElementById('c-rich'),
+  rich: document.getElementById('c-rich'),
 };
 const UI = buildUiRefs(document);
-
-let currentShape = 'circle';
-let lastMainGeo = { ...SHAPES.circle.main };
-let mainDeformAnim = null;
-const splitTimers = [];
-let splitAnimStyleBackup = null;
-let suppressDeformation = false;
-let splitBridgeTimer = null;
-let listBridgeTimer = null;
-let thinkingBridgeTimer = null;
-let thumbContentState = createIcon('none', '');
-let contentTypographyState = defaultTypographyForShape('pill');
-let contentDelayProfile = { secondaryInAdvanceMs: 0, detailInAdvanceMs: 0 };
-let stageMediaState = [];
-let canvasSettings = loadCanvasSettings();
-let responseMode = loadResponseMode();
-let aiStageOverride = loadAiStageOverride();
-let stageLibrary = loadStageLibrary();
-let scenarioLibrary = loadScenarioLibrary();
-let selectedScenarioId = scenarioLibrary[0]?.id || '';
-let morphApi = null;
 const detailMeasureEl = document.createElement('div');
+
 detailMeasureEl.style.position = 'fixed';
 detailMeasureEl.style.left = '-9999px';
 detailMeasureEl.style.top = '-9999px';
@@ -191,28 +48,35 @@ detailMeasureEl.style.fontFamily = "'DM Sans', sans-serif";
 detailMeasureEl.style.fontWeight = '300';
 document.body.appendChild(detailMeasureEl);
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: '' });
+
+let canvasSettings = loadCanvasSettings();
+let responseMode = loadResponseMode();
+let aiStageOverride = loadAiStageOverride();
+let stageLibrary = [];
+let scenarioLibrary = [];
+let selectedScenarioId = '';
+let morphApi = null;
+let manualDemo = null;
+let flight = null;
+let actions = null;
+let splitAnimStyleBackup = null;
 
 const scenarioData = initScenarioData({
   getStageLibrary: () => stageLibrary,
   getCanvasSettings: () => canvasSettings,
   clampFn: clamp,
 });
-
 const {
+  STORAGE_KEYS: _unusedStorageKeys,
   BUILTIN_STAGE_DEFS,
   SCENARIO_SHAPES,
   STAGE_COMPONENT_TYPES,
-  TYPOGRAPHY_LAYERS,
   SHAPES,
   defaultTypographyForShape,
   normalizeTypographyByShape,
   normalizeStage,
-  normalizeStageImage,
-  normalizeStageImages,
-  normalizeIcon,
   normalizeIconByShape,
   normalizeImagesByShape,
   stageId,
@@ -224,7 +88,6 @@ const {
   stageComponentCounts,
   stageHasComponent,
   stageVisibleEditorFields,
-  scenarioId,
   createIcon,
   normalizeStageTextByShape,
   normalizeScenarioCanvas,
@@ -247,10 +110,7 @@ function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
   const scenarios = Array.isArray(stored) ? stored.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
   scenarios.forEach((scenario) => {
-    scenario.content.canvas = normalizeScenarioCanvas(
-      scenario?.content?.canvas,
-      { frameMode: canvasSettings?.frameMode || 'none' }
-    );
+    scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || 'none' });
   });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
@@ -289,360 +149,11 @@ function persistAiStageOverride() {
 }
 
 function selectedScenario() {
-  return scenarioLibrary.find(item => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
-}
-
-function setThumbContent(iconValue) {
-  thumbContentState = normalizeIcon(iconValue);
-  const isImage = thumbContentState.kind === 'image' && !!thumbContentState.value;
-  const isText = thumbContentState.kind === 'emoji' && !!thumbContentState.value;
-  C.thumb.classList.toggle('thumb-image', isImage);
-  C.thumbLabel.textContent = isText ? thumbContentState.value : '';
-  if (isImage) {
-    C.thumbImg.src = thumbContentState.value;
-  } else {
-    C.thumbImg.removeAttribute('src');
-  }
-}
-
-function setContentTypography(typographyValue, shape = currentShape) {
-  contentTypographyState = normalizeTypography(typographyValue, shape);
-}
-
-function setStageMedia(imageValue) {
-  stageMediaState = normalizeStageImages(Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []));
-  if (stageMediaState[0]) C.media.src = stageMediaState[0].src;
-  else C.media.removeAttribute('src');
-}
-
-function getScenarioTypography(scenario, shape = scenario?.shape || currentShape) {
-  const renderShape = renderShapeForStageId(shape) || shape;
-  return normalizeTypography(
-    scenario?.content?.typographyByShape?.[shape],
-    renderShape
-  );
-}
-
-function cardDetailTextWidth(cardWidth) {
-  return Math.max(120, cardWidth - CARD_P * 2);
-}
-
-function lineTextWidth(shape, width) {
-  const hasIcon = hasIconContent(thumbContentState);
-  if (shape === 'pill') {
-    const textX = hasIcon
-      ? (stageIconLeftPadding(selectedScenario()?.shape, 'pill') + TS + stageIconTextGap(selectedScenario()?.shape, 'pill'))
-      : PILL_NO_ICON_P;
-    return Math.max(120, width - textX - P);
-  }
-  if (shape === 'card') {
-    return Math.max(120, width - CARD_P * 2);
-  }
-  if (shape === 'card-s') {
-    const textX = hasIcon
-      ? (stageIconLeftPadding(selectedScenario()?.shape, 'card-s') + TS + stageIconTextGap(selectedScenario()?.shape, 'card-s'))
-      : CARD_P;
-    return Math.max(120, width - textX - CARD_P);
-  }
-  return null;
-}
-
-function cardMediaWidth(cardWidth, shape = 'card') {
-  if (shape === 'image') return Math.max(40, cardWidth - CARD_P * 2);
-  return Math.max(120, cardWidth - CARD_P * 2);
-}
-
-function measureLineHeight(fontSize, lineHeight = 1.2) {
-  return Math.ceil(Number(fontSize || 0) * lineHeight);
-}
-
-function measureCardMediaHeight(imageValue, cardWidth, shape = 'card') {
-  const image = normalizeStageImage(imageValue);
-  if (!image) return 0;
-  return Math.ceil(cardMediaWidth(cardWidth, shape) * (image.height / image.width));
-}
-
-function measureCardMediaHeights(imagesValue, cardWidth, shape = 'card') {
-  const images = normalizeStageImages(Array.isArray(imagesValue) ? imagesValue : (imagesValue ? [imagesValue] : []));
-  return images.map((image) => measureCardMediaHeight(image, cardWidth, shape)).filter((height) => height > 0);
-}
-
-function mediaStackHeight(mediaHeights) {
-  if (!Array.isArray(mediaHeights) || !mediaHeights.length) return 0;
-  return mediaHeights.reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * Math.max(0, mediaHeights.length - 1);
-}
-
-function measureCardDetailHeight(detailText, typography, cardWidth) {
-  const text = String(detailText || '').trim();
-  if (!text) return 0;
-  detailMeasureEl.style.width = `${cardDetailTextWidth(cardWidth)}px`;
-  detailMeasureEl.style.fontSize = `${typography.detail.size}px`;
-  detailMeasureEl.style.lineHeight = '1.2';
-  detailMeasureEl.style.whiteSpace = 'normal';
-  detailMeasureEl.style.wordBreak = 'break-word';
-  detailMeasureEl.textContent = text;
-  return Math.ceil(detailMeasureEl.getBoundingClientRect().height);
-}
-
-function hasIconContent(iconValue) {
-  const icon = normalizeIcon(iconValue);
-  return icon.kind !== 'none' && String(icon.value || '').trim().length > 0;
-}
-
-function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
-  const hasPrimary = !!String(primaryText || '').trim();
-  const hasSecondary = !!String(secondaryText || '').trim();
-  const hasTopRow = hasIconContent(iconValue);
-  const hasDetailText = String(detailText || '').trim().length > 0;
-  const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
-  const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
-  const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
-  const mediaHeights = measureCardMediaHeights(imageValue, cardWidth);
-  const mediaHeight = mediaStackHeight(mediaHeights);
-  const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
-  const bodyStart = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
-  let cursorY = bodyStart;
-  let primaryTop = bodyStart;
-  let secondaryTop = bodyStart;
-  if (hasPrimary) {
-    primaryTop = cursorY;
-    cursorY += primaryHeight;
-  }
-  if (hasSecondary) {
-    if (hasPrimary) cursorY += CARD_PRIMARY_TO_SECONDARY_GAP;
-    secondaryTop = cursorY;
-    cursorY += secondaryHeight;
-  }
-  const detailTop = hasDetailText
-    ? ((hasPrimary || hasSecondary) ? (cursorY + CARD_SECONDARY_TO_DETAIL_GAP) : bodyStart)
-    : bodyStart;
-  const mediaTop = hasDetailText
-    ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP
-    : ((hasPrimary || hasSecondary) ? (cursorY + CARD_DETAIL_TO_MEDIA_GAP) : bodyStart);
-  const contentBottom = mediaHeight > 0
-    ? mediaTop + mediaHeight
-    : (detailHeight > 0
-      ? detailTop + detailHeight
-      : ((hasPrimary || hasSecondary) ? cursorY : bodyStart));
-  const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
-  return {
-    hasTopRow,
-    dividerY,
-    primaryTop,
-    secondaryTop,
-    detailTop,
-    detailHeight,
-    mediaTop,
-    mediaTops: mediaHeights.map((_, index) =>
-      mediaTop + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index
-    ),
-    mediaHeights,
-    mediaHeight,
-    neededHeight: contentBottom + bottomPadding,
-  };
-}
-
-function getCardSLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
-  const hasPrimary = !!String(primaryText || '').trim();
-  const hasSecondary = !!String(secondaryText || '').trim();
-  const hasTopRow = hasIconContent(iconValue) || hasPrimary || hasSecondary;
-  const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
-  const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
-  const iconMidY = CARD_P + TS / 2;
-  const rowGap = 4;
-  let primaryTop = Math.round(iconMidY - primaryHeight/2);
-  let secondaryTop = primaryTop + primaryHeight + rowGap;
-  if (hasPrimary && hasSecondary) {
-    const groupHeight = primaryHeight + rowGap + secondaryHeight;
-    primaryTop = Math.round(iconMidY - groupHeight/2);
-    secondaryTop = primaryTop + primaryHeight + rowGap;
-  } else if (!hasPrimary && hasSecondary) {
-    secondaryTop = Math.round(iconMidY - secondaryHeight/2);
-    primaryTop = secondaryTop;
-  }
-  const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
-  const detailTop = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
-  const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
-  const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card-s');
-  const mediaHeight = mediaStackHeight(mediaHeights);
-  const hasDetailText = String(detailText || '').trim().length > 0;
-  const mediaTop = hasDetailText
-    ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP
-    : (hasTopRow ? detailTop : CARD_P);
-  const contentBottom = mediaHeight > 0
-    ? mediaTop + mediaHeight
-    : (detailHeight > 0 ? detailTop + detailHeight : (hasTopRow ? dividerY : CARD_P));
-  const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
-  return {
-    hasTopRow,
-    dividerY,
-    primaryTop,
-    secondaryTop,
-    detailTop,
-    detailHeight,
-    mediaTop,
-    mediaTops: mediaHeights.map((_, index) =>
-      mediaTop + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index
-    ),
-    mediaHeights,
-    mediaHeight,
-    neededHeight: contentBottom + bottomPadding,
-  };
-}
-
-function stageCornerRadiusPx(stageId, fallbackBr) {
-  const stage = stageById(stageId);
-  if (!stage) return fallbackBr;
-  const radius = Number(stage.cornerRadius);
-  if (!Number.isFinite(radius)) return fallbackBr;
-  return `${clamp(Math.round(radius), 0, 120)}px`;
-}
-
-function withStageSizeOverride(geo, stageId, scenario = selectedScenario(), sizeOverride = null) {
-  if (!stageId) return geo;
-  const stage = stageById(stageId);
-  if (!stage) return geo;
-  const normalizedOverride = normalizeStageSizeEntry(sizeOverride);
-  const width = Number.isFinite(normalizedOverride.widthOverride)
-    ? normalizedOverride.widthOverride
-    : stageMainSize(stage, scenario).width;
-  const height = Number.isFinite(normalizedOverride.heightOverride)
-    ? normalizedOverride.heightOverride
-    : stageMainSize(stage, scenario).height;
-  if (width === geo.main.w && height === geo.main.h) return geo;
-  return {
-    ...geo,
-    main: {
-      ...geo.main,
-      w: width,
-      h: height,
-      tx: -(width / 2),
-      ty: -(height / 2),
-    },
-  };
-}
-
-function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
-  const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
-  const scenario = selectedScenario();
-  const stageSizeOverride = normalizeStageSizeEntry(
-    contentData?.sizeOverride,
-    scenarioStageSizeOverride(scenario, stageId)
-  );
-  const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
-  const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
-  const withStageRadius = (geo) => {
-    if (!stageId) return geo;
-    const nextRadius = stageCornerRadiusPx(stageId, geo.main.br);
-    if (nextRadius === geo.main.br) return geo;
-    return {
-      ...geo,
-      main: {
-        ...geo.main,
-        br: nextRadius,
-      },
-    };
-  };
-  if ((shape !== 'card' && shape !== 'card-s' && shape !== 'image') || customGeo) {
-    return withStageRadius(baseGeo);
-  }
-
-  const detailText = contentData?.detail !== undefined ? contentData.detail : C.det.textContent;
-  const typography = normalizeTypography(contentData?.typography || contentTypographyState, shape);
-  const mediaValue = contentData?.images !== undefined
-    ? contentData.images
-    : (contentData?.image !== undefined ? [contentData.image] : stageMediaState);
-  const primaryText = contentData?.primary !== undefined ? contentData.primary : C.prim.textContent;
-  const secondaryText = contentData?.secondary !== undefined ? contentData.secondary : C.sec.textContent;
-  const iconValue = contentData?.icon !== undefined ? contentData.icon : thumbContentState;
-  if (shape === 'image') {
-    if (hasHeightOverride) return withStageRadius(baseGeo);
-    const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image'));
-    if (!mediaHeight) return withStageRadius(baseGeo);
-    const neededHeight = mediaHeight + CARD_P * 2;
-    if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
-    return withStageRadius({
-      ...baseGeo,
-      main: {
-        ...baseGeo.main,
-        h: neededHeight,
-        ty: -(neededHeight / 2),
-      },
-    });
-  }
-  const layout = shape === 'card-s'
-    ? getCardSLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue, primaryText, secondaryText, iconValue)
-    : getCardLayoutMetrics(baseGeo.main.w, typography, detailText, mediaValue, primaryText, secondaryText, iconValue);
-  const hasDetailText = String(detailText || '').trim().length > 0;
-  const hasMedia = layout.mediaHeight > 0;
-  const baselineLayout = shape === 'card-s'
-    ? getCardSLayoutMetrics(
-      baseGeo.main.w,
-      defaultTypographyForShape(shape),
-      detailText,
-      mediaValue,
-      primaryText,
-      secondaryText,
-      iconValue
-    )
-    : getCardLayoutMetrics(
-      baseGeo.main.w,
-      defaultTypographyForShape(shape),
-      detailText,
-      mediaValue,
-      primaryText,
-      secondaryText,
-      iconValue
-    );
-  const neededHeight = (shape === 'card-s')
-    ? Math.ceil(layout.neededHeight)
-    : (!hasDetailText && !hasMedia)
-    ? Math.ceil(layout.neededHeight)
-    : Math.max(
-      Math.round(baseGeo.main.h + (layout.neededHeight - baselineLayout.neededHeight)),
-      Math.ceil(layout.neededHeight)
-    );
-  if (hasHeightOverride) return withStageRadius(baseGeo);
-  if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
-
-  return withStageRadius({
-    ...baseGeo,
-    main: {
-      ...baseGeo.main,
-      h: neededHeight,
-      ty: -(neededHeight / 2),
-    },
-  });
-}
-
-function scenarioToRenderContent(scenario) {
-  const stage = stageById(scenario?.shape);
-  const counts = stageComponentCounts(stage);
-  const shape = scenario?.shape || currentShape;
-  const has = (type) => counts[type] > 0;
-  const text = stageTextForShape(scenario, shape);
-  const sourceImages = stageImagesForShape(scenario, shape);
-  const imageCount = Math.max(0, counts.image || 0);
-  const images = has('image') ? sourceImages.slice(0, imageCount).filter(Boolean) : [];
-  return {
-    icon: has('icon') ? stageIconForShape(scenario, shape) : createIcon('none', ''),
-    primary: has('primary') ? text.primary : '',
-    secondary: has('secondary') ? text.secondary : '',
-    detail: has('detail') ? text.detail : '',
-    image: images[0] || null,
-    images,
-    typography: getScenarioTypography(scenario, shape),
-    sizeOverride: scenarioStageSizeOverride(scenario, shape),
-  };
+  return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
 }
 
 function currentScenarioFrameMode() {
-  const scenario = selectedScenario();
-  if (!scenario) return canvasSettings.frameMode;
-  return normalizeScenarioCanvas(
-    scenario?.content?.canvas,
-    { frameMode: canvasSettings.frameMode }
-  ).frameMode;
+  return normalizeScenarioCanvas(selectedScenario()?.content?.canvas, { frameMode: canvasSettings.frameMode }).frameMode;
 }
 
 function applyCanvasSettings() {
@@ -662,13 +173,9 @@ function applyCanvasSettings() {
     frame.style.setProperty('--phone-frame-w', `${canvasSettings.phoneFrameWidth}px`);
     frame.style.setProperty('--phone-frame-h', `${canvasSettings.phoneFrameHeight}px`);
     frame.style.setProperty('--frame-corner-radius', `${canvasSettings.frameCornerRadius}px`);
-    const hasBg = isPhone && !!canvasSettings.phoneBgEnabled && !!canvasSettings.phoneFrameBackground?.src;
-    frame.classList.toggle('has-bg', hasBg);
+    frame.classList.toggle('has-bg', isPhone && !!canvasSettings.phoneBgEnabled && !!canvasSettings.phoneFrameBackground?.src);
   }
-  if (frameBg) {
-    if (canvasSettings.phoneFrameBackground?.src) frameBg.style.backgroundImage = `url("${canvasSettings.phoneFrameBackground.src}")`;
-    else frameBg.style.backgroundImage = '';
-  }
+  if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : '';
   if (UI.bgToggle) UI.bgToggle.checked = !!canvasSettings.backgroundEnabled;
   if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
   if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
@@ -683,18 +190,14 @@ function applyCanvasSettings() {
     UI.phoneBgVisibleToggle.checked = !!canvasSettings.phoneBgEnabled;
     UI.phoneBgVisibleToggle.disabled = !isPhone;
   }
-  if (UI.phoneSceneVisibleRow) {
-    UI.phoneSceneVisibleRow.classList.toggle('hidden', !isPhone);
-  }
+  if (UI.phoneSceneVisibleRow) UI.phoneSceneVisibleRow.classList.toggle('hidden', !isPhone);
 }
 
-function applyStagePhoneBlur(stageId) {
+function applyStagePhoneBlur(shape) {
   const frame = document.getElementById('ui-frame');
   if (!frame) return;
-  const stage = stageById(stageId);
-  const shouldBlur = currentScenarioFrameMode() === 'phone'
-    && !!canvasSettings.phoneFrameBackground?.src
-    && !!stage?.phoneBgBlur;
+  const stage = stageById(shape);
+  const shouldBlur = currentScenarioFrameMode() === 'phone' && !!canvasSettings.phoneFrameBackground?.src && !!stage?.phoneBgBlur;
   frame.classList.toggle('stage-blur', shouldBlur);
 }
 
@@ -705,41 +208,67 @@ function applyResponseModeUi() {
   if (UI.modeToggle) UI.modeToggle.checked = isAi;
 }
 
+function setIntentHeader(label, step) {
+  const hdr = document.getElementById('intent-header');
+  const lbl = document.getElementById('intent-label');
+  const dot = document.getElementById('intent-step-dot');
+  const slbl = document.getElementById('intent-step-lbl');
+  lbl.textContent = label;
+  if (step) {
+    slbl.textContent = step;
+    dot.classList.add('visible');
+  } else {
+    slbl.textContent = '';
+    dot.classList.remove('visible');
+  }
+  hdr.classList.add('visible');
+}
+
+function hideIntentHeader() {
+  document.getElementById('intent-header').classList.remove('visible');
+}
+
+function updateActive(shape) {
+  document.querySelectorAll('.sb-shape-btn').forEach((b) => b.classList.toggle('active', b.dataset.shape === shape));
+}
+
+const anim = initAnimControls({ document, clamp });
+stageLibrary = loadStageLibrary();
+scenarioLibrary = loadScenarioLibrary();
+selectedScenarioId = scenarioLibrary[0]?.id || '';
+
+const orb = initOrbController({
+  document,
+  C,
+  clearListPills: () => manualDemo?.clearListPills?.(),
+  morphTo: (...args) => morphApi.morphTo(...args),
+});
+
 function previewScenario(scenario) {
   if (!scenario) return;
-  if (flightUi.active) {
-    flightUi.active = false;
-    setFlightStep('idle', 0);
-  }
-  stopSiriOrb();
-  hideRich();
+  if (flight?.isActive()) flight.cancelFlightFlow();
+  orb.stopSiriOrb();
+  morphApi.hideRich();
   hideIntentHeader();
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-  morphTo(renderShapeForStageId(scenario.shape), scenarioToRenderContent(scenario), null, scenario.shape);
+  morphApi.morphTo(renderShapeForStageId(scenario.shape), morphApi.scenarioToRenderContent(scenario), null, scenario.shape);
 }
 
 function previewScenarioInstant(scenario) {
   if (!scenario) return;
-  if (flightUi.active) {
-    flightUi.active = false;
-    setFlightStep('idle', 0);
-  }
-  stopSiriOrb();
-  hideRich();
+  if (flight?.isActive()) flight.cancelFlightFlow();
+  orb.stopSiriOrb();
+  morphApi.hideRich();
   hideIntentHeader();
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-
   const shape = renderShapeForStageId(scenario.shape);
-  const content = scenarioToRenderContent(scenario);
-  const geo = resolveGeometryForContent(shape, content, null, scenario.shape);
-
+  const content = morphApi.scenarioToRenderContent(scenario);
+  const geo = morphApi.resolveGeometryForContent(shape, content, null, scenario.shape);
   const root = document.documentElement;
-  const prevSuppress = suppressDeformation;
-  suppressDeformation = true;
   root.style.setProperty('--anim-w', '0ms linear');
   root.style.setProperty('--anim-h', '0ms linear');
   root.style.setProperty('--anim-br', '0ms linear');
@@ -751,44 +280,18 @@ function previewScenarioInstant(scenario) {
   root.style.setProperty('--content-move-t', '0ms linear');
   root.style.setProperty('--primary-size-anim-ms', '0ms');
   root.style.setProperty('--text-size-anim-ms', '0ms');
-
-  clearUiFadeTimers();
-  currentShape = shape;
-  applyGeometry(shape, geo, scenario.shape);
+  morphApi.clearUiFadeTimers();
+  morphApi.setSuppressDeformation(true);
+  morphApi.setCurrentShape(shape);
+  morphApi.applyGeometry(shape, geo, scenario.shape);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
   DROPS.main.classList.toggle('home-glow', shape === 'circle');
-  applyContent(content);
-  applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
-  if (morphApi) {
-    morphApi.setSuppressDeformation(suppressDeformation);
-    morphApi.setCurrentShape(shape);
-    morphApi.setLastMainGeo({ ...geo.main });
-  }
+  morphApi.applyContent(content);
+  morphApi.applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
+  morphApi.setLastMainGeo({ ...geo.main });
   updateActive(shape);
-
-  suppressDeformation = prevSuppress;
-  if (morphApi) morphApi.setSuppressDeformation(prevSuppress);
-  root.style.removeProperty('--anim-w');
-  root.style.removeProperty('--anim-h');
-  root.style.removeProperty('--anim-br');
-  root.style.removeProperty('--anim-tx');
-  root.style.removeProperty('--anim-t');
-  root.style.removeProperty('--content-fade-ms');
-  root.style.removeProperty('--detail-fade-ms');
-  root.style.removeProperty('--media-fade-ms');
-  root.style.removeProperty('--content-move-t');
-  root.style.removeProperty('--primary-size-anim-ms');
-  root.style.removeProperty('--text-size-anim-ms');
-}
-
-function syncMorphState() {
-  if (!morphApi) return;
-  currentShape = morphApi.getCurrentShape();
-  lastMainGeo = morphApi.getLastMainGeo();
-  suppressDeformation = morphApi.getSuppressDeformation();
-  splitBridgeTimer = morphApi.getSplitBridgeTimer();
-  listBridgeTimer = morphApi.getListBridgeTimer();
-  thinkingBridgeTimer = morphApi.getThinkingBridgeTimer();
+  morphApi.setSuppressDeformation(false);
+  ['--anim-w','--anim-h','--anim-br','--anim-tx','--anim-t','--content-fade-ms','--detail-fade-ms','--media-fade-ms','--content-move-t','--primary-size-anim-ms','--text-size-anim-ms'].forEach((key) => root.style.removeProperty(key));
 }
 
 morphApi = initMorph({
@@ -800,11 +303,11 @@ morphApi = initMorph({
     selectedScenario,
     stageById,
     updateActive,
-    stopSiriOrb,
-    startSiriOrb,
-    showAiIdle,
-    collapseListStack,
-    animateSplitMetaball,
+    stopSiriOrb: (...args) => orb.stopSiriOrb(...args),
+    startSiriOrb: (...args) => orb.startSiriOrb(...args),
+    showAiIdle: (...args) => orb.showAiIdle(...args),
+    collapseListStack: (...args) => manualDemo?.collapseListStack?.(...args),
+    animateSplitMetaball: (...args) => manualDemo?.animateSplitMetaball?.(...args),
     normalizeStageSizeEntry,
     scenarioStageSizeOverride,
     stageMainSize,
@@ -817,8 +320,8 @@ morphApi = initMorph({
     stageIconForShape,
     stageImagesForShape,
     createIcon,
-    getAnimDuration: () => animDur,
-    getEasingFns: () => EASING_FN,
+    getAnimDuration: anim.getAnimDuration,
+    getEasingFns: anim.getEasingFns,
   },
 });
 
@@ -831,7 +334,13 @@ const sidebar = initSidebar({
   stageById,
   availableScenarioShapes,
   persistScenarios,
-  persistStageLibrary,
+  persistStageLibrary: () => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.stageLibrary, JSON.stringify(stageLibrary));
+    } catch (err) {
+      console.warn('Unable to persist stage library', err);
+    }
+  },
   persistCanvasSettings,
   persistResponseMode,
   persistAiStageOverride,
@@ -839,9 +348,9 @@ const sidebar = initSidebar({
   applyCanvasSettings,
   applyStagePhoneBlur,
   applyResponseModeUi,
-  hideRich,
+  hideRich: morphApi.hideRich,
   hideIntentHeader,
-  getScenarioTypography,
+  getScenarioTypography: morphApi.getScenarioTypography,
   createScenario,
   stageComponentCounts,
   STAGE_COMPONENT_TYPES,
@@ -871,19 +380,49 @@ const sidebar = initSidebar({
   getAiStageOverride: () => aiStageOverride,
 });
 
+manualDemo = initManualDemo({
+  document,
+  SHAPES,
+  SCENARIO_SHAPES,
+  createScenario,
+  selectedScenario,
+  previewScenario,
+  morphTo: morphApi.morphTo,
+  applyContentPositions: morphApi.applyContentPositions,
+  hideRich: morphApi.hideRich,
+  hideIntentHeader,
+  stopSiriOrb: orb.stopSiriOrb,
+  startSiriOrb: orb.startSiriOrb,
+  showAiIdle: orb.showAiIdle,
+  renderShapeForStageId,
+  clearSplitTimers: morphApi.clearSplitTimers,
+  scheduleSplitTimer: morphApi.scheduleSplitTimer,
+  splitBridgeMs: morphApi.splitBridgeMs,
+  getActiveEasing: morphApi.getActiveEasing,
+  updateActive,
+  morphApi,
+  getCurrentShape: morphApi.getCurrentShape,
+  setCurrentShape: morphApi.setCurrentShape,
+  getLastMainGeo: morphApi.getLastMainGeo,
+  setLastMainGeo: morphApi.setLastMainGeo,
+  getSplitAnimStyleBackup: () => splitAnimStyleBackup,
+  setSplitAnimStyleBackup: (value) => { splitAnimStyleBackup = value; },
+  getSuppressDeformation: morphApi.getSuppressDeformation,
+  setSuppressDeformation: morphApi.setSuppressDeformation,
+  DROPS,
+  C,
+});
+
 const {
   renderAiStageOverrideUi,
   previewAiStageOverride,
   renderScenarioUi,
-  renderScenarioList,
-  renderScenarioEditor,
   updateLayerPreviews,
   initSidebarTabs,
   initLayerRowToggles,
   initSidebarCollapsibleSections,
   bindTypographyInputs,
   isSupportedAssetFile,
-  selectScenario,
   commitScenarioChange,
   commitStageChange,
   addStage,
@@ -895,2529 +434,111 @@ const {
   getScenarioImagesForStage,
 } = sidebar;
 
-function scenarioMatchesText(scenario, text) {
+const scenarioMatchesText = (scenario, text) => {
   const haystack = String(text || '').toLowerCase();
-  if (!haystack) return false;
-  if (scenario.name.toLowerCase().includes(haystack)) return true;
-  return scenario.triggers.some(trigger => haystack.includes(trigger.toLowerCase()));
-}
-
-function resolveScenario(inputText) {
-  const match = scenarioLibrary.find(item => scenarioMatchesText(item, inputText));
-  return match || selectedScenario();
-}
-
-function splitBridgeMs() {
-  return clamp(Math.round(animDur * 0.62), 300, 460);
-}
-
-function listBridgeMs() {
-  return 500;
-}
-
-function listPhaseTwoStartMs() {
-  return 500;
-}
-
-function thinkingBridgeMs() {
-  return clamp(Math.round(animDur * 0.55), 220, 420);
-}
-
-function homeThinkingBridgeMs() {
-  return clamp(Math.round(animDur * 0.48), 180, 320);
-}
-
-function cardHeightForTransition(fromShape, toShape, fromGeo, toGeo) {
-  if (fromShape === 'card' && Number.isFinite(fromGeo?.h)) return fromGeo.h;
-  if (toShape === 'card' && Number.isFinite(toGeo?.main?.h)) return toGeo.main.h;
-  return SHAPES.card.main.h;
-}
-
-function cardDurationBonusMs(cardHeight) {
-  const h = Number.isFinite(cardHeight) ? cardHeight : SHAPES.card.main.h;
-  return clamp(Math.round((h / 580) * 200), 0, 360);
-}
-
-function transitionAnimMs(fromShape, toShape, baseMs = animDur, fromGeo = null, toGeo = null) {
-  const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
-  const toCardLike = toShape === 'card' || toShape === 'card-s';
-  const isDotPillPair = (
-    (fromShape === 'dot' && toShape === 'pill') ||
-    (fromShape === 'pill' && toShape === 'dot')
-  );
-  const isPillCardPair = (
-    (fromShape === 'pill' && toCardLike) ||
-    (fromCardLike && toShape === 'pill')
-  );
-  const isDotCardPair = (
-    (fromShape === 'dot' && toCardLike) ||
-    (fromCardLike && toShape === 'dot')
-  );
-  const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
-  if (isDotPillPair) return clamp(baseMs, 100, 1800);
-  if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
-  if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);
-  return clamp(baseMs, 100, 1800);
-}
-
-function clearSplitTimers() {
-  while (splitTimers.length) clearTimeout(splitTimers.pop());
-}
-
-function scheduleSplitTimer(ms, fn) {
-  const id = setTimeout(fn, ms);
-  splitTimers.push(id);
-  return id;
-}
-
-function clearSplitAnimationOverlays() {
-  const main = DROPS.main;
-  const left = DROPS.left;
-  const right = DROPS.right;
-  if (!main || !left || !right) return;
-
-  if (main._metaAnim) {
-    main._metaAnim.cancel();
-    main._metaAnim = null;
-  }
-  if (main._splitAnim) {
-    main._splitAnim.cancel();
-    main._splitAnim = null;
-  }
-  [left, right].forEach((el) => {
-    if (el._splitAnim) {
-      el._splitAnim.cancel();
-      el._splitAnim = null;
-    }
-  });
-
-  main.classList.remove('metaball-prep');
-  main.style.filter = '';
-}
-
-function bridgeFromSplitToTarget(shape, contentData, customGeo, stageId = null) {
-  clearSplitAnimationOverlays();
-  clearSplitTimers();
-
-  const easing = getActiveEasing();
-  const phaseMs = splitBridgeMs();
-  const main = DROPS.main;
-  const left = DROPS.left;
-  const right = DROPS.right;
-
-  if (!main || !left || !right) {
-    morphCore(shape, contentData, customGeo, false, null, stageId);
-    return;
-  }
-
-  main.style.width = '100px';
-  main.style.height = '100px';
-  main.style.borderRadius = '50px';
-  main.style.transform = 'translate(-50px,-50px)';
-  main.style.pointerEvents = 'auto';
-  main.style.opacity = '0';
-  main.style.scale = '1 1';
-
-  [left, right].forEach((el) => {
-    el.style.width = '96px';
-    el.style.height = '96px';
-    el.style.borderRadius = '48px';
-    el.style.opacity = '1';
-    el.style.pointerEvents = 'none';
-    el.style.scale = '1 1';
-  });
-  left.style.transform = 'translate(-108px,-48px)';
-  right.style.transform = 'translate(12px,-48px)';
-
-  main._splitAnim = main.animate([
-    { transform: 'translate(-50px,-50px) scale(1.1,0.92)', borderRadius: '42px', opacity: 0, filter: 'blur(0.3px)', offset: 0 },
-    { transform: 'translate(-50px,-50px) scale(1.05,0.97)', borderRadius: '46px', opacity: 0.58, filter: 'blur(0px)', offset: 0.58 },
-    { transform: 'translate(-50px,-50px) scale(1,1)', borderRadius: '50px', opacity: 1, filter: 'blur(0px)', offset: 1 },
-  ], { duration: phaseMs, easing, fill: 'forwards' });
-
-  left._splitAnim = left.animate([
-    { transform: 'translate(-108px,-48px) scale(1,1)', opacity: 1, offset: 0 },
-    { transform: 'translate(-76px,-48px) scale(1.02,0.98)', opacity: 0.68, offset: 0.56 },
-    { transform: 'translate(-48px,-48px) scale(0.94,1.04)', opacity: 0, offset: 1 },
-  ], { duration: phaseMs, easing, fill: 'forwards' });
-
-  right._splitAnim = right.animate([
-    { transform: 'translate(12px,-48px) scale(1,1)', opacity: 1, offset: 0 },
-    { transform: 'translate(-20px,-48px) scale(1.02,0.98)', opacity: 0.68, offset: 0.56 },
-    { transform: 'translate(-48px,-48px) scale(0.94,1.04)', opacity: 0, offset: 1 },
-  ], { duration: phaseMs, easing, fill: 'forwards' });
-
-  updateActive('split');
-  splitBridgeTimer = setTimeout(() => {
-    splitBridgeTimer = null;
-    clearSplitAnimationOverlays();
-
-    main.style.width = '100px';
-    main.style.height = '100px';
-    main.style.borderRadius = '50px';
-    main.style.transform = 'translate(-50px,-50px)';
-    main.style.opacity = '1';
-    main.style.pointerEvents = 'auto';
-    main.style.scale = '1 1';
-
-    left.style.transform = 'translate(-48px,-48px)';
-    right.style.transform = 'translate(-48px,-48px)';
-    left.style.opacity = '0';
-    right.style.opacity = '0';
-    left.style.pointerEvents = 'none';
-    right.style.pointerEvents = 'none';
-
-    currentShape = 'dot';
-    lastMainGeo = { ...SHAPES.dot.main };
-    applyContentPositions('dot', SHAPES.dot.main.w, SHAPES.dot.main.h);
-
-    if (shape === 'dot') {
-      if (contentData) applyContent(contentData);
-      updateActive('dot');
-      return;
-    }
-    // Commit centered dot first so phase 2 matches normal dot -> target motion.
-    void main.offsetWidth;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        morphCore(shape, contentData, customGeo, false, null, stageId);
-      });
-    });
-  }, phaseMs + 12);
-}
-
-function bridgeToSplitViaDot() {
-  clearSplitAnimationOverlays();
-  clearSplitTimers();
-
-  morphCore('dot', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
-  splitBridgeTimer = setTimeout(() => {
-    splitBridgeTimer = null;
-    animateSplitMetaball();
-  }, splitBridgeMs());
-}
-
-function bridgeFromListToTarget(shape, contentData, customGeo, stageId = null) {
-  collapseListStack();
-  morphCore('pill', null, null, true);
-  updateActive('list');
-  listBridgeTimer = setTimeout(() => {
-    listBridgeTimer = null;
-    if (shape === 'pill') {
-      morphCore('pill', contentData, customGeo, false, null, stageId);
-      return;
-    }
-    morphTo(shape, contentData, customGeo, stageId);
-  }, listPhaseTwoStartMs());
-}
-
-function bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId = null) {
-  morphCore('circle', null, null, true, 0);
-  updateActive('ai');
-  thinkingBridgeTimer = setTimeout(() => {
-    thinkingBridgeTimer = null;
-    morphTo(shape, contentData, customGeo, stageId);
-  }, thinkingBridgeMs());
-}
-
-function bridgeHomeToThinking(targetShape) {
-  if (thinkingBridgeTimer) {
-    clearTimeout(thinkingBridgeTimer);
-    thinkingBridgeTimer = null;
-  }
-  stopSiriOrb();
-  morphCore('circle', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
-  C.thumb.style.opacity = '0';
-  updateActive(targetShape);
-  thinkingBridgeTimer = setTimeout(() => {
-    thinkingBridgeTimer = null;
-    morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
-    if (targetShape === 'idle') {
-      showAiIdle();
-      updateActive('idle');
-      return;
-    }
-    startSiriOrb(true);
-    updateActive('ai');
-  }, homeThinkingBridgeMs());
-}
-
-function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = null) {
-  if (thinkingBridgeTimer) {
-    clearTimeout(thinkingBridgeTimer);
-    thinkingBridgeTimer = null;
-  }
-  stopSiriOrb();
-  morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
-  updateActive('circle');
-}
-
-function getActiveEasing() {
-  const sel = document.getElementById('ease-select');
-  if (!sel) return 'cubic-bezier(0.22,1,0.36,1)';
-  const pick = EASING_FN[sel.value];
-  return pick ? pick() : 'cubic-bezier(0.22,1,0.36,1)';
-}
-
-function getCurrentMainGeometry() {
-  const main = DROPS.main;
-  if (!main) return { ...lastMainGeo };
-  const cs = getComputedStyle(main);
-  const g = { ...lastMainGeo };
-
-  const w = parseFloat(cs.width);
-  const h = parseFloat(cs.height);
-  const op = parseFloat(cs.opacity);
-  if (Number.isFinite(w)) g.w = w;
-  if (Number.isFinite(h)) g.h = h;
-  if (Number.isFinite(op)) g.op = op;
-
-  if (cs.borderRadius) g.br = cs.borderRadius.split(' ')[0];
-
-  const t = cs.transform;
-  if (t && t !== 'none') {
-    const m2d = t.match(/^matrix\(([^)]+)\)$/);
-    if (m2d) {
-      const parts = m2d[1].split(',').map(v => parseFloat(v.trim()));
-      if (parts.length === 6 && Number.isFinite(parts[4]) && Number.isFinite(parts[5])) {
-        g.tx = parts[4];
-        g.ty = parts[5];
-      }
-    } else {
-      const m3d = t.match(/^matrix3d\(([^)]+)\)$/);
-      if (m3d) {
-        const parts = m3d[1].split(',').map(v => parseFloat(v.trim()));
-        if (parts.length === 16 && Number.isFinite(parts[12]) && Number.isFinite(parts[13])) {
-          g.tx = parts[12];
-          g.ty = parts[13];
-        }
-      }
-    }
-  }
-  return g;
-}
-
-function shouldUseStrongDeform(fromShape, toShape) {
-  const compact = new Set(['circle', 'pill', 'split']);
-  return compact.has(fromShape) && compact.has(toShape);
-}
-
-function deformationIntensity(fromShape, toShape, fromMain, toMain) {
-  const maxSide = Math.max(fromMain.w, fromMain.h, toMain.w, toMain.h);
-  if (shouldUseStrongDeform(fromShape, toShape)) return 1;
-  if (String(fromShape).startsWith('card') || String(toShape).startsWith('card')) return 0.35;
-  if (maxSide >= 320 || fromMain.h >= 220 || toMain.h >= 220) return 0.35;
-  if (maxSide <= 160) return 0.9;
-  return 0.6;
-}
-
-function runMainDeformation(fromShape, toShape, fromMain, toMain) {
-  const main = DROPS.main;
-  if (!main || !fromMain || !toMain) return;
-  if (suppressDeformation) return;
-  if (toShape === 'split') return;
-  if ((fromMain.op ?? 1) <= 0.01 || (toMain.op ?? 1) <= 0.01) return;
-
-  const dw = toMain.w - fromMain.w;
-  const dh = toMain.h - fromMain.h;
-  if (Math.abs(dw) < 2 && Math.abs(dh) < 2) return;
-
-  if (mainDeformAnim) {
-    mainDeformAnim.cancel();
-    mainDeformAnim = null;
-  }
-  if (morphApi) morphApi.cancelMainDeformation();
-  main.style.scale = '1 1';
-
-  const intensity = deformationIntensity(fromShape, toShape, fromMain, toMain);
-  const horizontal = Math.abs(dw) >= Math.abs(dh);
-  const direction = horizontal ? (dw >= 0 ? 1 : -1) : (dh >= 0 ? 1 : -1);
-
-  const antMag = 0.04 * intensity;
-  const relMag = 0.06 * intensity;
-
-  let antX = 1, antY = 1, relX = 1, relY = 1;
-  if (horizontal) {
-    antX = 1 - direction * antMag;
-    antY = 1 + direction * antMag * 0.95;
-    relX = 1 + direction * relMag;
-    relY = 1 - direction * relMag * 0.8;
-  } else {
-    antX = 1 + direction * antMag * 0.95;
-    antY = 1 - direction * antMag;
-    relX = 1 - direction * relMag * 0.8;
-    relY = 1 + direction * relMag;
-  }
-
-  antX = clamp(antX, 0.93, 1.1);
-  antY = clamp(antY, 0.93, 1.1);
-  relX = clamp(relX, 0.9, 1.14);
-  relY = clamp(relY, 0.9, 1.14);
-
-  const totalMs = clamp(Math.round(currentTransitionAnimMs * 1.02), 340, 980);
-  const ease = getActiveEasing();
-  const aEnd = 0.16;
-  const bEnd = 0.74;
-
-  const anim = main.animate([
-    {
-      scale: '1 1',
-      offset: 0,
-      easing: ease,
-    },
-    {
-      scale: `${antX} ${antY}`,
-      offset: aEnd,
-      easing: ease,
-    },
-    {
-      scale: `${relX} ${relY}`,
-      offset: bEnd,
-      easing: ease,
-    },
-    {
-      scale: '1 1',
-      offset: 1,
-    },
-  ], {
-    duration: totalMs,
-    easing: 'linear',
-    fill: 'none',
-  });
-
-  mainDeformAnim = anim;
-  anim.onfinish = () => {
-    if (mainDeformAnim !== anim) return;
-    mainDeformAnim = null;
-    main.style.scale = '1 1';
-  };
-  anim.oncancel = () => {
-    if (mainDeformAnim === anim) {
-      mainDeformAnim = null;
-      main.style.scale = '1 1';
-    }
-  };
-}
-
-function applyGeometry(shape, resolvedGeo, stageId = null) {
-  const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
-  const mainRadius = stageId ? stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
-  const useBottomAlign = !!canvasSettings.bottomAlign;
-  const alignedStageHeight = useBottomAlign
-    ? Math.max(BOTTOM_ALIGN_REF_H, geo.main.h, SHAPES.dot.main.h)
-    : geo.main.h;
-  ['main','left','right'].forEach(k => {
-    const el = DROPS[k], s = geo[k];
-    const anchorHeight = (shape === 'idle' && k === 'main') ? SHAPES.dot.main.h : s.h;
-    const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
-    el.style.width        = s.w + 'px';
-    el.style.height       = s.h + 'px';
-    el.style.borderRadius = (k === 'main') ? mainRadius : s.br;
-    el.style.transform    = `translate(${s.tx}px,${s.ty + yOffset}px)`;
-    el.style.opacity      = s.op;
-    el.style.pointerEvents = s.op > 0 ? 'auto' : 'none';
-  });
-  const stage = document.getElementById('stage');
-  if (stage) stage.style.height = alignedStageHeight + 'px';
-  lastMainGeo = { ...geo.main };
-}
-
-const uiFadeTimers = [];
-function clearUiFadeTimers() {
-  while (uiFadeTimers.length) clearTimeout(uiFadeTimers.pop());
-}
-
-let currentContentFadeMs = 260;
-let currentDetailFadeMs = 260;
-let currentMediaFadeMs = 260;
-let currentTransitionAnimMs = 450;
-
-function applyCardDetailLayout(cardWidth) {
-  C.det.style.width = `${cardDetailTextWidth(cardWidth)}px`;
-  C.det.style.maxWidth = `${cardDetailTextWidth(cardWidth)}px`;
-  C.det.style.whiteSpace = 'normal';
-  C.det.style.wordBreak = 'break-word';
-}
-
-function resetDetailInlineLayout() {
-  C.det.style.width = '';
-  C.det.style.maxWidth = '';
-  C.det.style.whiteSpace = 'nowrap';
-  C.det.style.wordBreak = '';
-}
-
-function setOpacityWithDelay(el, targetOpacity, inDelayMs = 0, outDelayMs = 0) {
-  const target = Number(targetOpacity) || 0;
-  const current = parseFloat(getComputedStyle(el).opacity);
-
-  if (target <= 0) {
-    if (outDelayMs > 0 && Number.isFinite(current) && current > 0.02) {
-      const id = setTimeout(() => {
-        el.style.opacity = '0';
-      }, outDelayMs);
-      uiFadeTimers.push(id);
-      return;
-    }
-    el.style.opacity = '0';
-    return;
-  }
-
-  if (inDelayMs <= 0) {
-    el.style.opacity = String(target);
-    return;
-  }
-
-  if (Number.isFinite(current) && current <= 0.02) {
-    el.style.opacity = '0';
-    const id = setTimeout(() => {
-      el.style.opacity = String(target);
-    }, inDelayMs);
-    uiFadeTimers.push(id);
-    return;
-  }
-  el.style.opacity = String(target);
-}
-
-function isIconOnlyThumb(shape) {
-  if (thumbContentState.kind === 'image' && thumbContentState.value) {
-    return ['circle', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
-  }
-  const icon = (C.thumbLabel.textContent || '').trim();
-  if (!icon) return false;
-  if (icon === '···') return false;
-  return ['circle', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
-}
-
-function applyThumbVisualMode(shape) {
-  const icon = thumbContentState.kind === 'image' ? '__image__' : (C.thumbLabel.textContent || '').trim();
-  const homeEmpty = shape === 'circle' && !icon;
-  C.thumb.classList.toggle('thumb-empty', homeEmpty);
-
-  const plain = isIconOnlyThumb(shape);
-  C.thumb.classList.toggle('thumb-plain-icon', plain && !homeEmpty);
-  if (!plain || homeEmpty) {
-    C.thumb.style.fontSize = '';
-    C.thumb.style.color = '';
-    return;
-  }
-  const sizeByShape = {
-    circle: 42,
-    dot: 42,
-    pill: 40,
-    card: 48,
-    'card-s': 48,
-    'card-form': 48,
-    'card-list': 48,
-    custom: 40,
-  };
-  C.thumb.style.fontSize = (sizeByShape[shape] || 40) + 'px';
-}
-
-function applyTypographyStyles(shape) {
-  const typography = normalizeTypography(contentTypographyState, shape);
-  C.thumb.style.color = typography.icon.color;
-  if (thumbContentState.kind !== 'image') {
-    C.thumb.style.fontSize = typography.icon.size + 'px';
-    C.thumbImg.style.width = '';
-    C.thumbImg.style.height = '';
-  } else {
-    C.thumbImg.style.width = `${typography.icon.size}px`;
-    C.thumbImg.style.height = `${typography.icon.size}px`;
-  }
-  C.prim.style.fontSize = typography.primary.size + 'px';
-  C.prim.style.color = typography.primary.color;
-  C.sec.style.fontSize = typography.secondary.size + 'px';
-  C.sec.style.color = typography.secondary.color;
-  C.det.style.fontSize = typography.detail.size + 'px';
-  C.det.style.color = typography.detail.color;
-}
-
-function ensureStageMediaEls(count) {
-  const stage = document.getElementById('stage');
-  if (!stage) return [C.media];
-  const existing = Array.from(stage.querySelectorAll('.c-media-extra'));
-  const neededExtra = Math.max(0, count - 1);
-  while (existing.length < neededExtra) {
-    const img = document.createElement('img');
-    img.className = 'c-media-extra';
-    img.alt = '';
-    stage.appendChild(img);
-    existing.push(img);
-  }
-  while (existing.length > neededExtra) {
-    const el = existing.pop();
-    if (el) el.remove();
-  }
-  return [C.media, ...existing];
-}
-
-function hideAllStageMedia() {
-  ensureStageMediaEls(1).forEach((el) => {
-    el.style.display = 'none';
-    el.style.opacity = '0';
-    el.style.width = '';
-    el.style.height = '';
-    el.style.transform = '';
-    if (el !== C.media) el.removeAttribute('src');
-  });
-}
-
-function applyCardMediaLayout(cardWidth, shape = 'card') {
-  const images = normalizeStageImages(stageMediaState);
-  const mediaHeights = measureCardMediaHeights(images, cardWidth, shape);
-  const mediaHeight = mediaStackHeight(mediaHeights);
-  const mediaTops = mediaHeights.map((_, index) =>
-    CARD_P + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index
-  );
-  const typography = normalizeTypography(contentTypographyState, shape);
-  const layout = shape === 'image'
-    ? { mediaHeight, mediaHeights, mediaTops }
-    : (shape === 'card-s'
-      ? getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, thumbContentState)
-      : getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, thumbContentState));
-  if (!images.length || !layout.mediaHeight) {
-    hideAllStageMedia();
-    return;
-  }
-  const els = ensureStageMediaEls(images.length);
-  const x = CARD_P;
-  els.forEach((el, idx) => {
-    const image = images[idx];
-    const mediaHeight = layout.mediaHeights[idx];
-    const mediaTop = layout.mediaTops[idx];
-    if (!image || !mediaHeight || !Number.isFinite(mediaTop)) {
-      el.style.display = 'none';
-      el.style.opacity = '0';
-      return;
-    }
-    el.src = image.src;
-    el.style.display = 'block';
-    el.style.width = `${cardMediaWidth(cardWidth, shape)}px`;
-    el.style.height = `${mediaHeight}px`;
-    el.style.transform = `translate(${x}px,${mediaTop}px)`;
-    el.style.opacity = '1';
-  });
-}
-
-function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
-  const images = normalizeStageImages(Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []));
-  const mediaHeights = measureCardMediaHeights(images, cardWidth, shape);
-  const mediaHeight = mediaStackHeight(mediaHeights);
-  const mediaTops = mediaHeights.map((_, index) =>
-    CARD_P + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index
-  );
-  const typography = normalizeTypography(contentTypographyState, shape);
-  const layout = shape === 'image'
-    ? { mediaHeight, mediaHeights, mediaTops }
-    : (shape === 'card-s'
-      ? getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, thumbContentState)
-      : getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, thumbContentState));
-  if (!images.length || !layout.mediaHeight) return false;
-  const els = ensureStageMediaEls(images.length);
-  els.forEach((el, idx) => {
-    const image = images[idx];
-    const mediaHeight = layout.mediaHeights[idx];
-    const mediaTop = layout.mediaTops[idx];
-    if (!image || !mediaHeight || !Number.isFinite(mediaTop)) {
-      el.style.display = 'none';
-      el.style.opacity = '0';
-      return;
-    }
-    el.src = image.src;
-    el.style.display = 'block';
-    el.style.width = `${cardMediaWidth(cardWidth, shape)}px`;
-    el.style.height = `${mediaHeight}px`;
-    el.style.transform = `translate(${CARD_P}px,${mediaTop}px)`;
-    el.style.opacity = '0';
-  });
-  return true;
-}
-
-function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
-  const root = document.documentElement;
-  const transitionMs = transitionAnimMs(fromShape, toShape, animDur, fromGeo, toGeo);
-  const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
-  const toCardLike = toShape === 'card' || toShape === 'card-s';
-  let contentFadeMs = 260;
-  let detailFadeMs = 260;
-  let mediaFadeMs = 260;
-  let thumbFadeMs = 280;
-  let contentMoveMs = transitionMs;
-  let primarySizeAnimMs = transitionMs;
-  let textSizeAnimMs = transitionMs;
-  let secondaryInAdvanceMs = 0;
-  let detailInAdvanceMs = 0;
-
-  if ((fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill')) {
-    primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900);
-    textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820);
-  }
-  if (fromShape === 'pill' && toCardLike) {
-    secondaryInAdvanceMs = 60;
-    detailInAdvanceMs = 200;
-  }
-  if (fromShape === 'dot' && toCardLike) {
-    contentMoveMs = 0;
-  }
-  if (fromShape === 'image' && toShape === 'pill') {
-    contentMoveMs = 0;
-  }
-  if (fromCardLike && toShape === 'dot') {
-    contentFadeMs = 200;
-    detailFadeMs = 200;
-  }
-  if (fromCardLike && toShape === 'pill') {
-    mediaFadeMs = transitionMs;
-  }
-  if ((fromShape === 'idle' && toShape === 'dot') || (fromShape === 'dot' && toShape === 'idle')) {
-    thumbFadeMs = 200;
-  }
-
-  contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
-  currentContentFadeMs = contentFadeMs;
-  currentDetailFadeMs = detailFadeMs;
-  currentMediaFadeMs = mediaFadeMs;
-  currentTransitionAnimMs = transitionMs;
-  root.style.setProperty('--anim-w', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-h', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-br', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-tx', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--anim-t', `${transitionMs}ms var(--spring)`);
-  root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`);
-  root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`);
-  root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`);
-  root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`);
-  root.style.setProperty('--content-move-t', `${contentMoveMs}ms var(--spring)`);
-  root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`);
-  root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
-}
-
-function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
-  const pos = contentPos(shape, w, h);
-  C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
-  applyThumbVisualMode(shape);
-  let thumbOpacity = pos.thumb.op;
-  if (shape === 'circle' && thumbContentState.kind === 'none') thumbOpacity = 0;
-  setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
-  const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
-    const finalTransform = p.cx
-      ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)`
-      : `translate(${p.x}px,${p.y}px)`;
-    el.style.transform = finalTransform;
-    setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs);
-    if (p.fs) el.style.fontSize = p.fs + 'px';
-  };
-  setEl(C.prim, pos.prim);
-  setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (contentDelayProfile.secondaryInAdvanceMs || 0)));
-  setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (contentDelayProfile.detailInAdvanceMs || 0)));
-  applyTypographyStyles(shape);
-  const mainLineWidth = lineTextWidth(shape, w);
-  if (mainLineWidth) {
-    C.prim.style.width = `${mainLineWidth}px`;
-    C.prim.style.maxWidth = `${mainLineWidth}px`;
-    C.sec.style.width = `${mainLineWidth}px`;
-    C.sec.style.maxWidth = `${mainLineWidth}px`;
-    C.prim.style.overflow = 'hidden';
-    C.sec.style.overflow = 'hidden';
-    C.prim.style.textOverflow = 'ellipsis';
-    C.sec.style.textOverflow = 'ellipsis';
-    C.prim.style.whiteSpace = 'nowrap';
-    C.sec.style.whiteSpace = 'nowrap';
-  } else {
-    C.prim.style.width = '';
-    C.prim.style.maxWidth = '';
-    C.sec.style.width = '';
-    C.sec.style.maxWidth = '';
-    C.prim.style.overflow = '';
-    C.sec.style.overflow = '';
-    C.prim.style.textOverflow = '';
-    C.sec.style.textOverflow = '';
-    C.prim.style.whiteSpace = '';
-    C.sec.style.whiteSpace = '';
-  }
-  if (shape === 'card' || shape === 'card-s') {
-    applyCardDetailLayout(w);
-    applyCardMediaLayout(w, shape);
-  } else if (shape === 'image') {
-    resetDetailInlineLayout();
-    C.det.style.opacity = '0';
-    C.div.style.opacity = '0';
-    C.thumb.style.opacity = '0';
-    C.prim.style.opacity = '0';
-    C.sec.style.opacity = '0';
-    applyCardMediaLayout(w, 'image');
-  } else {
-    if (fromShape === 'card' || fromShape === 'card-s') {
-      applyCardDetailLayout(fromWidth);
-      const outgoingLayout = outgoingTypography
-        ? ((fromShape === 'card-s')
-          ? getCardSLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia, C.prim.textContent, C.sec.textContent, thumbContentState)
-          : getCardLayoutMetrics(fromWidth, outgoingTypography, C.det.textContent, outgoingMedia, C.prim.textContent, C.sec.textContent, thumbContentState))
-        : null;
-      if (shape === 'dot' && outgoingTypography && outgoingLayout) {
-        const cardSGap = stageIconTextGap(selectedScenario()?.shape, 'card-s');
-        const cardSIconPad = stageIconLeftPadding(selectedScenario()?.shape, 'card-s');
-        const outgoingTextX = fromShape === 'card-s'
-          ? (hasIconContent(thumbContentState) ? (cardSIconPad + TS + cardSGap) : CARD_P)
-          : CARD_P;
-        const outgoingLineWidth = fromShape === 'card-s'
-          ? Math.max(
-            120,
-            fromWidth - (hasIconContent(thumbContentState) ? (cardSIconPad + TS + cardSGap) : CARD_P) - CARD_P
-          )
-          : Math.max(120, fromWidth - CARD_P * 2);
-        C.prim.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.primaryTop}px)`;
-        C.sec.style.transform = `translate(${outgoingTextX}px,${outgoingLayout.secondaryTop}px)`;
-        C.prim.style.fontSize = outgoingTypography.primary.size + 'px';
-        C.sec.style.fontSize = outgoingTypography.secondary.size + 'px';
-        C.prim.style.color = outgoingTypography.primary.color;
-        C.sec.style.color = outgoingTypography.secondary.color;
-        C.prim.style.width = `${outgoingLineWidth}px`;
-        C.prim.style.maxWidth = `${outgoingLineWidth}px`;
-        C.sec.style.width = `${outgoingLineWidth}px`;
-        C.sec.style.maxWidth = `${outgoingLineWidth}px`;
-      }
-      if (outgoingTypography && outgoingLayout) {
-        C.det.style.transform = `translate(${CARD_P}px,${outgoingLayout.detailTop}px)`;
-        C.det.style.fontSize = outgoingTypography.detail.size + 'px';
-        C.det.style.color = outgoingTypography.detail.color;
-      }
-      const id = setTimeout(() => {
-        resetDetailInlineLayout();
-      }, fadeOutDelayMs + currentDetailFadeMs);
-      uiFadeTimers.push(id);
-    } else {
-      resetDetailInlineLayout();
-    }
-    if ((fromShape === 'card' || fromShape === 'card-s') && outgoingMedia && applyOutgoingCardMediaLayout(outgoingMedia, fromWidth, fromShape)) {
-      const id = setTimeout(() => {
-        hideAllStageMedia();
-        if (!stageMediaState?.length) C.media.removeAttribute('src');
-      }, fadeOutDelayMs + currentMediaFadeMs);
-      uiFadeTimers.push(id);
-    } else {
-      hideAllStageMedia();
-    }
-  }
-  C.div.style.transform = `translate(${pos.div.x}px,${pos.div.y}px)`;
-  C.div.style.width = (pos.div.dw||0) + 'px';
-  setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
-}
-
-function applyContent(data) {
-  if (data.icon      !== undefined) setThumbContent(data.icon);
-  if (data.primary   !== undefined) C.prim.textContent  = data.primary;
-  if (data.secondary !== undefined) C.sec.textContent   = data.secondary;
-  if (data.detail    !== undefined) C.det.textContent   = data.detail;
-  if (data.images    !== undefined) setStageMedia(data.images);
-  else if (data.image !== undefined) setStageMedia(data.image ? [data.image] : []);
-  if (data.typography !== undefined) setContentTypography(data.typography, currentShape);
-}
-
-function showRich(html) {
-  C.rich.style.opacity = '0';
-  C.rich.innerHTML = html;
-  C.rich.classList.add('visible');
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    C.rich.style.opacity = '1';
-  }));
-}
-
-function hideRich() {
-  C.rich.style.opacity = '0';
-  setTimeout(() => {
-    C.rich.classList.remove('visible');
-    C.rich.innerHTML = '';
-  }, 220);
-}
-
-function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null, stageId = null) {
-  morphApi.morphCore(shape, contentData, customGeo, skipActiveUpdate, uiFadeDelayMs, stageId);
-  syncMorphState();
-}
-
-function morphTo(shape, contentData, customGeo, stageId = null) {
-  morphApi.morphTo(shape, contentData, customGeo, stageId);
-  syncMorphState();
-}
-
-function setIntentHeader(label, step) {
-  const hdr  = document.getElementById('intent-header');
-  const lbl  = document.getElementById('intent-label');
-  const dot  = document.getElementById('intent-step-dot');
-  const slbl = document.getElementById('intent-step-lbl');
-  lbl.textContent = label;
-  if (step) {
-    slbl.textContent = step;
-    dot.classList.add('visible');
-  } else {
-    slbl.textContent = '';
-    dot.classList.remove('visible');
-  }
-  hdr.classList.add('visible');
-}
-
-function hideIntentHeader() {
-  document.getElementById('intent-header').classList.remove('visible');
-}
-
-let siriRaf     = null;
-let orbT        = 0;
-let orbRamp     = 0;
-let orbTarget   = 0;
-const ORB_SPEED = 1/180;
-let orbCY = 0.5;
-let orbCYTarget = 0.5;
-const USE_THINKING_ORB = false;
-
-const _BLOBS = [
-  { r:0.32, speed:0.022, phase:0.00, ax:0.10, ay:0.08, freq:1.00 },
-  { r:0.28, speed:0.027, phase:2.10, ax:0.09, ay:0.11, freq:1.31 },
-  { r:0.26, speed:0.032, phase:4.20, ax:0.11, ay:0.07, freq:0.77 },
-  { r:0.24, speed:0.022, phase:1.05, ax:0.08, ay:0.09, freq:1.61 },
-];
-
-function ss(t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
-
-function _ensureOrbLoop() {
-  if (!USE_THINKING_ORB) return;
-  if (siriRaf) return;
-  const orb    = document.getElementById('siri-orb');
-  const canvas = document.getElementById('siri-canvas');
-  orb.classList.add('visible');
-  const ctx = canvas.getContext('2d');
-
-  function draw() {
-    orbT += 1;
-    if (orbRamp < orbTarget) orbRamp = Math.min(orbTarget, orbRamp + ORB_SPEED);
-    if (orbRamp > orbTarget) orbRamp = Math.max(orbTarget, orbRamp - ORB_SPEED);
-
-    const dm = document.getElementById('drop-main');
-    const W = dm.offsetWidth  || 100;
-    const H = dm.offsetHeight || 100;
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width  = W;
-      canvas.height = H;
-    }
-
-    orbCY += (orbCYTarget - orbCY) * 0.03;
-
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-
-    const r = ss(orbRamp);
-    for (const b of _BLOBS) {
-      const px = (0.5   + Math.sin(orbT * b.speed          + b.phase) * b.ax * r) * W;
-      const py = (orbCY + Math.cos(orbT * b.speed * b.freq + b.phase) * b.ay * r) * H;
-      const br = b.r * Math.min(W, H) * (1 + 0.06 * Math.sin(orbT * 0.027 + b.phase));
-      const col = (b === _BLOBS[1] || b === _BLOBS[3]) ? 'rgba(210,232,255,1)' : 'rgba(255,255,255,1)';
-      ctx.save();
-      ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.arc(px, py, br, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    siriRaf = requestAnimationFrame(draw);
-  }
-  draw();
-}
-
-function resetOrbStyle() {
-  const orb = document.getElementById('siri-orb');
-  if (!orb) return;
-  orb.style.transition = 'none';
-  orb.style.filter     = '';
-  orb.style.opacity    = '';
-  orb.style.zIndex     = '';
-  orbCYTarget = 0.5;
-}
-
-function showAiIdle() {
-  document.getElementById('drop-main').classList.add('ai-mode');
-  if (!USE_THINKING_ORB) {
-    const orb = document.getElementById('siri-orb');
-    if (orb) orb.classList.remove('visible');
-    orbRamp = 0;
-    orbTarget = 0;
-    return;
-  }
-  orbTarget = 0;
-  _ensureOrbLoop();
-}
-
-function startSiriOrb(instant) {
-  document.getElementById('drop-main').classList.add('ai-mode');
-  if (!USE_THINKING_ORB) {
-    const orb = document.getElementById('siri-orb');
-    if (orb) orb.classList.remove('visible');
-    orbRamp = 0;
-    orbTarget = 0;
-    return;
-  }
-  if (instant) { orbRamp = 1; }
-  orbTarget = 1;
-  _ensureOrbLoop();
-}
-
-function ambientFromAi(shape, contentData, customGeo) {
-  stopSiriOrb();
-  morphTo(shape, contentData, customGeo);
-}
-
-function stopSiriOrb() {
-  if (siriRaf) { cancelAnimationFrame(siriRaf); siriRaf = null; }
-  const orb = document.getElementById('siri-orb');
-  if (orb) orb.classList.remove('visible');
-  clearListPills();
-  document.getElementById('drop-main').classList.remove('ai-mode');
-  C.thumb.style.opacity = '';
-  C.thumb.style.fontSize = '';
-  orbRamp = 0; orbTarget = 0;
-}
-
-let flightData = { origin:'SFO', dest:'NRT', destCity:'Tokyo', depDate:'Mar 15, 2026', retDate:'Mar 22, 2026' };
-const flightUi = { active:false, step:'idle', highlight:0, depIdx:0, retIdx:0 };
-const FLIGHT_DEP_OPTIONS = ['Mar 15, 2026', 'Mar 16, 2026', 'Mar 17, 2026', 'Mar 18, 2026'];
-const FLIGHT_RET_OPTIONS = ['Mar 22, 2026', 'Mar 23, 2026', 'Mar 24, 2026', 'Mar 25, 2026'];
-
-const FLIGHTS = [
-  { airline:'ANA', code:'NH 7', dep:'10:30', arr:'14:30', day:'+1', stops:'Non-stop', duration:'13h 0m', price:'$899' },
-  { airline:'JAL', code:'JL 61', dep:'12:00', arr:'15:45', day:'+1', stops:'Non-stop', duration:'13h 45m', price:'$1,049' },
-  { airline:'United', code:'UA 837', dep:'13:45', arr:'17:20', day:'+1', stops:'1 stop', duration:'15h 35m', price:'$649' },
-];
-
-function setFlightStep(step, highlight = 0) {
-  flightUi.step = step;
-  flightUi.highlight = highlight;
-}
-
-function syncFlightDateIndexes() {
-  const dep = FLIGHT_DEP_OPTIONS.indexOf(flightData.depDate);
-  const ret = FLIGHT_RET_OPTIONS.indexOf(flightData.retDate);
-  flightUi.depIdx = dep >= 0 ? dep : 0;
-  flightUi.retIdx = ret >= 0 ? ret : 0;
-}
-
-function updateFlightDateHighlight() {
-  const ids = ['f-opt-dep', 'f-opt-ret', 'f-opt-search'];
-  ids.forEach((id, idx) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('selected', flightUi.highlight === idx);
-  });
-  const depVal = document.getElementById('f-dep-val');
-  const retVal = document.getElementById('f-ret-val');
-  if (depVal) depVal.textContent = flightData.depDate;
-  if (retVal) retVal.textContent = flightData.retDate;
-}
-
-function updateFlightResultHighlight() {
-  document.querySelectorAll('.rich-flight-row').forEach((r, i) => r.classList.toggle('selected', i === flightUi.highlight));
-}
-
-function cycleFlightDate(which) {
-  if (which === 'dep') {
-    flightUi.depIdx = (flightUi.depIdx + 1) % FLIGHT_DEP_OPTIONS.length;
-    flightData.depDate = FLIGHT_DEP_OPTIONS[flightUi.depIdx];
-  } else {
-    flightUi.retIdx = (flightUi.retIdx + 1) % FLIGHT_RET_OPTIONS.length;
-    flightData.retDate = FLIGHT_RET_OPTIONS[flightUi.retIdx];
-  }
-  updateFlightDateHighlight();
-}
-
-function moveFlightHighlight(dir) {
-  if (flightUi.step === 'dates') {
-    const max = 2;
-    flightUi.highlight = (flightUi.highlight + dir + max + 1) % (max + 1);
-    updateFlightDateHighlight();
-    return;
-  }
-  if (flightUi.step === 'results') {
-    const max = FLIGHTS.length - 1;
-    flightUi.highlight = (flightUi.highlight + dir + max + 1) % (max + 1);
-    updateFlightResultHighlight();
-  }
-}
-
-function confirmFlightStep() {
-  if (!flightUi.active) return;
-  if (flightUi.step === 'route') {
-    flowDateStep();
-    return;
-  }
-  if (flightUi.step === 'dates') {
-    if (flightUi.highlight === 0) {
-      cycleFlightDate('dep');
-      return;
-    }
-    if (flightUi.highlight === 1) {
-      cycleFlightDate('ret');
-      return;
-    }
-    submitDates();
-    return;
-  }
-  if (flightUi.step === 'results') {
-    selectFlight(flightUi.highlight);
-  }
-}
-
-function cancelFlightFlow() {
-  if (!flightUi.active) return;
-  setFlightStep('idle', 0);
-  flightUi.active = false;
-  stopSiriOrb();
-  hideRich();
-  hideIntentHeader();
-  morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
-  document.getElementById('stage').classList.remove('flow-active');
-  document.getElementById('input-area').classList.remove('hidden');
-}
-
-function startFlightFlow() {
-  syncFlightDateIndexes();
-  flightUi.active = true;
-  setFlightStep('confirming', 0);
-  document.getElementById('stage').classList.add('flow-active');
-  hideRich();
-  morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
-  C.thumb.style.opacity = '0';
-  startSiriOrb();
-  setIntentHeader('Book a Flight', 'Confirming');
-
-  setTimeout(() => {
-    stopSiriOrb();
-    morphTo('pill', {
-      icon: '✈',
-      primary: `${flightData.origin} → ${flightData.dest}`,
-      secondary: flightData.destCity + ', Japan',
-    });
-    setIntentHeader('Book a Flight', 'Route · Space to Continue');
-    setFlightStep('route', 0);
-  }, 1200);
-}
-
-function flowDateStep() {
-  setIntentHeader('Book a Flight', 'When?');
-  hideRich();
-  morphTo('card-form', null);
-  setFlightStep('dates', 0);
-
-  const html = `
-    <div class="rich-route-row" style="margin-bottom:6px;">
-      <span class="rich-route-main">${flightData.origin}</span>
-      <span class="rich-route-arrow">→</span>
-      <span class="rich-route-main">${flightData.dest}</span>
-    </div>
-    <div class="rich-route-sub" style="margin-bottom:14px;">San Francisco → Tokyo Narita · ↑/↓ move · Space confirm · X cancel</div>
-    <div class="rich-divider"></div>
-    <div class="rich-flight-row selected" id="f-opt-dep">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">Departure</div>
-        <div class="rich-flight-times" id="f-dep-val">${flightData.depDate}</div>
-      </div>
-      <div class="rich-flight-right"><div class="rich-flight-meta">Space: cycle</div></div>
-    </div>
-    <div class="rich-divider"></div>
-    <div class="rich-flight-row" id="f-opt-ret">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">Return</div>
-        <div class="rich-flight-times" id="f-ret-val">${flightData.retDate}</div>
-      </div>
-      <div class="rich-flight-right"><div class="rich-flight-meta">Space: cycle</div></div>
-    </div>
-    <div class="rich-divider"></div>
-    <div class="rich-flight-row" id="f-opt-search">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">Search Flights</div>
-        <div class="rich-flight-times">${flightData.origin} → ${flightData.dest}</div>
-      </div>
-      <div class="rich-flight-right"><div class="rich-flight-price">Space</div></div>
-    </div>
-  `;
-
-  setTimeout(() => {
-    showRich(html);
-    updateFlightDateHighlight();
-  }, 350);
-}
-
-function submitDates() {
-  flowSearchStep();
-}
-
-function flowSearchStep() {
-  setFlightStep('searching', 0);
-  setIntentHeader('Book a Flight', 'Searching');
-  hideRich();
-  morphTo('pill', {
-    icon: '',
-    primary: `${flightData.origin} → ${flightData.dest}`,
-    secondary: flightData.depDate,
-  });
-  C.thumb.style.opacity = '0';
-  startSiriOrb();
-
-  setTimeout(() => {
-    stopSiriOrb();
-    flowResultsStep();
-  }, 1800);
-}
-
-function flowResultsStep() {
-  setFlightStep('results', 0);
-  setIntentHeader('Book a Flight', 'Select');
-  hideRich();
-  morphTo('card-list', null);
-
-  const rows = FLIGHTS.map((f, i) => `
-    <div class="rich-flight-row ${i === flightUi.highlight ? 'selected' : ''}">
-      <div class="rich-flight-left">
-        <div class="rich-flight-airline">${f.airline} · ${f.dep} <span style="color:rgba(255,255,255,0.30);">→ ${f.arr}<sup style="font-size:10px;">${f.day}</sup></span></div>
-        <div class="rich-flight-times">${f.stops} · ${f.duration}</div>
-      </div>
-      <div class="rich-flight-right">
-        <div class="rich-flight-price">${f.price}</div>
-        <div class="rich-flight-meta">${f.code}</div>
-      </div>
-    </div>
-    ${i < FLIGHTS.length - 1 ? '<div class="rich-divider"></div>' : ''}
-  `).join('');
-
-  const html = `
-    <div class="rich-list-header">${flightData.origin} → ${flightData.dest} · ${flightData.depDate} · ↑/↓ select · Space confirm · X cancel</div>
-    <div class="rich-divider"></div>
-    <div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${rows}</div>
-  `;
-
-  setTimeout(() => {
-    showRich(html);
-    updateFlightResultHighlight();
-  }, 350);
-}
-
-function selectFlight(idx) {
-  if (!flightUi.active) return;
-  setFlightStep('confirm', idx);
-  flightUi.highlight = idx;
-  const f = FLIGHTS[idx];
-  updateFlightResultHighlight();
-
-  setTimeout(() => {
-    setIntentHeader('Book a Flight', 'Confirm');
-    hideRich();
-    morphTo('pill', {
-      icon: '✈',
-      primary: `${f.airline} · ${f.price}`,
-      secondary: `${flightData.depDate} · ${f.stops}`,
-    });
-
-    setTimeout(() => {
-      setIntentHeader('Book a Flight', 'Booked ✓');
-      setFlightStep('booked', 0);
-      morphTo('circle', { icon:'✓', primary:'', secondary:'', detail:'' });
-      C.thumb.style.fontSize = '26px';
-
-      setTimeout(() => {
-        flightUi.active = false;
-        setFlightStep('idle', 0);
-        hideIntentHeader();
-        morphTo('circle', { icon:'', primary:'', secondary:'', detail:'' });
-        document.getElementById('stage').classList.remove('flow-active');
-        document.getElementById('input-area').classList.remove('hidden');
-      }, 3000);
-    }, 2000);
-  }, 500);
-}
-
-const FUTURE_ROUTE_ADAPTER = {
-  provider: 'gauss',
-  get mode() {
-    return responseMode;
-  },
+  return !!haystack && (scenario.name.toLowerCase().includes(haystack) || scenario.triggers.some((trigger) => haystack.includes(trigger.toLowerCase())));
 };
+const resolveScenario = (inputText) => scenarioLibrary.find((item) => scenarioMatchesText(item, inputText)) || selectedScenario();
 
-const AI_PROVIDERS = {
-  gauss: {
-    // Placeholder for future Gauss integration.
-    async resolve({ userText, stageOverride, scenarios, selected }) {
-      const text = String(userText || '').trim();
-      const scenario = scenarios.find(item => scenarioMatchesText(item, text)) || selected || scenarios[0] || null;
-      const base = scenario ? scenarioToRenderContent(scenario) : {
-        icon: createIcon('emoji', '✨'),
-        primary: '',
-        secondary: '',
-        detail: '',
-        image: null,
-        typography: defaultTypographyForShape('pill'),
-      };
-      const nextShape = (stageOverride && stageOverride !== AI_STAGE_OVERRIDE.AUTO)
-        ? stageOverride
-        : (scenario?.shape || 'pill');
-      return {
-        scenarioId: scenario?.id || null,
-        shape: nextShape,
-        content: {
-          ...base,
-          primary: base.primary || (scenario?.name || 'Generated response'),
-          secondary: base.secondary || `User: ${text}`,
-          detail: base.detail || `AI draft generated for "${text}"`,
-        },
-      };
-    },
-  },
-};
+flight = initManualFlight({
+  hideRich: morphApi.hideRich,
+  showRich: morphApi.showRich,
+  morphTo: morphApi.morphTo,
+  startSiriOrb: orb.startSiriOrb,
+  stopSiriOrb: orb.stopSiriOrb,
+  setIntentHeader,
+  hideIntentHeader,
+  createIcon,
+  scenarioMatchesText,
+  scenarioLibrary: () => scenarioLibrary,
+  selectedScenario,
+  renderScenarioUi,
+  previewScenario,
+  createScenario,
+  scenarioToRenderContent: morphApi.scenarioToRenderContent,
+  defaultTypographyForShape,
+  SCENARIO_SHAPES,
+  AI_STAGE_OVERRIDE,
+  RESPONSE_MODE,
+  getResponseMode: () => responseMode,
+  getAiStageOverride: () => aiStageOverride,
+  setSelectedScenarioId: (value) => { selectedScenarioId = value; },
+  C,
+  createRootCircle,
+});
 
-function syncFlightDestinationFromText(userText) {
-  const destMatch = String(userText || '').match(/to\s+([a-zA-Z\s]+)/i);
-  if (!destMatch) return;
-  flightData.destCity = destMatch[1].trim();
-  const cityMap = { tokyo:'NRT', paris:'CDG', london:'LHR', 'new york':'JFK', sydney:'SYD', dubai:'DXB', seoul:'ICN', amsterdam:'AMS' };
-  const key = flightData.destCity.toLowerCase();
-  const found = Object.keys(cityMap).find(k => key.includes(k));
-  if (found) flightData.dest = cityMap[found];
-}
-
-function handleManualRequest(userText) {
-  if (/flight|fly|book.*flight|ticket/i.test(userText)) {
-    syncFlightDestinationFromText(userText);
-    startFlightFlow();
-    return;
-  }
-  const scenario = resolveScenario(userText);
-  if (scenario) {
-    selectedScenarioId = scenario.id;
-    renderScenarioUi();
-    previewScenario(scenario);
-    return;
-  }
-  morphTo('pill', {
-    icon: createIcon('emoji', '⚠'),
-    primary: 'No Match',
-    secondary: 'Create a scenario to preview this',
-    detail: '',
-  });
-}
-
-async function handleAiRequest(userText) {
-  const provider = AI_PROVIDERS.gauss;
-  try {
-    const result = await provider.resolve({
-      userText,
-      stageOverride: aiStageOverride,
-      scenarios: scenarioLibrary,
-      selected: selectedScenario(),
-    });
-    const safeShape = SCENARIO_SHAPES.includes(result?.shape) ? result.shape : 'pill';
-    const safeContent = result?.content || {
-      icon: createIcon('emoji', '✨'),
-      primary: 'Generated response',
-      secondary: `User: ${userText}`,
-      detail: '',
-    };
-    if (result?.scenarioId && scenarioLibrary.some(item => item.id === result.scenarioId)) {
-      selectedScenarioId = result.scenarioId;
-      renderScenarioUi();
-    }
-    previewScenario(createScenario({
-      name: 'AI Preview',
-      shape: safeShape,
-      content: {
-        icon: safeContent.icon,
-        primary: safeContent.primary,
-        secondary: safeContent.secondary,
-        detail: safeContent.detail,
-        image: safeContent.image,
-        typography: safeContent.typography,
-      },
-      triggers: [],
-    }));
-  } catch (err) {
-    console.warn('AI mode failed, falling back to manual mode', err);
-    setIntentHeader('AI unavailable', 'Fallback to manual');
-    setTimeout(() => hideIntentHeader(), 1200);
-    handleManualRequest(userText);
-  }
-}
-
-async function processRequest(userText) {
-  hideRich();
-  stopSiriOrb();
-  if (responseMode === RESPONSE_MODE.AI) {
-    await handleAiRequest(userText);
-    return;
-  }
-  handleManualRequest(userText);
-}
-
-const DEMO = {
-  circle: { icon:createIcon('none', ''), primary:'', secondary:'', detail:'' },
-  split:  { icon:createIcon('none', ''), primary:'', secondary:'', detail:'' },
-  ai:     { icon:createIcon('none', ''), primary:'', secondary:'', detail:'' },
-};
-
-function resetSplitState() {
-  clearSplitTimers();
-  if (splitBridgeTimer) {
-    clearTimeout(splitBridgeTimer);
-    splitBridgeTimer = null;
-  }
-  if (listBridgeTimer) {
-    clearTimeout(listBridgeTimer);
-    listBridgeTimer = null;
-  }
-  suppressDeformation = false;
-  if (splitAnimStyleBackup !== null) {
-    const animStyle = document.getElementById('anim-style');
-    if (animStyle) animStyle.textContent = splitAnimStyleBackup;
-    splitAnimStyleBackup = null;
-  }
-  const main = DROPS.main;
-  const left = DROPS.left;
-  const right = DROPS.right;
-
-  if (main._metaAnim) {
-    main._metaAnim.cancel();
-    main._metaAnim = null;
-  }
-  if (main._splitAnim) {
-    main._splitAnim.cancel();
-    main._splitAnim = null;
-  }
-  if (mainDeformAnim) {
-    mainDeformAnim.cancel();
-    mainDeformAnim = null;
-  }
-
-  const baseMain = lastMainGeo || SHAPES[currentShape]?.main || SHAPES.circle.main;
-  main.classList.remove('metaball-prep');
-  main.style.filter = '';
-  main.style.scale = '1 1';
-  main.style.width = baseMain.w + 'px';
-  main.style.height = baseMain.h + 'px';
-  main.style.borderRadius = baseMain.br;
-  main.style.transform = `translate(${baseMain.tx}px,${baseMain.ty}px)`;
-  main.style.opacity = String(baseMain.op);
-  main.style.pointerEvents = baseMain.op > 0 ? 'auto' : 'none';
-
-  [left, right].forEach((el) => {
-    if (el._splitAnim) {
-      el._splitAnim.cancel();
-      el._splitAnim = null;
-    }
-    el.style.width = '100px';
-    el.style.height = '100px';
-    el.style.borderRadius = '50px';
-    el.style.transform = 'translate(-50px,-50px)';
-    el.style.scale = '1 1';
-    el.style.opacity = '0';
-    el.style.pointerEvents = 'none';
-  });
-}
-
-function animateSplitMetaball() {
-  stopSiriOrb();
-  hideRich();
-  hideIntentHeader();
-  document.getElementById('drop-main').classList.remove('ai-mode');
-  clearListPills();
-  resetSplitState();
-
-  const easing = getActiveEasing();
-  const normalizeMs = 360;
-  const splitMs = 560;
-  const overlapMs = 90;
-  const splitStartMs = Math.max(40, normalizeMs - overlapMs);
-  const sideDelay = 70;
-
-  splitAnimStyleBackup = document.getElementById('anim-style').textContent;
-  const originalAnimCSS = splitAnimStyleBackup;
-  document.getElementById('anim-style').textContent = `
-    :root {
-      --spring: ${easing};
-      --anim-w:  ${normalizeMs}ms var(--spring);
-      --anim-h:  ${normalizeMs}ms var(--spring);
-      --anim-br: ${normalizeMs}ms var(--spring);
-      --anim-tx: ${normalizeMs}ms var(--spring);
-      --anim-t:  ${normalizeMs}ms var(--spring);
-    }`;
-
-  suppressDeformation = true;
-  morphTo('dot', { icon:'', primary:'', secondary:'', detail:'' });
-  C.thumb.style.opacity = '0';
-  C.prim.style.opacity = '0';
-  C.sec.style.opacity = '0';
-  C.det.style.opacity = '0';
-  C.div.style.opacity = '0';
-
-  const main = DROPS.main;
-  const left = DROPS.left;
-  const right = DROPS.right;
-
-  [left, right].forEach((el) => {
-    el.style.width = '96px';
-    el.style.height = '96px';
-    el.style.borderRadius = '48px';
-    el.style.opacity = '0';
-    el.style.pointerEvents = 'none';
-  });
-  left.style.transform = 'translate(-48px,-48px)';
-  right.style.transform = 'translate(-48px,-48px)';
-
-  scheduleSplitTimer(splitStartMs, () => {
-    main.classList.add('metaball-prep');
-    if (main._metaAnim) main._metaAnim.cancel();
-    main._metaAnim = main.animate([
-      { transform: 'translate(-50px,-50px) scale(1,1)', borderRadius: '50px', opacity: 1, filter: 'blur(0px)', offset: 0 },
-      { transform: 'translate(-50px,-50px) scale(1.08,0.95)', borderRadius: '46px', opacity: 1, filter: 'blur(0px)', offset: 0.18 },
-      { transform: 'translate(-50px,-50px) scale(1.16,0.89)', borderRadius: '40px', opacity: 0.94, filter: 'blur(0.4px)', offset: 0.68 },
-      { transform: 'translate(-50px,-50px) scale(1.1,0.92)', borderRadius: '42px', opacity: 0, filter: 'blur(0px)', offset: 1 },
-    ], { duration: splitMs, easing, fill: 'forwards' });
-
-    [left, right].forEach((el) => {
-      if (el._splitAnim) el._splitAnim.cancel();
-    });
-
-    left._splitAnim = left.animate([
-      { transform: 'translate(-48px,-48px) scale(0.92,1.04)', opacity: 0, offset: 0 },
-      { transform: 'translate(-76px,-48px) scale(1.02,0.98)', opacity: 0.72, offset: 0.5 },
-      { transform: 'translate(-114px,-48px) scale(1.04,0.96)', opacity: 1, offset: 0.84 },
-      { transform: 'translate(-108px,-48px) scale(1,1)', opacity: 1, offset: 1 },
-    ], { duration: splitMs - sideDelay, delay: sideDelay, easing, fill: 'forwards' });
-
-    right._splitAnim = right.animate([
-      { transform: 'translate(-48px,-48px) scale(0.92,1.04)', opacity: 0, offset: 0 },
-      { transform: 'translate(-20px,-48px) scale(1.02,0.98)', opacity: 0.72, offset: 0.5 },
-      { transform: 'translate(18px,-48px) scale(1.04,0.96)', opacity: 1, offset: 0.84 },
-      { transform: 'translate(12px,-48px) scale(1,1)', opacity: 1, offset: 1 },
-    ], { duration: splitMs - sideDelay, delay: sideDelay, easing, fill: 'forwards' });
-
-    scheduleSplitTimer(sideDelay, () => {
-      left.style.pointerEvents = 'auto';
-      right.style.pointerEvents = 'auto';
-    });
-
-    scheduleSplitTimer(splitMs + 12, () => {
-      main.style.width = '96px';
-      main.style.height = '96px';
-      main.style.borderRadius = '48px';
-      main.style.transform = 'translate(-48px,-48px)';
-      main.style.opacity = '0';
-      main.style.pointerEvents = 'none';
-
-      left.style.opacity = '1';
-      right.style.opacity = '1';
-      left.style.transform = 'translate(-108px,-48px)';
-      right.style.transform = 'translate(12px,-48px)';
-
-      currentShape = 'split';
-      lastMainGeo = { ...SHAPES.split.main };
-      if (morphApi) {
-        morphApi.setCurrentShape('split');
-        morphApi.setLastMainGeo({ ...SHAPES.split.main });
-        morphApi.setSuppressDeformation(false);
-      }
-      updateActive('split');
-      main.classList.remove('metaball-prep');
-      main.style.filter = '';
-      document.getElementById('anim-style').textContent = originalAnimCSS;
-      splitAnimStyleBackup = null;
-      suppressDeformation = false;
-      clearSplitTimers();
-    });
-  });
-}
-
-function manualShape(shape) {
-  document.getElementById('shape-panel').classList.remove('visible');
-  hideRich();
-  hideIntentHeader();
-  document.getElementById('stage').classList.remove('flow-active');
-  document.getElementById('input-area').classList.remove('hidden');
-  const leavingSplit = currentShape === 'split' && shape !== 'split';
-  const leavingList = currentShape === 'list' && shape !== 'list';
-  if (!leavingList) clearListPills();
-
-  if (shape === 'split') {
-    morphTo('split', { icon:'', primary:'', secondary:'', detail:'' });
-    return;
-  }
-
-  if (!leavingSplit && currentShape === 'split') resetSplitState();
-
-  if (shape === 'list') {
-    morphToList(DEMO_LIST);
-    updateActive('list');
-    return;
-  }
-  if (shape === 'ai') {
-    if (currentShape === 'circle') {
-      bridgeHomeToThinking('ai');
-      return;
-    }
-    stopSiriOrb();
-    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
-    C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
-    startSiriOrb(true);
-    updateActive('ai');
-    return;
-  }
-  if (shape === 'idle') {
-    if (currentShape === 'circle') {
-      bridgeHomeToThinking('idle');
-      return;
-    }
-    stopSiriOrb();
-    morphTo('ai', { icon:'', primary:'', secondary:'', detail:'' });
-    C.thumb.style.opacity = '0';
-    document.getElementById('drop-main').classList.add('ai-mode');
-    showAiIdle();
-    updateActive('idle');
-    return;
-  }
-
-  stopSiriOrb();
-  if (SCENARIO_SHAPES.includes(shape)) {
-    const scenario = selectedScenario();
-    const nextScenario = scenario ? createScenario({
-      ...scenario,
-      shape,
-      content: scenario.content,
-      triggers: scenario.triggers,
-    }) : createScenario({ shape });
-    previewScenario(nextScenario);
-    return;
-  }
-  morphTo(shape, DEMO[shape] || {});
-}
-
-function updateActive(shape) {
-  syncMorphState();
-  document.querySelectorAll('.sb-shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === shape));
-}
-
-function openCustom() {
-  document.getElementById('shape-panel').classList.toggle('visible');
-  updateActive('custom');
-}
-
-function applyCustomShape() {
-  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
-  const w = clamp(parseInt(document.getElementById('sp-w').value)||280, 60, 420);
-  const h = clamp(parseInt(document.getElementById('sp-h').value)||140, 60, 360);
-  const r = clamp(parseInt(document.getElementById('sp-r').value)||0, 0, Math.floor(Math.min(w,h)/2));
-  document.getElementById('sp-w').value = w;
-  document.getElementById('sp-h').value = h;
-  document.getElementById('sp-r').value = r;
-  const g = {
-    main:  { w, h, br:r+'px', tx:-(w/2), ty:-(h/2), op:1 },
-    left:  { w:100, h:100, br:'50px', tx:-(w/2), ty:-50, op:0 },
-    right: { w:100, h:100, br:'50px', tx:(w/2)-100, ty:-50, op:0 },
-  };
-  hideRich();
-  morphTo('custom', null, g);
-  applyContentPositions('custom', w, h);
-}
-
-const input   = document.getElementById('user-input');
+const input = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
+actions = initManualActions({ input, sendBtn, flight, resolveScenario, previewScenario, renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; } });
 
-input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); handleSend(); }
-  e.stopPropagation();
+initManualBindings({
+  document,
+  UI,
+  PAGE_MODE_OVERRIDE,
+  RESPONSE_MODE,
+  AI_STAGE_OVERRIDE,
+  availableScenarioShapes,
+  selectedScenario,
+  stageById,
+  normalizeScenarioCanvas,
+  normalizeTriggers,
+  normalizeIconByShape,
+  createIcon,
+  normalizeStageTextByShape,
+  normalizeTypographyByShape,
+  normalizeStageSizeByShape,
+  normalizeImagesByShape,
+  scenarioStageSizeOverride,
+  STAGE_COMPONENT_TYPES,
+  clamp,
+  canvasSettings: () => canvasSettings,
+  setCanvasSettings: (value) => { canvasSettings = value; },
+  persistCanvasSettings,
+  persistScenarios,
+  responseMode: () => responseMode,
+  setResponseMode: (value) => { responseMode = value; },
+  persistResponseMode,
+  aiStageOverride: () => aiStageOverride,
+  setAiStageOverride: (value) => { aiStageOverride = value; },
+  persistAiStageOverride,
+  renderAiStageOverrideUi,
+  previewAiStageOverride,
+  renderScenarioUi,
+  addScenario,
+  duplicateScenario,
+  deleteScenario,
+  commitScenarioChange,
+  addStage,
+  deleteCurrentStage,
+  resetCurrentStageToDefault,
+  commitStageChange,
+  getScenarioImagesForStage,
+  isSupportedAssetFile,
+  bindTypographyInputs,
+  updateLayerPreviews,
+  initSidebarTabs,
+  initLayerRowToggles,
+  initSidebarCollapsibleSections,
+  applyCanvasSettings,
+  applyStagePhoneBlur,
+  applyResponseModeUi,
+  previewScenarioInstant,
+  previewScenario,
+  hideRich: morphApi.hideRich,
+  hideIntentHeader,
+  handleSend: actions.handleSend,
+  manualShape: manualDemo.manualShape,
+  openCustom: manualDemo.openCustom,
+  flight,
+  rebuildAnim: anim.rebuildAnim,
+  initStarfield: anim.initStarfield,
 });
-
-function handleSend() {
-  const text = input.value.trim();
-  if (!text) return;
-  if (flightUi.active) cancelFlightFlow();
-  input.value = '';
-  sendBtn.classList.remove('active');
-  void processRequest(text);
-}
-
-function fireChip(el) {
-  const text = el.textContent.trim();
-  if (flightUi.active) cancelFlightFlow();
-  input.value = text;
-  sendBtn.classList.add('active');
-  setTimeout(() => {
-    input.value = '';
-    sendBtn.classList.remove('active');
-    void processRequest(text);
-  }, 120);
-}
-
-document.addEventListener('keydown', e => {
-  if (document.activeElement?.matches?.('input, textarea, select')) return;
-
-  if (flightUi.active) {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      moveFlightHighlight(-1);
-      return;
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      moveFlightHighlight(1);
-      return;
-    }
-    if (e.code === 'Space') {
-      e.preventDefault();
-      confirmFlightStep();
-      return;
-    }
-    if (e.key === 'x' || e.key === 'X') {
-      e.preventDefault();
-      cancelFlightFlow();
-      return;
-    }
-    return;
-  }
-
-  if (e.key === '1') manualShape('circle');
-  if (e.key === '2') manualShape('dot');
-  if (e.key === '3') manualShape('pill');
-  if (e.key === '4') manualShape('card');
-  if (e.key === '5') manualShape('list');
-  if (e.key === '8') manualShape('ai');
-  if (e.key === '6') manualShape('split');
-  if (e.key === '7') openCustom();
-  if (e.key === 'Escape') {
-    document.getElementById('stage').classList.remove('flow-active');
-    document.getElementById('input-area').classList.remove('hidden');
-    hideRich(); hideIntentHeader();
-    previewScenario(selectedScenario());
-  }
-});
-
-document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach(inp => inp.addEventListener('keydown', e => e.stopPropagation()));
-
-if (UI.modeToggle && !PAGE_MODE_OVERRIDE) {
-  UI.modeToggle.addEventListener('change', () => {
-    responseMode = UI.modeToggle.checked ? RESPONSE_MODE.AI : RESPONSE_MODE.MANUAL;
-    persistResponseMode();
-    applyResponseModeUi();
-    if (responseMode === RESPONSE_MODE.AI) {
-      hideRich();
-      hideIntentHeader();
-      document.getElementById('stage').classList.remove('flow-active');
-      document.getElementById('input-area').classList.remove('hidden');
-      previewAiStageOverride();
-    }
-  });
-}
-
-UI.aiStageButtons.forEach((button) => {
-  button.addEventListener('click', () => {
-    const stage = button.dataset.aiStage;
-    if (!Object.values(AI_STAGE_OVERRIDE).includes(stage)) return;
-    aiStageOverride = stage;
-    persistAiStageOverride();
-    renderAiStageOverrideUi();
-    previewAiStageOverride();
-  });
-});
-
-UI.bgToggle.addEventListener('change', () => {
-  canvasSettings.backgroundEnabled = UI.bgToggle.checked;
-  persistCanvasSettings();
-  applyCanvasSettings();
-});
-
-UI.floatToggle.addEventListener('change', () => {
-  canvasSettings.floatingEnabled = UI.floatToggle.checked;
-  persistCanvasSettings();
-  applyCanvasSettings();
-});
-
-UI.alignBottomToggle.addEventListener('change', () => {
-  canvasSettings.bottomAlign = UI.alignBottomToggle.checked;
-  persistCanvasSettings();
-  applyCanvasSettings();
-  if (responseMode === RESPONSE_MODE.AI) {
-    previewAiStageOverride();
-  } else {
-    previewScenario(selectedScenario());
-  }
-});
-
-UI.frameGlassesToggle.addEventListener('change', () => {
-  const nextMode = UI.frameGlassesToggle.checked ? 'glasses' : 'none';
-  if (nextMode === 'glasses' && UI.framePhoneToggle) UI.framePhoneToggle.checked = false;
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  scenario.content.canvas = normalizeScenarioCanvas(
-    scenario.content.canvas,
-    { frameMode: canvasSettings.frameMode }
-  );
-  scenario.content.canvas.frameMode = nextMode;
-  persistScenarios();
-  renderScenarioUi();
-  applyCanvasSettings();
-  applyStagePhoneBlur(scenario.shape);
-});
-
-UI.framePhoneToggle.addEventListener('change', () => {
-  const nextMode = UI.framePhoneToggle.checked ? 'phone' : 'none';
-  if (nextMode === 'phone' && UI.frameGlassesToggle) UI.frameGlassesToggle.checked = false;
-  if (nextMode === 'phone') canvasSettings.floatingEnabled = false;
-  persistCanvasSettings();
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  scenario.content.canvas = normalizeScenarioCanvas(
-    scenario.content.canvas,
-    { frameMode: canvasSettings.frameMode }
-  );
-  scenario.content.canvas.frameMode = nextMode;
-  persistScenarios();
-  renderScenarioUi();
-  applyCanvasSettings();
-  applyStagePhoneBlur(scenario.shape);
-});
-
-const commitPhoneFrameSize = (axis, rawValue) => {
-  const parsed = parseInt(String(rawValue || '').trim(), 10);
-  if (!Number.isFinite(parsed)) return;
-  const key = axis === 'w' ? 'phoneFrameWidth' : 'phoneFrameHeight';
-  const bounded = axis === 'w' ? clamp(parsed, 240, 600) : clamp(parsed, 420, 1200);
-  canvasSettings[key] = bounded;
-  persistCanvasSettings();
-  applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
-};
-
-UI.phoneFrameWidth.addEventListener('change', (e) => commitPhoneFrameSize('w', e.target.value));
-UI.phoneFrameHeight.addEventListener('change', (e) => commitPhoneFrameSize('h', e.target.value));
-UI.frameCornerRadius.addEventListener('change', (e) => {
-  const parsed = parseInt(String(e.target.value || '').trim(), 10);
-  if (!Number.isFinite(parsed)) return;
-  canvasSettings.frameCornerRadius = clamp(parsed, 0, 120);
-  persistCanvasSettings();
-  applyCanvasSettings();
-});
-
-UI.phoneBgUpload.addEventListener('click', (e) => {
-  e.target.value = '';
-});
-UI.phoneBgUpload.addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  if (!String(file.type || '').startsWith('image/')) {
-    e.target.value = '';
-    return;
-  }
-  const dataUrl = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  }).catch(() => '');
-  if (!dataUrl) return;
-  const dimensions = await new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => resolve(null);
-    img.src = dataUrl;
-  });
-  if (!dimensions?.width || !dimensions?.height) return;
-  canvasSettings.phoneFrameBackground = {
-    src: dataUrl,
-    width: dimensions.width,
-    height: dimensions.height,
-  };
-  persistCanvasSettings();
-  applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
-  e.target.value = '';
-});
-UI.phoneBgReset.addEventListener('click', () => {
-  canvasSettings.phoneFrameBackground = null;
-  persistCanvasSettings();
-  applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
-  UI.phoneBgUpload.value = '';
-});
-
-UI.phoneBgVisibleToggle.addEventListener('change', () => {
-  canvasSettings.phoneBgEnabled = UI.phoneBgVisibleToggle.checked;
-  persistCanvasSettings();
-  applyCanvasSettings();
-  applyStagePhoneBlur(selectedScenario()?.shape);
-});
-
-UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
-UI.scenarioDuplicate.addEventListener('click', duplicateScenario);
-UI.scenarioDelete.addEventListener('click', deleteScenario);
-
-UI.scenarioName.addEventListener('input', (e) => {
-  commitScenarioChange((scenario) => {
-    scenario.name = e.target.value.trim() || 'Untitled Scenario';
-  });
-});
-
-UI.scenarioTriggers.addEventListener('input', (e) => {
-  commitScenarioChange((scenario) => {
-    scenario.triggers = normalizeTriggers(e.target.value);
-  });
-});
-
-UI.scenarioIconInput.addEventListener('input', (e) => {
-  commitScenarioChange((scenario) => {
-    const value = String(e.target.value || '').trim();
-    scenario.content.iconByShape = normalizeIconByShape(
-      scenario.content.iconByShape,
-      scenario.shape,
-      scenario.content.icon
-    );
-    scenario.content.iconByShape[scenario.shape] = value ? createIcon('emoji', value) : createIcon('none', '');
-  });
-});
-
-UI.scenarioPrimary.addEventListener('input', (e) => {
-  commitScenarioChange((scenario) => {
-    scenario.content.textByShape = normalizeStageTextByShape(
-      scenario.content.textByShape,
-      scenario.shape,
-      scenario.content
-    );
-    scenario.content.textByShape[scenario.shape].primary = e.target.value;
-  });
-});
-
-UI.scenarioSecondary.addEventListener('input', (e) => {
-  commitScenarioChange((scenario) => {
-    scenario.content.textByShape = normalizeStageTextByShape(
-      scenario.content.textByShape,
-      scenario.shape,
-      scenario.content
-    );
-    scenario.content.textByShape[scenario.shape].secondary = e.target.value;
-  });
-});
-
-UI.scenarioDetail.addEventListener('input', (e) => {
-  commitScenarioChange((scenario) => {
-    scenario.content.textByShape = normalizeStageTextByShape(
-      scenario.content.textByShape,
-      scenario.shape,
-      scenario.content
-    );
-    scenario.content.textByShape[scenario.shape].detail = e.target.value;
-  });
-});
-
-UI.scenarioShapeRow.addEventListener('click', (e) => {
-  const button = e.target.closest('[data-scenario-shape]');
-  if (!button) return;
-  const shape = String(button.dataset.scenarioShape || '');
-  if (!availableScenarioShapes().includes(shape)) return;
-  commitScenarioChange((scenario) => {
-    scenario.shape = shape;
-    scenario.content.textByShape = normalizeStageTextByShape(
-      scenario.content.textByShape,
-      shape,
-      scenario.content
-    );
-    scenario.content.typographyByShape = normalizeTypographyByShape(
-      scenario.content.typographyByShape,
-      shape
-    );
-    scenario.content.sizeByShape = normalizeStageSizeByShape(
-      scenario.content.sizeByShape,
-      shape,
-      scenario.content
-    );
-  });
-});
-
-UI.stageAdd.addEventListener('click', () => {
-  addStage();
-});
-UI.stageDelete.addEventListener('click', () => {
-  deleteCurrentStage();
-});
-UI.stageReset.addEventListener('click', () => {
-  resetCurrentStageToDefault();
-});
-
-UI.stageNameInput.addEventListener('input', (e) => {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  const nextName = String(e.target.value || '').trim();
-  commitStageChange(stage.id, (draft) => {
-    draft.name = nextName || 'Untitled Stage';
-  });
-});
-
-const commitStageRadius = (rawValue) => {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  const parsed = parseInt(String(rawValue || '').trim(), 10);
-  if (!Number.isFinite(parsed)) return;
-  const nextRadius = clamp(parsed, 0, 120);
-  commitStageChange(stage.id, (draft) => {
-    draft.cornerRadius = nextRadius;
-  });
-};
-UI.stageRadiusInput.addEventListener('change', (e) => commitStageRadius(e.target.value));
-UI.stageRadiusInput.addEventListener('blur', (e) => {
-  const value = String(e.target.value || '').trim();
-  if (!value) {
-    const scenario = selectedScenario();
-    const stage = stageById(scenario?.shape);
-    e.target.value = stage ? String(stage.cornerRadius) : '';
-    return;
-  }
-  commitStageRadius(value);
-});
-
-const commitStageSizeOverride = (axis, rawValue) => {
-  const scenario = selectedScenario();
-  if (!scenario) return;
-  const value = String(rawValue || '').trim();
-  const key = axis === 'width' ? 'widthOverride' : 'heightOverride';
-  if (!value) {
-    commitScenarioChange((draftScenario) => {
-      draftScenario.content.sizeByShape = normalizeStageSizeByShape(
-        draftScenario.content.sizeByShape,
-        draftScenario.shape,
-        draftScenario.content
-      );
-      draftScenario.content.sizeByShape[draftScenario.shape][key] = null;
-    });
-    return;
-  }
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return;
-  const bounded = clamp(parsed, 40, 1400);
-  commitScenarioChange((draftScenario) => {
-    draftScenario.content.sizeByShape = normalizeStageSizeByShape(
-      draftScenario.content.sizeByShape,
-      draftScenario.shape,
-      draftScenario.content
-    );
-    draftScenario.content.sizeByShape[draftScenario.shape][key] = bounded;
-  });
-};
-
-UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
-UI.stageWidthInput.addEventListener('blur', (e) => {
-  const scenario = selectedScenario();
-  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-  const value = String(e.target.value || '').trim();
-  if (!value) {
-    e.target.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
-    return;
-  }
-  commitStageSizeOverride('width', value);
-});
-
-UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
-UI.stageHeightInput.addEventListener('blur', (e) => {
-  const scenario = selectedScenario();
-  const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-  const value = String(e.target.value || '').trim();
-  if (!value) {
-    e.target.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
-    return;
-  }
-  commitStageSizeOverride('height', value);
-});
-
-const commitStageGapOverride = (rawValue) => {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  const value = String(rawValue || '').trim();
-  if (!value) {
-    commitStageChange(stage.id, (draft) => {
-      draft.iconTextGap = null;
-    });
-    return;
-  }
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return;
-  const bounded = clamp(parsed, 0, 80);
-  commitStageChange(stage.id, (draft) => {
-    draft.iconTextGap = bounded;
-  });
-};
-UI.stageGapInput.addEventListener('change', (e) => commitStageGapOverride(e.target.value));
-UI.stageGapInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
-  const value = String(e.target.value || '').trim();
-  if (!value) {
-    e.target.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
-    return;
-  }
-  commitStageGapOverride(value);
-});
-
-const commitStageIconPadOverride = (rawValue) => {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  const value = String(rawValue || '').trim();
-  if (!value) {
-    commitStageChange(stage.id, (draft) => {
-      draft.iconLeftPadding = null;
-    });
-    return;
-  }
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return;
-  const bounded = clamp(parsed, 0, 120);
-  commitStageChange(stage.id, (draft) => {
-    draft.iconLeftPadding = bounded;
-  });
-};
-UI.stageIconPadInput.addEventListener('change', (e) => commitStageIconPadOverride(e.target.value));
-UI.stageIconPadInput.addEventListener('blur', (e) => {
-  const stage = stageById(selectedScenario()?.shape);
-  const value = String(e.target.value || '').trim();
-  if (!value) {
-    e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
-    return;
-  }
-  commitStageIconPadOverride(value);
-});
-
-UI.stagePhoneBlurToggle.addEventListener('change', (e) => {
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  commitStageChange(stage.id, (draft) => {
-    draft.phoneBgBlur = e.target.checked;
-  });
-});
-
-UI.stageComponentControls.addEventListener('click', (e) => {
-  const button = e.target.closest('[data-stage-comp-action][data-stage-comp-type]');
-  if (!button) return;
-  const action = String(button.dataset.stageCompAction || '');
-  const type = String(button.dataset.stageCompType || '');
-  if (!STAGE_COMPONENT_TYPES.includes(type)) return;
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  commitStageChange(stage.id, (draft) => {
-    const next = [...(draft.components || [])];
-    if (action === 'add') {
-      next.push(type);
-    } else if (action === 'remove') {
-      const removeIndex = next.lastIndexOf(type);
-      if (removeIndex >= 0) next.splice(removeIndex, 1);
-    }
-    draft.components = next;
-  });
-});
-
-UI.stageComponentControls.addEventListener('change', (e) => {
-  const checkbox = e.target.closest('[data-stage-comp-toggle]');
-  if (!checkbox) return;
-  const type = String(checkbox.dataset.stageCompToggle || '');
-  if (!['icon', 'primary', 'secondary', 'detail'].includes(type)) return;
-  const scenario = selectedScenario();
-  const stage = stageById(scenario?.shape);
-  if (!stage) return;
-  commitStageChange(stage.id, (draft) => {
-    const next = [...(draft.components || [])].filter((item) => item !== type);
-    if (checkbox.checked) next.push(type);
-    draft.components = next;
-  });
-});
-
-UI.scenarioIconReset.addEventListener('click', () => {
-  commitScenarioChange((scenario) => {
-    scenario.content.iconByShape = normalizeIconByShape(
-      scenario.content.iconByShape,
-      scenario.shape,
-      scenario.content.icon
-    );
-    scenario.content.iconByShape[scenario.shape] = createIcon('none', '');
-  });
-  UI.scenarioIconUpload.value = '';
-});
-
-UI.scenarioIconUpload.addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  if (!isSupportedAssetFile(file)) {
-    e.target.value = '';
-    return;
-  }
-  const dataUrl = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  }).catch(() => '');
-  if (!dataUrl) return;
-  commitScenarioChange((scenario) => {
-    scenario.content.iconByShape = normalizeIconByShape(
-      scenario.content.iconByShape,
-      scenario.shape,
-      scenario.content.icon
-    );
-    scenario.content.iconByShape[scenario.shape] = createIcon('image', dataUrl);
-  });
-  e.target.value = '';
-});
-UI.scenarioIconUpload.addEventListener('click', (e) => {
-  e.target.value = '';
-});
-
-UI.editorMedia.addEventListener('click', (e) => {
-  const button = e.target.closest('[data-media-reset-index]');
-  if (!button) return;
-  const index = parseInt(button.dataset.mediaResetIndex, 10);
-  if (!Number.isFinite(index) || index < 0) return;
-  commitScenarioChange((scenario) => {
-    const stage = stageById(scenario.shape);
-    const images = getScenarioImagesForStage(scenario, stage);
-    images[index] = null;
-    scenario.content.imagesByShape = normalizeImagesByShape(
-      scenario.content.imagesByShape,
-      scenario.shape,
-      scenario.content.images
-    );
-    scenario.content.imagesByShape[scenario.shape] = images.filter(Boolean);
-  });
-});
-
-UI.editorMedia.addEventListener('change', async (e) => {
-  const input = e.target.closest('[data-media-upload-index]');
-  if (!input) return;
-  const index = parseInt(input.dataset.mediaUploadIndex, 10);
-  if (!Number.isFinite(index) || index < 0) return;
-  const file = input.files?.[0];
-  if (!file) return;
-  if (!isSupportedAssetFile(file)) {
-    input.value = '';
-    return;
-  }
-  const dataUrl = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  }).catch(() => '');
-  if (!dataUrl) return;
-  const dimensions = await new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => resolve(null);
-    img.src = dataUrl;
-  });
-  if (!dimensions?.width || !dimensions?.height) return;
-  commitScenarioChange((scenario) => {
-    const stage = stageById(scenario.shape);
-    const images = getScenarioImagesForStage(scenario, stage);
-    images[index] = {
-      src: dataUrl,
-      width: dimensions.width,
-      height: dimensions.height,
-    };
-    scenario.content.imagesByShape = normalizeImagesByShape(
-      scenario.content.imagesByShape,
-      scenario.shape,
-      scenario.content.images
-    );
-    scenario.content.imagesByShape[scenario.shape] = images.filter(Boolean);
-  });
-  input.value = '';
-});
-UI.editorMedia.addEventListener('click', (e) => {
-  const input = e.target.closest('[data-media-upload-index]');
-  if (!input) return;
-  input.value = '';
-});
-
-bindTypographyInputs('icon', UI.scenarioIconSize, UI.scenarioIconColor);
-bindTypographyInputs('primary', UI.scenarioPrimarySize, UI.scenarioPrimaryColor);
-bindTypographyInputs('secondary', UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
-bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
-
-// Keep layer row previews in sync with live input
-[UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
- UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor,
- UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,
-].forEach(el => { if (el) el.addEventListener('input', updateLayerPreviews); });
-
-let animDur = 450;
-const SPRING_WITH_ANTICIPATION = `linear(
-  0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
-  0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
-  1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
-  1.004 92%, 1.001 97%, 1
-)`;
-const DEFAULT_CUSTOM_BEZIER = [0.35, 0.23, 0.13, 0.98];
-
-function parseBezierInput(rawValue) {
-  const parts = String(rawValue || '')
-    .split(',')
-    .map(v => v.trim())
-    .filter(Boolean);
-  if (parts.length !== 4) return null;
-  const values = parts.map(v => Number(v));
-  if (values.some(v => !Number.isFinite(v))) return null;
-  return values;
-}
-
-function getCustomBezierValues() {
-  const input = document.getElementById('bz-input');
-  const parsed = parseBezierInput(input?.value);
-  return parsed || DEFAULT_CUSTOM_BEZIER;
-}
-
-function formatBezierValues(values) {
-  return values.map(v => {
-    const rounded = Math.round(v * 1000) / 1000;
-    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
-  }).join(', ');
-}
-
-const EASING_FN = {
-  custom:  () => { const v = getCustomBezierValues(); return `cubic-bezier(${v.join(',')})`; },
-  spring:  () => SPRING_WITH_ANTICIPATION,
-  ease:    () => 'cubic-bezier(0.25,0.1,0.25,1)',
-  linear:  () => 'linear',
-};
-
-function setAnimDuration(nextDuration) {
-  animDur = nextDuration;
-  const slider = document.getElementById('dur-sl');
-  const value = clamp(parseInt(nextDuration, 10) || animDur, 100, 1400);
-  if (slider) slider.value = String(value);
-  document.getElementById('dur-val').textContent = value + 'ms';
-  animDur = value;
-  rebuildAnim();
-}
-
-function applyEasingPresetDefaults(preset) {
-  if (preset === 'custom') {
-    setAnimDuration(450);
-    return;
-  }
-  if (preset === 'spring') {
-    setAnimDuration(900);
-  }
-}
-
-function rebuildAnim() {
-  const curve  = document.getElementById('ease-select').value;
-  const easing = EASING_FN[curve]();
-  const wDur   = animDur;
-  const hDur   = animDur;
-  const brDur  = animDur;
-  const txDur  = animDur;
-  document.getElementById('anim-style').textContent = `
-    :root {
-      --spring: ${easing};
-      --anim-w:  ${wDur}ms var(--spring);
-      --anim-h:  ${hDur}ms var(--spring);
-      --anim-br: ${brDur}ms var(--spring);
-      --anim-tx: ${txDur}ms var(--spring);
-      --anim-t:  ${txDur}ms var(--spring);
-    }`;
-}
-document.getElementById('dur-sl').addEventListener('input', function() {
-  setAnimDuration(parseInt(this.value, 10));
-});
-document.getElementById('ease-select').addEventListener('change', function() {
-  const showBz = this.value === 'custom';
-  document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
-  document.getElementById('bz-row').classList.toggle('hidden', !showBz);
-  applyEasingPresetDefaults(this.value);
-  if (this.value !== 'custom' && this.value !== 'spring') rebuildAnim();
-});
-document.querySelectorAll('.bz-inp').forEach(inp => inp.addEventListener('input', rebuildAnim));
-document.getElementById('bz-input').addEventListener('blur', function() {
-  const parsed = parseBezierInput(this.value);
-  this.value = formatBezierValues(parsed || DEFAULT_CUSTOM_BEZIER);
-});
-{
-  const showBz = document.getElementById('ease-select').value === 'custom';
-  document.getElementById('bz-group').style.opacity = showBz ? '1' : '0.3';
-  document.getElementById('bz-row').classList.toggle('hidden', !showBz);
-  document.getElementById('bz-input').value = formatBezierValues(getCustomBezierValues());
-}
-
-initSidebarTabs();
-initLayerRowToggles();
-initSidebarCollapsibleSections();
-applyCanvasSettings();
-applyResponseModeUi();
-renderScenarioUi();
-previewScenarioInstant(selectedScenario());
-rebuildAnim();
-
-[[8,12,.04,3.8,0],[18,76,.03,5.1,.8],[28,34,.05,4.2,.3],[38,88,.04,6.0,1.1],
- [48,22,.05,3.5,.5],[58,65,.03,4.8,.9],[68,42,.04,5.5,.2],[78,10,.04,4.0,.7],
- [88,55,.05,3.2,1.3],[12,48,.03,5.8,.4],[22,90,.04,4.5,1.0],[32,18,.04,3.9,.6],
- [42,72,.05,5.2,.1],[52,38,.03,4.1,.8],[62,82,.04,3.7,1.2],[72,28,.05,5.6,.3],
- [82,60,.04,4.3,.9],[92,14,.05,3.4,.5],[5,55,.03,5.0,1.1],[15,25,.04,4.7,.2],
- [25,70,.04,3.6,.7],[35,5,.05,5.3,1.4],[45,85,.03,4.0,.6],[55,45,.04,3.8,1.0],
- [65,15,.04,5.1,.3],[75,75,.05,4.4,.8],[85,35,.03,3.5,1.3],[95,50,.04,4.9,.4]
-].forEach(([l,t,op,dur,delay]) => {
-  const s = document.createElement('div'); s.className = 'star';
-  const big = Math.round(l+t) % 9 === 0;
-  s.style.cssText = `left:${l}%;top:${t}%;width:${big?2:1}px;height:${big?2:1}px;background:rgba(255,255,255,1);--op:${op};--sd:${dur}s;--sdl:${delay}s;`;
-  document.body.appendChild(s);
-});
-
-const LIST_PILL_W = 420;
-const LIST_PILL_H = 120;
-const LIST_GAP    = 12;
-const LIST_STEP   = LIST_PILL_H + LIST_GAP;
-const LIST_TOP_Y  = -60;
-const LIST_OFF    = 140;
-const DEMO_LIST = [
-  { icon:'🌤', primary:'21°  Sunny', secondary:'San Francisco' },
-  { icon:'✉', primary:'New Message', secondary:'Alice · Want to meet?' },
-  { icon:'⏱', primary:'Timer', secondary:'10 minutes remaining' },
-];
-
-function clearListPills() {
-  const wrap = document.getElementById('list-pills');
-  wrap.innerHTML = '';
-  wrap.style.pointerEvents = 'none';
-  wrap.style.opacity = '';
-  wrap.style.transition = '';
-  wrap.dataset.collapsing = '';
-}
-
-function collapseListStack(ms = 220) {
-  const wrap = document.getElementById('list-pills');
-  if (!wrap) return;
-  if (!wrap.children.length) {
-    clearListPills();
-    return;
-  }
-  if (wrap.dataset.collapsing === '1') return;
-  wrap.dataset.collapsing = '1';
-  wrap.style.pointerEvents = 'none';
-  wrap.style.transition = `opacity ${ms}ms ease`;
-  wrap.style.opacity = '0';
-  setTimeout(() => {
-    clearListPills();
-  }, ms + 30);
-}
-
-function buildListPill(item, idx, items) {
-  const el = document.createElement('div');
-  el.className = 'list-pill';
-  el.style.zIndex = String(Math.max(1, items.length - idx));
-  el.innerHTML = `
-    <div class="list-pill-thumb">${item.icon || '◉'}</div>
-    <div class="list-pill-text">
-      <div class="list-pill-primary">${item.primary || ''}</div>
-      <div class="list-pill-secondary">${item.secondary || ''}</div>
-    </div>`;
-  el.addEventListener('click', () => selectListItem(el, idx, items));
-  return el;
-}
-
-function morphToList(items) {
-  stopSiriOrb();
-  hideRich();
-  document.getElementById('drop-main').classList.remove('ai-mode');
-  setIntentHeader('Demo', 'List');
-
-  if (currentShape === 'split') {
-    morphTo('dot', { icon:'', primary:'', secondary:'', detail:'' });
-    if (listBridgeTimer) clearTimeout(listBridgeTimer);
-    listBridgeTimer = setTimeout(() => {
-      listBridgeTimer = null;
-      morphToList(items);
-    }, splitBridgeMs() + 28);
-    return;
-  }
-
-  const phaseOneMs = 600;
-  const phaseTwoMs = 500;
-  const overlapMs = 220;
-  const phaseTwoStart = phaseOneMs - overlapMs;
-  const easing = EASING_FN[document.getElementById('ease-select').value]();
-
-  const originalAnimCSS = document.getElementById('anim-style').textContent;
-  document.getElementById('anim-style').textContent = `
-    :root {
-      --spring: ${easing};
-      --anim-w:  ${phaseOneMs}ms var(--spring);
-      --anim-h:  ${phaseOneMs}ms var(--spring);
-      --anim-br: ${phaseOneMs}ms var(--spring);
-      --anim-tx: ${phaseOneMs}ms var(--spring);
-      --anim-t:  ${phaseTwoMs}ms var(--spring);
-    }`;
-
-  morphTo('pill', {
-    icon: items[0]?.icon || '◉',
-    primary: items[0]?.primary || '',
-    secondary: items[0]?.secondary || '',
-    detail: ''
-  });
-
-  const stackHeight = items.length * LIST_PILL_H + (items.length - 1) * LIST_GAP;
-  const stackTop = -stackHeight / 2;
-  const firstPillY = stackTop;
-  const incomingPillY = firstPillY + 20;
-
-  const stage = document.getElementById('stage');
-  if (stage) stage.style.height = stackHeight + 'px';
-
-  const wrap = document.getElementById('list-pills');
-  clearListPills();
-  wrap.style.opacity = '1';
-  wrap.style.transition = 'none';
-  wrap.style.pointerEvents = 'none';
-
-  const dm = DROPS.main;
-  dm.style.transform = `translate(-210px, ${firstPillY}px)`;
-  currentShape = 'list';
-  lastMainGeo = { ...SHAPES.pill.main, ty: firstPillY };
-
-  setTimeout(() => {
-    items.slice(1).forEach((item, i) => {
-      const idx = i + 1;
-      const pill = buildListPill(item, idx, items);
-      const finalY = stackTop + idx * LIST_STEP;
-      pill.style.transition = `transform ${phaseTwoMs}ms ${easing}, opacity ${Math.max(220, phaseTwoMs - 80)}ms ${easing}`;
-      pill.style.transform = `translateY(${incomingPillY}px)`;
-      pill.style.opacity = '0.01';
-      wrap.appendChild(pill);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          pill.style.transform = `translateY(${finalY}px)`;
-          pill.style.opacity = '1';
-        });
-      });
-    });
-
-    wrap.style.pointerEvents = 'auto';
-    setTimeout(() => {
-      document.getElementById('anim-style').textContent = originalAnimCSS;
-    }, phaseTwoMs + overlapMs + 40);
-  }, phaseTwoStart);
-}
-
-function selectListItem(el, idx, items) {
-  document.querySelectorAll('.list-pill').forEach(p => p.classList.remove('selected'));
-  el.classList.add('selected');
-}
 
 Object.assign(window, {
-  applyCustomShape,
-  fireChip,
-  handleSend,
-  manualShape,
-  openCustom,
-  selectListItem,
+  applyCustomShape: manualDemo.applyCustomShape,
+  fireChip: actions.fireChip,
+  handleSend: actions.handleSend,
+  manualShape: manualDemo.manualShape,
+  openCustom: manualDemo.openCustom,
+  selectListItem: manualDemo.selectListItem,
 });
