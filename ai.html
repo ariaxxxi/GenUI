@@ -238,6 +238,23 @@ body.mode-ai #main-col {
 #intent-header.visible {
   opacity: 1; transform: translateY(0);
 }
+#glass-orb-label {
+  position: absolute;
+  z-index: 30;
+  left: 50%; transform: translateX(-50%);
+  pointer-events: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  white-space: nowrap;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+#glass-orb-label.visible { opacity: 1; }
 #stage-wrap.flow-active #intent-header {
   margin-bottom: 16px;
 }
@@ -910,6 +927,7 @@ body.mode-ai #ui-frame {
   border: none;
   box-shadow: inset 0 0 20px rgba(255,255,255,0.20);
   transform: scale(1.12);
+  color: rgba(255,255,255,0.85);
   font-size: 20px;
   overflow: hidden;
   transition: opacity 500ms ease, height 500ms ease, transform 500ms ease;
@@ -934,6 +952,7 @@ body.mode-ai #ui-frame {
   border-radius: 50%;
   border: none;
   background: #000;
+  color: rgba(255,255,255,0.85);
   box-shadow:
     inset 0 -5px 6px -2px rgba(70,132,255,0.15),
     inset 0 -6px 7.8px -8px rgba(172,188,247,0.50),
@@ -2313,6 +2332,7 @@ body.bg-off .bg-blur-image { opacity: 0; }
           <div id="intent-step-dot"></div>
           <span id="intent-step-lbl"></span>
         </div>
+        <div id="glass-orb-label"></div>
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
           <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
@@ -5296,6 +5316,31 @@ function positionIntentHeaderAboveMain() {
   hdr.style.top = `${top}px`;
 }
 
+function updateOrbLabel() {
+  const lbl = document.getElementById('glass-orb-label');
+  const stage = document.getElementById('stage');
+  const main = document.getElementById('drop-main');
+  if (!lbl) return;
+  const isIdle = glassUi.active && glassUi.state === GS.IDLE;
+  const isThinking = glassUi.active && glassUi.state === GS.THINKING;
+  const text = isIdle ? (glassUi.interimText || '') : (isThinking ? (glassUi.aiVoice || '') : '');
+  if (!text || (!isIdle && !isThinking)) {
+    lbl.classList.remove('visible');
+    lbl.textContent = '';
+    return;
+  }
+  lbl.textContent = text;
+  lbl.classList.add('visible');
+  if (stage && main) {
+    const stageRect = stage.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const lblH = lbl.offsetHeight || 24;
+    const gap = 12;
+    const top = Math.max(8, Math.round(mainRect.top - stageRect.top - lblH - gap));
+    lbl.style.top = `${top}px`;
+  }
+}
+
 function hideIntentHeader() {
   const hdr = document.getElementById('intent-header');
   if (!hdr) return;
@@ -5582,7 +5627,7 @@ const glassUi = {
   active:false, state:GS.IDLE, sel:0,
   contact:null, msg:'', composeText:'',
   showChips:true, showCheck:false, aiVoice:'',
-  disambiguateContacts: [],
+  disambiguateContacts: [], interimText: '',
 };
 const voiceEngine = {
   recognition: null,
@@ -5827,6 +5872,7 @@ function addGlassLog(text, type = 'system') {
 function speakOutput(text) {
   glassUi.aiVoice = text;
   setSimVoice(text);
+  updateOrbLabel();
 }
 
 function setGlassOverlayOpacity(active) {
@@ -5968,10 +6014,15 @@ function cancelGlassMeasureSettle() {
 function buildGlassControlsHtml(confirmEnter = false) {
   if (!glassUi.active) return '';
   if (glassUi.state === GS.COMPOSE) {
-    return `<div class="g-glass-controls"><div class="g-checkmark ${glassUi.showCheck ? 'enter' : 'hidden'}">✅</div></div>`;
+    return `<div class="g-glass-controls"><div class="g-checkmark ${glassUi.showCheck ? 'enter' : 'hidden'}"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L9 18l10-14"/></svg></div></div>`;
   }
   if (glassUi.state === GS.CONFIRM) {
-    const buttons = ['✈️', '✊', '❌'].map((emoji, i) => `<div class="g-action-btn ${i === glassUi.sel ? 'selected' : ''}">${emoji}</div>`).join('');
+    const icons = [
+      `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>`,
+      `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>`,
+      `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>`,
+    ];
+    const buttons = icons.map((icon, i) => `<div class="g-action-btn ${i === glassUi.sel ? 'selected' : ''}">${icon}</div>`).join('');
     return `<div class="g-glass-controls"><div class="g-action-row${confirmEnter ? ' enter' : ''}">${buttons}</div></div>`;
   }
   return '';
@@ -6252,6 +6303,8 @@ function glassRender(shouldMorph = true) {
   const glow = document.getElementById('home-glow-layer');
   if (glow) glow.style.opacity = '';
 
+  updateOrbLabel();
+
   if (glassUi.active && glassUi.state === GS.DISAMBIGUATE) {
     setIntentHeader('Which Hiro?', null);
     const hdr = document.getElementById('intent-header');
@@ -6343,6 +6396,8 @@ function glassReset() {
   glassUi.showChips = true;
   glassUi.showCheck = false;
   glassUi.aiVoice = '';
+  glassUi.interimText = '';
+  glassUi._pendingMsg = '';
   speakOutput('');
   renderGlassControlsOverlay();
   glassRender(false);
@@ -6353,11 +6408,15 @@ function glassReset() {
 async function parseIntent(text) {
   const lower = String(text || '').toLowerCase().trim();
   if (/\b(send|message|text|msg)\b/.test(lower)) {
-    const match = lower.match(/\bto\s+(\w+)/i);
-    const recipient = match ? match[1] : '';
-    return { intent: 'send_message', recipient, confidence: 1.0 };
+    // Extract recipient: everything after "to" (greedy, to end or until message body heuristic)
+    const toMatch = lower.match(/\bto\s+(.+)/i);
+    const recipient = toMatch ? toMatch[1].trim() : '';
+    // Extract message body: text between send/message/text/msg and "to"
+    const bodyMatch = lower.match(/\b(?:send|message|text|msg)\s+(.+?)\s+to\s+/i);
+    const messageBody = bodyMatch ? bodyMatch[1].trim() : '';
+    return { intent: 'send_message', recipient, messageBody, confidence: 1.0 };
   }
-  return { intent: 'unknown', recipient: '', confidence: 0 };
+  return { intent: 'unknown', recipient: '', messageBody: '', confidence: 0 };
 }
 
 function isMessageIntent(text) {
@@ -6381,7 +6440,9 @@ function onTranscriptUpdate(text, isFinal = false) {
   if (!glassUi.active) return;
   switch (glassUi.state) {
     case GS.IDLE:
-      if (isFinal && text) { input.value = text; void handleGlassInputSubmit(); }
+      glassUi.interimText = isFinal ? '' : text;
+      updateOrbLabel();
+      if (isFinal && text) { glassUi.interimText = ''; input.value = text; void handleGlassInputSubmit(); }
       break;
     case GS.DISAMBIGUATE:
       if (isFinal && text) {
@@ -6629,7 +6690,17 @@ function glassConfirm() {
     if (!c) return;
     glassUi.contact = c;
     addGlassLog(`Selected: ${c.name}`, 'action');
-    beginComposeForContact(c, `What would you like to say to ${c.name.split(' ')[0]}?`);
+    const pendingMsg = glassUi._pendingMsg || '';
+    glassUi._pendingMsg = '';
+    if (pendingMsg) {
+      glassUi.msg = pendingMsg;
+      glassUi.composeText = pendingMsg;
+      glassUi.showChips = false;
+      glassUi.showCheck = true;
+      glassTransitionTo(GS.CONFIRM, `Confirm message to ${c.name.split(' ')[0]}.`);
+    } else {
+      beginComposeForContact(c, `What would you like to say to ${c.name.split(' ')[0]}?`);
+    }
     return;
   }
   if (glassUi.state === GS.COMPOSE && glassUi.showChips && !glassUi.composeText) {
@@ -6744,10 +6815,22 @@ async function handleGlassInputSubmit() {
       const fallbackMatches = matches.length > 0
         ? matches
         : GLASS_CONTACTS.filter((c) => c.name.toLowerCase().includes('hiro'));
+      const msg = intent.messageBody || '';
       if (fallbackMatches.length === 1) {
-        beginComposeForContact(fallbackMatches[0], `Message to ${fallbackMatches[0].name.split(' ')[0]}. What would you like to say?`);
+        if (msg) {
+          // Pre-fill message and go straight to CONFIRM
+          glassUi.contact = fallbackMatches[0];
+          glassUi.msg = msg;
+          glassUi.composeText = msg;
+          glassUi.showChips = false;
+          glassUi.showCheck = true;
+          glassTransitionTo(GS.CONFIRM, `Confirm message to ${fallbackMatches[0].name.split(' ')[0]}.`);
+        } else {
+          beginComposeForContact(fallbackMatches[0], `Message to ${fallbackMatches[0].name.split(' ')[0]}. What would you like to say?`);
+        }
       } else if (fallbackMatches.length > 1) {
         glassUi.disambiguateContacts = fallbackMatches;
+        glassUi._pendingMsg = msg;
         glassTransitionTo(GS.DISAMBIGUATE, 'Which Hiro?');
       } else {
         speakOutput('Contact not found.');
