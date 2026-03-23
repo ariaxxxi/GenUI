@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>GenUI Sys - AI</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:wght@500&display=swap" rel="stylesheet"/>
 <style id="base-style">
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 100%; height: 100%; overflow: hidden; user-select: none; }
@@ -730,24 +730,43 @@ body.mode-ai #ui-frame {
   font-weight: 400;
   border: none;
   color: rgba(255,255,255,0.50);
-  background: rgba(255, 255, 255, 0.085);
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
   transition: color 200ms ease, background 200ms ease, box-shadow 200ms ease, font-weight 200ms ease;
 }
 .g-chip.selected {
   color: rgba(255,255,255,1);
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.10);
   box-shadow: inset 0 0 20px rgba(255,255,255,0.15);
   font-weight: 500;
 }
 .g-chip.selected::before { opacity: 1; }
+@keyframes g-chip-exit {
+  to { opacity: 0; transform: scale(0.86); }
+}
+.g-chip-exit {
+  animation: g-chip-exit 180ms ease forwards;
+  pointer-events: none;
+}
+@keyframes g-text-fadein {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.g-text-enter {
+  animation: g-text-fadein 300ms ease both;
+}
 .g-listen-field {
   border-radius: 22px;
   padding: 14px 16px;
   min-height: 44px;
-  background: rgba(255,255,255,0.02);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.02) 100%);
   border: 1px solid rgba(255,255,255,0.06);
-  transition: min-height 400ms ease;
+  box-shadow:
+    inset 0 -6px 6px -2px rgba(35,101,255,0),
+    inset 0 -15px 20px -6px rgba(255,255,255,0),
+    inset 0 -15px 20px -6px rgba(230,229,247,0),
+    inset 0 -70px 60px -30px rgba(19,75,192,0);
+  transition: min-height 400ms ease, box-shadow 400ms ease, background 400ms ease, border-color 400ms ease;
   width: 100%;
 }
 .g-listen-field.has-text { min-height: 56px; }
@@ -5466,6 +5485,7 @@ const glassHeightByState = {
 let glassMeasureRaf = null;
 let glassMeasureSettleTimer = null;
 let glassRenderToken = 0;
+let glassPrevState = GS.IDLE;
 let glassPauseTimer = null;
 let glassDotsTimer = null;
 let glassThinkingTimer = null;
@@ -5841,6 +5861,16 @@ function glassRender(shouldMorph = true) {
   const shape = glassStateShape(glassUi.state);
   document.body.classList.toggle('glass-flow-active', glassUi.active);
   C.rich.innerHTML = buildGlassContent();
+  const _enteringCompose = glassUi.state === GS.COMPOSE && glassPrevState !== GS.COMPOSE;
+  glassPrevState = glassUi.state;
+  if (_enteringCompose) {
+    const _field = C.rich.querySelector('.g-listen-field');
+    if (_field) {
+      _field.classList.remove('compose-input');
+      void _field.offsetHeight;
+      requestAnimationFrame(() => _field.classList.add('compose-input'));
+    }
+  }
   C.rich.classList.toggle('visible', glassUi.active);
   C.rich.classList.toggle('glass-active', glassUi.active);
   C.rich.classList.toggle('glass-sent', glassUi.active && glassUi.state === GS.SENT);
@@ -5944,6 +5974,19 @@ function glassRender(shouldMorph = true) {
 
 function glassTransitionTo(state, voiceOutput = '') {
   if (glassDotsTimer) { clearInterval(glassDotsTimer); glassDotsTimer = null; }
+  if (glassUi.state === GS.COMPOSE && state !== GS.COMPOSE) {
+    const _field = C.rich?.querySelector('.g-listen-field.compose-input');
+    if (_field) {
+      _field.classList.remove('compose-input');
+      setTimeout(() => {
+        glassUi.state = state;
+        glassUi.sel = 0;
+        speakOutput(voiceOutput || '');
+        glassRender(true);
+      }, 380);
+      return;
+    }
+  }
   glassUi.state = state;
   glassUi.sel = 0;
   speakOutput(voiceOutput || '');
