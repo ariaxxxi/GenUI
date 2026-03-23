@@ -167,12 +167,13 @@
     <div id="sim-input-label">Voice Command</div>
     <div id="sim-input-wrap">
       <div id="sim-dot"></div>
-      <input id="sim-input" type="text" autocomplete="off" spellcheck="false" placeholder="Book a flight, send a message…"/>
+      <input id="sim-input" type="text" autocomplete="off" spellcheck="false" placeholder="Book a flight, check weather…"/>
     </div>
     <div id="sim-input-hint"></div>
   </div>
   <div id="sim-quick-chips">
-    <button class="sim-quick-chip" onclick="fireChip(this)">Send a message to Hiro</button>
+    <button class="sim-quick-chip" onclick="fireChip(this)">Send message to Hiro</button>
+    <button class="sim-quick-chip" onclick="fireChip(this)">What's the weather</button>
   </div>
   <div id="sim-voice-out">
     <div id="sim-voice-label">🔊 AI</div>
@@ -469,6 +470,18 @@
 
 <div class="ai-legacy-debug">
   <div class="ai-legacy-title">Legacy / Debug</div>
+  <label class="sb-toggle" for="debug-fullscreen-toggle">
+    <div class="sb-toggle-copy">
+      <strong>Fullscreen</strong>
+    </div>
+    <input id="debug-fullscreen-toggle" class="sb-toggle-input" type="checkbox"/>
+  </label>
+  <label class="sb-toggle" for="debug-ai-voice-toggle">
+    <div class="sb-toggle-copy">
+      <strong>AI Voice</strong>
+    </div>
+    <input id="debug-ai-voice-toggle" class="sb-toggle-input" type="checkbox" checked/>
+  </label>
   <div class="ai-legacy-actions">
     <button class="sb-shape-btn" data-shape="circle" type="button" onclick="manualShape('circle')">Home</button>
     <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>

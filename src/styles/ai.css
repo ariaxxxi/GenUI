@@ -415,6 +415,19 @@ body.mode-ai #ui-frame {
   top: 50%;
   transform: translate(-50%, -50%);
 }
+body.fullscreen-stage-only #sim-panel,
+body.fullscreen-stage-only .ai-legacy-debug,
+body.fullscreen-stage-only .entry-point-btn,
+body.fullscreen-stage-only #wordmark,
+body.fullscreen-stage-only #left-sidebar,
+body.fullscreen-stage-only #sidebar {
+  display: none !important;
+}
+body.mode-ai.fullscreen-stage-only #ui-frame {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
 
 /* ── Drop shell ── */
 .drop {
@@ -1551,8 +1564,9 @@ body.mode-manual .mode-ai-only { display: none !important; }
   transition: transform .2s ease;
 }
 .sb-toggle-input:checked {
-  background: rgba(255,255,255,0.30);
-  border-color: rgba(255,255,255,0.18);
+  background: rgba(45, 128, 255, 0.92);
+  border-color: rgba(122, 178, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(45, 128, 255, 0.28);
 }
 .sb-toggle-input:checked::after {
   transform: translateX(20px);

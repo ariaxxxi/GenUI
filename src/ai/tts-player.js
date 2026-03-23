@@ -5,14 +5,18 @@ let requestSeq = 0;
 let lastSpokenText = '';
 let lastSpokenAt = 0;
 let ttsSpeaking = false;
+let aiVoiceEnabled = true;
 const ttsCache = new Map();
 const ttsPrefetching = new Set();
+const ttsInFlight = new Map();
 
 const DEFAULT_TTS_VOICE = 'Kore';
 const DEFAULT_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 const DEFAULT_PLAYBACK_RATE = 1;
 
 const MIN_REPEAT_GAP_MS = 1500;
+const TTS_CACHE_STORAGE_KEY = 'genui.ai-tts-cache.v1';
+const TTS_CACHE_MAX_ENTRIES = 80;
 
 function normalizeText(text) {
   const trimmed = String(text || '').trim();
@@ -26,7 +30,14 @@ function shouldMuteTtsForText(text) {
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  const normalizedToken = String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
   if (!normalized) return true;
+  if (normalizedToken === 'edit_message') return true;
+  if (normalizedToken === 'confirm_message_to') return true;
   if (normalized === 'edit your message') return true;
   if (/^confirm message to\s+[a-z0-9]+\s*$/.test(normalized)) return true;
   return false;
@@ -35,6 +46,80 @@ function shouldMuteTtsForText(text) {
 function playbackRateForText(text) {
   void text;
   return DEFAULT_PLAYBACK_RATE;
+}
+
+function loadPersistentCache() {
+  try {
+    const raw = localStorage.getItem(TTS_CACHE_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const entries = Array.isArray(parsed?.entries) ? parsed.entries : [];
+    entries.forEach((entry) => {
+      const key = String(entry?.key || '');
+      const audioBase64 = String(entry?.audioBase64 || '');
+      if (!key || !audioBase64) return;
+      ttsCache.set(key, {
+        audioBase64,
+        mimeType: entry?.mimeType || 'audio/pcm;rate=24000',
+        sampleRate: Number(entry?.sampleRate) || 24000,
+        touchedAt: Number(entry?.touchedAt) || Date.now(),
+      });
+    });
+  } catch {
+    // best effort cache hydration
+  }
+}
+
+function persistCache() {
+  try {
+    const entries = Array.from(ttsCache.entries())
+      .map(([key, value]) => ({
+        key,
+        audioBase64: String(value?.audioBase64 || ''),
+        mimeType: value?.mimeType || 'audio/pcm;rate=24000',
+        sampleRate: Number(value?.sampleRate) || 24000,
+        touchedAt: Number(value?.touchedAt) || Date.now(),
+      }))
+      .filter((entry) => entry.key && entry.audioBase64)
+      .sort((a, b) => b.touchedAt - a.touchedAt)
+      .slice(0, TTS_CACHE_MAX_ENTRIES);
+    localStorage.setItem(TTS_CACHE_STORAGE_KEY, JSON.stringify({ entries }));
+  } catch {
+    // best effort cache persistence
+  }
+}
+
+function pruneCache(maxEntries = TTS_CACHE_MAX_ENTRIES) {
+  if (ttsCache.size <= maxEntries) return;
+  const entriesByAge = Array.from(ttsCache.entries())
+    .sort((a, b) => (Number(a[1]?.touchedAt) || 0) - (Number(b[1]?.touchedAt) || 0));
+  const toDelete = entriesByAge.slice(0, Math.max(0, ttsCache.size - maxEntries));
+  toDelete.forEach(([key]) => ttsCache.delete(key));
+}
+
+function setCacheEntry(key, value) {
+  if (!key || !value?.audioBase64) return;
+  ttsCache.set(key, {
+    audioBase64: String(value.audioBase64),
+    mimeType: value?.mimeType || 'audio/pcm;rate=24000',
+    sampleRate: Number(value?.sampleRate) || 24000,
+    touchedAt: Date.now(),
+  });
+  pruneCache();
+  persistCache();
+}
+
+function deleteCacheEntry(key) {
+  if (!key) return;
+  if (ttsCache.delete(key)) persistCache();
+}
+
+function getCacheEntry(key) {
+  const entry = ttsCache.get(key);
+  if (!entry?.audioBase64) return null;
+  entry.touchedAt = Date.now();
+  ttsCache.set(key, entry);
+  return entry;
 }
 
 function ensureAudioContext() {
@@ -55,6 +140,50 @@ function base64ToUint8Array(base64) {
 
 function cacheKey({ text, voiceName = DEFAULT_TTS_VOICE, model = DEFAULT_TTS_MODEL }) {
   return `${model}::${voiceName}::${String(text || '').trim()}`;
+}
+
+async function fetchTtsData(text, { forceRefresh = false } = {}) {
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  const key = cacheKey({ text: normalized });
+
+  if (!forceRefresh) {
+    const cached = getCacheEntry(key);
+    if (cached) return cached;
+    const inFlight = ttsInFlight.get(key);
+    if (inFlight) return inFlight;
+  }
+
+  const requestPromise = (async () => {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: normalized,
+        voiceName: DEFAULT_TTS_VOICE,
+        model: DEFAULT_TTS_MODEL,
+        ...(forceRefresh ? { forceRefresh: true } : {}),
+      }),
+    });
+    if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    const base64 = String(data.audioBase64 || '');
+    if (!base64) throw new Error('Empty TTS audio payload');
+    const entry = {
+      audioBase64: base64,
+      mimeType: data.mimeType || 'audio/pcm;rate=24000',
+      sampleRate: Number(data.sampleRate) || 24000,
+    };
+    setCacheEntry(key, entry);
+    return getCacheEntry(key) || entry;
+  })();
+
+  if (!forceRefresh) ttsInFlight.set(key, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    if (!forceRefresh) ttsInFlight.delete(key);
+  }
 }
 
 function pcm16MonoToAudioBuffer(base64, sampleRate = 24000) {
@@ -126,7 +255,7 @@ function speakWithBrowserVoice(text) {
 
 async function speakWithGemini(text, seq) {
   const key = cacheKey({ text });
-  const cached = ttsCache.get(key);
+  const cached = getCacheEntry(key);
   if (cached?.audioBase64) {
     if (seq !== requestSeq) return;
     const sampleRate = Number(cached.sampleRate) || 24000;
@@ -153,27 +282,11 @@ async function speakWithGemini(text, seq) {
     return;
   }
 
-  const res = await fetch('/api/tts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text,
-      voiceName: DEFAULT_TTS_VOICE,
-      model: DEFAULT_TTS_MODEL,
-    }),
-  });
-  if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
-  const data = await res.json().catch(() => ({}));
-  const base64 = String(data.audioBase64 || '');
-  if (!base64) throw new Error('Empty TTS audio payload');
-  ttsCache.set(key, {
-    audioBase64: base64,
-    mimeType: data.mimeType || 'audio/pcm;rate=24000',
-    sampleRate: Number(data.sampleRate) || 24000,
-  });
+  const fetched = await fetchTtsData(text);
+  if (!fetched?.audioBase64) throw new Error('Unable to fetch TTS audio');
   if (seq !== requestSeq) return;
-  const sampleRate = Number(data.sampleRate) || 24000;
-  const buffer = pcm16MonoToAudioBuffer(base64, sampleRate);
+  const sampleRate = Number(fetched.sampleRate) || 24000;
+  const buffer = pcm16MonoToAudioBuffer(fetched.audioBase64, sampleRate);
   const ctx = ensureAudioContext();
   if (!buffer || !ctx) throw new Error('Unable to decode TTS audio');
   if (ctx.state === 'suspended') {
@@ -199,54 +312,23 @@ async function regenerateOne(text) {
   const normalized = normalizeText(text);
   if (!normalized) return false;
   const key = cacheKey({ text: normalized });
-  ttsCache.delete(key);
-  const res = await fetch('/api/tts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text: normalized,
-      voiceName: DEFAULT_TTS_VOICE,
-      model: DEFAULT_TTS_MODEL,
-      forceRefresh: true,
-    }),
-  });
-  if (!res.ok) return false;
-  const data = await res.json().catch(() => ({}));
-  const base64 = String(data.audioBase64 || '');
-  if (!base64) return false;
-  ttsCache.set(key, {
-    audioBase64: base64,
-    mimeType: data.mimeType || 'audio/pcm;rate=24000',
-    sampleRate: Number(data.sampleRate) || 24000,
-  });
-  return true;
+  deleteCacheEntry(key);
+  try {
+    const refreshed = await fetchTtsData(normalized, { forceRefresh: true });
+    return !!refreshed?.audioBase64;
+  } catch {
+    return false;
+  }
 }
 
 async function prefetchOne(text) {
   const normalized = normalizeText(text);
   if (!normalized) return;
   const key = cacheKey({ text: normalized });
-  if (ttsCache.has(key) || ttsPrefetching.has(key)) return;
+  if (getCacheEntry(key) || ttsPrefetching.has(key)) return;
   ttsPrefetching.add(key);
   try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: normalized,
-        voiceName: DEFAULT_TTS_VOICE,
-        model: DEFAULT_TTS_MODEL,
-      }),
-    });
-    if (!res.ok) return;
-    const data = await res.json().catch(() => ({}));
-    const base64 = String(data.audioBase64 || '');
-    if (!base64) return;
-    ttsCache.set(key, {
-      audioBase64: base64,
-      mimeType: data.mimeType || 'audio/pcm;rate=24000',
-      sampleRate: Number(data.sampleRate) || 24000,
-    });
+    await fetchTtsData(normalized);
   } catch {
     // best effort prefetch
   } finally {
@@ -255,6 +337,7 @@ async function prefetchOne(text) {
 }
 
 export async function speakAiText(text) {
+  if (!aiVoiceEnabled) return;
   const normalized = normalizeText(text);
   if (!normalized) return;
   if (shouldMuteTtsForText(normalized)) return;
@@ -281,6 +364,17 @@ export function stopAiSpeech() {
   setTtsSpeaking(false);
 }
 
+export function isAiVoiceEnabled() {
+  return aiVoiceEnabled;
+}
+
+export function setAiVoiceEnabled(enabled) {
+  const next = enabled !== false;
+  if (aiVoiceEnabled === next) return;
+  aiVoiceEnabled = next;
+  if (!aiVoiceEnabled) stopAiSpeech();
+}
+
 export function prewarmAiSpeechCache() {
   const phrases = [
     'I found 2 hiro in your contact list, which one do you mean?',
@@ -292,3 +386,5 @@ export function prewarmAiSpeechCache() {
 export async function refreshAiVoice(text) {
   return regenerateOne(text);
 }
+
+loadPersistentCache();

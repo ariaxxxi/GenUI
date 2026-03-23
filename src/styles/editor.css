@@ -704,8 +704,9 @@ body.mode-manual .mode-ai-only { display: none !important; }
   transition: transform .2s ease;
 }
 .sb-toggle-input:checked {
-  background: rgba(255,255,255,0.30);
-  border-color: rgba(255,255,255,0.18);
+  background: rgba(45, 128, 255, 0.92);
+  border-color: rgba(122, 178, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(45, 128, 255, 0.28);
 }
 .sb-toggle-input:checked::after {
   transform: translateX(20px);

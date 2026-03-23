@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride } from "../app-state.js";
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, loadAiVoiceEnabled } from "../app-state.js";
 import { initMorph } from "../shared/morph.js";
 import { initScenarioData } from "../shared/scenario-data.js";
 import { buildUiRefs, initSidebar } from "../shared/sidebar.js";
@@ -12,7 +12,7 @@ import { createFlightBookingFlow } from "../flows/flight-booking.js";
 import { initDemoControls } from "./demo-controls.js";
 import { initInputActions } from "./input-actions.js";
 import { initEditorBindings } from "./editor-bindings.js";
-import { prewarmAiSpeechCache, refreshAiVoice } from "./tts-player.js";
+import { prewarmAiSpeechCache, refreshAiVoice, setAiVoiceEnabled, isAiVoiceEnabled } from "./tts-player.js";
 import { initPhrases } from "./phrases.js";
 
 const DROPS = { main: document.getElementById("drop-main"), left: document.getElementById("drop-left"), right: document.getElementById("drop-right") };
@@ -31,6 +31,7 @@ let stageLibrary = [];
 let scenarioLibrary = [];
 let selectedScenarioId = "";
 let preFlowShape = "circle";
+const isWeatherIntent = (text) => /\b(weather|forecast|temperature|rain|sunny|cloudy|humidity)\b/i.test(String(text || ""));
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const anim = initAnimControls({ document, clamp });
@@ -46,6 +47,7 @@ function persistScenarios() { try { localStorage.setItem(STORAGE_KEYS.scenarios,
 function persistCanvasSettings() { try { localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(canvasSettings)); } catch (err) { console.warn("Unable to persist canvas settings", err); } }
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) localStorage.setItem(STORAGE_KEYS.mode, JSON.stringify(responseMode)); }
 function persistAiStageOverride() { try { localStorage.setItem(STORAGE_KEYS.aiStage, JSON.stringify(aiStageOverride)); } catch (err) { console.warn("Unable to persist AI stage override", err); } }
+function persistAiVoiceEnabled(enabled) { try { localStorage.setItem(STORAGE_KEYS.aiVoiceEnabled, JSON.stringify(enabled !== false)); } catch (err) { console.warn("Unable to persist AI voice toggle", err); } }
 function persistStageLibrary() { try { localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(stageLibrary)); } catch (err) { console.warn("Unable to persist stage library", err); } }
 function selectedScenario() { return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null; }
 
@@ -75,11 +77,32 @@ const morph = initMorph({
 const sidebar = initSidebar({
   UI, RESPONSE_MODE, AI_STAGE_OVERRIDE, clamp, selectedScenario, stageById, availableScenarioShapes, persistScenarios, persistStageLibrary, persistCanvasSettings, persistResponseMode, persistAiStageOverride, previewScenario, applyCanvasSettings, applyStagePhoneBlur, applyResponseModeUi, hideRich: morph.hideRich, hideIntentHeader: shell.hideIntentHeader, getScenarioTypography: morph.getScenarioTypography, createScenario, stageComponentCounts, STAGE_COMPONENT_TYPES, builtinStageById, scenarioStageSizeOverride, stageVisibleEditorFields, stageHasComponent, stageTextForShape, stageIconForShape, stageImagesForShape, normalizeTriggers, normalizeIconByShape, createIcon, normalizeStageTextByShape, normalizeTypographyByShape, normalizeStageSizeByShape, normalizeImagesByShape, normalizeScenario, normalizeStage, stageId, getScenarioLibrary: () => scenarioLibrary, setScenarioLibrary: (value) => { scenarioLibrary = value; }, getStageLibrary: () => stageLibrary, setStageLibrary: (value) => { stageLibrary = value; }, getSelectedScenarioId: () => selectedScenarioId, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, getResponseMode: () => responseMode, getAiStageOverride: () => aiStageOverride,
 });
-const voice = initVoiceEngine({ document, input, addSimLog, getGlassUi: () => messageFlow?.flow, getGlassState: () => messageFlow?.GS, onTranscriptUpdate: (text, isFinal) => messageFlow?.onTranscriptUpdate(text, isFinal) });
+let actions = null;
+const voice = initVoiceEngine({
+  document,
+  input,
+  addSimLog,
+  getGlassUi: () => messageFlow?.flow,
+  getGlassState: () => messageFlow?.GS,
+  onTranscriptUpdate: (text, isFinal) => {
+    if (isFinal && isWeatherIntent(text)) {
+      if (messageFlow?.isActive()) messageFlow.dismiss();
+      void actions?.processRequest(String(text || "").trim());
+      if (input) input.value = "";
+      return;
+    }
+    if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
+    if (input) input.value = String(text || "");
+    if (isFinal && String(text || "").trim()) {
+      void actions?.processRequest(String(text || "").trim());
+      if (input) input.value = "";
+    }
+  },
+});
 const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, input, addChatBubble, hideTypingBubble });
 const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, playEarcon: playSimEarcon, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive });
 const demo = initDemoControls({ document, SHAPES, SCENARIO_SHAPES, createScenario, selectedScenario, previewScenario, morph, shell, voice, renderShapeForStageId, updateActive, getCurrentShape: morph.getCurrentShape, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, messageFlow, startGlassFlow: () => messageFlow.start() });
-const actions = initInputActions({ input, responseMode: () => responseMode, RESPONSE_MODE, selectedScenario, scenarioLibrary: () => scenarioLibrary, createScenario, createIcon, renderScenarioUi: sidebar.renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, previewScenario, messageFlow, flightFlow, voice, morph });
+actions = initInputActions({ input, responseMode: () => responseMode, RESPONSE_MODE, selectedScenario, scenarioLibrary: () => scenarioLibrary, createScenario, createIcon, renderScenarioUi: sidebar.renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, previewScenario, messageFlow, flightFlow, voice, morph });
 
 function currentScenarioFrameMode() { return normalizeScenarioCanvas(selectedScenario()?.content?.canvas, { frameMode: canvasSettings.frameMode }).frameMode; }
 function applyCanvasSettings() { const frame = document.getElementById("ui-frame"); const frameBg = document.getElementById("ui-frame-bg"); const frameMode = currentScenarioFrameMode(); const isPhone = frameMode === "phone"; const isGlasses = frameMode === "glasses"; document.body.classList.toggle("bg-off", !canvasSettings.backgroundEnabled); document.body.classList.toggle("float-off", !canvasSettings.floatingEnabled); document.body.classList.toggle("stage-bottom-align", !!canvasSettings.bottomAlign); if (frame) { frame.classList.toggle("phone", isPhone); frame.classList.toggle("glasses", isGlasses); frame.classList.remove("stage-blur"); frame.classList.toggle("phone-scene-off", isPhone && !canvasSettings.phoneBgEnabled); frame.style.setProperty("--phone-frame-w", `${canvasSettings.phoneFrameWidth}px`); frame.style.setProperty("--phone-frame-h", `${canvasSettings.phoneFrameHeight}px`); frame.style.setProperty("--frame-corner-radius", `${canvasSettings.frameCornerRadius}px`); frame.classList.toggle("has-bg", isPhone && !!canvasSettings.phoneBgEnabled && !!canvasSettings.phoneFrameBackground?.src); } if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : ""; if (UI.bgToggle) UI.bgToggle.checked = !!canvasSettings.backgroundEnabled; if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled; if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign; if (UI.framePhoneToggle) UI.framePhoneToggle.checked = isPhone; if (UI.frameGlassesToggle) UI.frameGlassesToggle.checked = isGlasses; if (UI.phoneFrameControls) UI.phoneFrameControls.classList.toggle("hidden", !isPhone); if (UI.phoneFrameWidth) UI.phoneFrameWidth.value = String(canvasSettings.phoneFrameWidth); if (UI.phoneFrameHeight) UI.phoneFrameHeight.value = String(canvasSettings.phoneFrameHeight); if (UI.frameCornerRadius) UI.frameCornerRadius.value = String(canvasSettings.frameCornerRadius); }
@@ -93,6 +116,39 @@ input?.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDe
 input?.addEventListener("input", (e) => { if (messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) return void messageFlow.handleInputChange(e.target.value); if (messageFlow.isActive() || flightFlow.isActive()) return; const hasText = String(e.target.value || "").trim().length > 0; if (hasText && morph.getCurrentShape() === "circle") morph.morphTo("listening", { icon: "", primary: "", secondary: "", detail: "" }); if (!hasText && morph.getCurrentShape() === "listening") morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); });
 document.addEventListener("keydown", (e) => { const focusedInTextInput = document.activeElement === input; if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if (!focusedInTextInput && e.key === "ArrowUp") { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && e.key === "ArrowDown") { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && e.code === "Space") { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") demo.manualShape("circle"); if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") demo.manualShape("listening"); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) demo.manualShape("circle"); else previewScenario(selectedScenario()); } });
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+
+const fullscreenToggle = document.getElementById("debug-fullscreen-toggle");
+if (fullscreenToggle) {
+  const syncFullscreenToggle = () => {
+    const isFullscreen = !!document.fullscreenElement;
+    fullscreenToggle.checked = isFullscreen;
+    document.body.classList.toggle("fullscreen-stage-only", isFullscreen);
+  };
+  fullscreenToggle.checked = !!document.fullscreenElement;
+  fullscreenToggle.addEventListener("change", async () => {
+    try {
+      if (fullscreenToggle.checked) {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.warn("Unable to toggle fullscreen", err);
+      syncFullscreenToggle();
+    }
+  });
+  document.addEventListener("fullscreenchange", syncFullscreenToggle);
+}
+
+const aiVoiceToggle = document.getElementById("debug-ai-voice-toggle");
+if (aiVoiceToggle) {
+  setAiVoiceEnabled(loadAiVoiceEnabled());
+  aiVoiceToggle.checked = isAiVoiceEnabled();
+  aiVoiceToggle.addEventListener("change", () => {
+    setAiVoiceEnabled(aiVoiceToggle.checked);
+    persistAiVoiceEnabled(aiVoiceToggle.checked);
+  });
+}
 
 applyCanvasSettings();
 applyResponseModeUi();

@@ -612,9 +612,11 @@ export function createMessageSendFlow(ctx) {
     flow.contact = null;
     flow.msg = "";
     flow.composeText = "";
+    flow.interimText = "";
     flow.showChips = true;
     flow.showCheck = false;
     flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
+    if (ctx.input) ctx.input.value = "";
     render.render(true);
     setTimeout(() => { ctx.input.focus(); ctx.voice.voiceEngine.start("command"); }, 50);
   }
