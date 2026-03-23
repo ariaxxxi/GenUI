@@ -1,7 +1,7 @@
 import {
   STORAGE_KEYS,
   readStoredJson,
-} from './app-state.js';
+} from '../app-state.js';
 import {
   SHAPES,
   configureShapeHelpers,
@@ -17,7 +17,7 @@ import {
   availableScenarioShapes as shapeAvailableScenarioShapes,
   renderShapeForStageId as shapeRenderShapeForStageId,
   TYPOGRAPHY_LAYERS,
-} from './shapes.js';
+} from '../shapes.js';
 
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];

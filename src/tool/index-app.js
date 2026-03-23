@@ -1,39 +1,16 @@
-import {
-  STORAGE_KEYS,
-  RESPONSE_MODE,
-  PAGE_MODE_OVERRIDE,
-  AI_STAGE_OVERRIDE,
-  readStoredJson,
-  loadCanvasSettings,
-  loadResponseMode,
-  loadAiStageOverride,
-} from './app-state.js';
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride } from '../app-state.js';
 import { initMorph } from './morph.js';
 import { initScenarioData } from './scenario-data.js';
 import { buildUiRefs, initSidebar } from './sidebar.js';
-import { initAnimControls } from './anim-controls.js';
-import { initOrbController } from './orb-controller.js';
-import { initManualFlight } from './manual-flight.js';
-import { initManualDemo } from './manual-demo.js';
-import { initManualActions } from './manual-actions.js';
-import { initManualBindings } from './manual-bindings.js';
+import { initAnimControls } from './modules/anim-controls.js';
+import { initOrbController } from './modules/orb-controller.js';
+import { initManualFlight } from './modules/manual-flight.js';
+import { initManualDemo } from './modules/manual-demo.js';
+import { initManualActions } from './modules/manual-actions.js';
+import { initManualBindings } from './modules/manual-bindings.js';
 
-const DROPS = {
-  main: document.getElementById('drop-main'),
-  left: document.getElementById('drop-left'),
-  right: document.getElementById('drop-right'),
-};
-const C = {
-  thumb: document.getElementById('c-thumb'),
-  thumbLabel: document.getElementById('c-thumb-label'),
-  thumbImg: document.getElementById('c-thumb-img'),
-  prim: document.getElementById('c-primary'),
-  sec: document.getElementById('c-secondary'),
-  div: document.getElementById('c-divider'),
-  det: document.getElementById('c-detail'),
-  media: document.getElementById('c-media'),
-  rich: document.getElementById('c-rich'),
-};
+const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
+const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
 const UI = buildUiRefs(document);
 const detailMeasureEl = document.createElement('div');
 
@@ -63,48 +40,8 @@ let flight = null;
 let actions = null;
 let splitAnimStyleBackup = null;
 
-const scenarioData = initScenarioData({
-  getStageLibrary: () => stageLibrary,
-  getCanvasSettings: () => canvasSettings,
-  clampFn: clamp,
-});
-const {
-  STORAGE_KEYS: _unusedStorageKeys,
-  BUILTIN_STAGE_DEFS,
-  SCENARIO_SHAPES,
-  STAGE_COMPONENT_TYPES,
-  SHAPES,
-  defaultTypographyForShape,
-  normalizeTypographyByShape,
-  normalizeStage,
-  normalizeIconByShape,
-  normalizeImagesByShape,
-  stageId,
-  loadStageLibrary,
-  stageById,
-  builtinStageById,
-  renderShapeForStageId,
-  availableScenarioShapes,
-  stageComponentCounts,
-  stageHasComponent,
-  stageVisibleEditorFields,
-  createIcon,
-  normalizeStageTextByShape,
-  normalizeScenarioCanvas,
-  normalizeStageSizeEntry,
-  normalizeStageSizeByShape,
-  scenarioStageSizeOverride,
-  stageMainSize,
-  stageIconTextGap,
-  stageIconLeftPadding,
-  stageTextForShape,
-  stageIconForShape,
-  stageImagesForShape,
-  createScenario,
-  normalizeTriggers,
-  normalizeScenario,
-  defaultScenarioLibrary,
-} = scenarioData;
+const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
@@ -413,26 +350,7 @@ manualDemo = initManualDemo({
   C,
 });
 
-const {
-  renderAiStageOverrideUi,
-  previewAiStageOverride,
-  renderScenarioUi,
-  updateLayerPreviews,
-  initSidebarTabs,
-  initLayerRowToggles,
-  initSidebarCollapsibleSections,
-  bindTypographyInputs,
-  isSupportedAssetFile,
-  commitScenarioChange,
-  commitStageChange,
-  addStage,
-  deleteCurrentStage,
-  resetCurrentStageToDefault,
-  addScenario,
-  duplicateScenario,
-  deleteScenario,
-  getScenarioImagesForStage,
-} = sidebar;
+const { renderAiStageOverrideUi, previewAiStageOverride, renderScenarioUi, updateLayerPreviews, initSidebarTabs, initLayerRowToggles, initSidebarCollapsibleSections, bindTypographyInputs, isSupportedAssetFile, commitScenarioChange, commitStageChange, addStage, deleteCurrentStage, resetCurrentStageToDefault, addScenario, duplicateScenario, deleteScenario, getScenarioImagesForStage } = sidebar;
 
 const scenarioMatchesText = (scenario, text) => {
   const haystack = String(text || '').toLowerCase();

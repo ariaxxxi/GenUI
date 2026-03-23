@@ -5,7 +5,7 @@ import {
   normalizeStageImage,
   normalizeStageImages,
   normalizeIcon,
-} from './shapes.js';
+} from '../shapes.js';
 
 export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
   const P = 20;
