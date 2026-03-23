@@ -206,7 +206,7 @@ body.mode-ai #main-col {
   height: 36px; margin-bottom: 12px;
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 420ms ease, transform 420ms cubic-bezier(0.22,1,0.36,1);
+  transition: opacity 600ms cubic-bezier(0.35,0.23,0.13,0.98), transform 600ms cubic-bezier(0.35,0.23,0.13,0.98);
   pointer-events: none;
 }
 #intent-header.glass-intent {
@@ -564,6 +564,11 @@ body.mode-ai #ui-frame {
   gap: 14px;
 }
 #c-rich.glass-sent {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: auto;
   justify-content: center;
   align-items: center;
   gap: 0;
@@ -660,8 +665,6 @@ body.mode-ai #ui-frame {
   color: rgba(255,255,255,1);
   line-height: 1.2;
   white-space: nowrap;
-  transform: translateY(-2px);
-
 }
 .g-sent-emoji {
   display: inline-flex;
@@ -706,7 +709,10 @@ body.mode-ai #ui-frame {
 }
 .g-chips-wrap {
   overflow: hidden;
-  transition: max-height 400ms cubic-bezier(0.35,0.23,0.13,0.98), opacity 400ms cubic-bezier(0.35,0.23,0.13,0.98), margin-bottom 400ms cubic-bezier(0.35,0.23,0.13,0.98);
+  transition:
+    max-height 600ms cubic-bezier(0.35,0.23,0.13,0.98),
+    opacity 600ms cubic-bezier(0.35,0.23,0.13,0.98),
+    margin-bottom 600ms cubic-bezier(0.35,0.23,0.13,0.98);
   max-height: 120px;
   opacity: 1;
   margin-bottom: 14px;
@@ -742,10 +748,10 @@ body.mode-ai #ui-frame {
 }
 .g-chip.selected::before { opacity: 1; }
 @keyframes g-chip-exit {
-  to { opacity: 0; transform: scale(0.86); }
+  to { opacity: 0; transform: scale(0.82); }
 }
 .g-chip-exit {
-  animation: g-chip-exit 180ms ease forwards;
+  animation: g-chip-exit 320ms cubic-bezier(0.35,0.23,0.13,0.98) forwards;
   pointer-events: none;
 }
 @keyframes g-text-fadein {
@@ -753,7 +759,14 @@ body.mode-ai #ui-frame {
   to   { opacity: 1; transform: translateY(0);   }
 }
 .g-text-enter {
-  animation: g-text-fadein 300ms ease both;
+  animation: g-text-fadein 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+}
+@keyframes g-checkmark-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.85); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.g-checkmark.enter {
+  animation: g-checkmark-enter 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
 }
 .g-listen-field {
   border-radius: 22px;
@@ -1220,9 +1233,12 @@ body.mode-ai #c-secondary {
   inset: 0;
   z-index: 8;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
 }
 #glass-controls-layer.visible {
   pointer-events: auto;
+  opacity: 1;
 }
 #glass-controls-layer .g-glass-controls {
   position: absolute;
@@ -5651,7 +5667,7 @@ function cancelGlassMeasureSettle() {
 function buildGlassControlsHtml(confirmEnter = false) {
   if (!glassUi.active) return '';
   if (glassUi.state === GS.COMPOSE) {
-    return `<div class="g-glass-controls"><div class="g-checkmark ${glassUi.showCheck ? '' : 'hidden'}">✅</div></div>`;
+    return `<div class="g-glass-controls"><div class="g-checkmark ${glassUi.showCheck ? 'enter' : 'hidden'}">✅</div></div>`;
   }
   if (glassUi.state === GS.CONFIRM) {
     const buttons = ['✈️', '✊', '❌'].map((emoji, i) => `<div class="g-action-btn ${i === glassUi.sel ? 'selected' : ''}">${emoji}</div>`).join('');
@@ -6089,6 +6105,64 @@ function doGlassAction(index) {
   glassReset();
 }
 
+function glassChipSelect(idx) {
+  const contact = glassUi.contact || GLASS_CONTACTS[0];
+  const chip = contact?.chips?.[idx];
+  if (!chip) return;
+
+  addGlassLog(`Chip: "${chip.label}"`, 'action');
+
+  // Update state immediately (checkmark deferred)
+  glassUi.composeText = chip.message;
+  glassUi.msg = chip.message;
+  glassUi.showChips = false;
+  glassUi.showCheck = false;
+
+  // t=0 — exit all chips (staggered), collapse wrap, fade empty text, start container morph
+  const chipEls = C.rich.querySelectorAll('.g-chip');
+  chipEls.forEach((el, i) => {
+    const delay = i === idx ? 0 : 40 + Math.abs(i - idx) * 30;
+    el.style.animationDelay = `${delay}ms`;
+    el.classList.add('g-chip-exit');
+  });
+  const wrap = C.rich.querySelector('.g-chips-wrap');
+  if (wrap) wrap.classList.add('collapsed');
+  const emptyEl = C.rich.querySelector('.g-listen-empty');
+  if (emptyEl) { emptyEl.style.transition = 'opacity 300ms ease'; emptyEl.style.opacity = '0'; }
+
+  // Start morph immediately — measure layer uses collapsed class so height is correct
+  const shape = glassStateShape(glassUi.state);
+  const h = glassContentHeightPx();
+  const geo = glassDynamicGeo(shape, h);
+  const cur = getCurrentMainGeometry() || {};
+  if (Math.abs(geo.main.h - (Number(cur.h) || 0)) > 1 || Math.abs(geo.main.ty - (Number(cur.ty) || 0)) > 1) {
+    morphTo(shape, { icon: '', primary: '', secondary: '', detail: '' }, geo);
+  }
+
+  // t=300ms — swap in message text (midway through 600ms container morph)
+  setTimeout(() => {
+    const field = C.rich.querySelector('.g-listen-field');
+    if (!field) return;
+    field.classList.add('has-text');
+    const old = field.querySelector('.g-listen-empty');
+    const textEl = document.createElement('div');
+    textEl.className = 'g-listen-text g-text-enter';
+    textEl.textContent = chip.message;
+    if (old) old.replaceWith(textEl); else field.appendChild(textEl);
+  }, 300);
+
+  // t=560ms — show checkmark + re-morph to apply controls lift (container morph ~done)
+  setTimeout(() => {
+    glassUi.showCheck = true;
+    glassControlsMode = ''; // force fresh build so enter animation fires
+    renderGlassControlsOverlay();
+    const shape2 = glassStateShape(glassUi.state);
+    const h2 = glassContentHeightPx();
+    const geo2 = glassDynamicGeo(shape2, h2);
+    morphTo(shape2, { icon: '', primary: '', secondary: '', detail: '' }, geo2);
+  }, 560);
+}
+
 function glassConfirm() {
   if (!glassUi.active) return;
   if (glassUi.state === GS.DISAMBIGUATE) {
@@ -6096,21 +6170,11 @@ function glassConfirm() {
     if (!c) return;
     glassUi.contact = c;
     addGlassLog(`Selected: ${c.name}`, 'action');
-    glassTransitionTo(GS.THINKING, '');
-    glassThinkingTimer = setTimeout(() => {
-      beginComposeForContact(c, `What would you like to say to ${c.name.split(' ')[0]}?`);
-    }, 700);
+    beginComposeForContact(c, `What would you like to say to ${c.name.split(' ')[0]}?`);
     return;
   }
   if (glassUi.state === GS.COMPOSE && glassUi.showChips && !glassUi.composeText) {
-    const chip = glassUi.contact?.chips?.[glassUi.sel];
-    if (!chip) return;
-    glassUi.composeText = chip.message;
-    glassUi.msg = chip.message;
-    glassUi.showChips = false;
-    glassUi.showCheck = true;
-    addGlassLog(`Chip: "${chip.label}"`, 'action');
-    glassRender(false);
+    glassChipSelect(glassUi.sel);
     return;
   }
   if (glassUi.state === GS.COMPOSE && glassUi.showCheck) {
