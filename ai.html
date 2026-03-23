@@ -209,6 +209,11 @@ body.mode-ai #main-col {
   transition: opacity 600ms cubic-bezier(0.35,0.23,0.13,0.98), transform 600ms cubic-bezier(0.35,0.23,0.13,0.98);
   pointer-events: none;
 }
+#intent-header.exiting {
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity 200ms cubic-bezier(0.35,0.23,0.13,0.98), transform 200ms cubic-bezier(0.35,0.23,0.13,0.98);
+}
 #intent-header.glass-intent {
   position: absolute;
   z-index: 30;
@@ -767,6 +772,26 @@ body.mode-ai #ui-frame {
 }
 .g-checkmark.enter {
   animation: g-checkmark-enter 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+}
+@keyframes g-fadein-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.g-card-header.header-enter {
+  animation: g-fadein-up 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+}
+.g-chip.chip-enter {
+  animation: g-fadein-up 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+}
+.g-listen-field.field-enter {
+  animation: g-fadein-up 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+}
+@keyframes g-row-exit {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+.g-row-exit {
+  animation: g-row-exit 220ms cubic-bezier(0.35,0.23,0.13,0.98) forwards;
+  pointer-events: none;
 }
 .g-listen-field {
   border-radius: 22px;
@@ -5502,6 +5527,7 @@ let glassMeasureRaf = null;
 let glassMeasureSettleTimer = null;
 let glassRenderToken = 0;
 let glassPrevState = GS.IDLE;
+let glassManualComposeEntry = false;
 let glassPauseTimer = null;
 let glassDotsTimer = null;
 let glassThinkingTimer = null;
@@ -5877,7 +5903,7 @@ function glassRender(shouldMorph = true) {
   const shape = glassStateShape(glassUi.state);
   document.body.classList.toggle('glass-flow-active', glassUi.active);
   C.rich.innerHTML = buildGlassContent();
-  const _enteringCompose = glassUi.state === GS.COMPOSE && glassPrevState !== GS.COMPOSE;
+  const _enteringCompose = glassUi.state === GS.COMPOSE && glassPrevState !== GS.COMPOSE && !glassManualComposeEntry;
   glassPrevState = glassUi.state;
   if (_enteringCompose) {
     const _field = C.rich.querySelector('.g-listen-field');
@@ -6074,14 +6100,106 @@ function findContacts(recipientHint = '', fullText = '') {
   });
 }
 
-function beginComposeForContact(contact, voiceText) {
+function glassAnimateToCompose(contact, voiceText) {
+  // t=0 — fade out intent header, exit all contact rows (staggered), set state, morph to compose height
+  const intentHdr = document.getElementById('intent-header');
+  if (intentHdr) { intentHdr.classList.remove('visible'); intentHdr.classList.add('exiting'); }
+
+  const rows = C.rich.querySelectorAll('.g-contact-row');
+  rows.forEach((el, i) => {
+    el.style.animationDelay = `${i * 25}ms`;
+    el.classList.add('g-row-exit');
+  });
+
   glassUi.contact = contact;
   glassUi.composeText = '';
   glassUi.msg = '';
   glassUi.showChips = true;
   glassUi.showCheck = false;
-  glassTransitionTo(GS.COMPOSE, voiceText);
-  setTimeout(() => input.focus(), 200);
+  glassUi.state = GS.COMPOSE;
+  glassPrevState = GS.COMPOSE;       // suppress normal _enteringCompose rAF
+  glassManualComposeEntry = true;
+
+  // Measure compose height off-screen before rebuilding live DOM
+  let layer = document.getElementById('glass-measure-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'glass-measure-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;';
+    document.body.appendChild(layer);
+  }
+  layer.innerHTML = buildGlassContent();
+  const measureBody = layer.querySelector('[data-glass-body]');
+  const rawH = measureBody
+    ? Math.ceil(Math.max(measureBody.getBoundingClientRect().height || 0, measureBody.offsetHeight || 0, measureBody.scrollHeight || 0))
+    : 0;
+  const contentH = rawH > 0
+    ? clamp(rawH, 60, GLASS_MAX_SHELL_H - GLASS_TOP_INSET - GLASS_BOTTOM_INSET)
+    : glassLastContentHeightPx;
+  const shape = glassStateShape(GS.COMPOSE);
+  const geo = glassDynamicGeo(shape, contentH);
+  morphTo(shape, { icon: '', primary: '', secondary: '', detail: '' }, geo);
+
+  // t=220ms — rebuild HTML, all content starts hidden
+  setTimeout(() => {
+    glassManualComposeEntry = false;
+    C.rich.innerHTML = buildGlassContent();
+    C.rich.classList.add('glass-active', 'visible');
+    C.rich.dataset.glassState = String(GS.COMPOSE);
+    C.rich.style.opacity = '1';
+
+    // Hide all enter targets before their animations
+    const hdr = C.rich.querySelector('.g-card-header');
+    if (hdr) hdr.style.opacity = '0';
+    const chipsWrap = C.rich.querySelector('.g-chips-wrap');
+    if (chipsWrap) chipsWrap.style.opacity = '0';
+    const field = C.rich.querySelector('.g-listen-field');
+    if (field) { field.style.opacity = '0'; field.classList.remove('compose-input'); }
+
+    renderGlassControlsOverlay();
+
+    // t=280ms — header fades up
+    setTimeout(() => {
+      const h2 = C.rich.querySelector('.g-card-header');
+      if (h2) { h2.style.opacity = ''; h2.classList.add('header-enter'); }
+    }, 60);
+
+    // t=380ms — chips stagger in
+    setTimeout(() => {
+      const wrap = C.rich.querySelector('.g-chips-wrap');
+      if (wrap) wrap.style.opacity = '';
+      const chips = C.rich.querySelectorAll('.g-chip');
+      chips.forEach((el, i) => {
+        el.style.animationDelay = `${i * 70}ms`;
+        el.classList.add('chip-enter');
+      });
+    }, 160);
+
+    // t=460ms — listen field fades in (no blue shadow yet)
+    setTimeout(() => {
+      const f = C.rich.querySelector('.g-listen-field');
+      if (!f) return;
+      f.style.opacity = '';
+      f.classList.add('field-enter');
+
+      // t=560ms — blue shadow fades in
+      setTimeout(() => {
+        const f2 = C.rich.querySelector('.g-listen-field');
+        if (!f2) return;
+        f2.classList.remove('compose-input');
+        void f2.offsetHeight;
+        requestAnimationFrame(() => f2.classList.add('compose-input'));
+      }, 100);
+    }, 240);
+  }, 220);
+
+  speakOutput(voiceText || '');
+  setTimeout(() => input.focus(), 500);
+}
+
+function beginComposeForContact(contact, voiceText) {
+  glassAnimateToCompose(contact, voiceText);
 }
 
 function doGlassAction(index) {
