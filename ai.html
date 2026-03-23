@@ -352,6 +352,30 @@ body.mode-ai #sim-panel { display: flex; }
   font-family: 'DM Sans', sans-serif;
 }
 #sim-voice-text { font-size: 12px; color: rgba(255,255,255,0.50); font-family: 'DM Sans', sans-serif; }
+#sim-mic {
+  display: none;
+  align-items: center;
+  gap: 7px;
+}
+#sim-mic.active { display: flex; }
+#sim-mic-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(100,150,255,0.9);
+  box-shadow: 0 0 6px rgba(100,150,255,0.5);
+  animation: pulse 1.2s ease infinite;
+  flex-shrink: 0;
+}
+#sim-mic-dot.dictation {
+  background: rgba(100,220,140,0.9);
+  box-shadow: 0 0 6px rgba(100,220,140,0.5);
+}
+#sim-mic-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.30);
+  font-family: 'DM Sans', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
 #sim-log { flex: 1; overflow-y: auto; }
 #sim-log::-webkit-scrollbar { width: 2px; }
 #sim-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 10px; }
@@ -2261,6 +2285,10 @@ body.bg-off .bg-blur-image { opacity: 0; }
   <div id="sim-voice-out">
     <div id="sim-voice-label">🔊 AI</div>
     <div id="sim-voice-text"></div>
+  </div>
+  <div id="sim-mic">
+    <div id="sim-mic-dot"></div>
+    <span id="sim-mic-label">Listening…</span>
   </div>
   <div id="sim-log"></div>
   <div id="sim-kbd">
@@ -5550,7 +5578,96 @@ const glassUi = {
   active:false, state:GS.IDLE, sel:0,
   contact:null, msg:'', composeText:'',
   showChips:true, showCheck:false, aiVoice:'',
+  disambiguateContacts: [],
 };
+const voiceEngine = {
+  recognition: null,
+  supported: false,
+  active: false,
+  mode: 'off',
+  restartOnEnd: false,
+};
+
+function initVoiceEngine() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { addSimLog('Voice input not supported in this browser', 'system'); return; }
+  voiceEngine.supported = true;
+  const r = new SR();
+  r.lang = 'en-US';
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+  r.continuous = false;
+  r.onresult = (e) => {
+    const result = e.results[e.results.length - 1];
+    const transcript = result[0].transcript.trim();
+    const isFinal = result.isFinal;
+    onVoiceResult(transcript, isFinal);
+  };
+  r.onend = () => {
+    voiceEngine.active = false;
+    updateMicIndicator();
+    if (voiceEngine.restartOnEnd && voiceEngine.mode !== 'off' && glassUi.active) {
+      setTimeout(() => {
+        if (voiceEngine.restartOnEnd && glassUi.active) voiceEngine.start(voiceEngine.mode);
+      }, 120);
+    }
+  };
+  r.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      voiceEngine.supported = false;
+      voiceEngine.restartOnEnd = false;
+      addSimLog('Mic access denied — use typed input', 'system');
+    } else if (e.error !== 'no-speech') {
+      addSimLog(`Voice error: ${e.error}`, 'system');
+    }
+    voiceEngine.active = false;
+    updateMicIndicator();
+  };
+  voiceEngine.recognition = r;
+}
+
+voiceEngine.start = function(mode) {
+  if (!voiceEngine.supported || !voiceEngine.recognition) return;
+  voiceEngine.mode = mode;
+  if (mode === 'off') { voiceEngine.stop(); return; }
+  voiceEngine.restartOnEnd = true;
+  if (voiceEngine.active) return;
+  try {
+    voiceEngine.recognition.start();
+    voiceEngine.active = true;
+    updateMicIndicator();
+  } catch(e) {}
+};
+
+voiceEngine.stop = function() {
+  voiceEngine.restartOnEnd = false;
+  voiceEngine.mode = 'off';
+  if (voiceEngine.recognition && voiceEngine.active) {
+    try { voiceEngine.recognition.stop(); } catch(e) {}
+  }
+  voiceEngine.active = false;
+  updateMicIndicator();
+};
+
+function updateMicIndicator() {
+  const el = document.getElementById('sim-mic');
+  const dot = document.getElementById('sim-mic-dot');
+  const lbl = document.getElementById('sim-mic-label');
+  if (!el) return;
+  if (!voiceEngine.supported || !voiceEngine.active || voiceEngine.mode === 'off') {
+    el.classList.remove('active');
+    return;
+  }
+  el.classList.add('active');
+  dot.className = voiceEngine.mode === 'dictation' ? 'dictation' : 'command';
+  lbl.textContent = voiceEngine.mode === 'dictation' ? 'Dictating…' : 'Listening…';
+}
+
+function onVoiceResult(transcript, isFinal) {
+  if (input) input.value = transcript;
+  onTranscriptUpdate(transcript, isFinal);
+}
+
 let glassLastContentHeightPx = 180;
 const glassHeightByState = {
   [GS.DISAMBIGUATE]: 160,
@@ -5562,6 +5679,7 @@ let glassMeasureSettleTimer = null;
 let glassRenderToken = 0;
 let glassPrevState = GS.IDLE;
 let glassManualComposeEntry = false;
+let glassPreFlowShape = 'circle';
 let glassPauseTimer = null;
 let glassDotsTimer = null;
 let glassThinkingTimer = null;
@@ -6048,6 +6166,16 @@ function glassRender(shouldMorph = true) {
   }
 }
 
+function _applyVoiceModeForState(state) {
+  if (state === GS.IDLE || state === GS.DISAMBIGUATE || state === GS.CONFIRM) {
+    voiceEngine.start('command');
+  } else if (state === GS.COMPOSE) {
+    voiceEngine.start('dictation');
+  } else {
+    voiceEngine.stop();
+  }
+}
+
 function glassTransitionTo(state, voiceOutput = '') {
   if (glassDotsTimer) { clearInterval(glassDotsTimer); glassDotsTimer = null; }
   if (glassUi.state === GS.COMPOSE && state !== GS.COMPOSE) {
@@ -6059,6 +6187,7 @@ function glassTransitionTo(state, voiceOutput = '') {
         glassUi.sel = 0;
         speakOutput(voiceOutput || '');
         glassRender(true);
+        _applyVoiceModeForState(state);
       }, 380);
       return;
     }
@@ -6067,9 +6196,11 @@ function glassTransitionTo(state, voiceOutput = '') {
   glassUi.sel = 0;
   speakOutput(voiceOutput || '');
   glassRender(true);
+  _applyVoiceModeForState(state);
 }
 
 function glassReset() {
+  voiceEngine.stop();
   clearGlassTimers();
   cancelGlassMeasure();
   glassUi.active = false;
@@ -6083,7 +6214,9 @@ function glassReset() {
   glassUi.aiVoice = '';
   speakOutput('');
   renderGlassControlsOverlay();
-  glassRender(true);
+  glassRender(false);
+  morphTo(glassPreFlowShape || 'circle', { icon:'', primary:'', secondary:'', detail:'' });
+  updateActive(glassPreFlowShape || 'circle');
 }
 
 async function parseIntent(text) {
@@ -6100,9 +6233,40 @@ function isMessageIntent(text) {
   return /\b(send|message|text|msg)\b/i.test(String(text || ''));
 }
 
-function onTranscriptUpdate(text) {
-  if (glassUi.state === GS.COMPOSE) {
-    handleGlassInputChange(text);
+function parseDisambiguateVoice(text, contacts) {
+  const lower = text.toLowerCase().trim();
+  // Check second/third BEFORE first/one — "second one" contains "one" and would false-match first
+  if (/\b(second|the\s*second|number\s*two|option\s*two)\b/.test(lower)) return 1;
+  if (/\b(third|the\s*third|number\s*three|option\s*three)\b/.test(lower)) return 2;
+  if (/\b(first|one|1|the\s*first|number\s*one|option\s*one)\b/.test(lower)) return 0;
+  for (let i = 0; i < contacts.length; i++) {
+    const nameParts = contacts[i].name.toLowerCase().split(' ');
+    if (nameParts.some(part => part.length > 2 && lower.includes(part))) return i;
+  }
+  return -1;
+}
+
+function onTranscriptUpdate(text, isFinal = false) {
+  if (!glassUi.active) return;
+  switch (glassUi.state) {
+    case GS.IDLE:
+      if (isFinal && text) { input.value = text; void handleGlassInputSubmit(); }
+      break;
+    case GS.DISAMBIGUATE:
+      if (isFinal && text) {
+        const idx = parseDisambiguateVoice(text, glassUi.disambiguateContacts);
+        if (idx >= 0) { glassUi.sel = idx; input.value = ''; glassConfirm(); }
+        else { addGlassLog(`No match for "${text}" — try a name or "the first one"`, 'system'); }
+      }
+      break;
+    case GS.COMPOSE:
+      handleGlassInputChange(text);
+      if (isFinal && text.trim() && input) input.value = text;
+      break;
+    case GS.CONFIRM:
+      if (isFinal && text) { input.value = text; if (parseGlassVoice(text)) input.value = ''; }
+      break;
+    default: break;
   }
 }
 
@@ -6119,7 +6283,7 @@ function startGlassFlow() {
   glassUi.showCheck = false;
   speakOutput('');
   glassRender(true);
-  setTimeout(() => input.focus(), 50);
+  setTimeout(() => { input.focus(); voiceEngine.start('command'); }, 50);
 }
 
 function findContacts(recipientHint = '', fullText = '') {
@@ -6153,6 +6317,7 @@ function glassAnimateToCompose(contact, voiceText) {
   glassUi.state = GS.COMPOSE;
   glassPrevState = GS.COMPOSE;       // suppress normal _enteringCompose rAF
   glassManualComposeEntry = true;
+  voiceEngine.start('dictation');
 
   // Measure compose height off-screen before rebuilding live DOM
   let layer = document.getElementById('glass-measure-layer');
@@ -6444,6 +6609,7 @@ async function handleGlassInputSubmit() {
       if (fallbackMatches.length === 1) {
         beginComposeForContact(fallbackMatches[0], `Message to ${fallbackMatches[0].name.split(' ')[0]}. What would you like to say?`);
       } else if (fallbackMatches.length > 1) {
+        glassUi.disambiguateContacts = fallbackMatches;
         glassTransitionTo(GS.DISAMBIGUATE, 'Which Hiro?');
       } else {
         speakOutput('Contact not found.');
@@ -7533,6 +7699,7 @@ function animateSplitMetaball() {
 
 function manualShape(shape) {
   if (shape === 'ai') shape = 'magic';
+  if (shape !== 'listening') { voiceEngine.stop(); if (glassUi.active) glassReset(); }
   document.getElementById('shape-panel').classList.remove('visible');
   hideRich();
   hideIntentHeader();
@@ -7560,6 +7727,13 @@ function manualShape(shape) {
     updateActive('magic');
     return;
   }
+  if (shape === 'listening') {
+    glassPreFlowShape = currentShape || 'circle';
+    startGlassFlow();
+    updateActive('listening');
+    return;
+  }
+
   if (shape === 'idle') {
     if (currentShape === 'circle' || currentShape === 'magic') {
       bridgeHomeToThinking('idle');
@@ -8816,6 +8990,8 @@ function selectListItem(el, idx, items) {
   document.querySelectorAll('.list-pill').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
 }
+
+initVoiceEngine();
 
 Object.assign(window, {
   applyCustomShape,
