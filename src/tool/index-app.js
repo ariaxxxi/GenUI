@@ -1,9 +1,9 @@
 import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride } from '../app-state.js';
-import { initMorph } from './morph.js';
-import { initScenarioData } from './scenario-data.js';
-import { buildUiRefs, initSidebar } from './sidebar.js';
-import { initAnimControls } from './modules/anim-controls.js';
-import { initOrbController } from './modules/orb-controller.js';
+import { initMorph } from '../shared/morph.js';
+import { initScenarioData } from '../shared/scenario-data.js';
+import { buildUiRefs, initSidebar } from '../shared/sidebar.js';
+import { initAnimControls } from '../shared/anim-controls.js';
+import { initOrbController } from '../shared/orb-controller.js';
 import { initManualFlight } from './modules/manual-flight.js';
 import { initManualDemo } from './modules/manual-demo.js';
 import { initManualActions } from './modules/manual-actions.js';
@@ -305,6 +305,7 @@ const sidebar = initSidebar({
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
+  normalizeScenario,
   normalizeStage,
   stageId,
   getScenarioLibrary: () => scenarioLibrary,

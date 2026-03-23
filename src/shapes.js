@@ -1,6 +1,6 @@
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
+export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 
 const shapeHelperConfig = {
   clampFn: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
@@ -41,12 +41,12 @@ function stageComponentTypes() {
     : DEFAULT_STAGE_COMPONENT_TYPES;
 }
 
-function availableScenarioShapes() {
+export function availableScenarioShapes() {
   const result = shapeHelperConfig.getAvailableScenarioShapes();
   return Array.isArray(result) ? result : [];
 }
 
-function renderShapeForStageId(id) {
+export function renderShapeForStageId(id) {
   return shapeHelperConfig.renderShapeForStageId(id);
 }
 
@@ -59,7 +59,7 @@ function stageIdsForShapeMap(value = {}, fallbackShape = 'pill') {
   ].filter(Boolean)));
 }
 
-function createIcon(kind = 'none', value = '') {
+export function createIcon(kind = 'none', value = '') {
   return { kind, value: String(value || '') };
 }
 

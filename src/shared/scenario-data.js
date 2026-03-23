@@ -16,11 +16,11 @@ import {
   createIcon,
   availableScenarioShapes as shapeAvailableScenarioShapes,
   renderShapeForStageId as shapeRenderShapeForStageId,
-  TYPOGRAPHY_LAYERS,
 } from '../shapes.js';
 
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
+const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, components: [] },

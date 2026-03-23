@@ -15,17 +15,12 @@
 
 <style id="anim-style">
   :root {
-    --spring: linear(
-      0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
-      0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
-      1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
-      1.004 92%, 1.001 97%, 1
-    );
-    --anim-w:  450ms var(--spring);
-    --anim-h:  450ms var(--spring);
-    --anim-br: 450ms var(--spring);
-    --anim-tx: 450ms var(--spring);
-    --anim-t:  450ms var(--spring);
+    --spring: cubic-bezier(0.35,0.23,0.13,0.98);
+    --anim-w:  600ms var(--spring);
+    --anim-h:  600ms var(--spring);
+    --anim-br: 600ms var(--spring);
+    --anim-tx: 600ms var(--spring);
+    --anim-t:  600ms var(--spring);
   }
 </style>
 
@@ -133,9 +128,9 @@
       <div class="sb-row">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <span class="sb-lbl">Duration</span>
-          <span class="sb-val" id="dur-val-left">450ms</span>
+          <span class="sb-val" id="dur-val-left">600ms</span>
         </div>
-        <input type="range" id="dur-sl-left" min="100" max="1400" step="50" value="450"/>
+        <input type="range" id="dur-sl-left" min="100" max="1400" step="50" value="600"/>
       </div>
       <div class="sb-row">
         <span class="sb-lbl">Easing</span>
@@ -407,9 +402,9 @@
         <div class="sb-row">
           <div style="display:flex;justify-content:space-between;align-items:baseline;">
             <span class="sb-lbl">Duration</span>
-            <span class="sb-val" id="dur-val">450ms</span>
+            <span class="sb-val" id="dur-val">600ms</span>
           </div>
-          <input type="range" id="dur-sl" min="100" max="1400" step="50" value="450"/>
+          <input type="range" id="dur-sl" min="100" max="1400" step="50" value="600"/>
         </div>
         <div class="sb-row">
           <span class="sb-lbl">Easing</span>

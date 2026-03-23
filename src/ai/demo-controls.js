@@ -1,0 +1,149 @@
+export function initDemoControls({
+  document,
+  SHAPES,
+  SCENARIO_SHAPES,
+  createScenario,
+  selectedScenario,
+  previewScenario,
+  morph,
+  shell,
+  voice,
+  renderShapeForStageId,
+  updateActive,
+  getCurrentShape,
+  getPreFlowShape,
+  setPreFlowShape,
+  messageFlow,
+  startGlassFlow,
+}) {
+  const DEMO = { circle: { icon: "", primary: "", secondary: "", detail: "" }, split: { icon: "", primary: "", secondary: "", detail: "" }, ai: { icon: "", primary: "", secondary: "", detail: "" } };
+  const LIST_PILL_H = 120;
+  const LIST_GAP = 12;
+  const LIST_STEP = LIST_PILL_H + LIST_GAP;
+  const DEMO_LIST = [
+    { icon: "🌤", primary: "21°  Sunny", secondary: "San Francisco" },
+    { icon: "✉", primary: "New Message", secondary: "Alice · Want to meet?" },
+    { icon: "⏱", primary: "Timer", secondary: "10 minutes remaining" },
+  ];
+
+  function clearListPills() {
+    const wrap = document.getElementById("list-pills");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    wrap.style.pointerEvents = "none";
+    wrap.style.opacity = "";
+    wrap.style.transition = "";
+    wrap.dataset.collapsing = "";
+  }
+
+  function collapseListStack(ms = 220) {
+    const wrap = document.getElementById("list-pills");
+    if (!wrap) return;
+    if (!wrap.children.length) return void clearListPills();
+    if (wrap.dataset.collapsing === "1") return;
+    wrap.dataset.collapsing = "1";
+    wrap.style.pointerEvents = "none";
+    wrap.style.transition = `opacity ${ms}ms ease`;
+    wrap.style.opacity = "0";
+    setTimeout(clearListPills, ms + 30);
+  }
+
+  function selectListItem(el) {
+    document.querySelectorAll(".list-pill").forEach((pill) => pill.classList.remove("selected"));
+    el.classList.add("selected");
+  }
+
+  function buildListPill(item, idx, items) {
+    const el = document.createElement("div");
+    el.className = "list-pill";
+    el.style.zIndex = String(Math.max(1, items.length - idx));
+    el.innerHTML = `<div class="list-pill-thumb">${item.icon || "◉"}</div><div class="list-pill-text"><div class="list-pill-primary">${item.primary || ""}</div><div class="list-pill-secondary">${item.secondary || ""}</div></div>`;
+    el.addEventListener("click", () => selectListItem(el));
+    return el;
+  }
+
+  function morphToList(items = DEMO_LIST) {
+    shell.stopSiriOrb();
+    morph.hideRich();
+    document.getElementById("drop-main").classList.remove("ai-mode");
+    shell.setIntentHeader("Demo", "List");
+    morph.morphTo("pill", { icon: items[0]?.icon || "◉", primary: items[0]?.primary || "", secondary: items[0]?.secondary || "", detail: "" });
+    const stackHeight = items.length * LIST_PILL_H + (items.length - 1) * LIST_GAP;
+    const stackTop = -stackHeight / 2;
+    const wrap = document.getElementById("list-pills");
+    clearListPills();
+    if (!wrap) return;
+    wrap.style.opacity = "1";
+    wrap.style.pointerEvents = "auto";
+    const stage = document.getElementById("stage");
+    if (stage) stage.style.height = `${stackHeight}px`;
+    items.slice(1).forEach((item, i) => {
+      const pill = buildListPill(item, i + 1, items);
+      pill.style.transition = "transform 500ms cubic-bezier(0.22,1,0.36,1), opacity 420ms cubic-bezier(0.22,1,0.36,1)";
+      pill.style.transform = `translateY(${stackTop + 20}px)`;
+      pill.style.opacity = "0.01";
+      wrap.appendChild(pill);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        pill.style.transform = `translateY(${stackTop + (i + 1) * LIST_STEP}px)`;
+        pill.style.opacity = "1";
+      }));
+    });
+    updateActive("list");
+  }
+
+  function openCustom() {
+    document.getElementById("shape-panel")?.classList.toggle("visible");
+    updateActive("custom");
+  }
+
+  function applyCustomShape() {
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const w = clamp(parseInt(document.getElementById("sp-w")?.value, 10) || 280, 60, 420);
+    const h = clamp(parseInt(document.getElementById("sp-h")?.value, 10) || 140, 60, 360);
+    const r = clamp(parseInt(document.getElementById("sp-r")?.value, 10) || 0, 0, Math.floor(Math.min(w, h) / 2));
+    morph.hideRich();
+    morph.morphTo("custom", null, { main: { w, h, br: `${r}px`, tx: -(w / 2), ty: -(h / 2), op: 1 }, left: { w: 100, h: 100, br: "50px", tx: -(w / 2), ty: -50, op: 0 }, right: { w: 100, h: 100, br: "50px", tx: (w / 2) - 100, ty: -50, op: 0 } });
+    morph.applyContentPositions("custom", w, h);
+  }
+
+  function manualShape(shape) {
+    const nextShape = shape === "ai" ? "magic" : shape;
+    if (nextShape !== "listening") {
+      voice.voiceEngine.stop();
+      if (messageFlow.isActive()) messageFlow.reset();
+    }
+    document.getElementById("shape-panel")?.classList.remove("visible");
+    morph.hideRich();
+    shell.hideIntentHeader();
+    document.getElementById("stage")?.classList.remove("flow-active");
+    document.getElementById("stage-wrap")?.classList.remove("flow-active");
+    clearListPills();
+    if (nextShape === "list") return void morphToList(DEMO_LIST);
+    if (nextShape === "magic") {
+      morph.morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
+      updateActive("magic");
+      return;
+    }
+    if (nextShape === "listening") {
+      setPreFlowShape(getCurrentShape() || "circle");
+      startGlassFlow();
+      updateActive("listening");
+      return;
+    }
+    if (nextShape === "idle") {
+      morph.morphTo("ai", { icon: "", primary: "", secondary: "", detail: "" });
+      shell.showAiIdle();
+      updateActive("idle");
+      return;
+    }
+    if (SCENARIO_SHAPES.includes(nextShape)) {
+      const scenario = selectedScenario();
+      const nextScenario = scenario ? createScenario({ ...scenario, shape: nextShape, content: scenario.content, triggers: scenario.triggers }) : createScenario({ shape: nextShape });
+      previewScenario(nextScenario);
+      return;
+    }
+    morph.morphTo(nextShape, DEMO[nextShape] || {});
+  }
+
+  return { clearListPills, collapseListStack, selectListItem, buildListPill, morphToList, openCustom, applyCustomShape, manualShape };
+}
