@@ -3,7 +3,7 @@ import { initMorph } from "../shared/morph.js";
 import { initScenarioData } from "../shared/scenario-data.js";
 import { buildUiRefs, initSidebar } from "../shared/sidebar.js";
 import { initAnimControls } from "../shared/anim-controls.js";
-import { addSimLog, setSimVoice, setSimInputState, addChatBubble, showTypingBubble, hideTypingBubble } from "../sim-panel.js";
+import { addSimLog, setSimVoice, setSimInputState, addChatBubble, showTypingBubble, hideTypingBubble, playSimEarcon } from "../sim-panel.js";
 import { SHAPES, defaultTypographyForShape } from "../shapes.js";
 import { initAiShell } from "./ai-shell.js";
 import { initVoiceEngine } from "./voice-engine.js";
@@ -12,6 +12,8 @@ import { createFlightBookingFlow } from "../flows/flight-booking.js";
 import { initDemoControls } from "./demo-controls.js";
 import { initInputActions } from "./input-actions.js";
 import { initEditorBindings } from "./editor-bindings.js";
+import { prewarmAiSpeechCache, refreshAiVoice } from "./tts-player.js";
+import { initPhrases } from "./phrases.js";
 
 const DROPS = { main: document.getElementById("drop-main"), left: document.getElementById("drop-left"), right: document.getElementById("drop-right") };
 const C = { thumb: document.getElementById("c-thumb"), thumbLabel: document.getElementById("c-thumb-label"), thumbImg: document.getElementById("c-thumb-img"), prim: document.getElementById("c-primary"), sec: document.getElementById("c-secondary"), div: document.getElementById("c-divider"), det: document.getElementById("c-detail"), media: document.getElementById("c-media"), rich: document.getElementById("c-rich"), glassControlsLayer: document.getElementById("glass-controls-layer") };
@@ -75,7 +77,7 @@ const sidebar = initSidebar({
 });
 const voice = initVoiceEngine({ document, input, addSimLog, getGlassUi: () => messageFlow?.flow, getGlassState: () => messageFlow?.GS, onTranscriptUpdate: (text, isFinal) => messageFlow?.onTranscriptUpdate(text, isFinal) });
 const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, input, addChatBubble, hideTypingBubble });
-const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive });
+const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, playEarcon: playSimEarcon, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive });
 const demo = initDemoControls({ document, SHAPES, SCENARIO_SHAPES, createScenario, selectedScenario, previewScenario, morph, shell, voice, renderShapeForStageId, updateActive, getCurrentShape: morph.getCurrentShape, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, messageFlow, startGlassFlow: () => messageFlow.start() });
 const actions = initInputActions({ input, responseMode: () => responseMode, RESPONSE_MODE, selectedScenario, scenarioLibrary: () => scenarioLibrary, createScenario, createIcon, renderScenarioUi: sidebar.renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, previewScenario, messageFlow, flightFlow, voice, morph });
 
@@ -98,5 +100,15 @@ sidebar.renderScenarioUi();
 if (responseMode === RESPONSE_MODE.AI) demo.manualShape("circle"); else previewScenario(selectedScenario());
 anim.rebuildAnim();
 anim.initStarfield();
+prewarmAiSpeechCache();
+void initPhrases();
 
-Object.assign(window, { applyCustomShape: demo.applyCustomShape, fireChip: actions.fireChip, handleSend: actions.handleSend, manualShape: demo.manualShape, openCustom: demo.openCustom, selectListItem: demo.selectListItem });
+Object.assign(window, {
+  applyCustomShape: demo.applyCustomShape,
+  fireChip: actions.fireChip,
+  handleSend: actions.handleSend,
+  manualShape: demo.manualShape,
+  openCustom: demo.openCustom,
+  selectListItem: demo.selectListItem,
+  refreshAiVoiceText: (text) => refreshAiVoice(text),
+});

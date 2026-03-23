@@ -55,3 +55,42 @@ export function showTypingBubble() {
 }
 
 export function hideTypingBubble() {}
+
+let earconCtx = null;
+
+function getEarconCtx() {
+  if (!earconCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    earconCtx = new AC();
+  }
+  return earconCtx;
+}
+
+export function playSimEarcon(type = 'sent') {
+  if (type !== 'sent') return;
+  const ctx = getEarconCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime + 0.01;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+  master.connect(ctx.destination);
+
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(784, now);
+  osc1.frequency.exponentialRampToValueAtTime(1174.66, now + 0.12);
+  osc1.connect(master);
+  osc1.start(now);
+  osc1.stop(now + 0.14);
+
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'triangle';
+  osc2.frequency.setValueAtTime(1174.66, now + 0.12);
+  osc2.frequency.exponentialRampToValueAtTime(1567.98, now + 0.26);
+  osc2.connect(master);
+  osc2.start(now + 0.12);
+  osc2.stop(now + 0.3);
+}

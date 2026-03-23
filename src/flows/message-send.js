@@ -1,5 +1,6 @@
 import { createMessageSendRender } from "./message-send-render.js";
 import { createMessageSendVoice } from "./message-send-voice.js";
+import { phrase } from "../ai/phrases.js";
 
 const CONTACTS = [
   { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", chips: [
@@ -450,7 +451,8 @@ export function createMessageSendFlow(ctx) {
     if (index === 0) {
       transitionTo(GS.SENDING, "");
       timers.send = setTimeout(() => {
-        transitionTo(GS.SENT, "Sent.");
+        transitionTo(GS.SENT, "");
+        if (typeof ctx.playEarcon === "function") ctx.playEarcon("sent");
         ctx.addSimLog(`✓ Delivered to ${flow.contact?.name || "contact"}`, "success");
         timers.sent = setTimeout(() => reset(), 2500);
       }, 900);
@@ -460,7 +462,7 @@ export function createMessageSendFlow(ctx) {
     flow.showChips = false;
     flow.showCheck = !!String(flow.composeText || "").trim();
     flow.composeText = flow.msg || flow.composeText;
-      transitionTo(GS.COMPOSE, "Edit your message.");
+      transitionTo(GS.COMPOSE, phrase("edit_message"));
       setTimeout(() => ctx.input.focus(), 120);
       return;
     }
@@ -479,9 +481,9 @@ export function createMessageSendFlow(ctx) {
         flow.composeText = pending;
         flow.showChips = false;
         flow.showCheck = true;
-        transitionTo(GS.CONFIRM, `Confirm message to ${contact.name.split(" ")[0]}.`);
+        transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: contact.name.split(" ")[0] }));
       } else {
-        beginCompose(contact, `What would you like to say to ${contact.name.split(" ")[0]}?`);
+        beginCompose(contact, phrase("compose_prompt"));
       }
       return;
     }
@@ -491,7 +493,7 @@ export function createMessageSendFlow(ctx) {
     }
     if (flow.state === GS.COMPOSE && flow.showCheck) {
       flow.msg = String(flow.composeText || flow.msg || "").trim();
-      transitionTo(GS.CONFIRM, `Send to ${flow.contact?.name?.split(" ")[0] || "contact"}?`);
+      transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
       ctx.input.blur();
       return;
     }
@@ -503,7 +505,7 @@ export function createMessageSendFlow(ctx) {
       flow.showChips = false;
       flow.showCheck = !!String(flow.composeText || "").trim();
       flow.composeText = flow.msg || flow.composeText;
-      transitionTo(GS.COMPOSE, "Edit your message.");
+      transitionTo(GS.COMPOSE, phrase("edit_message"));
       setTimeout(() => ctx.input.focus(), 120);
       return;
     }
@@ -563,19 +565,19 @@ export function createMessageSendFlow(ctx) {
             flow.composeText = msg;
             flow.showChips = false;
             flow.showCheck = true;
-            transitionTo(GS.CONFIRM, `Confirm message to ${fallback[0].name.split(" ")[0]}.`);
+            transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: fallback[0].name.split(" ")[0] }));
           } else {
-            beginCompose(fallback[0], `Message to ${fallback[0].name.split(" ")[0]}. What would you like to say?`);
+            beginCompose(fallback[0], phrase("compose_prompt"));
           }
         } else if (fallback.length > 1) {
           flow.disambiguateContacts = fallback;
           flow._pendingMsg = msg;
-          transitionTo(GS.DISAMBIGUATE, "Which Hiro?");
+          transitionTo(GS.DISAMBIGUATE, phrase("disambiguate_found_two"));
         } else {
-          speakOutput("Contact not found.");
+          speakOutput(phrase("contact_not_found"));
           reset();
         }
-      }, 1000);
+      }, 0);
     }
   }
 

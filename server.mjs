@@ -1,10 +1,13 @@
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, normalize, resolve } from 'node:path';
 
 const ROOT = process.cwd();
 const MAX_BODY_BYTES = 256 * 1024;
+const TTS_CACHE = new Map();
+const TTS_IN_FLIGHT = new Map();
+const PHRASES_PATH = join(ROOT, 'ref', 'ai-phrases.json');
 
 async function loadEnvFile() {
   const envPath = join(ROOT, '.env');
@@ -45,6 +48,33 @@ function sendText(res, status, text, type = 'text/plain; charset=utf-8') {
 
 function pickProvider(reqBodyProvider) {
   return String(reqBodyProvider || process.env.AI_PROVIDER || 'gemini').toLowerCase();
+}
+
+const DEFAULT_PHRASES = {
+  disambiguate_found_two: 'I found 2 hiro in your contact list, which one do you mean?',
+  compose_prompt: 'What would you like to say?',
+  confirm_message_to: 'Confirm message to {{name}}.',
+  confirm_ready_send: 'Ready to send?',
+  edit_message: 'Edit your message.',
+  contact_not_found: 'Contact not found.',
+};
+
+async function loadPhrasesFromDisk() {
+  if (!existsSync(PHRASES_PATH)) return { ...DEFAULT_PHRASES };
+  try {
+    const raw = await readFile(PHRASES_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_PHRASES };
+    return { ...DEFAULT_PHRASES, ...parsed };
+  } catch {
+    return { ...DEFAULT_PHRASES };
+  }
+}
+
+async function savePhrasesToDisk(nextPhrases) {
+  const normalized = { ...DEFAULT_PHRASES, ...(nextPhrases || {}) };
+  await writeFile(PHRASES_PATH, `${JSON.stringify(normalized, null, 2)}\n`, 'utf8');
+  return normalized;
 }
 
 async function readJsonBody(req) {
@@ -174,6 +204,31 @@ async function callGeminiTTS({ apiKey, model, text, voiceName }) {
   const mimeType = part?.inlineData?.mimeType || 'audio/pcm;rate=24000';
   if (!audioBase64) throw new Error('Gemini TTS returned no audio');
   return { audioBase64, mimeType };
+}
+
+function ttsCacheKey({ model, voiceName, text }) {
+  return `${String(model || '')}::${String(voiceName || '')}::${String(text || '').trim()}`;
+}
+
+async function getGeminiTtsCached({ apiKey, model, voiceName, text, forceRefresh = false }) {
+  const key = ttsCacheKey({ model, voiceName, text });
+  if (!forceRefresh) {
+    const cached = TTS_CACHE.get(key);
+    if (cached) return cached;
+  }
+  if (forceRefresh) TTS_CACHE.delete(key);
+  const inFlight = TTS_IN_FLIGHT.get(key);
+  if (inFlight) return inFlight;
+  const task = callGeminiTTS({ apiKey, model, text, voiceName })
+    .then((payload) => {
+      TTS_CACHE.set(key, payload);
+      return payload;
+    })
+    .finally(() => {
+      TTS_IN_FLIGHT.delete(key);
+    });
+  TTS_IN_FLIGHT.set(key, task);
+  return task;
 }
 
 async function handleAiRoute(req, res) {
@@ -334,7 +389,8 @@ async function handleTtsRoute(req, res) {
   try {
     const model = String(body.model || process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts');
     const voiceName = String(body.voiceName || process.env.GEMINI_TTS_VOICE || 'Kore');
-    const { audioBase64, mimeType } = await callGeminiTTS({ apiKey, model, text, voiceName });
+    const forceRefresh = body.forceRefresh === true;
+    const { audioBase64, mimeType } = await getGeminiTtsCached({ apiKey, model, text, voiceName, forceRefresh });
     json(res, 200, {
       audioBase64,
       mimeType,
@@ -346,6 +402,53 @@ async function handleTtsRoute(req, res) {
   } catch (err) {
     json(res, 502, { error: String(err.message || err), code: 'TTS_ERROR' });
   }
+}
+
+async function handlePhrasesGet(_req, res) {
+  const phrases = await loadPhrasesFromDisk();
+  json(res, 200, { phrases });
+}
+
+async function handlePhrasesSave(req, res) {
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (err) {
+    json(res, 400, { error: String(err.message || err), code: 'INVALID_REQUEST' });
+    return;
+  }
+  const updates = body?.phrases;
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
+    json(res, 400, { error: 'Missing phrases object', code: 'INVALID_REQUEST' });
+    return;
+  }
+  const current = await loadPhrasesFromDisk();
+  const merged = { ...current };
+  for (const [key, value] of Object.entries(updates)) {
+    if (typeof key !== 'string' || !key.trim()) continue;
+    if (typeof value !== 'string') continue;
+    merged[key] = value;
+  }
+  try {
+    const saved = await savePhrasesToDisk(merged);
+    json(res, 200, { phrases: saved });
+  } catch (err) {
+    json(res, 500, { error: String(err.message || err), code: 'SAVE_FAILED' });
+  }
+}
+
+async function prewarmTtsCache() {
+  const apiKey = String(process.env.GEMINI_API_KEY || process.env.AI_API_KEY || '').trim();
+  if (!apiKey) return;
+  const model = String(process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts');
+  const voiceName = String(process.env.GEMINI_TTS_VOICE || 'Kore');
+  const phrases = [
+    'I found 2 hiro in your contact list, which one do you mean?',
+    'What would you like to say?',
+  ];
+  await Promise.allSettled(
+    phrases.map((text) => getGeminiTtsCached({ apiKey, model, voiceName, text }))
+  );
 }
 
 const MIME = {
@@ -400,6 +503,14 @@ const server = createServer(async (req, res) => {
     await handleTtsRoute(req, res);
     return;
   }
+  if (req.method === 'GET' && req.url.startsWith('/api/phrases')) {
+    await handlePhrasesGet(req, res);
+    return;
+  }
+  if (req.method === 'POST' && req.url.startsWith('/api/phrases')) {
+    await handlePhrasesSave(req, res);
+    return;
+  }
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     sendText(res, 405, 'Method Not Allowed');
@@ -446,3 +557,4 @@ server.on('error', (err) => {
 });
 
 listen(PORT);
+void prewarmTtsCache();
