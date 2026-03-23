@@ -2,7 +2,7 @@
 > Last updated: 2026-03-22 | Branch: refractor-to-2-pages
 
 ## Current Phase
-**Active UI polish / send message flow parity.** Two-page split is in place and functional. Current worktree is dirty with ongoing send message flow refinements in `ai.html` and handoff docs updates.
+**Refactor in progress: page asset extraction after send message flow parity work.** `ai.html` and `index.html` have been reduced to thin entrypoint HTML files with externalized CSS and JS entrypoints, but the deeper shared-module split is still incomplete.
 
 ---
 
@@ -12,6 +12,17 @@
   - `THINKING -> DISAMBIGUATE -> COMPOSE -> CONFIRM -> SENDING -> SENT -> RESET`
   - phrase `send msg to hiro` and chip `Send a message to Hiro` both trigger flow
 - `src/shapes.js` extracted and shared between both pages
+- Thin HTML entrypoints are now in place:
+  - `ai.html` loads external CSS plus `src/ai-app.js`
+  - `index.html` loads external CSS plus `src/index-app.js`
+- External page assets now exist:
+  - `src/styles/ai.css`
+  - `src/styles/editor.css`
+  - `src/styles/shared.css`
+  - `src/styles/message-flow.css`
+  - `src/styles/flight-flow.css`
+  - `src/ai-app.js`
+  - `src/index-app.js`
 - Smoke test (`test/smoke.mjs`) validates `ai.html` loads, chip exists, and shape animates on click
 - Smoke test can self-host `server.mjs` on a free local port or target `SMOKE_BASE_URL` env var
 - `server.mjs` routes AI requests to OpenAI / Anthropic / Gemini with per-provider retry and auth logic
@@ -30,6 +41,13 @@
 
 ## What Is Incomplete / Known Issues
 - No smoke test coverage for `index.html` (manual mode); only `ai.html` is tested
+- The task-defined shared modules are not fully landed yet:
+  - `src/morph.js`
+  - `src/sidebar.js`
+  - `src/sim-panel.js`
+  - `src/voice-engine.js`
+  - `src/flows/message-send.js`
+  - `src/flows/flight-booking.js`
 - No error boundary for full or corrupted localStorage — silent failures
 - Pixel-perfect visual parity to Figma is still iterative (manual visual checks required for animation timing/placement nuances)
 - AI trigger phrases in `ai.html` are still implicit in code (not documented for new devs)
@@ -38,6 +56,7 @@
 ---
 
 ## Active Risks
+- **Refactor parity risk**: the HTML files are now thin, but behavior is still carried by large page-level modules (`src/ai-app.js`, `src/index-app.js`) until the shared-module split is completed
 - **Visual regression risk in `ai.html`**: ongoing CSS/animation iteration can reintroduce spacing/stacking issues across states
 - **Glasses overflow edge cases**: dynamic height + external controls must keep all visible content inside 420×420 stage under all transitions
 - **localStorage silent failure**: corruption or quota exceeded will cause data loss with no user feedback
@@ -55,8 +74,17 @@
 ├── BUILD_RULES.md      # Hard constraints — READ BEFORE TOUCHING UI
 ├── AGENTS.md           # Planner/Implementer agent workflow
 ├── src/
+│   ├── ai-app.js       # Extracted AI page module (still large; next split target)
+│   ├── index-app.js    # Extracted manual page module (still large; next split target)
+│   ├── events.js       # Small event-date stub used by flight flow
 │   ├── shapes.js       # Canonical shape/stage definitions (ES module)
-│   └── shapes.legacy.js# file:// fallback — keep in sync with shapes.js
+│   ├── shapes.legacy.js# file:// fallback — keep in sync with shapes.js
+│   └── styles/
+│       ├── ai.css
+│       ├── editor.css
+│       ├── shared.css
+│       ├── message-flow.css
+│       └── flight-flow.css
 ├── test/
 │   ├── smoke.mjs       # Playwright E2E smoke test (primary)
 │   └── smoke.js        # CJS copy of smoke test
@@ -84,8 +112,8 @@ node test/smoke.mjs     # requires server running, or smoke.mjs self-hosts
 ---
 
 ## Likely Next Priorities
-1. Complete manual parity pass for send message flow visuals/motion (header grouping, controls containment, selection animation consistency)
-2. Add targeted UI regression checks for `ai.html` (beyond current smoke shape check)
-3. Add smoke test for `index.html`
-4. Add localStorage error boundary
-5. Decide fate of `ref/FluidUI.html`
+1. Complete the shared-module split from `src/ai-app.js` / `src/index-app.js` into `src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, and `src/flows/*`
+2. Deduplicate `src/styles/ai.css` / `src/styles/editor.css` into a real `src/styles/shared.css`
+3. Add smoke test coverage for `index.html`
+4. Add targeted UI regression checks for `ai.html`
+5. Add localStorage error boundary

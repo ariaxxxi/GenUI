@@ -1,6 +1,66 @@
 # Handoff
 
 ## Task title
+Refactor: extract page CSS and JS entrypoints from `ai.html` and `index.html`
+
+## Completion status
+- Partially completed
+
+## Summary
+- Reduced `ai.html` from 9,227 lines to 489 lines by extracting the full inline style block and the full inline module script into external files.
+- Reduced `index.html` from 6,165 lines to 419 lines by extracting the full inline style block and the full inline script into external files.
+- Added external page entrypoints:
+  - `src/ai-app.js`
+  - `src/index-app.js`
+- Added external style files:
+  - `src/styles/ai.css`
+  - `src/styles/editor.css`
+  - `src/styles/shared.css`
+  - `src/styles/message-flow.css`
+  - `src/styles/flight-flow.css`
+- Added `src/events.js` stub used by the extracted AI flight logic for Coachella date resolution.
+- Rewired both HTML files to load external CSS/JS:
+  - `ai.html` now loads CSS links plus `src/ai-app.js`
+  - `index.html` now loads CSS links plus `src/index-app.js`
+- Fixed extracted module wiring:
+  - `src/ai-app.js` import path updated from `./src/shapes.js` to `./shapes.js`
+  - dynamic import updated from `./src/events.js` to `./events.js`
+  - `src/index-app.js` now exports inline-handler functions via `window.*` because `index.html` is now a module page
+
+## Files changed
+- `ai.html`
+- `index.html`
+- `src/ai-app.js`
+- `src/index-app.js`
+- `src/events.js`
+- `src/styles/ai.css`
+- `src/styles/editor.css`
+- `src/styles/shared.css`
+- `src/styles/message-flow.css`
+- `src/styles/flight-flow.css`
+
+## Validation performed
+- `SMOKE_BASE_URL=http://localhost:5174 node test/smoke.mjs`
+- Result observed: `SHAPE:magic`, `LOGS:[]`
+- Syntax sanity:
+  - `src/ai-app.js` parses after import stripping
+  - `src/index-app.js` parses after import stripping
+- Line-count check:
+  - `ai.html`: 489 lines
+  - `index.html`: 419 lines
+
+## Remaining issues / caveats
+- This pass extracted page assets and entrypoints, but did not yet finish the deeper shared-module split requested in `context/task.md` (`src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, `src/flows/*` are still not created/consumed as final shared modules).
+- `index.html` was not runtime-validated in Playwright because headless Chromium crashes in this sandbox (`SIGTRAP`); only syntax/static checks were completed for the extracted manual-page module.
+- `context/task.md` was already dirty before this pass and was not modified by this implementation step.
+
+## Recommended next step
+1. Split `src/ai-app.js` and `src/index-app.js` into the task-defined shared modules:
+   `src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, `src/flows/message-send.js`, `src/flows/flight-booking.js`.
+2. Deduplicate CSS properly by moving verified-shared sections into `src/styles/shared.css` and removing duplicated rules from `ai.css` / `editor.css`.
+3. Run a runtime validation pass on both pages in a local browser outside the current sandbox limits.
+
+## Task title
 send message flow visual/motion parity pass: gradients, selection smoothing, grouped floating, controls containment
 
 ## Completion status
