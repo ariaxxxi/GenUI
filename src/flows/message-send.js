@@ -22,6 +22,11 @@ export function createMessageSendFlow(ctx) {
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   const controlsGap = 14;
+  let flowEpoch = 0;
+
+  function isEpochAlive(epoch) {
+    return epoch === flowEpoch && flow.active;
+  }
 
   function clearTimers() {
     Object.keys(timers).forEach((key) => {
@@ -262,6 +267,7 @@ export function createMessageSendFlow(ctx) {
   }
 
   function reset() {
+    flowEpoch += 1;
     clearTimers();
     ctx.voice.voiceEngine.stop();
     flow.active = false;
@@ -276,13 +282,31 @@ export function createMessageSendFlow(ctx) {
     flow.interimText = "";
     flow._pendingMsg = "";
     speakOutput("");
+    if (ctx.C?.rich) {
+      ctx.C.rich.innerHTML = "";
+      ctx.C.rich.classList.remove("visible", "glass-active", "glass-sent");
+      ctx.C.rich.dataset.glassState = "";
+      ctx.C.rich.style.opacity = "";
+      ctx.C.rich.style.transform = "";
+    }
+    document.body.classList.remove("glass-flow-active");
+    if (ctx.C?.glassControlsLayer) {
+      ctx.C.glassControlsLayer.innerHTML = "";
+      ctx.C.glassControlsLayer.classList.remove("visible");
+    }
+    ctx.shell.hideIntentHeader?.();
     renderControls();
     render.render(false);
-    ctx.morph.morphTo(ctx.getPreFlowShape() || "circle", { icon: "", primary: "", secondary: "", detail: "" });
-    ctx.updateActive(ctx.getPreFlowShape() || "circle");
+    if (typeof ctx.returnToHomeContext === "function") {
+      ctx.returnToHomeContext();
+    } else {
+      ctx.morph.morphTo(ctx.getPreFlowShape() || "circle", { icon: "", primary: "", secondary: "", detail: "" });
+      ctx.updateActive(ctx.getPreFlowShape() || "circle");
+    }
   }
 
   function animateToCompose(contact, voiceText) {
+    const epoch = flowEpoch;
     const intentHeader = document.getElementById("intent-header");
     if (intentHeader) {
       intentHeader.classList.remove("visible");
@@ -326,6 +350,7 @@ export function createMessageSendFlow(ctx) {
     ctx.morph.morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
 
     setTimeout(() => {
+      if (!isEpochAlive(epoch)) return;
       render.setManualComposeEntry(false);
       ctx.C.rich.innerHTML = render.buildContent();
       ctx.C.rich.classList.add("glass-active", "visible");
@@ -346,6 +371,7 @@ export function createMessageSendFlow(ctx) {
       renderControls();
 
       setTimeout(() => {
+        if (!isEpochAlive(epoch)) return;
         const header2 = ctx.C.rich.querySelector(".g-card-header");
         if (header2) {
           header2.style.opacity = "";
@@ -354,6 +380,7 @@ export function createMessageSendFlow(ctx) {
       }, 60);
 
       setTimeout(() => {
+        if (!isEpochAlive(epoch)) return;
         const wrap = ctx.C.rich.querySelector(".g-chips-wrap");
         if (wrap) wrap.style.opacity = "";
         const chips = ctx.C.rich.querySelectorAll(".g-chip");
@@ -364,12 +391,14 @@ export function createMessageSendFlow(ctx) {
       }, 160);
 
       setTimeout(() => {
+        if (!isEpochAlive(epoch)) return;
         const field1 = ctx.C.rich.querySelector(".g-listen-field");
         if (!field1) return;
         field1.style.opacity = "";
         field1.classList.add("field-enter");
 
         setTimeout(() => {
+          if (!isEpochAlive(epoch)) return;
           const field2 = ctx.C.rich.querySelector(".g-listen-field");
           if (!field2) return;
           field2.classList.remove("compose-input");
@@ -380,7 +409,7 @@ export function createMessageSendFlow(ctx) {
     }, 220);
 
     speakOutput(voiceText || "");
-    setTimeout(() => ctx.input.focus(), 500);
+    setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 500);
   }
 
   function beginCompose(contact, voiceText) {
@@ -388,6 +417,7 @@ export function createMessageSendFlow(ctx) {
   }
 
   function selectChipWithAnimation(idx) {
+    const epoch = flowEpoch;
     const chip = flow.contact?.chips?.[idx];
     if (!chip) return;
 
@@ -419,6 +449,7 @@ export function createMessageSendFlow(ctx) {
     }
 
     setTimeout(() => {
+      if (!isEpochAlive(epoch)) return;
       const field = ctx.C.rich.querySelector(".g-listen-field");
       if (!field) return;
       field.dataset.pulseLock = "1";
@@ -433,11 +464,13 @@ export function createMessageSendFlow(ctx) {
       void field.offsetHeight;
       field.classList.add("text-arriving");
       setTimeout(() => {
+        if (!isEpochAlive(epoch)) return;
         delete field.dataset.pulseLock;
       }, 920);
     }, 300);
 
     setTimeout(() => {
+      if (!isEpochAlive(epoch)) return;
       flow.showCheck = true;
       forceControlsRebuild();
       renderControls();
@@ -448,9 +481,11 @@ export function createMessageSendFlow(ctx) {
   }
 
   function doAction(index) {
+    const epoch = flowEpoch;
     if (index === 0) {
       transitionTo(GS.SENDING, "");
       timers.send = setTimeout(() => {
+        if (!isEpochAlive(epoch)) return;
         transitionTo(GS.SENT, "");
         if (typeof ctx.playEarcon === "function") ctx.playEarcon("sent");
         ctx.addSimLog(`✓ Delivered to ${flow.contact?.name || "contact"}`, "success");
@@ -463,7 +498,7 @@ export function createMessageSendFlow(ctx) {
     flow.showCheck = !!String(flow.composeText || "").trim();
     flow.composeText = flow.msg || flow.composeText;
       transitionTo(GS.COMPOSE, phrase("edit_message"));
-      setTimeout(() => ctx.input.focus(), 120);
+      setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
       return;
     }
     reset();
@@ -501,12 +536,13 @@ export function createMessageSendFlow(ctx) {
   }
 
   function dismiss() {
+    const epoch = flowEpoch;
     if (flow.state === GS.CONFIRM) {
       flow.showChips = false;
       flow.showCheck = !!String(flow.composeText || "").trim();
       flow.composeText = flow.msg || flow.composeText;
       transitionTo(GS.COMPOSE, phrase("edit_message"));
-      setTimeout(() => ctx.input.focus(), 120);
+      setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
       return;
     }
     if (flow.state === GS.COMPOSE || flow.state === GS.DISAMBIGUATE) reset();
@@ -591,7 +627,12 @@ export function createMessageSendFlow(ctx) {
     }
     if (flow.state === GS.DISAMBIGUATE && isFinal && text) {
       const idx = voice.parseDisambiguateVoice(text, flow.disambiguateContacts);
-      if (idx >= 0) { flow.sel = idx; render.updateSelectionUiOnly(); setTimeout(() => confirm(), 240); }
+      if (idx >= 0) {
+        const epoch = flowEpoch;
+        flow.sel = idx;
+        render.updateSelectionUiOnly();
+        setTimeout(() => { if (isEpochAlive(epoch)) confirm(); }, 240);
+      }
       return;
     }
     if (flow.state === GS.COMPOSE) {
@@ -605,6 +646,8 @@ export function createMessageSendFlow(ctx) {
   }
 
   function start() {
+    flowEpoch += 1;
+    const epoch = flowEpoch;
     clearTimers();
     flow.active = true;
     flow.state = GS.IDLE;
@@ -618,7 +661,11 @@ export function createMessageSendFlow(ctx) {
     flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
     if (ctx.input) ctx.input.value = "";
     render.render(true);
-    setTimeout(() => { ctx.input.focus(); ctx.voice.voiceEngine.start("command"); }, 50);
+    setTimeout(() => {
+      if (!isEpochAlive(epoch)) return;
+      ctx.input.focus();
+      ctx.voice.voiceEngine.start("command");
+    }, 50);
   }
 
   return {

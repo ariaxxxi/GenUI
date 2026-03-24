@@ -218,6 +218,7 @@
         <div class="drop" id="drop-left"></div>
         <div class="drop" id="drop-right"></div>
         <div id="list-pills"></div>
+        <div id="home-state-dot" aria-hidden="true"></div>
         <div id="home-start-prompt"></div>
       </div>
     </div>
@@ -447,7 +448,6 @@
       </button>
       <div class="sb-section-body">
         <div class="legacy-grid">
-          <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
           <button class="sb-shape-btn" data-shape="listening" onclick="manualShape('listening')"><span class="sb-shape-num">0</span> Listening</button>
           <button class="sb-shape-btn" data-shape="magic" onclick="manualShape('magic')"><span class="sb-shape-num">9</span> Magic</button>
           <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
@@ -482,8 +482,15 @@
     </div>
     <input id="debug-ai-voice-toggle" class="sb-toggle-input" type="checkbox" checked/>
   </label>
+  <label class="sb-toggle" for="debug-fullscreen-stage-outline-toggle">
+    <div class="sb-toggle-copy">
+      <strong>Frame</strong>
+    </div>
+    <input id="debug-fullscreen-stage-outline-toggle" class="sb-toggle-input" type="checkbox" checked/>
+  </label>
   <div class="ai-legacy-actions">
-    <button class="sb-shape-btn" data-shape="circle" type="button" onclick="manualShape('circle')">Home</button>
+    <button class="sb-shape-btn" data-home-state="sleep" type="button" onclick="setHomeState('sleep')">Sleep</button>
+    <button class="sb-shape-btn" data-home-state="context" type="button" onclick="setHomeState('context')">Home</button>
     <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
     <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Magic</button>
   </div>

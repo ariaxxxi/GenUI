@@ -1,6 +1,230 @@
 # Handoff
 
 ## Task title
+Fix message-flow to home transition overlap (prevent double UI display)
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed UI overlap where message-flow content could remain visible when returning to home.
+- Root cause: delayed async callbacks (`setTimeout`) in `message-send` could still run after reset and re-inject flow DOM/animations.
+- Implemented flow epoch guard in `src/flows/message-send.js`:
+  - Added `flowEpoch` and `isEpochAlive(epoch)` helper.
+  - Incremented epoch on `start()` and `reset()`.
+  - Guarded delayed callbacks in compose/chip/confirm/dismiss/start paths so stale callbacks exit early.
+- Added explicit hard cleanup in `reset()`:
+  - clear rich content/classes (`visible`, `glass-active`, `glass-sent`)
+  - clear glass controls layer content/visibility
+  - remove `glass-flow-active` body class
+  - hide intent header
+- Result: switching from message flow back to home no longer leaves stale message UI in the container.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Task title
+Implement Figma node `163:1616` home-context pill look (pixel-targeted)
+
+## Completion status
+- Completed
+
+## Summary
+- Pulled Figma specs from:
+  - file: `LTNbsRqNkyLeo81OSL1X7J`
+  - node: `163:1616`
+  - measured frame: `233x46`
+- Updated AI home-context pill geometry to match Figma frame size:
+  - custom home-context morph geometry now uses `233x46`, radius `30`.
+- Implemented context-only layout in morph engine to match node structure:
+  - left pad `24`
+  - top/bottom implied by `46` height and text y positions
+  - dot `6x6`
+  - item gaps `10`
+  - primary/divider/secondary placement based on measured text widths
+  - divider rendered as vertical line (`26px` high) with `#2f2f2f`
+- Applied context-only style matching Figma:
+  - primary: `20px`, semibold (`600`), `#fff`
+  - secondary: `18px`, regular (`400`), `#c2c2c2`
+  - surface: `rgba(255,255,255,0.05)` fill
+  - border: `1px rgba(255,255,255,0.36)`
+  - inner shadow: `inset 0 0 20px rgba(255,255,255,0.15)`
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/shared/morph-layout.js`
+- `src/styles/ai.css`
+
+## Validation performed
+- Visual/logic validation by code against Figma values from MCP design context and metadata.
+
+## Remaining issues / caveats
+- Existing smoke automation still fails in this branch on debug-toggle click interception (`#debug-fullscreen-toggle` label intercept), unrelated to home-context pill implementation.
+
+## Task title
+Add fullscreen stage-outline toggle for AI page (sleep-stage outline control)
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new AI debug toggle in `ai.html`:
+  - `Stage/Frame Glow (FS)` (`#debug-fullscreen-stage-outline-toggle`)
+- Wired fullscreen outline visibility control in `src/ai/ai-bindings.js`:
+  - Persists to `localStorage` key: `genui_ai_fullscreen_stage_outline_visible`
+  - Applies body class `hide-stage-outline-fullscreen` when toggle is off
+- Added fullscreen-only CSS rule in `src/styles/ai.css`:
+  - Disables glow layers when toggled off:
+    - `#stage::after` outer glow
+    - `#ui-frame.glasses::after` white frame glow
+    - `#ui-frame.phone` frame shadow
+    - `#stage` screen blend glow path (`mix-blend-mode: normal`)
+  - Updated behavior to key off `body.hide-stage-outline-fullscreen` directly (not dependent on `fullscreen-stage-only`) so toggle updates apply immediately and consistently.
+
+## Files changed
+- `ai.html`
+- `src/ai/ai-bindings.js`
+- `src/styles/ai.css`
+
+## Validation performed
+- Manual wiring check by code inspection for:
+  - toggle presence
+  - class application path
+  - fullscreen-only CSS selector
+
+## Remaining issues / caveats
+- Existing smoke automation currently fails on AI debug toggle click interception in this branch state (`elementHandle.click` on `#debug-fullscreen-toggle` intercepted by label). This is pre-existing in current debug-toggle pointer-event setup and does not block runtime behavior of the new outline toggle itself.
+
+## Task title
+AI home-context visual update (dot + inline text + divider styling)
+
+## Completion status
+- Completed
+
+## Summary
+- Updated home-context (`data-ai-home-state="context"`) design to match requested structure:
+  - leading dot
+  - primary text + vertical divider + secondary text on one row
+  - home-context-specific typography and colors
+- Implemented a dedicated pill layout path in morph layout (AI context mode only) so positions are deterministic and stable during morph:
+  - dot anchored with left padding
+  - measured primary/secondary widths for divider placement
+  - divider rendered as a vertical line segment
+- Applied home-context-specific visual styles:
+  - primary `20px`, `700`, white
+  - secondary `18px`, `400`, `#c2c2c2`
+  - divider `#2f2f2f`
+  - dot style simplified for context row
+
+## Files changed
+- `src/shared/morph-layout.js`
+- `src/shared/morph-render.js`
+- `src/styles/ai.css`
+
+## Validation performed
+- `node test/smoke.mjs` (pass)
+
+## Remaining issues / caveats
+- Exact pixel-perfect parity with image reference may still need one visual tuning pass (gap values/divider height) on target device scale.
+
+## Recommended next step
+1. Manual visual check in `ai.html` home-context state; if needed, provide exact tweaks for `dotToPrimaryGap`, `primaryToDividerGap`, and `dividerHeight` in `src/shared/morph-layout.js`.
+
+## Task title
+Fix AI stage morph regression (glitchy/jumpy container transitions)
+
+## Completion status
+- Completed
+
+## Summary
+- Restored AI morph transition rules that were unintentionally removed from `src/styles/ai.css`:
+  - `body[data-page-mode="ai"] #drop-main` scale/opacity transition
+  - shape-specific scaling for `data-current-shape="circle"` and `data-current-shape="listening"`
+  - home-prompt suppression tied to `data-current-shape="circle"`
+- Kept sleep-state hiding rules (`data-ai-home-state="sleep"`) in place, but isolated from the core cross-stage morph transition behavior.
+- This restores smooth container interpolation across stage changes instead of abrupt/jumpy jumps.
+- Follow-up alignment after user report:
+  - Compared against `big-refractor` commit `88cce85` (`update toast pos`) and removed those AI scale override rules again because they are not part of the reference baseline.
+  - Switched home-state morph driver to single-step transitions (`circle -> pill`) and removed chained `idle -> pill` morphing from the home-context entry path to avoid visible jump/cut.
+  - Restored baseline listening prompt behavior (`circle <-> listening`) in AI input motion handling.
+
+## Files changed
+- `src/styles/ai.css`
+
+## Validation performed
+- `node test/smoke.mjs` (pass)
+
+## Remaining issues / caveats
+- Visual motion quality still needs manual eye-check in browser because smoke covers behavior correctness, not animation smoothness scoring.
+
+## Recommended next step
+1. Add a dedicated AI motion regression smoke that snapshots transition-relevant computed styles on shape changes (ensure `#drop-main` keeps the scale/opacity transition in AI mode).
+
+## Regression prevention notes
+- Do not remove or overwrite AI-specific `#drop-main` transition rules when editing home-state visibility behavior.
+- Treat motion rules and visibility rules as separate layers:
+  - motion layer: `data-page-mode + data-current-shape`
+  - visibility layer: `data-ai-home-state`
+- Any future home-state CSS change must verify transitions for at least `pill -> listening`, `listening -> card`, and `magic -> pill`.
+- For AI motion parity checks, use commit `88cce85` as the reference baseline and diff only motion-driving paths before merging.
+
+## Task title
+AI home-state rebuild from reference: `sleep` / `home-still` / `home-context` + flow returns to context
+
+## Completion status
+- Completed
+
+## Summary
+- Implemented explicit AI home-state controller with three states:
+  - `sleep` (blank/off simulation)
+  - `still` (idle/dot state)
+  - `context` (pill with rotating contextual content)
+- Added static context cycle dataset and behavior matching the reference “next context” pattern:
+  - pressing `Home-context` again while already in context refreshes to next context item.
+- Added legacy debug controls in AI panel:
+  - `Sleep`, `Home-still`, `Home-context` (kept existing Home/Listening/Magic controls).
+- Implemented still/sleep -> context transition behavior:
+  - pill enters from idle-size (via `idle -> pill` morph path),
+  - overlay dot animates toward pill icon anchor,
+  - pill content appears with current context.
+- Set `home-context` as default home target and integrated flow exits:
+  - message-send reset path returns to home-context,
+  - flight flow reset path returns to home-context,
+  - `Esc` while input-focused during active flight now resets flow and returns to home-context.
+- Added sleep-wake guard in input actions:
+  - text/chip processing wakes from sleep to still first.
+
+## Files changed
+- `ai.html`
+- `src/styles/ai.css`
+- `src/ai/ai-bindings.js`
+- `src/ai/input-actions.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-booking.js`
+
+## Validation performed
+- `node test/smoke.mjs` (pass).
+- Playwright runtime checks:
+  - New legacy buttons exist and switch `data-ai-home-state`.
+  - `sleep` hides stage UI (`stage-wrap` forced hidden).
+  - `home-still` sets current shape to `idle` with visible dot.
+  - `home-context` morphs to `pill` and cycles text on repeated press.
+  - Flight flow `Esc` reset returns to `home-context` (`shape: pill`, `flow-active: false`).
+
+## Remaining issues / caveats
+- The dot-to-pill animation uses a deterministic transform target tuned to current pill geometry (`420x100` baseline). If home pill geometry is changed later, this transform should be adjusted.
+- Smoke still logs non-blocking 502 resource errors from optional network-backed calls.
+
+## Recommended next step
+1. Add a dedicated AI home-state smoke script to assert:
+   `sleep -> still -> context` sequence, repeated context cycling, and flow-reset return to context.
+
+## Blockers
+- None
+
+---
+
+## Task title
 Port Stage panel controls from `tool-updated` reference (layout + Add setup + Delete/Reset look)
 
 ## Completion status
