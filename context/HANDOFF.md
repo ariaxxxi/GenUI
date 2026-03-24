@@ -1060,3 +1060,64 @@ Clear voice visualization shadow when returning to home stage
 
 ## Recommended next step
 1. Manual check in `ai.html`: run message/weather flow, return to home, confirm no residual container voice shadow remains.
+
+---
+
+## Task title
+Fix index components toggles so they actually add/remove stage components
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed stage component toggles in `index.html` flow so checkbox state now drives actual UI behavior.
+- Root cause: component mutations were applied to stage data, but render paths did not consume component flags for content visibility.
+- Implemented two runtime fixes:
+  - Editor visibility now follows stage components (`icon`, `primary`, `secondary`, `detail`, `image`).
+  - Stage render content now respects component presence; removed components render as empty/absent.
+
+## Files changed
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/morph-layout.js`
+
+## Validation performed
+- Manual headless repro on `index.html` (`http://localhost:5211`):
+  - Unchecked `primary` component toggle.
+  - Confirmed checkbox state persisted (`true -> false`).
+  - Confirmed `#editor-primary-field` became hidden.
+  - Confirmed `#c-primary` stage text became empty.
+
+## Remaining issues / caveats
+- None found for this scoped fix.
+
+## Recommended next step
+1. Quick visual pass in browser for other component toggles (`icon`, `secondary`, `detail`, `image`) to confirm expected behavior parity.
+
+---
+
+## Task title
+Fix prototype Legacy shape buttons (Split) no-op
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed `manualShape(...)` runtime crash that prevented Legacy shape buttons from working.
+- Root cause: `manualShape` unconditionally accessed optional elements (`#shape-panel`, `#input-area`) and threw when they were absent in current prototype layout.
+- Added null-safe guards so Split (and other manualShape buttons) execute without throwing.
+
+## Files changed
+- `src/tool/modules/manual-demo.js`
+
+## Validation performed
+- Headless browser check on `index.html`:
+  - opened Config -> Legacy / Debug
+  - clicked `Split`
+  - confirmed stage width changed from `420px` to `100px` (split geometry applied)
+
+## Remaining issues / caveats
+- None for this scoped fix.
+
+## Recommended next step
+1. If needed, we can re-add `#shape-panel` UI for Custom shape editing to fully restore previous Legacy custom workflow.

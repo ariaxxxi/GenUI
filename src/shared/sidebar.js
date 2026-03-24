@@ -56,6 +56,7 @@ export function buildUiRefs(documentRef = document) {
     scenarioDetailSize: documentRef.getElementById('scenario-detail-size'),
     scenarioDetailColor: documentRef.getElementById('scenario-detail-color'),
     scenarioMediaList: documentRef.getElementById('scenario-media-list'),
+    editorIcon: documentRef.getElementById('editor-icon-layer'),
     editorPrimary: documentRef.getElementById('editor-primary-field'),
     editorSecondary: documentRef.getElementById('editor-secondary-field'),
     editorDetail: documentRef.getElementById('editor-detail-field'),

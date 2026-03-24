@@ -318,12 +318,18 @@ export function createMorphLayout(ctx) {
 
   function scenarioToRenderContent(scenario) {
     const shape = scenario?.shape || 'pill';
+    const stage = callbacks.stageById?.(shape);
+    const has = (component) => {
+      if (!stage) return true;
+      return (stage.components || []).includes(component);
+    };
+    const text = callbacks.stageTextForShape(scenario, shape);
     return {
-      icon: callbacks.stageIconForShape(scenario, shape),
-      primary: callbacks.stageTextForShape(scenario, shape).primary,
-      secondary: callbacks.stageTextForShape(scenario, shape).secondary,
-      detail: callbacks.stageTextForShape(scenario, shape).detail,
-      images: callbacks.stageImagesForShape(scenario, shape),
+      icon: has('icon') ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
+      primary: has('primary') ? text.primary : '',
+      secondary: has('secondary') ? text.secondary : '',
+      detail: has('detail') ? text.detail : '',
+      images: has('image') ? callbacks.stageImagesForShape(scenario, shape) : [],
       typography: getScenarioTypography(scenario, shape),
       sizeOverride: callbacks.scenarioStageSizeOverride(scenario, shape),
     };
