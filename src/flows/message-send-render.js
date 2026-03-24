@@ -63,7 +63,7 @@ export function createMessageSendRender({
         h = clampFn(Math.round(rect.height + 32), 52, 140);
       }
     }
-    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) } };
+    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) - 18 } };
   }
 
   function cancelMeasure() {
@@ -143,6 +143,7 @@ export function createMessageSendRender({
     C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT);
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
     C.rich.style.opacity = flow.active ? "1" : "";
+    C.rich.style.transform = (flow.active && flow.state === GS.SENT) ? "translateY(-18px)" : "";
     renderControls();
     cancelMeasure();
     cancelSettle();
@@ -175,7 +176,12 @@ export function createMessageSendRender({
       if (flow.state === GS.SENT) {
         const geo = sentGeo();
         const current = getCurrentMainGeometry() || {};
-        if (shouldMorph || Math.abs(geo.main.w - (current.w || 0)) > 1 || Math.abs(geo.main.h - (current.h || 0)) > 1) {
+        if (
+          shouldMorph
+          || Math.abs(geo.main.w - (current.w || 0)) > 1
+          || Math.abs(geo.main.h - (current.h || 0)) > 1
+          || Math.abs(geo.main.ty - (current.ty || 0)) > 1
+        ) {
           morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
         }
       } else if (shouldMorph) {
@@ -191,6 +197,7 @@ export function createMessageSendRender({
     C.sec.style.opacity = flow.active ? "0" : "";
     C.det.style.opacity = flow.active ? "0" : "";
     C.div.style.opacity = flow.active ? "0" : "";
+    C.div.style.display = (flow.active && flow.state === GS.SENT) ? "none" : "";
     const glow = document.getElementById("home-glow-layer");
     if (glow) glow.style.opacity = "";
     updateOrbLabel();

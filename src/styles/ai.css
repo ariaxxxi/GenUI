@@ -626,8 +626,9 @@ body.mode-ai.fullscreen-stage-only #ui-frame {
   left: 0;
   right: 0;
   height: auto;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+  padding-bottom: 0;
   gap: 0;
 }
 
