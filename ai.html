@@ -161,7 +161,7 @@
 <div id="sim-panel">
   <div id="sim-header">
     <div id="sim-title">GlassOS Simulator</div>
-    <div id="sim-key-legend"><kbd>↑↓</kbd> nav · <kbd>Space</kbd> confirm · <kbd>Esc</kbd> back</div>
+    <div id="sim-key-legend"><kbd>1/Space</kbd> confirm · <kbd>F/B</kbd> nav · <kbd>L</kbd> listen · <kbd>Esc</kbd> back</div>
   </div>
   <div id="sim-input-section">
     <div id="sim-input-label">Voice Command</div>
@@ -185,10 +185,10 @@
   </div>
   <div id="sim-log"></div>
   <div id="sim-kbd">
-    <div class="sim-key-badge"><kbd>↑↓</kbd> <span>Nav</span></div>
-    <div class="sim-key-badge"><kbd>Space</kbd> <span>OK</span></div>
+    <div class="sim-key-badge"><kbd>1/Space</kbd> <span>Confirm</span></div>
+    <div class="sim-key-badge"><kbd>F/B</kbd> <span>Nav</span></div>
+    <div class="sim-key-badge"><kbd>L</kbd> <span>Listen</span></div>
     <div class="sim-key-badge"><kbd>Esc</kbd> <span>Back</span></div>
-    <div class="sim-key-badge"><kbd>Enter</kbd> <span>Send</span></div>
   </div>
 </div>
 
@@ -481,6 +481,12 @@
       <strong>AI Voice</strong>
     </div>
     <input id="debug-ai-voice-toggle" class="sb-toggle-input" type="checkbox" checked/>
+  </label>
+  <label class="sb-toggle" for="debug-disable-text-input-toggle">
+    <div class="sb-toggle-copy">
+      <strong>Disable Text Input</strong>
+    </div>
+    <input id="debug-disable-text-input-toggle" class="sb-toggle-input" type="checkbox"/>
   </label>
   <label class="sb-toggle" for="debug-fullscreen-stage-outline-toggle">
     <div class="sb-toggle-copy">

@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   mode: 'genui.mode.v1',
   aiStage: 'genui.ai-stage.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
+  disableTextInput: 'genui.disable-text-input.v1',
 };
 
 export const RESPONSE_MODE = Object.freeze({
@@ -65,4 +66,9 @@ export function loadAiStageOverride() {
 export function loadAiVoiceEnabled() {
   const stored = readStoredJson(STORAGE_KEYS.aiVoiceEnabled, null);
   return stored !== false;
+}
+
+export function loadDisableTextInput() {
+  const stored = readStoredJson(STORAGE_KEYS.disableTextInput, null);
+  return stored === true;
 }
