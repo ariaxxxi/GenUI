@@ -350,10 +350,10 @@ export async function speakAiText(text) {
   setTtsSpeaking(true, normalized);
   try {
     await speakWithGemini(normalized, seq);
-  } catch {
+  } catch (err) {
     if (seq !== requestSeq) return;
-    setTtsSpeaking(false);
-    return;
+    console.warn('Gemini TTS failed, falling back to browser voice:', err?.message || err);
+    speakWithBrowserVoice(normalized);
   }
 }
 
