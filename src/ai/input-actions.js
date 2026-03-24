@@ -27,7 +27,6 @@ export function initInputActions({
     if (!userText) return false;
     clearActiveFlows();
     morph.hideRich();
-    voice.voiceEngine.stop();
     if (input) input.value = "";
     messageFlow.start();
     setTimeout(() => { void messageFlow.handleInputSubmit(userText); }, 60);
@@ -78,7 +77,6 @@ export function initInputActions({
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
     if (isMessageIntent(userText)) return startMessageFlowWithText(userText);
     morph.hideRich();
-    voice.voiceEngine.stop();
     if (handleChipQuickAction(userText)) return;
     if (flightFlow.processRequest(userText)) return;
     if (responseMode() === RESPONSE_MODE.AI) return handleAiRequest(userText);
@@ -97,7 +95,6 @@ export function initInputActions({
     const lower = String(text || "").trim().toLowerCase();
     clearActiveFlows();
     morph.hideRich();
-    voice.voiceEngine.stop();
     if (/\bweather\b|\bforecast\b|\btemperature\b/.test(lower)) {
       previewScenario(createScenario({ name: "Weather", shape: "card", content: { icon: createIcon("emoji", "🌤"), primary: "San Francisco", secondary: "57°F · Sunny", detail: "H: 61°F  L: 51°F · 0% rain · Wind 8 mph" }, triggers: [] }));
       setTimeout(() => {
@@ -126,7 +123,6 @@ export function initInputActions({
         input.value = "";
         clearActiveFlows();
         morph.hideRich();
-        voice.voiceEngine.stop();
         messageFlow.start();
         setTimeout(() => { void messageFlow.handleInputSubmit("send message to hiro"); }, 60);
         return;

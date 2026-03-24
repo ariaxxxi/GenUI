@@ -1381,6 +1381,7 @@ body.mode-ai #c-primary.home-context-prim {
   max-width: none !important;
   overflow: visible !important;
   text-overflow: clip !important;
+  transition: none !important;
 }
 body.mode-ai #c-secondary.home-context-second {
   font-size: 18px !important;
@@ -1391,6 +1392,11 @@ body.mode-ai #c-secondary.home-context-second {
   max-width: none !important;
   overflow: visible !important;
   text-overflow: clip !important;
+  transition: none !important;
+}
+body[data-ai-home-state="context"][data-current-shape="pill"] #c-thumb,
+body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
+  transition: none !important;
 }
 
 /* ── Stage ── */

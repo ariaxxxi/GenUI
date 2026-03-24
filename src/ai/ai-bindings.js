@@ -14,6 +14,7 @@ import { initInputActions } from "./input-actions.js";
 import { initEditorBindings } from "./editor-bindings.js";
 import { prewarmAiSpeechCache, refreshAiVoice, setAiVoiceEnabled, isAiVoiceEnabled } from "./tts-player.js";
 import { initPhrases } from "./phrases.js";
+import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction } from "../shared/stage-capture.js";
 
 const DROPS = { main: document.getElementById("drop-main"), left: document.getElementById("drop-left"), right: document.getElementById("drop-right") };
 const C = { thumb: document.getElementById("c-thumb"), thumbLabel: document.getElementById("c-thumb-label"), thumbImg: document.getElementById("c-thumb-img"), prim: document.getElementById("c-primary"), sec: document.getElementById("c-secondary"), div: document.getElementById("c-divider"), det: document.getElementById("c-detail"), media: document.getElementById("c-media"), rich: document.getElementById("c-rich"), glassControlsLayer: document.getElementById("glass-controls-layer") };
@@ -33,6 +34,7 @@ let scenarioLibrary = [];
 let selectedScenarioId = "";
 let preFlowShape = "circle";
 const HOME_STATES = Object.freeze({ SLEEP: "sleep", CONTEXT: "context" });
+const WAKE_WORD_RE = /\bhey\s+bixby\b/i;
 const HOME_CONTEXTS = [
   { primary: "Design review", secondary: "in 12 min" },
   { primary: "Flight on time", secondary: "SFO • Gate B22" },
@@ -40,7 +42,9 @@ const HOME_CONTEXTS = [
 ];
 let homeState = HOME_STATES.CONTEXT;
 let homeContextIndex = 0;
+let aiAwake = false;
 const isWeatherIntent = (text) => /\b(weather|forecast|temperature|rain|sunny|cloudy|humidity)\b/i.test(String(text || ""));
+const stripWakeWord = (text) => String(text || "").replace(/\bhey\s+bixby\b/ig, " ").replace(/\s+/g, " ").trim();
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const anim = initAnimControls({ document, clamp });
@@ -126,14 +130,37 @@ function clearStageFlowFlags() {
   document.getElementById("stage-wrap")?.classList.remove("flow-active");
 }
 
+function clearGlassFlowUiImmediate() {
+  document.body.classList.remove("glass-flow-active");
+  if (C.rich) {
+    C.rich.innerHTML = "";
+    C.rich.classList.remove("visible", "glass-active", "glass-sent");
+    C.rich.dataset.glassState = "";
+    C.rich.style.opacity = "";
+    C.rich.style.transform = "";
+  }
+  if (C.glassControlsLayer) {
+    C.glassControlsLayer.innerHTML = "";
+    C.glassControlsLayer.classList.remove("visible");
+  }
+  shell.hideIntentHeader?.();
+}
+
 function ensureHomeAwake() {
   if (homeState !== HOME_STATES.SLEEP) return;
   enterHomeContext();
 }
 
-function enterSleep() {
-  voice.voiceEngine.stop();
+function enterSleep(options = {}) {
+  const source = options?.source || "";
+  if (source !== "flow-reset") {
+    if (messageFlow?.isActive?.()) { messageFlow.reset(); return; }
+    if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
+  }
+  aiAwake = false;
+  voice?.clearVoiceVizStyles?.();
   shell.stopSiriOrb();
+  clearGlassFlowUiImmediate();
   morph.hideRich();
   clearStageFlowFlags();
   setHomeStateData(HOME_STATES.SLEEP);
@@ -142,13 +169,20 @@ function enterSleep() {
 }
 
 function enterHomeContext(options = {}) {
+  const source = options?.source || "";
+  if (source !== "flow-reset") {
+    if (messageFlow?.isActive?.()) { messageFlow.reset(); return; }
+    if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
+  }
   const cycle = options?.cycle === true;
   const previous = homeState;
   if (cycle) homeContextIndex = (homeContextIndex + 1) % HOME_CONTEXTS.length;
   const content = homeContextContent();
   const fromSleep = previous === HOME_STATES.SLEEP;
-  voice.voiceEngine.stop();
+  aiAwake = false;
+  voice?.clearVoiceVizStyles?.();
   shell.stopSiriOrb();
+  clearGlassFlowUiImmediate();
   morph.hideRich();
   clearStageFlowFlags();
   setHomeStateData(HOME_STATES.CONTEXT);
@@ -177,7 +211,16 @@ function setHomeState(nextState) {
 }
 
 function returnToHomeContext() {
-  enterHomeContext();
+  enterHomeContext({ source: "flow-reset" });
+}
+
+function armAiWakeListening() {
+  aiAwake = true;
+  ensureHomeAwake();
+  if (!messageFlow?.isActive() && !flightFlow?.isActive()) {
+    morph.morphTo("listening", { icon: "", primary: "", secondary: "", detail: "" });
+    updateActive("listening");
+  }
 }
 
 function updateActive(shape) {
@@ -232,19 +275,35 @@ const voice = initVoiceEngine({
   addSimLog,
   getGlassUi: () => messageFlow?.flow,
   getGlassState: () => messageFlow?.GS,
+  shouldKeepCommandListening: () => true,
+  shouldShowCommandViz: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.(),
   onTranscriptUpdate: (text, isFinal) => {
-    if (isFinal && isWeatherIntent(text)) {
-      if (messageFlow?.isActive()) messageFlow.dismiss();
-      void actions?.processRequest(String(text || "").trim());
+    if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
+    const transcript = String(text || "");
+    if (input) input.value = transcript;
+    if (!isFinal) return;
+    const finalText = transcript.trim();
+    if (!finalText) return;
+    const hasWakeWord = WAKE_WORD_RE.test(finalText);
+    if (!aiAwake) {
+      if (!hasWakeWord) {
+        if (input) input.value = "";
+        return;
+      }
+      armAiWakeListening();
+    }
+    const requestText = hasWakeWord ? stripWakeWord(finalText) : finalText;
+    if (!requestText) {
       if (input) input.value = "";
       return;
     }
-    if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
-    if (input) input.value = String(text || "");
-    if (isFinal && String(text || "").trim()) {
-      void actions?.processRequest(String(text || "").trim());
+    if (isWeatherIntent(requestText)) {
+      void actions?.processRequest(requestText);
       if (input) input.value = "";
+      return;
     }
+    void actions?.processRequest(requestText);
+    if (input) input.value = "";
   },
 });
 const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, input, addChatBubble, hideTypingBubble, returnToHomeContext });
@@ -293,7 +352,7 @@ input?.addEventListener("input", (e) => {
     updateActive("circle");
   }
 });
-document.addEventListener("keydown", (e) => { const focusedInTextInput = document.activeElement === input; if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if (!focusedInTextInput && e.key === "ArrowUp") { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && e.key === "ArrowDown") { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && e.code === "Space") { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") demo.manualShape("circle"); if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") demo.manualShape("listening"); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
+document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if (!focusedInTextInput && e.key === "ArrowUp") { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && e.key === "ArrowDown") { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && e.code === "Space") { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") demo.manualShape("circle"); if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") demo.manualShape("listening"); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
 
 const fullscreenToggle = document.getElementById("debug-fullscreen-toggle");
@@ -341,6 +400,20 @@ if (fullscreenStageOutlineToggle) {
   });
 }
 
+async function copyStagePng() {
+  try {
+    const ok = await copyStagePngToClipboard({ root: document.getElementById("stage"), documentRef: document });
+    if (!ok) console.warn("[stage-capture] PNG copy did not complete.");
+  } catch (err) {
+    console.warn("[stage-capture] PNG copy failed:", err);
+  }
+}
+
+async function exportStageSvg() {
+  const ok = await exportStageSvgFile({ root: document.getElementById("stage"), filenamePrefix: "genui-ai-stage", documentRef: document });
+  if (!ok) console.warn("[stage-capture] SVG export did not complete.");
+}
+
 const aiVoiceToggle = document.getElementById("debug-ai-voice-toggle");
 if (aiVoiceToggle) {
   setAiVoiceEnabled(loadAiVoiceEnabled());
@@ -359,6 +432,7 @@ anim.rebuildAnim();
 anim.initStarfield();
 prewarmAiSpeechCache();
 void initPhrases();
+voice.voiceEngine.start("command");
 
 Object.assign(window, {
   applyCustomShape: demo.applyCustomShape,
@@ -371,4 +445,6 @@ Object.assign(window, {
   openCustom: demo.openCustom,
   selectListItem: demo.selectListItem,
   refreshAiVoiceText: (text) => refreshAiVoice(text),
+  copyStagePng,
+  exportStageSvg,
 });

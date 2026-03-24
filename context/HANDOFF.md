@@ -1,6 +1,46 @@
 # Handoff
 
 ## Task title
+Add stage capture utilities (AI + prototype): Copy PNG + Export SVG
+
+## Completion status
+- Completed
+
+## Summary
+- Added shared capture utility module for stage-only capture:
+  - serialize current `#stage` to SVG using `foreignObject`
+  - export SVG download
+  - render SVG to canvas and copy PNG to clipboard
+  - graceful warning fallback for unsupported/blocked clipboard writes
+- Wired feature in both modes:
+  - AI mode (`ai.html` + `src/ai/ai-bindings.js`)
+  - Prototype mode (`index.html` + `src/tool/index-app.js`)
+- Added debug controls in both UIs:
+  - `Copy PNG`
+  - `Export SVG`
+- Added hotkeys in both runtimes:
+  - `Cmd/Ctrl + Shift + C` => copy PNG
+  - `Cmd/Ctrl + Shift + E` => export SVG
+  - ignored when focused in input/textarea/select/contenteditable
+- Exposed runtime actions:
+  - `window.copyStagePng()`
+  - `window.exportStageSvg()`
+
+## Files changed
+- `src/shared/stage-capture.js` (new)
+- `src/ai/ai-bindings.js`
+- `src/tool/index-app.js`
+- `ai.html`
+- `index.html`
+
+## Validation performed
+- Wiring validation by code inspection for:
+  - button hooks in both pages
+  - window API exposure in both runtimes
+  - hotkey routing + editable-target guard
+- `node test/smoke.mjs` still fails on pre-existing debug-toggle interception issue unrelated to capture feature.
+
+## Task title
 Fix message-flow to home transition overlap (prevent double UI display)
 
 ## Completion status
@@ -948,3 +988,75 @@ AI spoken responses via Gemini TTS
 ## Recommended next step
 1. Start server and run AI flow; confirm spoken output for AI responses.
 2. If desired, tune voice via `GEMINI_TTS_VOICE` and model via `GEMINI_TTS_MODEL` in `.env`.
+
+---
+
+## Task title
+Stage capture follow-up: fix PNG decode failures + move controls into Export section
+
+## Completion status
+- Completed
+
+## Summary
+- Hardened PNG capture pipeline in `src/shared/stage-capture.js` to reduce `EncodingError: The source image cannot be decoded` failures:
+  - added XML declaration to serialized SVG
+  - set `foreignObject` `x/y` explicitly
+  - added rasterization fallback chain: `createImageBitmap(svgBlob)` -> `Image(blob URL)` -> `Image(data URL)`
+  - retained graceful warning-only behavior on capture/clipboard failure
+- Wrapped `copyStagePng()` in both runtimes with local `try/catch` so no uncaught promise errors bubble to console.
+- Moved capture controls out of Legacy actions into dedicated **Export** section:
+  - `ai.html`: separate `Export` block in floating debug panel
+  - `index.html`: separate collapsible `Export` section in Config tab
+
+## Files changed
+- `src/shared/stage-capture.js`
+- `src/ai/ai-bindings.js`
+- `src/tool/index-app.js`
+- `ai.html`
+- `index.html`
+
+## Validation performed
+- Verified module imports for `stage-capture.js`.
+- Verified button placement by direct HTML inspection in both pages.
+- Ran smoke script: `node test/smoke.mjs` (fails with existing `MISSING_CHIP` in current branch state; not introduced by this change).
+
+## Remaining issues / caveats
+- Browser extensions (e.g. Zotero/inject scripts) may still emit console errors unrelated to app runtime.
+- If stage contains browser-restricted/unsupported subcontent, capture can still fail gracefully and log warning.
+
+## Recommended next step
+1. Manual browser check in `ai.html` and `index.html`:
+   - click `Copy PNG` and paste into Notes/Slack
+   - click `Export SVG` and open downloaded file
+   - verify shortcuts `Cmd/Ctrl+Shift+C` and `Cmd/Ctrl+Shift+E` still work
+
+---
+
+## Task title
+Clear voice visualization shadow when returning to home stage
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed lingering voice-viz container shadow on home re-entry.
+- Added explicit visual cleanup in AI home entry paths:
+  - `enterSleep(...)`
+  - `enterHomeContext(...)`
+- Added command-viz gating in voice engine so command-mode shadow/glow is not applied while AI is in home (not awake), preventing immediate reapplication after cleanup.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/ai/voice-engine.js`
+
+## Validation performed
+- Verified new hooks and gating paths by code inspection:
+  - `voice?.clearVoiceVizStyles?.()` called on home entry
+  - `shouldShowCommandViz` callback wired from AI bindings
+- `node test/smoke.mjs` still fails on existing fullscreen-toggle click interception (pre-existing issue in this branch).
+
+## Remaining issues / caveats
+- Smoke suite failure is unrelated to this fix and remains in debug-toggle hit-testing path.
+
+## Recommended next step
+1. Manual check in `ai.html`: run message/weather flow, return to home, confirm no residual container voice shadow remains.
