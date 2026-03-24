@@ -95,10 +95,81 @@ function preprocessCanvases(root) {
   };
 }
 
+/* ── Font embedding: inline Google Fonts as base64 @font-face ── */
+
+let _fontStyleEl = null;
+
+async function ensureFontsInlined() {
+  // Only do this once
+  if (_fontStyleEl) return;
+
+  const fontLinks = document.querySelectorAll('link[rel="stylesheet"][href*="fonts.googleapis.com"]');
+  if (fontLinks.length === 0) return;
+
+  const allRules = [];
+  for (const link of fontLinks) {
+    try {
+      const resp = await fetch(link.href);
+      const cssText = await resp.text();
+      const fontFaceRegex = /@font-face\s*\{[^}]+\}/g;
+      let match;
+      while ((match = fontFaceRegex.exec(cssText)) !== null) {
+        allRules.push(match[0]);
+      }
+    } catch (_) { /* fetch failed */ }
+  }
+
+  if (allRules.length === 0) return;
+
+  // Fetch each font URL and replace with base64 data URL
+  const urlCache = new Map();
+  const inlinedRules = [];
+
+  for (const rule of allRules) {
+    let inlined = rule;
+    const urlRegex = /url\(([^)]+)\)/g;
+    let m;
+    const urls = [];
+    while ((m = urlRegex.exec(rule)) !== null) {
+      const url = m[1].replace(/['"]/g, "");
+      if (!url.startsWith("data:")) urls.push({ full: m[0], url });
+    }
+
+    for (const { full, url } of urls) {
+      if (!urlCache.has(url)) {
+        try {
+          const resp = await fetch(url);
+          const blob = await resp.blob();
+          const dataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+          urlCache.set(url, dataUrl);
+        } catch (_) {
+          urlCache.set(url, null);
+        }
+      }
+      const dataUrl = urlCache.get(url);
+      if (dataUrl) {
+        inlined = inlined.replace(full, `url(${dataUrl})`);
+      }
+    }
+    inlinedRules.push(inlined);
+  }
+
+  // Inject as a <style> element so all capture libraries can access these fonts
+  _fontStyleEl = document.createElement("style");
+  _fontStyleEl.textContent = inlinedRules.join("\n");
+  document.head.appendChild(_fontStyleEl);
+}
+
 /* ── Capture via modern-screenshot ── */
 
 const captureOptions = {
-  backgroundColor: "#000",
+  backgroundColor: null,
+  scale: 2,
   style: {
     "mix-blend-mode": "normal",
     "animation": "none",
@@ -110,8 +181,17 @@ const captureOptions = {
   timeout: 30000,
 };
 
+function hideStageOutline() {
+  const style = document.createElement("style");
+  style.textContent = "#stage::after { box-shadow: none !important; }";
+  document.head.appendChild(style);
+  return () => style.remove();
+}
+
 async function captureToBlob(root) {
   const { domToBlob } = window.modernScreenshot;
+  await ensureFontsInlined();
+  const restoreOutline = hideStageOutline();
   const restoreImages = preprocessImages(root);
   const restoreCanvases = preprocessCanvases(root);
   try {
@@ -119,11 +199,14 @@ async function captureToBlob(root) {
   } finally {
     restoreCanvases();
     restoreImages();
+    restoreOutline();
   }
 }
 
 async function captureToPng(root) {
   const { domToPng } = window.modernScreenshot;
+  await ensureFontsInlined();
+  const restoreOutline = hideStageOutline();
   const restoreImages = preprocessImages(root);
   const restoreCanvases = preprocessCanvases(root);
   try {
@@ -131,6 +214,7 @@ async function captureToPng(root) {
   } finally {
     restoreCanvases();
     restoreImages();
+    restoreOutline();
   }
 }
 
@@ -171,10 +255,10 @@ export async function exportStageSvg({ root, filenamePrefix = "stage", documentR
     }
 
     const rect = captureRoot.getBoundingClientRect();
-    const width = Math.ceil(rect.width);
-    const height = Math.ceil(rect.height);
+    const width = Math.ceil(rect.width) * 2;
+    const height = Math.ceil(rect.height) * 2;
 
-    // Figma-compatible SVG with embedded PNG raster
+    // Figma-compatible SVG with embedded PNG raster at 2x
     const svgContent = [
       '<?xml version="1.0" encoding="UTF-8"?>',
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
