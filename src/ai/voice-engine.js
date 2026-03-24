@@ -1,4 +1,4 @@
-export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate }) {
+export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz }) {
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
   let dictationStart = 0;
   let vizLevel = 0;
@@ -58,6 +58,13 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
     if (voiceEngine.mode === 'command') {
+      const allowCommandViz = shouldShowCommandViz?.() !== false;
+      if (!allowCommandViz) {
+        if (glowEl) glowEl.style.boxShadow = '';
+        if (dropMain) dropMain.style.setProperty('box-shadow', '');
+        document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+        return;
+      }
       if (glowEl) glowEl.style.boxShadow = shadow(level);
       if (state === GS.DISAMBIGUATE) {
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
@@ -113,6 +120,14 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
+  function clearVoiceVizStyles() {
+    document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
+    const field = document.querySelector('.g-listen-field.compose-input');
+    if (field) { field.style.transition = ''; field.style.boxShadow = ''; }
+    document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
+    document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+  }
+
   function updateMicIndicator() {
     const el = document.getElementById('sim-mic');
     const dot = document.getElementById('sim-mic-dot');
@@ -154,9 +169,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (!pausedModeForTts) return;
     const resumeMode = pausedModeForTts;
     pausedModeForTts = '';
-    if (!getGlassUi()?.active) return;
+    const allowResume = getGlassUi()?.active || shouldKeepCommandListening?.();
+    if (!allowResume) return;
     setTimeout(() => {
-      if (!ttsSpeaking && getGlassUi()?.active) voiceEngine.start(resumeMode);
+      if (!ttsSpeaking && (getGlassUi()?.active || shouldKeepCommandListening?.())) voiceEngine.start(resumeMode);
     }, 120);
   }
 
@@ -172,7 +188,11 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     };
     r.onend = () => {
       voiceEngine.active = false; updateMicIndicator();
-      if (voiceEngine.restartOnEnd && voiceEngine.mode !== 'off' && getGlassUi()?.active) setTimeout(() => { if (voiceEngine.restartOnEnd && getGlassUi()?.active) voiceEngine.start(voiceEngine.mode); }, 120);
+      if (voiceEngine.restartOnEnd && voiceEngine.mode !== 'off' && (getGlassUi()?.active || shouldKeepCommandListening?.())) {
+        setTimeout(() => {
+          if (voiceEngine.restartOnEnd && (getGlassUi()?.active || shouldKeepCommandListening?.())) voiceEngine.start(voiceEngine.mode);
+        }, 120);
+      }
     };
     r.onerror = (e) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { voiceEngine.supported = false; voiceEngine.restartOnEnd = false; addSimLog('Mic access denied — use typed input', 'system'); }
@@ -207,5 +227,5 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   init();
   window.addEventListener('ai-tts-state', handleTtsStateChange);
-  return { voiceEngine, initVoiceAnalyser, updateMicIndicator };
+  return { voiceEngine, initVoiceAnalyser, updateMicIndicator, clearVoiceVizStyles };
 }

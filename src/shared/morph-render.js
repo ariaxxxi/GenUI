@@ -180,7 +180,15 @@ export function createMorphRender(ctx) {
     if (shape === 'circle') thumbOpacity = 0;
     else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
-    const setEl = (el, p, customInDelayMs = fadeInDelayMs) => { el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`; setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs); if (p.fs) el.style.fontSize = `${p.fs}px`; };
+    const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
+      el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
+      setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs);
+      if (p.fs) el.style.fontSize = `${p.fs}px`;
+      if (Object.prototype.hasOwnProperty.call(p, 'w') && Number.isFinite(p.w)) {
+        el.style.width = `${p.w}px`;
+        el.style.maxWidth = `${p.w}px`;
+      }
+    };
     setEl(C.prim, pos.prim);
     setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.secondaryInAdvanceMs || 0)));
     setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.detailInAdvanceMs || 0)));
@@ -199,6 +207,15 @@ export function createMorphRender(ctx) {
     const mainLineWidth = layout.lineTextWidth(shape, w);
     ['prim', 'sec'].forEach((key) => {
       const el = C[key];
+      const customWidth = pos[key]?.w;
+      if (Number.isFinite(customWidth)) {
+        el.style.width = `${customWidth}px`;
+        el.style.maxWidth = `${customWidth}px`;
+        el.style.overflow = 'hidden';
+        el.style.textOverflow = 'ellipsis';
+        el.style.whiteSpace = 'nowrap';
+        return;
+      }
       el.style.width = mainLineWidth ? `${mainLineWidth}px` : '';
       el.style.maxWidth = mainLineWidth ? `${mainLineWidth}px` : '';
       el.style.overflow = mainLineWidth ? 'hidden' : '';
@@ -228,6 +245,7 @@ export function createMorphRender(ctx) {
     }
     C.div.style.transform = `translate(${pos.div.x}px,${pos.div.y}px)`;
     C.div.style.width = `${pos.div.dw || 0}px`;
+    C.div.style.height = `${pos.div.dh || 1}px`;
     setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
   }
 

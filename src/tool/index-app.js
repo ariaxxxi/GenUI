@@ -8,6 +8,7 @@ import { initManualFlight } from './modules/manual-flight.js';
 import { initManualDemo } from './modules/manual-demo.js';
 import { initManualActions } from './modules/manual-actions.js';
 import { initManualBindings } from './modules/manual-bindings.js';
+import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction } from '../shared/stage-capture.js';
 
 const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
 const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
@@ -391,6 +392,20 @@ const input = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 actions = initManualActions({ input, sendBtn, flight, resolveScenario, previewScenario, renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; } });
 
+async function copyStagePng() {
+  try {
+    const ok = await copyStagePngToClipboard({ root: document.getElementById('stage'), documentRef: document });
+    if (!ok) console.warn('[stage-capture] PNG copy did not complete.');
+  } catch (err) {
+    console.warn('[stage-capture] PNG copy failed:', err);
+  }
+}
+
+async function exportStageSvg() {
+  const ok = await exportStageSvgFile({ root: document.getElementById('stage'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
+  if (!ok) console.warn('[stage-capture] SVG export did not complete.');
+}
+
 initManualBindings({
   document,
   UI,
@@ -454,6 +469,14 @@ initManualBindings({
   initStarfield: anim.initStarfield,
 });
 
+document.addEventListener('keydown', (event) => {
+  const action = getCaptureHotkeyAction(event);
+  if (!action) return;
+  event.preventDefault();
+  if (action === 'copy-png') void copyStagePng();
+  else void exportStageSvg();
+});
+
 Object.assign(window, {
   applyCustomShape: manualDemo.applyCustomShape,
   fireChip: actions.fireChip,
@@ -461,4 +484,6 @@ Object.assign(window, {
   manualShape: manualDemo.manualShape,
   openCustom: manualDemo.openCustom,
   selectListItem: manualDemo.selectListItem,
+  copyStagePng,
+  exportStageSvg,
 });

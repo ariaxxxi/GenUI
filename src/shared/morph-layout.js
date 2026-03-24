@@ -19,6 +19,37 @@ export function createMorphLayout(ctx) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (['circle', 'magic', 'listening', 'dot'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (shape === 'pill') {
+      const isAiHomeContext = document.body?.dataset?.pageMode === 'ai' && document.body?.dataset?.aiHomeState === 'context';
+      if (isAiHomeContext) {
+        const primarySize = 20;
+        const secondarySize = 18;
+        const dotSize = 10;
+        const leftPad = 24;
+        const rightPad = 24;
+        const dotToPrimaryGap = 10;
+        const primaryToDividerGap = 10;
+        const dividerToSecondaryGap = 10;
+        const dividerWidth = 1;
+        const dividerHeight = 26;
+        const iconY = Math.round((h - dotSize) / 2);
+        const primaryText = String(C.prim.textContent || '').trim();
+        const secondaryText = String(C.sec.textContent || '').trim();
+        const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, primarySize, 600) : 0;
+        const primaryX = leftPad + dotSize + dotToPrimaryGap;
+        const dividerX = primaryX + primaryWidth + primaryToDividerGap;
+        const secondaryX = dividerX + dividerWidth + dividerToSecondaryGap;
+        const dividerOp = primaryText && secondaryText ? 1 : 0;
+        const fallbackSecondaryX = primaryText ? secondaryX : primaryX;
+        const rowYPrimary = Math.round((h - 26) / 2);
+        const rowYSecondary = 11.5;
+        return {
+          thumb:{ x:leftPad, y:iconY, w:6, h:6, br:'3px', op:1 },
+          prim:{ x:primaryX, y:rowYPrimary, op:primaryText ? 1 : 0, fs:primarySize, cx:false },
+          sec:{ x:fallbackSecondaryX, y:rowYSecondary, op:secondaryText ? 1 : 0, fs:secondarySize, cx:false },
+          div:{ x:dividerX, y:Math.round((h - dividerHeight) / 2), dw:dividerWidth, op:dividerOp, dh:dividerHeight },
+          det:{ x:fallbackSecondaryX, y:rowYSecondary, op:0, fs:secondarySize, cx:false },
+        };
+      }
       const typography = normalizeTypography(state.contentTypographyState, 'pill');
       const gap = callbacks.stageIconTextGap(callbacks.selectedScenario()?.shape, 'pill');
       const iconLeft = callbacks.stageIconLeftPadding(callbacks.selectedScenario()?.shape, 'pill');
@@ -109,6 +140,18 @@ export function createMorphLayout(ctx) {
 
   const cardMediaWidth = (cardWidth, shape = 'card') => Math.max(shape === 'image' ? 40 : 120, cardWidth - CARD_P * 2);
   const measureLineHeight = (fontSize, lineHeight = 1.2) => Math.ceil(Number(fontSize || 0) * lineHeight);
+  const measureSingleLineWidth = (text, fontSize, fontWeight = 400) => {
+    const value = String(text || '').trim();
+    if (!value) return 0;
+    detailMeasureEl.style.width = 'auto';
+    detailMeasureEl.style.maxWidth = 'none';
+    detailMeasureEl.style.whiteSpace = 'nowrap';
+    detailMeasureEl.style.wordBreak = 'normal';
+    detailMeasureEl.style.fontSize = `${fontSize}px`;
+    detailMeasureEl.style.fontWeight = String(fontWeight);
+    detailMeasureEl.textContent = value;
+    return Math.ceil(detailMeasureEl.getBoundingClientRect().width);
+  };
   const measureCardMediaHeight = (imageValue, cardWidth, shape = 'card') => {
     const image = normalizeStageImage(imageValue);
     return image ? Math.ceil(cardMediaWidth(cardWidth, shape) * (image.height / image.width)) : 0;
