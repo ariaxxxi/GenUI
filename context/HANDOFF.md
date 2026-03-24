@@ -1,6 +1,149 @@
 # Handoff
 
 ## Task title
+Port Stage panel controls from `tool-updated` reference (layout + Add setup + Delete/Reset look)
+
+## Completion status
+- Completed
+
+## Summary
+- Ported Stage tab action row structure from `origin/tool-updated:ref/index.html`:
+  - Added stage-kind select (`#stage-add-kind`) next to Add.
+  - Converted Delete/Reset to icon buttons (`🗑`, `↻`) with `icon-btn` styling.
+- Ported Stage timeline visual style to match reference:
+  - Wrap layout (not horizontal scroll-only).
+  - Blue pill chips with stronger active state gradient.
+- Wired Add behavior to selected kind:
+  - `dot`, `pill`, `card`, `blank`.
+  - `Add` now calls `addStage(kind)` with template-specific render shape/components.
+
+## Files changed
+- `index.html`
+- `src/styles/editor.css`
+- `src/shared/sidebar.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/shared/sidebar-actions.js`
+
+## Validation performed
+- Playwright runtime check on `http://127.0.0.1:5174/index.html`:
+  - Confirmed `#stage-add-kind` exists.
+  - Confirmed Delete/Reset labels are icon buttons (`🗑`, `↻`).
+  - Selected `dot` + clicked Add; new active stage became `Dot Stage`.
+- `node test/smoke.mjs` passed.
+
+## Remaining issues / caveats
+- `blank` currently maps to a card-shaped stage with empty components; if you want a different blank-stage geometry/content policy, that can be adjusted.
+
+## Recommended next step
+1. Manual visual pass in Stage tab to confirm exact spacing/sizing parity with your expected `tool-updated` look.
+
+## Blockers
+- None
+
+---
+
+## Task title
+Fix `index.html` regression: pill -> card stage transition no-op
+
+## Completion status
+- Completed
+
+## Summary
+- Root cause: runtime exception during morph transition for specific shape pairs.
+- Fixed missing `clamp` helper in `src/shared/morph-render.js` (`clamp is not defined`), which was thrown in `setUiMotionProfile()` for transitions such as `pill -> card`.
+- After fix, Stage timeline click from pill to card now applies full card geometry and content as expected.
+
+## Files changed
+- `src/shared/morph-render.js`
+
+## Validation performed
+- Playwright runtime check on `http://127.0.0.1:5174/index.html`:
+  - Clicked Stage timeline chip `card` from default `pill`.
+  - Verified stage geometry changed to card (`420x260`, `30px` radius).
+  - Verified no `pageerror` thrown.
+- `node test/smoke.mjs` passed (`SHAPE:card-list`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- None identified for this transition path.
+
+## Recommended next step
+1. Add one explicit smoke assertion for `pill -> card` geometry values in `index.html` to guard this exact regression.
+
+## Blockers
+- None
+
+---
+
+## Task title
+AI home stage: make home fully blank (hide circle + prompt)
+
+## Completion status
+- Completed
+
+## Summary
+- Added AI-page-only visual override so when the current stage shape is `circle` (home), the stage orb/circle container is hidden.
+- Also hid the home start prompt in the same `circle` state so home appears fully blank.
+- Kept non-home states unchanged (listening/magic/content states still render normally).
+
+## Files changed
+- `src/styles/ai.css`
+
+## Validation performed
+- Playwright runtime check on `http://127.0.0.1:5174/ai.html`:
+  - Home (`data-current-shape="circle"`): `#drop-main` computed `opacity: 0`, prompt `opacity: 0`.
+  - After typing into `#sim-input` (listening): shape becomes `listening`, `#drop-main` opacity returns above `0`.
+
+## Remaining issues / caveats
+- This change is intentionally scoped to AI page only (`body[data-page-mode="ai"]`), so prototype/manual page behavior is unchanged.
+
+## Recommended next step
+1. Manual visual check on desktop/mobile to confirm the blank home state matches your intended feel.
+
+## Blockers
+- None
+
+---
+
+## Task title
+Fix `index.html` Stage timeline button no-op + Content tab text edit no-op
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed sidebar mutation commit logic so in-place mutators persist updates instead of being discarded.
+- Added shared draft-apply helper in sidebar actions to normalize both mutation styles:
+  - mutator returns updated object
+  - mutator mutates draft and returns `undefined`
+- Restored expected runtime behavior in `index.html`:
+  - Stage timeline chips now activate/switch scenario stage.
+  - Content tab text edits now persist after typing.
+- Extended smoke coverage to validate both regressions on `/index.html` and updated existing AI chip selector to match current quick-chip copy.
+
+## Files changed
+- `src/shared/sidebar-actions.js`
+- `test/smoke.mjs`
+- `test/smoke.js`
+
+## Validation performed
+- `node test/smoke.mjs`
+- Result: pass (`SHAPE:card-list`; no thrown assertion failures for new index checks)
+- New automated assertions in smoke:
+  - Click non-active stage timeline chip in `#scenario-shape-row` and assert it becomes active.
+  - Open Content tab, expand Primary row, type into `#scenario-primary`, assert typed value persists after rerender delay.
+
+## Remaining issues / caveats
+- Smoke logs still include non-blocking `502` resource errors in AI mode from optional external calls; they do not block the Stage/Content regression checks and do not fail the suite.
+
+## Recommended next step
+1. Add a dedicated manual-editor smoke file (`test/index-smoke.mjs`) so `/index.html` regression checks can run independently of AI-mode network noise.
+
+## Blockers
+- None
+
+---
+
+## Task title
 Refactor: extract page CSS and JS entrypoints from `ai.html` and `index.html`
 
 ## Completion status

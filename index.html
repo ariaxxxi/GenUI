@@ -193,10 +193,18 @@
       <div class="stage-timeline" id="scenario-shape-row"></div>
     </div>
 
-    <div class="sb-btn-row">
-      <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
-      <button id="stage-delete" class="sb-mini-btn" type="button">Delete</button>
-      <button id="stage-reset" class="sb-mini-btn" type="button">Reset</button>
+    <div class="sb-btn-row stage-actions">
+      <div class="stage-add-group">
+        <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
+          <option value="dot">Dot</option>
+          <option value="pill">Pill</option>
+          <option value="card" selected>Card</option>
+          <option value="blank">Blank</option>
+        </select>
+        <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
+      </div>
+      <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
+      <button id="stage-reset" class="sb-mini-btn icon-btn" type="button" title="Reset stage" aria-label="Reset stage">↻</button>
     </div>
 
     <div id="stage-config-panel" class="sb-row tight">

@@ -26,6 +26,7 @@ export function buildUiRefs(documentRef = document) {
     scenarioDelete: documentRef.getElementById('scenario-delete'),
     scenarioName: documentRef.getElementById('scenario-name'),
     stageAdd: documentRef.getElementById('stage-add'),
+    stageAddKind: documentRef.getElementById('stage-add-kind'),
     stageDelete: documentRef.getElementById('stage-delete'),
     stageReset: documentRef.getElementById('stage-reset'),
     stageNameInput: documentRef.getElementById('stage-name-input'),

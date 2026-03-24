@@ -311,7 +311,10 @@ export function initManualBindings({
     });
   });
 
-  UI.stageAdd.addEventListener('click', () => addStage());
+  UI.stageAdd.addEventListener('click', () => {
+    const kind = String(UI.stageAddKind?.value || 'card');
+    addStage(kind);
+  });
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());
   UI.stageReset.addEventListener('click', () => resetCurrentStageToDefault());
   UI.stageNameInput.addEventListener('input', (e) => {

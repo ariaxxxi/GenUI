@@ -5,6 +5,7 @@ export function createMorphRender(ctx) {
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
   function applyGeometry(shape, resolvedGeo, stageId = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;

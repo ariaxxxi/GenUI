@@ -7,6 +7,13 @@ export function createSidebarActions(ctx, refs) {
     aiStageOverride: ctx.getAiStageOverride(),
   });
 
+  function applyDraftMutator(source, mutator, normalize, normalizeArg) {
+    const draft = structuredClone(source);
+    const mutated = mutator(draft);
+    const candidate = mutated === undefined ? draft : mutated;
+    return normalize(candidate, normalizeArg);
+  }
+
   function renderAiStageOverrideUi() {
     const { aiStageOverride } = sync();
     ctx.UI.aiStageButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.aiStage === aiStageOverride));
@@ -29,7 +36,9 @@ export function createSidebarActions(ctx, refs) {
   }
 
   function commitScenarioChange(mutator) {
-    const next = ctx.getScenarioLibrary().map((scenario) => scenario.id === ctx.getSelectedScenarioId() ? ctx.normalizeScenario(mutator(structuredClone(scenario)) || structuredClone(scenario)) : scenario);
+    const next = ctx.getScenarioLibrary().map((scenario) => scenario.id === ctx.getSelectedScenarioId()
+      ? applyDraftMutator(scenario, mutator, ctx.normalizeScenario)
+      : scenario);
     ctx.setScenarioLibrary(next);
     ctx.persistScenarios();
     refs.render.renderScenarioUi();
@@ -37,27 +46,43 @@ export function createSidebarActions(ctx, refs) {
   }
 
   function commitStageChange(stageIdValue, mutator) {
-    const next = ctx.getStageLibrary().map((stage) => stage.id === stageIdValue ? ctx.normalizeStage(mutator(structuredClone(stage)) || structuredClone(stage), ctx.builtinStageById(stageIdValue)) : stage);
+    const next = ctx.getStageLibrary().map((stage) => stage.id === stageIdValue
+      ? applyDraftMutator(stage, mutator, ctx.normalizeStage, ctx.builtinStageById(stageIdValue))
+      : stage);
     ctx.setStageLibrary(next);
     ctx.persistStageLibrary();
     refs.render.renderScenarioUi();
     ctx.previewScenario(ctx.selectedScenario());
   }
 
-  function addStage() {
-    const shape = ctx.selectedScenario()?.shape || 'pill';
+  function stageTemplateFromKind(kind = 'card') {
+    const value = String(kind || '').toLowerCase();
+    if (value === 'dot') {
+      return { renderShape: 'dot', name: 'Dot Stage', cornerRadius: 50, iconTextGap: null, iconLeftPadding: null, components: ['icon'] };
+    }
+    if (value === 'pill') {
+      return { renderShape: 'pill', name: 'Pill Stage', cornerRadius: 60, iconTextGap: 8, iconLeftPadding: 16, components: ['icon', 'primary', 'secondary'] };
+    }
+    if (value === 'blank') {
+      return { renderShape: 'card', name: 'Blank Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: [] };
+    }
+    return { renderShape: 'card', name: 'Card Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: ['icon', 'primary', 'secondary', 'detail', 'image'] };
+  }
+
+  function addStage(kind = 'card') {
+    const template = stageTemplateFromKind(kind);
     const newStage = ctx.normalizeStage({
       id: ctx.stageId(),
-      name: 'New Stage',
+      name: template.name,
       preset: false,
-      renderShape: ctx.renderShapeForStageId(shape) || 'pill',
-      cornerRadius: 30,
+      renderShape: template.renderShape,
+      cornerRadius: template.cornerRadius,
       widthOverride: null,
       heightOverride: null,
-      iconTextGap: 8,
-      iconLeftPadding: 16,
+      iconTextGap: template.iconTextGap,
+      iconLeftPadding: template.iconLeftPadding,
       phoneBgBlur: false,
-      components: ['icon', 'primary', 'secondary'],
+      components: template.components,
     });
     ctx.setStageLibrary([...ctx.getStageLibrary(), newStage]);
     ctx.persistStageLibrary();
