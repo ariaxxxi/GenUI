@@ -167,19 +167,27 @@ async function ensureFontsInlined() {
 
 /* ── Capture via modern-screenshot ── */
 
-const captureOptions = {
-  backgroundColor: null,
-  scale: 2,
-  style: {
-    "mix-blend-mode": "normal",
-    "animation": "none",
-  },
-  fetch: {
-    placeholderImage: TRANSPARENT_1PX,
-    bypassingCache: false,
-  },
-  timeout: 30000,
-};
+function getCaptureOptions(root) {
+  const width = Math.ceil(root.getBoundingClientRect().width);
+  return {
+    backgroundColor: null,
+    scale: 2,
+    width,
+    height: width,
+    style: {
+      "mix-blend-mode": "normal",
+      "animation": "none",
+      width: width + "px",
+      height: width + "px",
+      overflow: "hidden",
+    },
+    fetch: {
+      placeholderImage: TRANSPARENT_1PX,
+      bypassingCache: false,
+    },
+    timeout: 30000,
+  };
+}
 
 function hideStageOutline() {
   const style = document.createElement("style");
@@ -195,7 +203,7 @@ async function captureToBlob(root) {
   const restoreImages = preprocessImages(root);
   const restoreCanvases = preprocessCanvases(root);
   try {
-    return await domToBlob(root, captureOptions);
+    return await domToBlob(root, getCaptureOptions(root));
   } finally {
     restoreCanvases();
     restoreImages();
@@ -210,7 +218,7 @@ async function captureToPng(root) {
   const restoreImages = preprocessImages(root);
   const restoreCanvases = preprocessCanvases(root);
   try {
-    return await domToPng(root, captureOptions);
+    return await domToPng(root, getCaptureOptions(root));
   } finally {
     restoreCanvases();
     restoreImages();
@@ -255,8 +263,9 @@ export async function exportStageSvg({ root, filenamePrefix = "stage", documentR
     }
 
     const rect = captureRoot.getBoundingClientRect();
-    const width = Math.ceil(rect.width) * 2;
-    const height = Math.ceil(rect.height) * 2;
+    const size = Math.ceil(rect.width) * 2;
+    const width = size;
+    const height = size;
 
     // Figma-compatible SVG with embedded PNG raster at 2x
     const svgContent = [
