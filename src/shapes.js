@@ -1,6 +1,6 @@
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
 const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
+export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 
 const shapeHelperConfig = {
   clampFn: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
@@ -41,12 +41,12 @@ function stageComponentTypes() {
     : DEFAULT_STAGE_COMPONENT_TYPES;
 }
 
-function availableScenarioShapes() {
+export function availableScenarioShapes() {
   const result = shapeHelperConfig.getAvailableScenarioShapes();
   return Array.isArray(result) ? result : [];
 }
 
-function renderShapeForStageId(id) {
+export function renderShapeForStageId(id) {
   return shapeHelperConfig.renderShapeForStageId(id);
 }
 
@@ -59,7 +59,7 @@ function stageIdsForShapeMap(value = {}, fallbackShape = 'pill') {
   ].filter(Boolean)));
 }
 
-function createIcon(kind = 'none', value = '') {
+export function createIcon(kind = 'none', value = '') {
   return { kind, value: String(value || '') };
 }
 
@@ -70,19 +70,19 @@ export const SHAPES = {
     right: { w: 0, h: 0, br: '0px', tx: 0, ty: 0, op: 0 },
   },
   circle: {
-    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -40, op: 1 },
-    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -40, op: 0 },
-    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -40, op: 0 },
+    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 1 },
+    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
+    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
   listening: {
-    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -40, op: 1 },
-    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -40, op: 0 },
-    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -40, op: 0 },
+    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 1 },
+    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
+    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
   magic: {
-    main: { w: 60, h: 60, br: '30px', tx: -30, ty: -30, op: 1 },
-    left: { w: 60, h: 60, br: '30px', tx: -30, ty: -30, op: 0 },
-    right: { w: 60, h: 60, br: '30px', tx: -30, ty: -30, op: 0 },
+    main: { w: 60, h: 60, br: '30px', tx: -30, ty: -60, op: 1 },
+    left: { w: 60, h: 60, br: '30px', tx: -30, ty: -60, op: 0 },
+    right: { w: 60, h: 60, br: '30px', tx: -30, ty: -60, op: 0 },
   },
   dot: {
     main: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 1 },

@@ -1,436 +1,511 @@
 # Task
 
 ## Title
-ai.html: Voice input integration — Web Speech API across Send Message flow
+Refactor: Extract flows, CSS, and shared modules from `ai.html` and `index.html`
 
 ## Status
 Ready for implementation
 
 ## Objective
-Wire real voice input into the Send Message flow using the Web Speech API. The three seam stubs (`onTranscriptUpdate`, `speakOutput`, `parseIntent`) are already in place — this task replaces the stub wiring and extends them. After this task, users can:
-- Speak commands to start and navigate the flow ("Send a message to Hiro")
-- Say a contact name or ordinal at disambiguation ("Hiro Tanaka", "the first one")
-- Dictate message content in real time (compose field updates as they speak)
-- Say voice shortcuts at confirm ("send", "cancel", "edit")
+Both pages are monolithic files totaling ~15,000 lines. They duplicate CSS, rendering logic, and shape functions. This refactor creates a clean module structure so both pages are thin orchestrators, shared code lives in `src/`, and adding a new flow is one file.
 
-Typed input (`#sim-input`) must continue to work exactly as before — voice and typing are parallel input channels.
+| File | Current lines | Target after refactor |
+|---|---|---|
+| `ai.html` | 9,227 | ≤ 1,200 |
+| `index.html` | 6,165 | ≤ 1,000 |
 
----
-
-## In scope
-- All changes in `ai.html` only
-- New `voiceEngine` module (SpeechRecognition wrapper) inside `ai.html`
-- Extend `onTranscriptUpdate(text, isFinal)` — add `isFinal` param and per-state routing
-- Extend `glassTransitionTo()` — call `voiceEngine.start(mode)` / `voiceEngine.stop()` on each state entry
-- New `parseDisambiguateVoice(text, contacts)` — ordinal + name matching
-- Mic status indicator added to `#sim-panel` HTML + CSS
-- Graceful degradation: if Speech API unavailable or permission denied, typed input works unaffected
-
-## Out of scope
-- No TTS / `speakOutput` is already wired to `setSimVoice()` — leave as-is
-- No changes to `parseIntent` logic (it already accepts the text string)
-- No changes to shape morphing, layout, or visual rendering
-- No new files
-- No smoke test changes
+**Behavior is 100% identical after every step. No new features, no visual changes.**
 
 ---
 
-## Background: existing seams to wire
-
-These functions already exist in `ai.html` — do not rewrite them, only extend:
-
-```
-onTranscriptUpdate(text)        line ~6103  — currently COMPOSE-only; extend to all states
-speakOutput(text)               line ~5586  — already wired to setSimVoice(); leave body unchanged
-parseIntent(text)               line ~6089  — regex stub; already called by handleGlassInputSubmit()
-handleGlassInputSubmit()        line ~6414  — called on Enter; voice final result must call this too
-handleGlassInputChange(val)     line ~6393  — updates compose field; called by onTranscriptUpdate
-parseGlassVoice(text)           existing   — handles CONFIRM shortcuts ("send"/"edit"/"cancel")
-glassTransitionTo(state, voice) line ~6051  — voice start/stop must be called here
-```
-
-The `onTranscriptUpdate` + `handleGlassInputSubmit` path is the canonical input channel. Voice final results must flow through the same path as typed Enter — not through a separate code branch.
+## Constraints
+- No framework, no bundler — vanilla JS, ES modules only
+- Files served as-is by `server.mjs` (already handles static files)
+- `src/shapes.js` is the established pattern for shared ES modules
+- `morphTo()` and the core rendering system must not change behavior
+- `index.html` currently uses `<script>` (not module) — conversion to module requires explicit `window.*` exports for any function called from inline `onclick` attributes
 
 ---
 
-## Step 1: Voice engine module
+## Final file structure
 
-Add a `voiceEngine` object immediately after the `glassUi` / `GS` declarations.
-
-```js
-const voiceEngine = {
-  recognition: null,      // SpeechRecognition instance
-  supported: false,       // set to true if SpeechRecognition exists in window
-  active: false,          // true while recognition is running
-  mode: 'off',            // 'command' | 'dictation' | 'off'
-  restartOnEnd: false,    // true if we want auto-restart (continuous workaround)
-};
+```
+src/
+  shapes.js                  (unchanged)
+  shapes.legacy.js           (unchanged)
+  morph.js                   (new) — morphTo, morphCore, applyGeometry, applyContent, bridges
+  sim-panel.js               (new) — addSimLog, setSimVoice, setSimInputState (ai.html only)
+  voice-engine.js            (new stub) — Web Speech API wrapper
+  sidebar.js                 (new) — scenario/stage editor logic (index.html only)
+  styles/
+    shared.css               (new) — CSS identical in both pages
+    ai.css                   (new) — ai.html-specific styles (sim panel, frame modes, etc.)
+    editor.css               (new) — index.html-specific styles (sidebar, input area)
+    message-flow.css         (new) — send message flow component styles
+    flight-flow.css          (new) — flight booking component styles
+  flows/
+    message-send.js          (new) — GlassOS send message state machine
+    flight-booking.js        (new) — flight booking state machine
 ```
 
-### Initialization
-```js
-function initVoiceEngine() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    addSimLog('Voice input not supported in this browser', 'system');
-    return;
-  }
-  voiceEngine.supported = true;
-  const r = new SR();
-  r.lang = 'en-US';
-  r.interimResults = true;   // always on — we filter by isFinal flag
-  r.maxAlternatives = 1;
-  r.continuous = false;      // we restart manually to avoid browser quirks
+`ai.html` after refactor: HTML + `<link>` tags + `<script type="module">` importing flows + core rendering + flow registry (~1,200 lines)
 
-  r.onresult = (e) => {
-    const result = e.results[e.results.length - 1];
-    const transcript = result[0].transcript.trim();
-    const isFinal = result.isFinal;
-    onVoiceResult(transcript, isFinal);
-  };
-
-  r.onend = () => {
-    voiceEngine.active = false;
-    updateMicIndicator();
-    if (voiceEngine.restartOnEnd && voiceEngine.mode !== 'off' && glassUi.active) {
-      // auto-restart — browser stops recognition after silence; resume seamlessly
-      setTimeout(() => {
-        if (voiceEngine.restartOnEnd && glassUi.active) voiceEngine.start(voiceEngine.mode);
-      }, 120);
-    }
-  };
-
-  r.onerror = (e) => {
-    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      voiceEngine.supported = false;
-      voiceEngine.restartOnEnd = false;
-      addSimLog('Mic access denied — use typed input', 'system');
-    } else if (e.error === 'no-speech') {
-      // normal — restart will handle it via onend
-    } else {
-      addSimLog(`Voice error: ${e.error}`, 'system');
-    }
-    voiceEngine.active = false;
-    updateMicIndicator();
-  };
-
-  voiceEngine.recognition = r;
-}
-```
-
-### start / stop
-```js
-voiceEngine.start = function(mode) {
-  if (!voiceEngine.supported || !voiceEngine.recognition) return;
-  voiceEngine.mode = mode;
-  if (mode === 'off') { voiceEngine.stop(); return; }
-  voiceEngine.restartOnEnd = true;
-  if (voiceEngine.active) return;         // already running
-  try {
-    voiceEngine.recognition.start();
-    voiceEngine.active = true;
-    updateMicIndicator();
-  } catch(e) {
-    // recognition.start() throws if already started — safe to ignore
-  }
-};
-
-voiceEngine.stop = function() {
-  voiceEngine.restartOnEnd = false;
-  voiceEngine.mode = 'off';
-  if (voiceEngine.recognition && voiceEngine.active) {
-    try { voiceEngine.recognition.stop(); } catch(e) {}
-  }
-  voiceEngine.active = false;
-  updateMicIndicator();
-};
-```
-
-Call `initVoiceEngine()` once at page load, after the DOM is ready (end of the existing init block).
+`index.html` after refactor: HTML + `<link>` tags + `<script type="module">` importing sidebar + core rendering (~1,000 lines)
 
 ---
 
-## Step 2: Central voice result router
+## Part A — Shared CSS extraction (both pages)
 
-`onVoiceResult` is the single entry point for all voice output. It routes based on current glass state.
+Both pages have identical CSS section headers. Before extracting JS, get the CSS under control. This is the safest first step — pure copy/paste, no logic changes.
 
-```js
-function onVoiceResult(transcript, isFinal) {
-  // Always mirror transcript to #sim-input for visual feedback (interim + final)
-  if (input) { input.value = transcript; }
+### Step A1 — Identify shared CSS blocks
 
-  onTranscriptUpdate(transcript, isFinal);
-}
-```
+Diff the CSS sections between the two files. Sections with the same comment header that are **byte-for-byte identical or functionally equivalent** move to `src/styles/shared.css`. Sections that differ stay page-specific.
 
-### Extend `onTranscriptUpdate(text, isFinal = false)`
+Likely shared (verify before moving):
+- `/* ── Drop shell ── */` — `.drop`, `#drop-main`, `#drop-left`, `#drop-right`
+- `/* ── Generic content elements ── */` — `#c-primary`, `#c-secondary`, `#c-detail`, `#c-thumb`, `#c-media`, `#c-divider`, `#c-rich`
+- `/* ── Stage ── */` — `#stage`, `#stage-wrap`, `#drop-main` sizing
+- `/* ── Intent header ── */` — `#intent-header`, `#intent-label`, `#intent-step-dot`
+- `/* ── Metaball orb ── */` — `#siri-orb`, `#siri-canvas`
+- `/* ── List pills ── */` — `#list-pills`, `.list-pill`
+- `/* ── Stars ── */`, `/* ── Wordmark ── */`
+- `@keyframes` that exist in both files: `spin`, `pulse`, `float`, `fadeUp`
+- Sidebar + editor styles (`/* ── Sidebar ── */`, tab bars, layer rows) — shared if identical
 
-Replace the existing stub with:
+**Do not merge if the values differ** — keep the page-specific version in the page-specific file and note the divergence.
 
-```js
-function onTranscriptUpdate(text, isFinal = false) {
-  if (!glassUi.active) return;
+### Step A2 — `src/styles/shared.css`
 
-  switch (glassUi.state) {
+Create this file with the verified-identical CSS blocks from Step A1.
 
-    case GS.IDLE:
-      // interim: show in input (done by onVoiceResult above)
-      // final: submit as command → same path as typed Enter
-      if (isFinal && text) {
-        input.value = text;
-        void handleGlassInputSubmit();
-      }
-      break;
+### Step A3 — `src/styles/ai.css`
 
-    case GS.DISAMBIGUATE:
-      if (isFinal && text) {
-        const contacts = GLASS_CONTACTS.filter(c =>
-          c.name.toLowerCase().includes(glassUi.recipientQuery || '')
-        );
-        const idx = parseDisambiguateVoice(text, contacts);
-        if (idx >= 0) {
-          glassUi.sel = idx;
-          input.value = '';
-          glassConfirm();
-        } else {
-          addGlassLog(`No match for "${text}" — try a name or "the first one"`, 'system');
-        }
-      }
-      break;
+Everything in `ai.html`'s `<style>` block that is NOT in `shared.css`:
+- `#sim-panel`, `#sim-input`, `#sim-dot`, `#sim-voice-out`, `#sim-log`, `#sim-kbd`, `#sim-mic` (all sim panel)
+- `body.mode-ai` layout rules
+- `#home-glow-layer`
+- Any rules that ai.html modified vs the shared version
 
-    case GS.COMPOSE:
-      // interim + final: update compose field in real time
-      handleGlassInputChange(text);
-      if (isFinal && text.trim()) {
-        // finalize: update #sim-input to match, show checkmark
-        if (input) input.value = text;
-      }
-      break;
+### Step A4 — `src/styles/editor.css`
 
-    case GS.CONFIRM:
-      if (isFinal && text) {
-        input.value = text;
-        if (parseGlassVoice(text)) {
-          input.value = '';
-        }
-      }
-      break;
+Everything in `index.html`'s `<style>` block that is NOT in `shared.css`:
+- `/* ── Input area ── */` — `#input-area`, `#input-wrap`, `#user-input`, etc.
+- Any sidebar rules that differ from ai.html's sidebar
+- Any editor-specific rules
 
-    default:
-      break;
-  }
-}
-```
+### Step A5 — `src/styles/message-flow.css`
 
----
+All send message flow component styles from `ai.html`:
+- `.g-*` classes (`.g-contacts`, `.g-contact-row`, `.g-avatar`, `.g-chip`, `.g-chips`, `.g-listen-field`, `.g-compose-card`, `.g-action-row`, `.g-action-btn`, `.g-checkmark`, `.g-pill-content`, `.g-header-row`, `.g-pill-state`)
+- `.compose-input` and pseudo-elements
+- `#glass-controls-layer` and children
+- `@keyframes` specific to message flow
 
-## Step 3: Disambiguation voice parser
+### Step A6 — `src/styles/flight-flow.css`
 
-Add `parseDisambiguateVoice` — called by `onTranscriptUpdate` when state is DISAMBIGUATE.
+All flight booking component styles from `ai.html` (if any dedicated CSS exists). Can be empty if flight flow uses only generic component styles.
 
-```js
-function parseDisambiguateVoice(text, contacts) {
-  const lower = text.toLowerCase().trim();
+### Replace `<style>` blocks
 
-  // Ordinal patterns → index
-  if (/\b(first|one|1|number\s*one|option\s*one|the\s*first)\b/.test(lower)) return 0;
-  if (/\b(second|two|2|number\s*two|option\s*two|the\s*second)\b/.test(lower)) return 1;
-  if (/\b(third|three|3|number\s*three|option\s*three|the\s*third)\b/.test(lower)) return 2;
-
-  // Name matching — any word in spoken text matches any word in a contact's name
-  for (let i = 0; i < contacts.length; i++) {
-    const nameParts = contacts[i].name.toLowerCase().split(' ');
-    if (nameParts.some(part => part.length > 2 && lower.includes(part))) return i;
-  }
-
-  return -1; // no match
-}
-```
-
----
-
-## Step 4: Wire voice start/stop to glass state transitions
-
-Modify `glassTransitionTo(state, voiceOutput)` to call `voiceEngine.start()` / `voiceEngine.stop()` based on the new state. Add the voice mode call **after** the existing state assignment and `speakOutput` call:
-
-| State entered | Voice mode |
-|---|---|
-| `GS.IDLE` | `voiceEngine.start('command')` |
-| `GS.THINKING` | `voiceEngine.stop()` |
-| `GS.DISAMBIGUATE` | `voiceEngine.start('command')` |
-| `GS.COMPOSE` | `voiceEngine.start('dictation')` |
-| `GS.CONFIRM` | `voiceEngine.start('command')` |
-| `GS.SENDING` | `voiceEngine.stop()` |
-| `GS.SENT` | `voiceEngine.stop()` |
-
-Also call `voiceEngine.start('command')` at the end of `startGlassFlow()` (IDLE entry), and `voiceEngine.stop()` at the start of `glassReset()`.
-
-`'command'` and `'dictation'` are identical at the recognition level (both use the same SpeechRecognition instance) — the distinction is only in how `onTranscriptUpdate` handles the results. The mode label is stored in `voiceEngine.mode` for display in the mic indicator.
-
----
-
-## Step 5: Mic indicator in `#sim-panel`
-
-### HTML — add after `#sim-input-section`, before `#sim-voice-out`
-
+**`ai.html`** — replace entire `<style>` block with:
 ```html
-<div id="sim-mic">
-  <div id="sim-mic-dot"></div>
-  <span id="sim-mic-label">Listening…</span>
-</div>
+<link rel="stylesheet" href="src/styles/shared.css"/>
+<link rel="stylesheet" href="src/styles/ai.css"/>
+<link rel="stylesheet" href="src/styles/message-flow.css"/>
+<link rel="stylesheet" href="src/styles/flight-flow.css"/>
 ```
 
-### CSS
-
-```css
-#sim-mic {
-  display: none;
-  align-items: center;
-  gap: 7px;
-}
-#sim-mic.active { display: flex; }
-
-#sim-mic-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: rgba(100,150,255,0.9);
-  box-shadow: 0 0 6px rgba(100,150,255,0.5);
-  animation: pulse 1.2s ease infinite;
-  flex-shrink: 0;
-}
-#sim-mic-dot.command { background: rgba(100,150,255,0.9); }
-#sim-mic-dot.dictation {
-  background: rgba(100,220,140,0.9);
-  box-shadow: 0 0 6px rgba(100,220,140,0.5);
-}
-
-#sim-mic-label {
-  font-size: 10px;
-  color: rgba(255,255,255,0.30);
-  font-family: 'DM Sans', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-}
+**`index.html`** — replace entire `<style>` block with:
+```html
+<link rel="stylesheet" href="src/styles/shared.css"/>
+<link rel="stylesheet" href="src/styles/editor.css"/>
 ```
 
-Color coding:
-- **Blue dot** (`command` mode): IDLE, DISAMBIGUATE, CONFIRM — waiting for a command
-- **Green dot** (`dictation` mode): COMPOSE — actively transcribing speech to text
+### Validate Step A
+- Both pages load without visual regression
+- `node test/smoke.mjs` passes
+- Manual check: shapes morph, sidebar renders, send message flow styles intact
 
-### `updateMicIndicator()` function
+---
+
+## Part B — Shared JS: morph system + convert index.html to module
+
+### Step B1 — Extract `src/morph.js` (shared morphing system)
+
+Both pages contain `morphTo()` and the full bridge/transition system. This is the highest-value shared extraction. Move to `src/morph.js`.
+
+**Move from both pages to `src/morph.js`:**
+- `morphTo(shape, content, geo, stageId)`
+- `morphCore(geo, durationMs, easingFn)`
+- `applyGeometry(geo, els)`
+- `applyContent(content, els, shape)`
+- `applyContentPositions(shape, w, h)`
+- `resolveGeometryForContent(shape, content, stageId)`
+- `getCardLayoutMetrics(...)`, `getCardSLayoutMetrics(...)`
+- All bridge functions: `bridgeFromSplitToTarget`, `bridgeToSplitViaDot`, `bridgeFromListToTarget`, `bridgeHomeToThinking`, `bridgeThinkingToHome`, `bridgeFromThinkingToTarget`
+- `runMainDeformation()`, `deformationIntensity()`, `shouldUseStrongDeform()`
+- `applyGeometryWithDelay()`, `clearUiFadeTimers()`
+- `applyCardDetailLayout()`, `applyTypographyStyles()`
+- `applyCardMediaLayout()`, `applyOutgoingCardMediaLayout()`
+- `applyThumbVisualMode()`, `isIconOnlyThumb()`
+- `setOpacityWithDelay()`
+- `clearSplitTimers()`, `scheduleSplitTimer()`, `clearSplitAnimationOverlays()`
+- `ensureStageMediaEls()`, `hideAllStageMedia()`
+- Timer/easing helpers: `transitionAnimMs()`, `cardHeightForTransition()`, `cardDurationBonusMs()`, `splitBridgeMs()`, `listBridgeMs()`, `thinkingBridgeMs()`, `getActiveEasing()`
+
+`src/morph.js` imports from `src/shapes.js` (already an ES module). Both pages import from `src/morph.js`.
+
+**Export pattern:**
+```js
+// src/morph.js
+import { SHAPES, configureShapeHelpers } from './shapes.js';
+
+export function morphTo(shape, content, geo, stageId) { ... }
+export function morphCore(geo, durationMs, easingFn) { ... }
+// ... all bridge and geometry functions ...
+```
+
+**Risk:** `morphTo` and bridges reference DOM elements (`els` object, `#drop-main`, etc.) that are defined in the calling page. These must be passed in as parameters or injected via an `init(els)` call. Choose one approach and apply consistently:
+
+**Recommended approach — init injection:**
+```js
+// src/morph.js
+let _els = null;
+export function initMorph(els) { _els = els; }
+// All morph functions use _els instead of accessing DOM directly
+```
+
+Both pages call `initMorph(els)` once after DOM is ready.
+
+### Step B2 — Convert `index.html` to ES module
+
+Change `<script>` to `<script type="module">` and add imports:
+```html
+<script type="module">
+  import { SHAPES, normalizeTypography, defaultTypographyForShape, ... } from './src/shapes.js';
+  import { initMorph, morphTo, ... } from './src/morph.js';
+```
+
+**Remove all functions from `index.html` that are already in `src/shapes.js`:**
+- `normalizeTypography()`, `normalizeTypographyByShape()`, `defaultTypographyForShape()`
+- `normalizeStage()`, `normalizeIcon()`, `normalizeImagesByShape()`
+- `configureShapeHelpers()` and any other exports from `src/shapes.js`
+
+Verify the function signatures match before deleting — if `index.html` has a modified version, note the difference in `context/decisions.md` before merging.
+
+**Critical: inline `onclick` handlers.** Converting to `type="module"` removes functions from global scope. Any function called via `onclick="foo()"` must be explicitly exposed:
+```js
+// At the end of the module, expose all functions used in inline HTML handlers:
+Object.assign(window, {
+  addScenario, deleteScenario, duplicateScenario,
+  addStage, deleteCurrentStage, resetCurrentStageToDefault,
+  fireChip, handleSend, openCustom, applyCustomShape,
+  commitScenarioChange, selectListItem,
+  // ... audit every onclick in index.html HTML and add here
+});
+```
+
+Audit step: grep index.html HTML for `onclick=`, `onchange=`, `oninput=`, `onblur=` — every referenced function must be in the `window.*` block.
+
+### Step B3 — Extract `src/sim-panel.js` (ai.html only)
+
+Move from `ai.html` to `src/sim-panel.js`:
+- `addSimLog(text, type)`
+- `setSimVoice(text)`
+- `setSimInputState({ label, placeholder, hint, dictating })`
+- `updateMicIndicator(voiceEngine)`
 
 ```js
-function updateMicIndicator() {
-  const el = document.getElementById('sim-mic');
-  const dot = document.getElementById('sim-mic-dot');
-  const lbl = document.getElementById('sim-mic-label');
-  if (!el) return;
-  if (!voiceEngine.supported || !voiceEngine.active || voiceEngine.mode === 'off') {
-    el.classList.remove('active');
-    return;
-  }
-  el.classList.add('active');
-  dot.className = voiceEngine.mode === 'dictation' ? 'dictation' : 'command';
-  lbl.textContent = voiceEngine.mode === 'dictation' ? 'Dictating…' : 'Listening…';
+// src/sim-panel.js
+export function addSimLog(text, type = 'system') { ... }
+export function setSimVoice(text) { ... }
+export function setSimInputState(opts) { ... }
+export function updateMicIndicator(voiceEngine) { ... }
+```
+
+### Step B4 — Create `src/voice-engine.js` stub
+
+Stub module — wire-compatible interface for future voice input implementation.
+
+```js
+// src/voice-engine.js
+// Stub — no-op until voice input task is implemented. See context/todos.md.
+export const voiceEngine = {
+  recognition: null, supported: false, active: false, mode: 'off', restartOnEnd: false,
+  start(mode) { this.mode = mode; },
+  stop() { this.mode = 'off'; this.active = false; },
+};
+export function initVoiceEngine() { /* stub */ }
+```
+
+### Validate Part B
+- Both pages load and render correctly
+- `morphTo()` transitions work (smoke test + manual)
+- `index.html` scenario add/edit/delete still works
+- `node test/smoke.mjs` passes
+
+---
+
+## Part C — `ai.html` flow extraction
+
+### Flow interface contract
+
+Every flow module exports a default object:
+
+```js
+export default {
+  id: 'message-send',
+  chipLabel: 'Send a message to Hiro',
+
+  start(context) {},   // begin flow; context = FlowContext (see below)
+  reset() {},          // stop flow, clean up timers, restore panel defaults
+  handleKey(e) { return false; },  // return true if key consumed
+  handleInput(text, isFinal) {},   // text input (typed or voice)
+};
+```
+
+**FlowContext** — what `ai.html` passes to every flow:
+```js
+{
+  morphTo,              // from src/morph.js
+  els,                  // DOM ref object
+  setIntentHeader,      // (text) → void
+  hideIntentHeader,     // () → void
+  hideRich,             // () → void
+  addSimLog,            // from src/sim-panel.js
+  setSimVoice,          // from src/sim-panel.js
+  setSimInputState,     // from src/sim-panel.js
+  voice: voiceEngine,   // from src/voice-engine.js
+  simInput,             // #sim-input DOM element
 }
 ```
 
-Call `updateMicIndicator()` in `voiceEngine.start`, `voiceEngine.stop`, and `r.onend`.
+Flows only use `context.*` — never global variables from `ai.html`.
+
+### Step C1 — Extract `src/flows/message-send.js`
+
+Move from `ai.html` into `src/flows/message-send.js`:
+
+**Data (module-private):**
+- `GLASS_CONTACTS` array
+- `GS` enum
+- `glassUi` state object
+- `glassPauseTimer`, `glassDotsTimer`
+- `GLASS_TOP_INSET`, `GLASS_BOTTOM_INSET`, `GLASS_CONTROLS_GAP`
+
+**All functions prefixed or related to glass/send message flow:**
+- `startGlassFlow` → `start(context)`
+- `glassReset` → `reset()`
+- `glassTransitionTo`, `glassRender`, `glassConfirm`, `glassDismiss`, `doGlassAction`
+- `parseGlassVoice`, `handleGlassInputSubmit`, `handleGlassInputChange`
+- `onTranscriptUpdate`, `parseIntent`, `parseDisambiguateVoice`, `speakOutput`
+- `findContacts`, `maxGlassSel`, `addGlassLog`, `clearGlassTimers`, `cancelGlassMeasure`
+- All `buildGlass*` content builder functions
+- `renderGlassControlsOverlay`, `glassContentHeightPx`, `updateGlassSelectionUiOnly`
+
+Global-to-context mapping (all references inside the module must use `_ctx`):
+
+| Current global | `_ctx` equivalent |
+|---|---|
+| `morphTo(...)` | `_ctx.morphTo(...)` |
+| `els.rich` | `_ctx.els.rich` |
+| `els.glowLayer` | `_ctx.els.glowLayer` |
+| `setIntentHeader(t)` | `_ctx.setIntentHeader(t)` |
+| `hideIntentHeader()` | `_ctx.hideIntentHeader()` |
+| `addSimLog(t, type)` | `_ctx.addSimLog(t, type)` |
+| `setSimVoice(t)` | `_ctx.setSimVoice(t)` |
+| `setSimInputState(o)` | `_ctx.setSimInputState(o)` |
+| `input` | `_ctx.simInput` |
+| `voiceEngine` | `_ctx.voice` |
+| `hideRich()` | `_ctx.hideRich()` |
+| `document.getElementById('glass-controls-layer')` | `_ctx.els.glassControlsLayer` |
+
+### Step C2 — Extract `src/flows/flight-booking.js`
+
+Move from `ai.html` into `src/flows/flight-booking.js`:
+
+**Data (module-private):**
+- `FLIGHT_FLOW_STEPS` array
+- `flightUi` state object
+- City/airport lookup tables
+
+**All functions:**
+- `startFlightFlow` → `start(context)`
+- `resetFlightFlowToHome` → `reset()`
+- `flightStep`, `setFlightStep`, `resetFlightData`
+- `renderFlightStep`, `flightNextStep`, `flightBackStep`, `confirmFlightStep`
+- `moveFlightHighlight`, `syncFlightDestinationFromText`
+- `callGeminiFlightAction`, `handleFlightUserInput`, `localFlightFallback`
+- `normalizeCity`, `cityToAirport`
+- All `buildFlight*` / `renderFlight*` content builder functions
+
+### Step C3 — Flow registry in `ai.html`
+
+```js
+import messageSend from './src/flows/message-send.js';
+import flightBooking from './src/flows/flight-booking.js';
+
+const FLOWS = [messageSend, flightBooking];
+let activeFlow = null;
+
+function flowContext() {
+  return { morphTo, els, setIntentHeader, hideIntentHeader, hideRich,
+           addSimLog, setSimVoice, setSimInputState,
+           voice: voiceEngine, simInput: input };
+}
+
+function activateFlow(flow) {
+  if (activeFlow && activeFlow !== flow) activeFlow.reset();
+  activeFlow = flow;
+  flow.start(flowContext());
+}
+```
+
+Replace `handleChipQuickAction` to use registry:
+```js
+function handleChipQuickAction(text) {
+  const t = text.trim().toLowerCase();
+  const flow = FLOWS.find(f => t.includes(f.chipLabel.toLowerCase()));
+  if (flow) { activateFlow(flow); return true; }
+  // weather / timer / call remain inline (no flow module needed)
+  ...
+}
+```
+
+Replace global keydown and `#sim-input` listeners to delegate to `activeFlow`.
+
+### Validate Part C
+- `send msg to hiro` chip → full message flow works
+- `book a flight` chip → full flight flow works
+- Esc resets active flow
+- `node test/smoke.mjs` passes
 
 ---
 
-## Step 6: Degrade gracefully when voice is unavailable
+## Part D — `index.html` editor extraction
 
-- `initVoiceEngine()` sets `voiceEngine.supported = false` if `SpeechRecognition` not in `window`
-- All `voiceEngine.start()` / `.stop()` calls check `voiceEngine.supported` first — no-ops if false
-- `#sim-mic` never shows `active` class when unsupported
-- Typed input (`#sim-input`) works exactly as before in all cases — nothing in this task changes the typed input path
+### Step D1 — Extract `src/sidebar.js`
 
-If permission is denied at runtime (`onerror: 'not-allowed'`):
-- Set `voiceEngine.supported = false`, call `updateMicIndicator()` to hide indicator
-- Add log entry: `addSimLog('Mic access denied — use typed input', 'system')`
-- No crash, no broken state — user continues with typed input
+The sidebar is `index.html`'s equivalent of a flow — it is the primary interactive system unique to that page.
+
+Move from `index.html` to `src/sidebar.js`:
+- `renderScenarioList()`, `renderScenarioEditor()`, `renderScenarioUi()`
+- `renderScenarioStageChips()`, `renderScenarioMediaEditor()`
+- `commitScenarioChange()`, `commitStageChange()`
+- `addScenario()`, `duplicateScenario()`, `deleteScenario()`
+- `addStage()`, `deleteCurrentStage()`, `resetCurrentStageToDefault()`
+- `bindTypographyInputs()`, `updateLayerPreviews()`
+- `initSidebarTabs()`, `initLayerRowToggles()`, `initSidebarCollapsibleSections()`
+- `renderAiStageOverrideUi()`, `previewAiStageOverride()`
+- `isSupportedAssetFile()`
+- All `commitPhone*`, `commitStage*` event handlers
+
+```js
+// src/sidebar.js
+// Depends on: src/morph.js (for previewScenario), src/shapes.js
+export function initSidebar(context) { ... }
+// context: { previewScenario, scenarios, stages, persistScenarios, ... }
+```
+
+### Step D2 — What stays in `index.html`
+
+After extraction, `index.html`'s module contains:
+- `loadScenarioLibrary()`, `persistScenarios()` (storage layer)
+- `selectedScenario()`, `previewScenario()`
+- `handleSend()`, `fireChip()`, `handleManualRequest()`
+- `manualShape()`, `openCustom()`, `applyCustomShape()`
+- Canvas settings: `applyCanvasSettings()`, `loadCanvasSettings()`, `persistCanvasSettings()`
+- Orb/intent header: `showAiIdle()`, `startSiriOrb()`, `stopSiriOrb()`, `setIntentHeader()`, `hideIntentHeader()`
+- List pills: `morphToList()`, `buildListPill()`, `clearListPills()`, `selectListItem()`
+- Animation/easing controls: `parseBezierInput()`, `rebuildAnim()`, `setAnimDuration()`
+- Init code and event binding
+
+### Validate Part D
+- `index.html` loads and renders correctly
+- Scenario create/duplicate/delete works
+- Stage add/delete/reset works
+- Typography and style editing works
+- Shape morphs on scenario selection
+- No JS errors in console
 
 ---
 
-## Visual spec: mic indicator states
+## Implementation order
 
-| State | `#sim-mic` | Dot color | Label |
-|---|---|---|---|
-| Voice unsupported | `display:none` | — | — |
-| Voice supported, inactive | `display:none` | — | — |
-| IDLE listening | `display:flex` | Blue `rgba(100,150,255,0.9)` | "Listening…" |
-| DISAMBIGUATE listening | `display:flex` | Blue | "Listening…" |
-| COMPOSE dictating | `display:flex` | Green `rgba(100,220,140,0.9)` | "Dictating…" |
-| CONFIRM listening | `display:flex` | Blue | "Listening…" |
-| THINKING / SENDING / SENT | `display:none` | — | — |
+Do parts in order — each part is independently validatable:
 
-Dot pulses at `1.2s ease infinite` (reuses existing `@keyframes pulse`).
+1. **Part A** (CSS) — zero logic risk, validate visually
+2. **Part B** (shared JS + index.html module conversion) — validate both pages
+3. **Part C** (ai.html flows) — validate ai.html flows
+4. **Part D** (index.html sidebar) — validate index.html editor
 
----
-
-## Interaction spec per state
-
-| State | Voice input | Interim behavior | Final behavior |
-|---|---|---|---|
-| IDLE | Free-form command | Updates `#sim-input` value | → `handleGlassInputSubmit()` → `parseIntent()` → THINKING |
-| THINKING | Silent | — | — |
-| DISAMBIGUATE | Name or ordinal | Updates `#sim-input` value | `parseDisambiguateVoice()` → select contact → THINKING → COMPOSE |
-| COMPOSE | Free dictation | Updates compose field + `#sim-input` in real time | Finalizes text, resets 3s pause timer |
-| COMPOSE + "send" | "send" shortcut | — | Skip to SENDING (via `parseGlassVoice`) |
-| CONFIRM | "send" / "edit" / "cancel" | Updates `#sim-input` value | `parseGlassVoice()` → action |
-| SENDING | Silent | — | — |
-| SENT | Silent | — | — |
+Do NOT attempt multiple parts at once. Each part ends with a smoke test pass.
 
 ---
 
 ## Files to inspect
-- `ai.html` lines ~5542–5555 — `GS`, `glassUi` (add `voiceEngine` after these)
-- `ai.html` lines ~6051–6070 — `glassTransitionTo()` (add voice mode calls)
-- `ai.html` lines ~6072–6087 — `glassReset()` (add `voiceEngine.stop()`)
-- `ai.html` lines ~6089–6097 — `parseIntent()` (read only — no change needed)
-- `ai.html` lines ~6103–6107 — `onTranscriptUpdate()` (replace with extended version)
-- `ai.html` lines ~6109–6123 — `startGlassFlow()` (add `voiceEngine.start('command')`)
-- `ai.html` lines ~6393–6412 — `handleGlassInputChange()` (read only — no change needed)
-- `ai.html` lines ~6414–6434 — `handleGlassInputSubmit()` (read only — no change needed)
-- `ai.html` lines ~7725–7756 — `#sim-input` event listeners (read only — no change needed)
-- `ai.html` — `#sim-panel` HTML (add `#sim-mic` after `#sim-input-section`)
-- `ai.html` — `<style>` block (add `#sim-mic`, `#sim-mic-dot`, `#sim-mic-label` CSS)
-- `ai.html` — init block at end of file (add `initVoiceEngine()` call)
+
+**ai.html:**
+- Lines 8–2142 — CSS to split (Part A)
+- Lines 2619–9225 — JS module to split (Parts B, C)
+- Lines ~5542–5555 — `GS`, `glassUi`, `GLASS_CONTACTS`
+- Lines ~4993–5010 — `flightUi`, `FLIGHT_FLOW_STEPS`
+- Lines ~7725–7756 — `#sim-input` event listeners
+- Lines ~6222–6281 — `handleChipQuickAction`
+- Lines ~6296–6351 — global `keydown` listener
+
+**index.html:**
+- Lines 8–1311 — CSS to split (Part A)
+- Lines 1700–6163 — `<script>` block to convert (Parts B, D)
+- All `onclick=`, `onchange=`, `oninput=`, `onblur=` attributes in HTML — audit for `window.*` exposure
+
+**Both:**
+- `src/shapes.js` — reference for module pattern; functions here must not be duplicated in either page
 
 ## Files allowed to change
-- `ai.html` only
+- `ai.html`
+- `index.html`
+- `src/` (new files created here)
+- `context/architecture.md` (update after completion)
+
+## Files must not change
+- `server.mjs`
+- `test/smoke.mjs`
+- `src/shapes.js`
+- `src/shapes.legacy.js`
 
 ---
 
 ## Acceptance criteria
 
-- [ ] Saying "Send a message to Hiro" (when in IDLE) → flow proceeds to THINKING → DISAMBIGUATE
-- [ ] At DISAMBIGUATE, saying "Hiro Tanaka" → selects first contact → COMPOSE
-- [ ] At DISAMBIGUATE, saying "the first one" or "first" → selects index 0 → COMPOSE
-- [ ] At DISAMBIGUATE, saying "the second one" → selects index 1 → COMPOSE
-- [ ] At COMPOSE, speaking dictates into the compose field in real time (interim results visible)
-- [ ] At COMPOSE, pausing 3 seconds after speaking → checkmark appears
-- [ ] At COMPOSE, saying "send" when checkmark visible → goes directly to SENDING
-- [ ] At CONFIRM, saying "send" → action 0 (send)
-- [ ] At CONFIRM, saying "edit" → returns to COMPOSE
-- [ ] At CONFIRM, saying "cancel" → glassReset()
-- [ ] Typed input still works identically in all states when voice is not used
-- [ ] Mic indicator shows blue dot (Listening…) during IDLE, DISAMBIGUATE, CONFIRM
-- [ ] Mic indicator shows green dot (Dictating…) during COMPOSE
-- [ ] Mic indicator hidden during THINKING, SENDING, SENT, and when flow is inactive
-- [ ] If SpeechRecognition not supported: no errors thrown, typed input works, mic never shows
-- [ ] If mic permission denied: sim log shows error, typed input continues to work
+- [ ] `ai.html` is ≤ 1,200 lines
+- [ ] `index.html` is ≤ 1,000 lines
+- [ ] No CSS `<style>` blocks in either page — only `<link>` tags
+- [ ] `src/styles/shared.css` exists; no CSS duplicated between `ai.css` and `editor.css`
+- [ ] `src/morph.js` exists; `morphTo()` not defined in either HTML file
+- [ ] `src/flows/message-send.js` exists; no glass/send message functions in `ai.html`
+- [ ] `src/flows/flight-booking.js` exists; no flight functions in `ai.html`
+- [ ] `src/sidebar.js` exists; no scenario editor render functions in `index.html`
+- [ ] `src/sim-panel.js` exported and imported correctly in `ai.html`
+- [ ] `src/voice-engine.js` stub exists with correct interface
+- [ ] Flow modules use only `_ctx.*` — no direct global access
+- [ ] `index.html` uses `<script type="module">` with `window.*` exports for all inline handlers
+- [ ] Adding a new flow to `ai.html` requires: one new file in `src/flows/`, one line in `FLOWS` array
+- [ ] `index.html` full editor works: create/duplicate/delete scenario, edit stage, typography
+- [ ] `ai.html` full flight flow works end-to-end
+- [ ] `ai.html` full send message flow works end-to-end
 - [ ] `node test/smoke.mjs` passes
+- [ ] `context/architecture.md` updated to reflect new module structure
 
 ---
 
 ## Risks / notes
 
-- **`recognition.start()` throws if already running** — wrap all `.start()` calls in try/catch; the `voiceEngine.active` guard handles most cases but race conditions can still occur
-- **Chrome stops recognition after ~60s silence** — `restartOnEnd = true` + the `onend` auto-restart handles this; test with a long pause in COMPOSE
-- **`continuous: false` is deliberate** — `continuous: true` causes browser to accumulate all interim text into one long string, which breaks real-time compose updates. Manual restart is cleaner.
-- **Interim results overwrite, not append** — the Speech API returns the full transcript so far each time, not a delta. `handleGlassInputChange(text)` already handles this correctly (it sets `composeText = text` not `+=`).
-- **`input.value = transcript` in `onVoiceResult`** — this mirrors voice to `#sim-input` for visual feedback but does NOT trigger the `input` event listener (DOM `value` assignment doesn't fire `oninput`). The `onTranscriptUpdate` call handles the actual logic separately. This is intentional.
-- **`parseDisambiguateVoice` contact array** — the `contacts` array passed to it should be the same filtered subset that was shown to the user in DISAMBIGUATE (not all of `GLASS_CONTACTS`). Store this in `glassUi.disambiguateContacts` when entering DISAMBIGUATE state.
-- **COMPOSE: voice + typed are additive** — if user types then speaks, last write wins. Both call `handleGlassInputChange(text)` with the full current value. No conflict.
-- **No changes to `parseGlassVoice()`** — it already handles CONFIRM shortcuts; voice final result just feeds it the same way typed Enter does.
+- **CSS diff before merge** — do not assume shared CSS sections are identical. Open both files side by side and diff each section. If values differ by even one property, keep them separate.
+- **`index.html` inline handlers** — this is the highest-risk step. Missing one `window.*` export will silently break a UI interaction. Grep for every `onclick`, `onchange`, `oninput`, `onblur` before and after conversion.
+- **`morphTo` DOM dependency** — the morph system reads `els` (the DOM ref object). Use the `initMorph(els)` injection pattern so `src/morph.js` doesn't import from the page. Both pages call `initMorph(els)` once after DOM is ready.
+- **`src/shapes.legacy.js`** — not affected. It is the `file://` fallback for index.html before module conversion. After index.html is converted to a module, `file://` loading will no longer work anyway (ES modules require HTTP). Document this in `decisions.md`.
+- **Voice task ordering** — voice input implementation (in `context/todos.md`) must run AFTER this refactor. The voice engine should land in `src/voice-engine.js` (stub created in Step B4) and `onTranscriptUpdate` in `src/flows/message-send.js`. Do not implement voice into the current monolithic file.
+- **`flightUi.active` / `glassUi.active` references** — after extraction, `ai.html` cannot read these directly. The `activeFlow` variable replaces both: `activeFlow?.id === 'flight-booking'` instead of `flightUi.active`. Audit before deleting originals.
+- **`resetFlightFlowToHome()` called from glass flow** — `activateFlow(messageSend)` handles this automatically via `activeFlow.reset()` on the previous flow. No explicit cross-flow call needed.

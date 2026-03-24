@@ -84,7 +84,8 @@ async function createTarget() {
 
 (async ()=>{
   const { baseUrl, server, serverLogs } = await createTarget();
-  const url = `${baseUrl}/ai.html`;
+  const aiUrl = `${baseUrl}/ai.html`;
+  const indexUrl = `${baseUrl}/index.html`;
   let browser;
   try {
     browser = await chromium.launch({headless:true});
@@ -93,10 +94,10 @@ async function createTarget() {
     page.on('console', msg => logs.push({type: msg.type(), text: msg.text()}));
     page.on('pageerror', err => logs.push({type: 'pageerror', text: String(err)}));
 
-    await page.goto(url, {waitUntil:'domcontentloaded', timeout: 15000});
+    await page.goto(aiUrl, {waitUntil:'domcontentloaded', timeout: 15000});
     await page.waitForTimeout(400);
 
-    const chip = await page.$('//button[contains(normalize-space(.), "Send a message to Hiro")]');
+    const chip = await page.$('//button[contains(translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "hiro")]');
     if (!chip) {
       console.log('MISSING_CHIP');
       console.log(JSON.stringify({ logs, serverLogs }, null, 2));
@@ -107,6 +108,36 @@ async function createTarget() {
 
     const currentShape = await page.evaluate(()=>window.currentShape || document.body.dataset.currentShape || '');
     console.log('SHAPE:'+currentShape);
+
+    await page.goto(indexUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.waitForTimeout(300);
+
+    const timelineButtons = await page.$$eval('#scenario-shape-row [data-scenario-shape]', (els) =>
+      els.map((el) => ({ id: String(el.getAttribute('data-scenario-shape') || ''), active: el.classList.contains('active') }))
+    );
+    const target = timelineButtons.find((btn) => btn.id && !btn.active);
+    if (!target) {
+      throw new Error('No non-active stage timeline button available to test');
+    }
+    await page.click(`#scenario-shape-row [data-scenario-shape="${target.id}"]`);
+    await page.waitForTimeout(100);
+    const activeAfterClick = await page.$$eval('#scenario-shape-row [data-scenario-shape].active', (els) =>
+      els.map((el) => String(el.getAttribute('data-scenario-shape') || ''))
+    );
+    if (!activeAfterClick.includes(target.id)) {
+      throw new Error(`Stage timeline click did not activate "${target.id}"`);
+    }
+
+    await page.click('#sb-tab-bar [data-tab="content"]');
+    await page.click('#editor-primary-field .layer-row-header');
+    const typedValue = `Smoke-${Date.now()}`;
+    await page.fill('#scenario-primary', typedValue);
+    await page.waitForTimeout(120);
+    const persistedValue = await page.$eval('#scenario-primary', (el) => el.value);
+    if (persistedValue !== typedValue) {
+      throw new Error(`Content input did not persist edit. expected="${typedValue}" actual="${persistedValue}"`);
+    }
+
     console.log('LOGS:'+JSON.stringify(logs));
   } finally {
     if (browser) await browser.close();

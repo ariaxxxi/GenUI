@@ -1,6 +1,223 @@
 # Handoff
 
 ## Task title
+Port Stage panel controls from `tool-updated` reference (layout + Add setup + Delete/Reset look)
+
+## Completion status
+- Completed
+
+## Summary
+- Ported Stage tab action row structure from `origin/tool-updated:ref/index.html`:
+  - Added stage-kind select (`#stage-add-kind`) next to Add.
+  - Converted Delete/Reset to icon buttons (`🗑`, `↻`) with `icon-btn` styling.
+- Ported Stage timeline visual style to match reference:
+  - Wrap layout (not horizontal scroll-only).
+  - Blue pill chips with stronger active state gradient.
+- Wired Add behavior to selected kind:
+  - `dot`, `pill`, `card`, `blank`.
+  - `Add` now calls `addStage(kind)` with template-specific render shape/components.
+
+## Files changed
+- `index.html`
+- `src/styles/editor.css`
+- `src/shared/sidebar.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/shared/sidebar-actions.js`
+
+## Validation performed
+- Playwright runtime check on `http://127.0.0.1:5174/index.html`:
+  - Confirmed `#stage-add-kind` exists.
+  - Confirmed Delete/Reset labels are icon buttons (`🗑`, `↻`).
+  - Selected `dot` + clicked Add; new active stage became `Dot Stage`.
+- `node test/smoke.mjs` passed.
+
+## Remaining issues / caveats
+- `blank` currently maps to a card-shaped stage with empty components; if you want a different blank-stage geometry/content policy, that can be adjusted.
+
+## Recommended next step
+1. Manual visual pass in Stage tab to confirm exact spacing/sizing parity with your expected `tool-updated` look.
+
+## Blockers
+- None
+
+---
+
+## Task title
+Fix `index.html` regression: pill -> card stage transition no-op
+
+## Completion status
+- Completed
+
+## Summary
+- Root cause: runtime exception during morph transition for specific shape pairs.
+- Fixed missing `clamp` helper in `src/shared/morph-render.js` (`clamp is not defined`), which was thrown in `setUiMotionProfile()` for transitions such as `pill -> card`.
+- After fix, Stage timeline click from pill to card now applies full card geometry and content as expected.
+
+## Files changed
+- `src/shared/morph-render.js`
+
+## Validation performed
+- Playwright runtime check on `http://127.0.0.1:5174/index.html`:
+  - Clicked Stage timeline chip `card` from default `pill`.
+  - Verified stage geometry changed to card (`420x260`, `30px` radius).
+  - Verified no `pageerror` thrown.
+- `node test/smoke.mjs` passed (`SHAPE:card-list`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- None identified for this transition path.
+
+## Recommended next step
+1. Add one explicit smoke assertion for `pill -> card` geometry values in `index.html` to guard this exact regression.
+
+## Blockers
+- None
+
+---
+
+## Task title
+AI home stage: make home fully blank (hide circle + prompt)
+
+## Completion status
+- Completed
+
+## Summary
+- Added AI-page-only visual override so when the current stage shape is `circle` (home), the stage orb/circle container is hidden.
+- Also hid the home start prompt in the same `circle` state so home appears fully blank.
+- Kept non-home states unchanged (listening/magic/content states still render normally).
+
+## Files changed
+- `src/styles/ai.css`
+
+## Validation performed
+- Playwright runtime check on `http://127.0.0.1:5174/ai.html`:
+  - Home (`data-current-shape="circle"`): `#drop-main` computed `opacity: 0`, prompt `opacity: 0`.
+  - After typing into `#sim-input` (listening): shape becomes `listening`, `#drop-main` opacity returns above `0`.
+
+## Remaining issues / caveats
+- This change is intentionally scoped to AI page only (`body[data-page-mode="ai"]`), so prototype/manual page behavior is unchanged.
+
+## Recommended next step
+1. Manual visual check on desktop/mobile to confirm the blank home state matches your intended feel.
+
+## Blockers
+- None
+
+---
+
+## Task title
+Fix `index.html` Stage timeline button no-op + Content tab text edit no-op
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed sidebar mutation commit logic so in-place mutators persist updates instead of being discarded.
+- Added shared draft-apply helper in sidebar actions to normalize both mutation styles:
+  - mutator returns updated object
+  - mutator mutates draft and returns `undefined`
+- Restored expected runtime behavior in `index.html`:
+  - Stage timeline chips now activate/switch scenario stage.
+  - Content tab text edits now persist after typing.
+- Extended smoke coverage to validate both regressions on `/index.html` and updated existing AI chip selector to match current quick-chip copy.
+
+## Files changed
+- `src/shared/sidebar-actions.js`
+- `test/smoke.mjs`
+- `test/smoke.js`
+
+## Validation performed
+- `node test/smoke.mjs`
+- Result: pass (`SHAPE:card-list`; no thrown assertion failures for new index checks)
+- New automated assertions in smoke:
+  - Click non-active stage timeline chip in `#scenario-shape-row` and assert it becomes active.
+  - Open Content tab, expand Primary row, type into `#scenario-primary`, assert typed value persists after rerender delay.
+
+## Remaining issues / caveats
+- Smoke logs still include non-blocking `502` resource errors in AI mode from optional external calls; they do not block the Stage/Content regression checks and do not fail the suite.
+
+## Recommended next step
+1. Add a dedicated manual-editor smoke file (`test/index-smoke.mjs`) so `/index.html` regression checks can run independently of AI-mode network noise.
+
+## Blockers
+- None
+
+---
+
+## Task title
+Refactor: extract page CSS and JS entrypoints from `ai.html` and `index.html`
+
+## Completion status
+- Partially completed
+
+## Summary
+- Reduced `ai.html` from 9,227 lines to 489 lines by extracting the full inline style block and the full inline module script into external files.
+- Reduced `index.html` from 6,165 lines to 419 lines by extracting the full inline style block and the full inline script into external files.
+- Extracted shared app-state helpers into `src/app-state.js` and wired both page modules to use the shared constants/loaders instead of carrying duplicate local definitions.
+- Extracted simulator panel helpers into `src/sim-panel.js` and wired `src/ai-app.js` to use the shared module.
+- Added external page entrypoints:
+  - `src/ai-app.js`
+  - `src/index-app.js`
+- Added external style files:
+  - `src/styles/ai.css`
+  - `src/styles/editor.css`
+  - `src/styles/shared.css`
+  - `src/styles/message-flow.css`
+  - `src/styles/flight-flow.css`
+- Added `src/events.js` stub used by the extracted AI flight logic for Coachella date resolution.
+- Rewired both HTML files to load external CSS/JS:
+  - `ai.html` now loads CSS links plus `src/ai-app.js`
+  - `index.html` now loads CSS links plus `src/index-app.js`
+- Fixed extracted module wiring:
+  - `src/ai-app.js` import path updated from `./src/shapes.js` to `./shapes.js`
+  - dynamic import updated from `./src/events.js` to `./events.js`
+  - `src/index-app.js` now exports inline-handler functions via `window.*` because `index.html` is now a module page
+
+## Files changed
+- `ai.html`
+- `index.html`
+- `src/ai-app.js`
+- `src/index-app.js`
+- `src/events.js`
+- `src/app-state.js`
+- `src/sim-panel.js`
+- `src/styles/ai.css`
+- `src/styles/editor.css`
+- `src/styles/shared.css`
+- `src/styles/message-flow.css`
+- `src/styles/flight-flow.css`
+
+## Validation performed
+- `SMOKE_BASE_URL=http://localhost:5174 node test/smoke.mjs`
+- Result observed: `SHAPE:magic`, `LOGS:[]`
+- Syntax sanity:
+  - `src/ai-app.js` parses after import stripping
+  - `src/index-app.js` parses after import stripping
+- Line-count check:
+  - `ai.html`: 489 lines
+  - `index.html`: 419 lines
+
+## Remaining issues / caveats
+- This pass extracted page assets and entrypoints, but did not yet finish the deeper shared-module split requested in `context/task.md` (`src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, `src/flows/*` are still not created/consumed as final shared modules).
+- `src/sim-panel.js` is now created and consumed. Remaining large extractions are still pending:
+  - `src/morph.js`
+  - `src/sidebar.js`
+  - `src/voice-engine.js`
+  - `src/flows/message-send.js`
+  - `src/flows/flight-booking.js`
+  - `src/scenario-data.js`
+  - `src/ui-actions.js`
+  - `src/demo-ui.js`
+  - `src/anim-controls.js`
+- `index.html` was not runtime-validated in Playwright because headless Chromium crashes in this sandbox (`SIGTRAP`); only syntax/static checks were completed for the extracted manual-page module.
+- `context/task.md` was already dirty before this pass and was not modified by this implementation step.
+
+## Recommended next step
+1. Split `src/ai-app.js` and `src/index-app.js` into the task-defined shared modules:
+   `src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, `src/flows/message-send.js`, `src/flows/flight-booking.js`.
+2. Deduplicate CSS properly by moving verified-shared sections into `src/styles/shared.css` and removing duplicated rules from `ai.css` / `editor.css`.
+3. Run a runtime validation pass on both pages in a local browser outside the current sandbox limits.
+
+## Task title
 send message flow visual/motion parity pass: gradients, selection smoothing, grouped floating, controls containment
 
 ## Completion status
@@ -239,3 +456,271 @@ send message flow: eliminate first-frame sizing drift and move controls fully ou
   2) COMPOSE first frame vs Arrow frame (no extra top/bottom),
   3) controls visibly outside `drop-main`,
   4) multiline compose growth still updates shell height correctly.
+
+---
+
+## Task title
+Exact AI Motion/Visual Parity With `main:ai.html` (Commit `e918410`)
+
+## Completion status
+- Completed with validation caveat
+
+## Summary
+- Restored AI base stylesheet parity by replacing `src/styles/ai.css` with the extracted `main:ai.html` base style block.
+- Removed post-base AI flow CSS overrides to preserve single-style cascade semantics:
+  - `src/styles/message-flow.css` now intentionally empty.
+  - `src/styles/flight-flow.css` now intentionally empty.
+- Restored animation control behavior to match main defaults/preset logic:
+  - `animDur` base remains `600`.
+  - preset defaults: `custom -> 450`, `spring -> 900`.
+  - init ordering now calls `setAnimDuration(animDur)` during bind, matching main startup behavior.
+- Restored bridge/deformation parity in modular runtime:
+  - removed AI-only deformation suppression in `src/shared/morph-bridges.js`.
+- Restored motion profile synthesis and content choreography in `src/shared/morph-render.js`:
+  - home/thinking multiplier and `geometryEase` behavior restored.
+  - `--content-move-t` now uses main-equivalent geometry easing path.
+  - restored ai/magic content fade suppression block from main.
+  - restored rich hide/show timer semantics from main (`richHideTimer` lifecycle).
+  - removed non-main deformation call from `morphCore` that introduced end-of-transition bounce/jitter.
+- Reverted AI panel defaults in `ai.html` to main-equivalent initial values/select state.
+- Preserved functional non-visual fixes (including `clamp` fallback wiring in message send render).
+
+## Files changed
+- `ai.html`
+- `src/shared/anim-controls.js`
+- `src/shared/morph-bridges.js`
+- `src/shared/morph-render.js`
+- `src/styles/ai.css`
+- `src/styles/message-flow.css`
+- `src/styles/flight-flow.css`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+- Runtime browser probe executed to inspect AI page timing variables (sandbox caveat on direct `file://` loading means module init is not authoritative in that mode).
+- Verified key parity hooks now present in source:
+  - `anim-controls` init uses `setAnimDuration(animDur)`.
+  - `morphCore` no longer invokes extra deformation pass.
+  - ai/magic content suppression block restored.
+
+## Remaining issues / caveats
+- Full frame-by-frame pixel diff against a temporary served `main:ai.html` baseline was not completed in this pass.
+- Browser runtime checks should be executed against served pages (not `file://`) for final parity sign-off.
+
+## Recommended next step
+1. Run side-by-side served comparison (`current ai.html` vs temporary `main:ai.html` baseline) with fixed timestamp screenshots (0/200/400/600ms) and pixel diff threshold.
+2. If any residual drift remains, reconcile remaining differences in `src/flows/message-send-render.js` and `src/ai/ai-shell.js` against `main` choreography values.
+
+---
+
+## Task title
+AI message flow polish: stage-scoped voice viz + confirm-shell lift
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed stage-specific voice visualization ownership in `src/ai/voice-engine.js`:
+  - During command mode, drop-main/glow shadow now applies only in `DISAMBIGUATE`.
+  - During `COMPOSE` dictation mode, drop-main/glow/action-button shadows are cleared; only compose field receives voice viz.
+  - During `CONFIRM`, action-button shadow pulse remains active, while drop-main shadow stays off.
+- Fixed confirm-stage shell overlap in `src/flows/message-send-render.js`:
+  - Replaced static-only control lift with measured controls-aware lift.
+  - `drop-main` now lifts by `max(78, controlsHeight + 14 + 18)` when external controls are shown (`CONFIRM` or compose-check state), preventing overlap with the 3-button row.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Visual verification still needs manual browser pass for exact perceived match in your target environment.
+
+## Recommended next step
+1. Run `send msg to hiro` flow and verify:
+   - DISAMBIGUATE: drop-main has voice viz.
+   - COMPOSE: only compose field has voice viz.
+   - CONFIRM: shell sits above buttons with no overlap.
+
+---
+
+## Task title
+AI message flow follow-up: restore listening orb viz + fix confirm overlap via flow-active lifecycle
+
+## Completion status
+- Completed
+
+## Summary
+- Restored command-mode listening/orb visualization responsiveness by re-enabling home-glow shadow interpolation in command mode.
+- Kept stage-scoped shell behavior so only DISAMBIGUATE applies shell (`drop-main`) voice shadow; compose/confirm keep shell shadow cleared.
+- Fixed confirm overlap root cause by restoring message-flow lifecycle control of stage sizing classes:
+  - add `flow-active` to `#stage`/`#stage-wrap` on flow start.
+  - remove `flow-active` on flow reset.
+- This re-applies the dedicated flow stage height (`#stage.flow-active { height: 420px; }`) so controls are no longer forced to clamp into the shell area.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Manual visual verification still needed for exact overlap clearance and live mic-reactivity in your browser/hardware environment.
+
+## Recommended next step
+1. Re-test `send msg to hiro` flow in browser:
+   - listening/orb reacts to mic level.
+   - compose: only field pulses.
+   - confirm: shell sits above the 3 buttons with no overlap.
+
+---
+
+## Task title
+AI parity pass: disambiguate→compose choreography + chip-select motion + listening/thinking glow class parity
+
+## Completion status
+- Completed
+
+## Summary
+- Restored `main`-style disambiguate→compose choreography in `src/flows/message-send.js`:
+  - Added `animateToCompose(...)` sequence with `main` timing/cascade points:
+    - `t=0`: intent header exit + contact row staggered exits, COMPOSE state setup, immediate morph to measured compose height.
+    - `t=220ms`: rebuild compose DOM with hidden targets.
+    - `t=280ms`: header fade-up (`header-enter`).
+    - `t=380ms`: chip stagger-in (`chip-enter`, 70ms stagger).
+    - `t=460ms`: field fade-in (`field-enter`).
+    - `t=560ms`: compose blue-shadow activation (`compose-input` re-apply).
+- Restored `main`-style chip-select choreography in `src/flows/message-send.js` via `selectChipWithAnimation(...)`:
+  - `t=0`: staggered chip exits + chip-wrap collapse + empty-text fade + immediate container re-morph.
+  - `t=300ms`: swap in selected chip message with text magic + field pulse.
+  - `t=560ms`: show checkmark, force controls overlay rebuild, re-morph with controls lift.
+- Restored compose-entry render semantics in `src/flows/message-send-render.js`:
+  - Added `manualComposeEntry` suppression hook (`setManualComposeEntry`) to match `main` behavior during choreographed compose transition.
+  - Kept normal auto compose-input re-trigger for non-manual compose entries.
+- Added `home-glow-layer` opacity reset in message flow render parity path.
+- Fixed startup home/thinking glow class parity regression in `src/tool/index-app.js`:
+  - Changed `home-glow` toggle from `shape === 'circle'` to `shape === 'listening' || shape === 'magic'`.
+  - Added `magic-glow` toggle for `shape === 'magic'`.
+  - This aligns with `main` class behavior and restores vivid listening/thinking blue-layer glow visibility.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/tool/index-app.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+- Source parity checks against `main:ai.html` for:
+  - `glassAnimateToCompose` timing path
+  - `glassChipSelect` timing path
+  - compose-entry suppression behavior
+  - home/thinking glow class toggles
+
+## Remaining issues / caveats
+- Exact frame-by-frame browser pixel diff against served `main:ai.html` baseline not run in this pass.
+- Final perceptual parity still requires manual A/B run on your machine for the specific transition steps.
+
+## Recommended next step
+1. A/B test only these flows side-by-side with `main:ai.html` baseline:
+   - DISAMBIGUATE -> COMPOSE transition
+   - chip select in COMPOSE
+   - listening/thinking glow intensity response
+2. If any residual drift remains, I will patch the last mismatched selectors/timers to exact baseline values.
+
+---
+
+## Task title
+Compose step UX tweak: single confirm button always visible
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the 2s no-input gate for compose confirmation.
+- In compose step, the single check/confirm button now remains visible immediately and continuously.
+- Updated compose input hint text to remove the old "2s pause" behavior reference.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- None identified in this scoped change.
+
+## Recommended next step
+1. Manual verify in AI page compose step:
+   - check button is present immediately on entry
+   - check button does not wait for pause
+   - check button remains visible while typing/clearing text
+
+---
+
+## Task title
+AI flow parity follow-up: compose->confirm transition, thinking glow reset, line-icon confirm actions
+
+## Completion status
+- Completed
+
+## Summary
+- Restored `main` compose->non-compose transition handoff in `transitionTo(...)`:
+  - when leaving COMPOSE and field has `.compose-input`, remove class and delay state switch/render by `380ms` before transitioning.
+  - this restores missing header/field handoff motion when entering CONFIRM.
+- Updated confirm action buttons to `main` line-SVG icons (send/edit/cancel), replacing emoji glyphs.
+- Added thinking-entry glow normalization:
+  - on THINKING transition, clear inline `#home-glow-layer`/`#drop-main` box-shadow overrides so base vivid layered glow style is restored.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Final visual sign-off still needs manual browser verification for perceived glow intensity.
+
+## Recommended next step
+1. Re-test:
+   - COMPOSE -> CONFIRM: header + field handoff should animate smoothly.
+   - THINKING: vivid multi-layer blue glow should no longer appear dim.
+   - CONFIRM: buttons should render as line SVG icons.
+
+---
+
+## Task title
+AI spoken responses via Gemini TTS
+
+## Completion status
+- Completed
+
+## Summary
+- Added server-side Gemini TTS endpoint `POST /api/tts` that uses `GEMINI_API_KEY` from `.env` and returns generated audio payload.
+- Added client TTS player module to:
+  - request Gemini TTS audio,
+  - decode PCM audio and play it in browser,
+  - dedupe repeated speech,
+  - stop current speech on clear,
+  - fallback to browser `speechSynthesis` if Gemini TTS fails.
+- Wired spoken output to existing `setSimVoice(...)` path so AI responses are automatically read aloud.
+- Updated `.env.example` with Gemini TTS config keys.
+
+## Files changed
+- `server.mjs`
+- `src/ai/tts-player.js` (new)
+- `src/sim-panel.js`
+- `.env.example`
+
+## Validation performed
+- `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
+
+## Remaining issues / caveats
+- Gemini TTS model availability depends on API project access/preview entitlement.
+- If upstream TTS fails, browser voice fallback is used.
+
+## Recommended next step
+1. Start server and run AI flow; confirm spoken output for AI responses.
+2. If desired, tune voice via `GEMINI_TTS_VOICE` and model via `GEMINI_TTS_MODEL` in `.env`.
