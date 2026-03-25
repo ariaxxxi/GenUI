@@ -1167,6 +1167,10 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 #stage.flight-destination-active #home-state-dot {
   opacity: 0 !important;
 }
+#stage.flight-destination-active #c-thumb {
+  opacity: 0 !important;
+  transform: scale(0.6) !important;
+}
 .flight-route-row-core {
   display: grid;
   grid-template-columns: 1fr 24px 1fr;
