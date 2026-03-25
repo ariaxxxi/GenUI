@@ -13,7 +13,8 @@ const FLOW_STEPS = [
 ];
 
 export function createFlightBookingFlow(ctx) {
-  const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", paymentMethod: "" }, thinkingTimer: null, C: ctx.C };
+  const FLOW_START_THINK_MS = 1600;
+  const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", paymentMethod: "" }, thinkingTimer: null, startupTimer: null, C: ctx.C };
   const apiUrl = (path) => `${location.protocol === "file:" ? "http://localhost:5180" : ""}${path}`;
 
   function step() { return FLOW_STEPS[flow.stepIndex] || FLOW_STEPS[0]; }
@@ -60,7 +61,7 @@ export function createFlightBookingFlow(ctx) {
     cityToAirport,
     advanceAfterDatesConfirm() { if (flow.editReturnStepIndex != null) { const idx = flow.editReturnStepIndex; flow.editReturnStepIndex = null; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); } else api.nextStep(true); },
     selectByIndex(index) { const current = step(); const selected = current.options?.[Math.max(0, Math.min((current.options || []).length - 1, index))]; if (!selected) return; flow.focused = index; ctx.addChatBubble("user", selected.name); if (current.type === "payment") flow.data.paymentMethod = selected.name; else { flow.data[current.key] = selected.name; if (current.key === "flight") flow.data.returnFlight = selected.sub?.split("·")?.[0]?.trim() || "2:10 PM - 11:30 PM"; } api.nextStep(); },
-    resetToHome() { if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer); flow.thinkingTimer = null; flow.active = false; flow.stepIndex = 0; flow.focused = 0; flow.editReturnStepIndex = null; ctx.hideTypingBubble(); ctx.morph.hideRich(); ctx.shell.stopSiriOrb(); ctx.shell.hideIntentHeader?.(); if (typeof ctx.returnToHomeContext === "function") ctx.returnToHomeContext(); else ctx.morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); const stageEl = document.getElementById("stage"); stageEl?.classList.remove("flow-active", "flight-destination-active", "flight-voice-viz"); document.getElementById("stage-wrap")?.classList.remove("flow-active"); },
+    resetToHome() { if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer); if (flow.startupTimer) clearTimeout(flow.startupTimer); flow.thinkingTimer = null; flow.startupTimer = null; flow.active = false; flow.stepIndex = 0; flow.focused = 0; flow.editReturnStepIndex = null; ctx.hideTypingBubble(); ctx.morph.hideRich(); ctx.shell.stopSiriOrb(); ctx.shell.clearOrbLabel?.(); ctx.shell.hideIntentHeader?.(); if (typeof ctx.returnToHomeContext === "function") ctx.returnToHomeContext(); else ctx.morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); const stageEl = document.getElementById("stage"); stageEl?.classList.remove("flow-active", "flight-destination-active", "flight-voice-viz"); document.getElementById("stage-wrap")?.classList.remove("flow-active"); },
     syncDestinationFromText(userText) { const match = String(userText || "").match(/to\s+([a-zA-Z\s]+)/i); if (match) flow.data.destination = normalizeCity(match[1].trim()); },
     isFlightIntent(userText) { return /(?:\bflight\b|\bfly\b|book\s+(?:a\s+)?flight|\bticket\b)/i.test(String(userText || "")); },
   };
@@ -80,7 +81,37 @@ export function createFlightBookingFlow(ctx) {
   }
 
   async function handleUserInput(userText) { if (!flow.active) return; await ai.handleUserInput(userText); }
-  function start(seedText = "") { resetData(); if (seedText) api.syncDestinationFromText(seedText); flow.active = true; flow.stepIndex = 0; flow.focused = 0; document.getElementById("stage").classList.add("flow-active"); document.getElementById("stage-wrap")?.classList.add("flow-active"); render.renderStep(false); if (seedText && /\bto\s+[a-zA-Z]/i.test(seedText)) { ctx.addChatBubble("user", seedText); ctx.addChatBubble("ai", `Got it. Flying to ${flow.data.destination || "your destination"}.`); api.nextStep(true); } }
+  function start(seedText = "") {
+    resetData();
+    if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer);
+    if (flow.startupTimer) clearTimeout(flow.startupTimer);
+    flow.thinkingTimer = null;
+    flow.startupTimer = null;
+    if (seedText) api.syncDestinationFromText(seedText);
+    flow.active = true;
+    flow.stepIndex = 0;
+    flow.focused = 0;
+    document.getElementById("stage").classList.add("flow-active");
+    document.getElementById("stage-wrap")?.classList.add("flow-active");
+    ctx.shell.hideIntentHeader?.();
+    ctx.shell.stopSiriOrb();
+    ctx.morph.hideRich();
+    ctx.shell.setOrbLabel?.("Initiating...");
+    ctx.morph.morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
+    flow.startupTimer = setTimeout(() => {
+      flow.startupTimer = null;
+      if (!flow.active) return;
+      ctx.shell.clearOrbLabel?.();
+      flow.stepIndex = 0;
+      flow.focused = 0;
+      render.renderStep(false);
+      if (seedText && /\bto\s+[a-zA-Z]/i.test(seedText)) {
+        ctx.addChatBubble("user", seedText);
+        ctx.addChatBubble("ai", `Got it. Flying to ${flow.data.destination || "your destination"}.`);
+        api.nextStep(true);
+      }
+    }, FLOW_START_THINK_MS);
+  }
   function cancel() { if (flow.active) api.backStep(); }
 
   return { isActive: () => flow.active, start, cancel, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };

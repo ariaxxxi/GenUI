@@ -16,9 +16,10 @@ const CONTACTS = [
 ];
 
 export function createMessageSendFlow(ctx) {
+  const FLOW_START_THINK_MS = 1600;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "" };
-  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null };
+  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   const controlsGap = 14;
@@ -550,7 +551,8 @@ export function createMessageSendFlow(ctx) {
     render.render(false);
   }
 
-  async function handleInputSubmit(text) {
+  async function handleInputSubmit(text, options = {}) {
+    const skipThinking = options?.skipThinking === true;
     const value = String(text || "").trim();
     if (!value) return;
     ctx.addSimLog(value, "user");
@@ -566,7 +568,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (flow.state === GS.IDLE || flow.state === GS.DISAMBIGUATE) {
-      transitionTo(GS.THINKING, "");
+      if (!skipThinking) transitionTo(GS.THINKING, "Searching contact...");
       const intent = await voice.parseIntent(value);
       const matches = voice.findContacts(intent.recipient, value);
       timers.thinking = setTimeout(() => {
@@ -623,7 +625,7 @@ export function createMessageSendFlow(ctx) {
     }
   }
 
-  function start() {
+  function start(seedText = "") {
     flowEpoch += 1;
     const epoch = flowEpoch;
     clearTimers();
@@ -638,12 +640,19 @@ export function createMessageSendFlow(ctx) {
     flow.showCheck = false;
     flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
     if (ctx.input) ctx.input.value = "";
-    render.render(true);
-    setTimeout(() => {
+    transitionTo(GS.THINKING, "Searching contact...");
+    timers.startup = setTimeout(() => {
+      timers.startup = null;
       if (!isEpochAlive(epoch)) return;
+      transitionTo(GS.IDLE, "");
+      const seeded = String(seedText || "").trim();
+      if (seeded) {
+        void handleInputSubmit(seeded, { skipThinking: true });
+        return;
+      }
       ctx.input.focus();
       ctx.voice.voiceEngine.start("command");
-    }, 50);
+    }, FLOW_START_THINK_MS);
   }
 
   return {

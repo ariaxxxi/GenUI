@@ -149,6 +149,11 @@ function clearGlassFlowUiImmediate() {
   shell.hideIntentHeader?.();
 }
 
+function ensurePassiveCommandListening() {
+  if (messageFlow?.isActive?.() || flightFlow?.isActive?.()) return;
+  voice?.voiceEngine?.start?.("command");
+}
+
 function ensureHomeAwake() {
   if (homeState !== HOME_STATES.SLEEP) return;
   enterHomeContext();
@@ -170,6 +175,7 @@ function enterSleep(options = {}) {
   setHomeStateData(HOME_STATES.SLEEP);
   morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" });
   updateActive("circle");
+  ensurePassiveCommandListening();
 }
 
 function enterHomeContext(options = {}) {
@@ -200,6 +206,7 @@ function enterHomeContext(options = {}) {
   morph.morphTo("pill", content, homeContextGeo(content));
   preFlowShape = "pill";
   updateActive("pill");
+  ensurePassiveCommandListening();
 }
 
 function cycleHomeContext() {
@@ -232,6 +239,7 @@ function armAiWakeListening() {
     setHomeStateData(HOME_STATES.CONTEXT);
   }
   if (!messageFlow?.isActive() && !flightFlow?.isActive()) {
+    voice?.voiceEngine?.start?.("command");
     if (fromSleep) {
       document.body.classList.remove("sleep-to-listening");
       void document.body.offsetWidth;

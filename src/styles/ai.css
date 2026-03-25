@@ -281,7 +281,7 @@ body[data-ai-home-state="context"] #home-state-dot {
   left: 50%; transform: translateX(-50%);
   pointer-events: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   color: rgba(255,255,255,0.6);
   text-align: center;
   white-space: nowrap;

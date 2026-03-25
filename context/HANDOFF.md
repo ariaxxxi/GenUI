@@ -1252,3 +1252,38 @@ Flight destination/date header + command voice visualization
 
 ## Recommended next step
 1. Manual check in `ai.html`: start flight flow and verify headers and voice glow on destination/date steps, then confirm header/extra classes clear on subsequent steps and on reset to home.
+
+---
+
+## Task title
+Flow startup thinking hold + orb-top thinking copy
+
+## Completion status
+- Completed
+
+## Summary
+- Added a mandatory startup thinking phase for both flows (`1600ms`) before entering their first actionable step.
+- Message flow startup now enters `THINKING` first and shows orb-top text `Searching contact...`.
+- Flight flow startup now morphs to magic/thinking first and shows orb-top text `Initiating...`.
+- Added shell-level orb-label override APIs so non-message flows can show centered text above orb:
+  - `setOrbLabel(text)`
+  - `clearOrbLabel()`
+- Updated message flow seeded-start callers to pass seed text into `messageFlow.start(seedText)` so seeded requests respect the startup hold instead of bypassing it.
+
+## Files changed
+- `src/ai/ai-shell.js`
+- `src/flows/message-send.js`
+- `src/ai/input-actions.js`
+- `src/flows/flight-booking.js`
+
+## Validation performed
+- Static code-path validation only:
+  - both flow start paths now include `1600ms` startup timers
+  - required startup copy strings are wired
+  - orb-label override API is integrated into flight startup/reset
+
+## Remaining issues / caveats
+- No browser runtime test executed in this step.
+
+## Recommended next step
+1. Manual verify in `ai.html`: start send-message and book-flight flows; confirm they both show startup thinking for ~1.6s with correct copy above orb before continuing.

@@ -29,8 +29,7 @@ export function initInputActions({
     clearActiveFlows();
     morph.hideRich();
     if (input) input.value = "";
-    messageFlow.start();
-    setTimeout(() => { void messageFlow.handleInputSubmit(userText); }, 60);
+    messageFlow.start(userText);
     return true;
   }
 
@@ -124,8 +123,7 @@ export function initInputActions({
         input.value = "";
         clearActiveFlows();
         morph.hideRich();
-        messageFlow.start();
-        setTimeout(() => { void messageFlow.handleInputSubmit("send message to hiro"); }, 60);
+        messageFlow.start("send message to hiro");
         return;
       }
       input.value = "";

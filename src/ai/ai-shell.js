@@ -9,6 +9,7 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
   let orbTarget = 0;
   let orbCY = 0.5;
   let orbCYTarget = 0.5;
+  let orbLabelOverride = '';
   const ORB_SPEED = 1 / 180;
   const USE_THINKING_ORB = false;
   const BLOBS = [
@@ -74,7 +75,7 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const mainRect = main.getBoundingClientRect();
     const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
     const left = Math.round(mainRect.left - stageRect.left + 2);
-    const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - 10));
+    const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - 18));
     hdr.style.left = `${left}px`;
     hdr.style.top = `${top}px`;
   }
@@ -96,13 +97,20 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const lbl = document.getElementById('glass-orb-label');
     const stage = document.getElementById('stage');
     const main = document.getElementById('drop-main');
+    const overrideText = String(orbLabelOverride || '').trim();
     const glassUi = getGlassUi?.();
     const GS = getGlassState?.();
-    if (!lbl || !glassUi || !GS) return;
-    const isIdle = glassUi.active && glassUi.state === GS.IDLE;
-    const isThinking = glassUi.active && glassUi.state === GS.THINKING;
-    const text = isIdle ? (glassUi.interimText || input?.value || '') : (isThinking ? (glassUi.aiVoice || '') : '');
-    if (!text || (!isIdle && !isThinking)) {
+    if (!lbl) return;
+    let text = '';
+    if (overrideText) {
+      text = overrideText;
+    } else if (glassUi && GS) {
+      const isIdle = glassUi.active && glassUi.state === GS.IDLE;
+      const isThinking = glassUi.active && glassUi.state === GS.THINKING;
+      text = isIdle ? (glassUi.interimText || input?.value || '') : (isThinking ? (glassUi.aiVoice || '') : '');
+      if (!text || (!isIdle && !isThinking)) text = '';
+    }
+    if (!text) {
       lbl.classList.remove('visible');
       lbl.textContent = '';
       return;
@@ -113,8 +121,18 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
       const stageRect = stage.getBoundingClientRect();
       const mainRect = main.getBoundingClientRect();
       const lblH = lbl.offsetHeight || 24;
-      lbl.style.top = `${Math.max(8, Math.round(mainRect.top - stageRect.top - lblH - 12))}px`;
+      lbl.style.top = `${Math.max(8, Math.round(mainRect.top - stageRect.top - lblH - 20))}px`;
     }
+  }
+
+  function setOrbLabel(text) {
+    orbLabelOverride = String(text || '');
+    updateOrbLabel();
+  }
+
+  function clearOrbLabel() {
+    orbLabelOverride = '';
+    updateOrbLabel();
   }
 
   function hideIntentHeader() {
@@ -207,6 +225,8 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     trackIntentHeaderForTransition,
     positionIntentHeaderAboveMain,
     updateOrbLabel,
+    setOrbLabel,
+    clearOrbLabel,
     enterAiModeVisual,
     setAiBridgeWindow,
     animateHomePromptToThinking,
