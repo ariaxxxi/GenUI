@@ -27,7 +27,7 @@ const CONTACTS = [
       { label: "Schedule a sync", message: "Want to schedule a quick sync this week?" },
     ],
   },
-  { id: 2, name: "Hiro Horri", initials: "HH", relation: "Friend",
+  { id: 2, name: "Hiro Horii", initials: "HH", relation: "Friend",
     chips: [
       { label: "What's up?", message: "Hey! What's up? Haven't caught up in a while." },
       { label: "Lunch this week?", message: "Hey, want to grab lunch sometime this week?" },
