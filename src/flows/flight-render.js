@@ -15,6 +15,7 @@ export function createFlightRender({
 }) {
   const THINKING_HOLD_MS = 3000;
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
+  let headerShowTimer = null;
 
   function optionRows(options) {
     const flow = getFlow();
@@ -49,6 +50,10 @@ export function createFlightRender({
   }
 
   function renderStep(skipGreet = false) {
+    if (headerShowTimer) {
+      clearTimeout(headerShowTimer);
+      headerShowTimer = null;
+    }
     const flow = getFlow();
     const step = flow.step();
     const stageEl = document.getElementById("stage");
@@ -62,18 +67,26 @@ export function createFlightRender({
     hideRich();
     flow.C.thumb.style.opacity = "0";
     if (isDestinationStep || isDatesStep) startCommandListening?.();
+    const showHeader = (label) => {
+      setIntentHeader?.(label, null);
+      const hdr = document.getElementById("intent-header");
+      if (hdr) hdr.classList.add("glass-intent");
+      positionIntentHeaderAboveMain?.();
+      trackIntentHeaderForTransition?.();
+    };
     if (isDestinationStep) {
-      setIntentHeader?.("Where are you going?", null);
-      const hdr = document.getElementById("intent-header");
-      if (hdr) hdr.classList.add("glass-intent");
-      positionIntentHeaderAboveMain?.();
-      trackIntentHeaderForTransition?.();
+      const fromThinking = document.body.dataset.currentShape === "magic";
+      if (fromThinking) {
+        hideIntentHeader?.();
+        headerShowTimer = setTimeout(() => {
+          headerShowTimer = null;
+          showHeader("Where are you going?");
+        }, 220);
+      } else {
+        showHeader("Where are you going?");
+      }
     } else if (isDatesStep) {
-      setIntentHeader?.("When?", null);
-      const hdr = document.getElementById("intent-header");
-      if (hdr) hdr.classList.add("glass-intent");
-      positionIntentHeaderAboveMain?.();
-      trackIntentHeaderForTransition?.();
+      showHeader("When?");
     } else {
       hideIntentHeader?.();
     }
