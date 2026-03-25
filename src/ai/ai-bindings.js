@@ -187,7 +187,6 @@ function enterHomeContext(options = {}) {
   const cycle = options?.cycle === true;
   const previous = homeState;
   if (cycle) homeContextIndex = (homeContextIndex + 1) % HOME_CONTEXTS.length;
-  const content = homeContextContent();
   const fromSleep = previous === HOME_STATES.SLEEP;
   aiAwake = false;
   listeningPromptText = "";
@@ -203,9 +202,9 @@ function enterHomeContext(options = {}) {
     homeStateDotEl.classList.add("to-context");
     setTimeout(() => homeStateDotEl.classList.remove("to-context"), 520);
   }
-  morph.morphTo("pill", content, homeContextGeo(content));
-  preFlowShape = "pill";
-  updateActive("pill");
+  morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" });
+  preFlowShape = "circle";
+  updateActive("circle");
   ensurePassiveCommandListening();
 }
 

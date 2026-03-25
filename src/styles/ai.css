@@ -1188,6 +1188,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   line-height: 1;
   color: rgba(255,255,255,1);
 }
+.flight-destination-origin.placeholder {
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
+}
 .flight-destination-swap {
   justify-self: center;
   width: 24px;
@@ -1209,8 +1215,17 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 .flight-destination-target.placeholder {
   font-family: 'Inter', 'DM Sans', sans-serif;
   font-size: 20px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.3);
+  font-weight: 400;
+  color: rgba(255,255,255,0.24);
+}
+body.mode-ai .flight-destination-target.placeholder {
+  font-size: 20px !important;
+}
+body.mode-ai .flight-destination-target.destination-placeholder-fixed {
+  font-family: 'Inter', 'DM Sans', sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  color: rgba(255,255,255,0.24) !important;
 }
 .flight-destination-target.filled {
   font-family: 'DM Sans', sans-serif;
@@ -2054,6 +2069,16 @@ body[data-ai-home-state="sleep"] #glass-controls-layer,
 body[data-ai-home-state="sleep"] #home-start-prompt,
 body[data-ai-home-state="sleep"] #glass-orb-label,
 body[data-ai-home-state="sleep"] #home-state-dot {
+  opacity: 0 !important;
+}
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main,
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-left,
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-right,
+body[data-ai-home-state="context"][data-current-shape="circle"] #list-pills,
+body[data-ai-home-state="context"][data-current-shape="circle"] #glass-controls-layer,
+body[data-ai-home-state="context"][data-current-shape="circle"] #home-start-prompt,
+body[data-ai-home-state="context"][data-current-shape="circle"] #glass-orb-label,
+body[data-ai-home-state="context"][data-current-shape="circle"] #home-state-dot {
   opacity: 0 !important;
 }
 #drop-main:not(.listening-orb) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }

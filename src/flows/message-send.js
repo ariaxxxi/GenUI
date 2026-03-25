@@ -517,8 +517,20 @@ export function createMessageSendFlow(ctx) {
     }, ms);
   }
 
-  function handleInputChange(value) {
+  function normalizeChipCopyText(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+  }
+
+  function findExactChipMessageIndex(text) {
+    const target = normalizeChipCopyText(text);
+    if (!target) return -1;
+    const chips = flow.contact?.chips || [];
+    return chips.findIndex((chip) => normalizeChipCopyText(chip?.message || "") === target);
+  }
+
+  function handleInputChange(value, options = {}) {
     const text = String(value || "");
+    const allowChipMatch = options?.allowChipMatch === true;
     flow.composeText = text;
 
     if (timers.autoConfirm) {
@@ -532,6 +544,13 @@ export function createMessageSendFlow(ctx) {
     }
 
     if (text.trim()) {
+      if (allowChipMatch) {
+        const exactChipIndex = findExactChipMessageIndex(text);
+        if (exactChipIndex >= 0) {
+          selectChipWithAnimation(exactChipIndex);
+          return;
+        }
+      }
       flow.showChips = false;
       flow.showCheck = false;
       flow.msg = text.trim();
@@ -616,7 +635,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (flow.state === GS.COMPOSE) {
-      handleInputChange(text);
+      handleInputChange(text, { allowChipMatch: isFinal === true });
       return;
     }
     if (flow.state === GS.CONFIRM && isFinal && text) {

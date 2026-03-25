@@ -70,7 +70,7 @@ export function createFlightRender({
       trackIntentHeaderForTransition?.();
     };
     if (isDestinationStep) {
-      showHeader("Where are you going?");
+      showHeader("Where to?");
     } else if (isDatesStep) {
       showHeader("When?");
     } else {
@@ -85,10 +85,10 @@ export function createFlightRender({
     let html = "";
     if (step.type === "destination") {
       const dest = String(flow.data.destination || "").trim();
-      html = `<div class="flight-destination-step">${buildRouteRowHtml(flow.data.origin, dest ? flow.cityToAirport(dest) : "Where to?", !!dest)}</div>`;
+      html = `<div class="flight-destination-step">${buildRouteRowHtml(flow.data.origin || "SFO", dest ? flow.cityToAirport(dest) : "Destination", { originReady: true, destinationReady: !!dest })}</div>`;
     } else if (step.type === "dates") {
       const ready = !!String(flow.data.destination || "").trim();
-      html = `<div class="flight-date-step"><div class="flight-date-route-shared">${buildRouteRowHtml(flow.data.origin, ready ? flow.cityToAirport(flow.data.destination || "") : "Where to?", ready)}</div><div class="flight-date-panel"><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Depart</div><div class="flight-date-panel-val ${flow.data.depart ? "" : "placeholder"}">${flow.data.depart || "Select"}</div></div><div class="flight-date-panel-divider"></div><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Return</div><div class="flight-date-panel-val ${flow.data.return ? "" : "placeholder"}">${flow.data.return || "Select"}</div></div></div></div>`;
+      html = `<div class="flight-date-step"><div class="flight-date-route-shared">${buildRouteRowHtml(flow.data.origin, ready ? flow.cityToAirport(flow.data.destination || "") : "Where to?", { originReady: true, destinationReady: ready })}</div><div class="flight-date-panel"><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Depart</div><div class="flight-date-panel-val ${flow.data.depart ? "" : "placeholder"}">${flow.data.depart || ""}</div></div><div class="flight-date-panel-divider"></div><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Return</div><div class="flight-date-panel-val ${flow.data.return ? "" : "placeholder"}">${flow.data.return || ""}</div></div></div></div>`;
     } else if (step.type === "options") {
       html = `<div class="rich-list-header">${step.label}</div><div class="rich-divider"></div><div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${optionRows(step.options || [])}</div>`;
     } else if (step.type === "thinking") {
