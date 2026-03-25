@@ -1287,3 +1287,42 @@ Flow startup thinking hold + orb-top thinking copy
 
 ## Recommended next step
 1. Manual verify in `ai.html`: start send-message and book-flight flows; confirm they both show startup thinking for ~1.6s with correct copy above orb before continuing.
+
+---
+
+## Task title
+Post-flow listening reliability + header/label polish + flight header transition fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed a regression where re-entering listening after completing a flow sometimes looked active but did not actually listen:
+  - Added passive command-listening re-arm when returning to sleep/home states.
+  - Ensured `armAiWakeListening()` explicitly starts command recognition before morphing to listening.
+- Tuned top labels/headers for spacing and readability:
+  - Thinking/orb-top label font size reduced (20px -> 18px).
+  - Orb-top label vertical offset increased upward for more gap.
+  - Intent header vertical offset increased upward for more gap from container.
+- Fixed flight flow header glitch during transition from startup thinking (magic) to destination:
+  - Destination header is now delayed slightly after morph settles when entering from thinking.
+  - Added timer cleanup to avoid stale/double header flashes.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/ai/ai-shell.js`
+- `src/styles/ai.css`
+- `src/flows/flight-render.js`
+
+## Validation performed
+- Static verification of code paths and timing logic.
+- No full interactive browser pass executed in this update.
+
+## Remaining issues / caveats
+- Final motion quality should be verified manually at runtime for exact visual feel/timing.
+
+## Recommended next step
+1. Manual regression pass in `ai.html`:
+   - complete message/flight flow -> re-enter listening and verify speech is captured.
+   - confirm orb-top thinking text and intent headers have the new spacing.
+   - confirm no header jump on flight thinking -> destination transition.
