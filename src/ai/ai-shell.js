@@ -68,9 +68,13 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
       intentHeaderShowTimer = setTimeout(() => {
         intentHeaderShowTimer = null;
         hdr.classList.add('visible');
+        positionIntentHeaderAboveMain();
+        trackIntentHeaderForTransition();
       }, 220);
     } else {
       hdr.classList.add('visible');
+      positionIntentHeaderAboveMain();
+      trackIntentHeaderForTransition();
     }
   }
 
@@ -89,7 +93,7 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const mainRect = main.getBoundingClientRect();
     const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
     const centerX = Math.round((mainRect.left + (mainRect.width / 2)) - stageRect.left);
-    const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - 18));
+    const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - 12));
     const headerW = Math.ceil(hdr.getBoundingClientRect().width || hdr.offsetWidth || 0);
     const left = Math.round(centerX - (headerW / 2));
     hdr.style.left = `${left}px`;

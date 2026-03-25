@@ -265,11 +265,11 @@ body[data-ai-home-state="context"] #home-state-dot {
 }
 #intent-header.glass-intent #intent-label {
   font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
-  color: rgba(255,255,255,0.6);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
   margin-left: 0;
   padding-left: 0;
 }
