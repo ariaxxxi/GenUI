@@ -117,10 +117,17 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const lbl = document.getElementById('glass-orb-label');
     const stage = document.getElementById('stage');
     const main = document.getElementById('drop-main');
+    const inHomeContext = document.body?.dataset?.aiHomeState === 'context';
+    const inHomeCircle = document.body?.dataset?.currentShape === 'circle';
     const overrideText = String(orbLabelOverride || '').trim();
     const glassUi = getGlassUi?.();
     const GS = getGlassState?.();
     if (!lbl) return;
+    if (inHomeContext && inHomeCircle) {
+      lbl.classList.remove('visible');
+      lbl.textContent = '';
+      return;
+    }
     let text = '';
     if (overrideText) {
       text = overrideText;

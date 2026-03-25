@@ -2085,7 +2085,6 @@ body[data-ai-home-state="sleep"] #glass-orb-label,
 body[data-ai-home-state="sleep"] #home-state-dot {
   opacity: 0 !important;
 }
-body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main,
 body[data-ai-home-state="context"][data-current-shape="circle"] #drop-left,
 body[data-ai-home-state="context"][data-current-shape="circle"] #drop-right,
 body[data-ai-home-state="context"][data-current-shape="circle"] #list-pills,
@@ -2094,6 +2093,13 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #home-start-prom
 body[data-ai-home-state="context"][data-current-shape="circle"] #glass-orb-label,
 body[data-ai-home-state="context"][data-current-shape="circle"] #home-state-dot {
   opacity: 0 !important;
+}
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main {
+  opacity: 0.96 !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::after {
+  box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
 #drop-main:not(.listening-orb) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 #drop-main { z-index: 3; }

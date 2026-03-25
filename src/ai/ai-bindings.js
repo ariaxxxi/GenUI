@@ -127,6 +127,18 @@ function homeContextGeo(content = homeContextContent()) {
     right: { w: h, h, br: "23px", tx, ty, op: 0 },
   };
 }
+function homeCircleGeo() {
+  const w = 14;
+  const h = 14;
+  const bottomGap = 12;
+  const tx = -w / 2;
+  const ty = -(h / 2) - bottomGap;
+  return {
+    main: { w, h, br: "7px", tx, ty, op: 1 },
+    left: { w, h, br: "7px", tx, ty, op: 0 },
+    right: { w, h, br: "7px", tx, ty, op: 0 },
+  };
+}
 
 function clearStageFlowFlags() {
   document.getElementById("stage")?.classList.remove("flow-active");
@@ -202,7 +214,7 @@ function enterHomeContext(options = {}) {
     homeStateDotEl.classList.add("to-context");
     setTimeout(() => homeStateDotEl.classList.remove("to-context"), 520);
   }
-  morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" });
+  morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }, homeCircleGeo());
   preFlowShape = "circle";
   updateActive("circle");
   ensurePassiveCommandListening();
