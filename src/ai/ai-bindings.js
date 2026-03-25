@@ -237,7 +237,11 @@ function returnToHomeContext() {
   enterHomeContext({ source: "flow-reset" });
 }
 
-function armAiWakeListening() {
+function armAiWakeListening(options = {}) {
+  const source = String(options?.source || "");
+  const fromHomeOrSleep = homeState === HOME_STATES.SLEEP || (homeState === HOME_STATES.CONTEXT && morph.getCurrentShape() === "circle");
+  // Guardrail: only voice wake word can move home/sleep -> listening.
+  if (fromHomeOrSleep && source !== "wake-word") return;
   aiAwake = true;
   listeningPromptText = "";
   const fromSleep = homeState === HOME_STATES.SLEEP;
@@ -369,7 +373,7 @@ const voice = initVoiceEngine({
         if (input) input.value = "";
         return;
       }
-      armAiWakeListening();
+      armAiWakeListening({ source: "wake-word" });
     }
     const requestText = hasWakeWord ? stripWakeWord(finalText) : finalText;
     if (!requestText) {
@@ -427,7 +431,7 @@ input?.addEventListener("input", (e) => {
   if (homeState === HOME_STATES.SLEEP && !aiAwake) return;
   const hasText = String(e.target.value || "").trim().length > 0;
   const currentShape = morph.getCurrentShape();
-  if (hasText && currentShape === "circle") {
+  if (hasText && currentShape === "circle" && aiAwake) {
     morph.morphTo("listening", { icon: "", primary: "", secondary: "", detail: "" });
     updateActive("listening");
     return;
