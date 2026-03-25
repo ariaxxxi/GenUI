@@ -1,3 +1,5 @@
+import { apiUrl } from '../utils.js';
+
 const DEFAULT_PHRASES = {
   disambiguate_found_two: 'I found 2 hiro in your contact list, which one do you mean?',
   compose_prompt: 'What would you like to say?',
@@ -15,7 +17,7 @@ function applyTemplate(text, vars = {}) {
 
 export async function initPhrases() {
   try {
-    const res = await fetch('/api/phrases', { method: 'GET' });
+    const res = await fetch(apiUrl('api/phrases'), { method: 'GET' });
     if (!res.ok) return;
     const data = await res.json().catch(() => ({}));
     const phrases = data?.phrases;

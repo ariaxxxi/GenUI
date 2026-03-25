@@ -3,12 +3,12 @@ import { createMessageSendVoice } from "./message-send-voice.js";
 import { phrase } from "../ai/phrases.js";
 
 const CONTACTS = [
-  { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", chips: [
+  { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", avatar: "src/assets/avatar1.png", chips: [
     { label: "Design review", message: "Hey, do you have time for a design review sometime?" },
     { label: "Share a file", message: "I have a file to share with you — when's a good time?" },
     { label: "Schedule a sync", message: "Want to schedule a quick sync this week?" },
   ]},
-  { id: 2, name: "Hiro Horri", initials: "HH", relation: "Friend", chips: [
+  { id: 2, name: "Hiro Horri", initials: "HH", relation: "Friend", avatar: "src/assets/avatar2.png", chips: [
     { label: "What's up?", message: "Hey! What's up? Haven't caught up in a while." },
     { label: "Lunch this week?", message: "Hey, want to grab lunch sometime this week?" },
     { label: "Check this out", message: "Hey, I found something cool I wanted to share with you!" },
@@ -18,7 +18,7 @@ const CONTACTS = [
 export function createMessageSendFlow(ctx) {
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "" };
-  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null };
+  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   const controlsGap = 14;
@@ -145,8 +145,9 @@ export function createMessageSendFlow(ctx) {
         ].map((icon, i) => `<div class="g-action-btn ${i === flow.sel ? "selected" : ""}">${icon}</div>`).join("")}</div></div>`;
       controlsMode = mode;
     } else if (mode === "compose") {
+      // Checkmark is now always visible during compose to indicate auto-confirmation
       const mark = layer.querySelector(".g-checkmark");
-      if (mark) mark.classList.toggle("hidden", !flow.showCheck);
+      if (mark) mark.classList.remove("hidden");
     } else {
       layer.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.sel));
     }
@@ -427,57 +428,10 @@ export function createMessageSendFlow(ctx) {
     flow.showChips = false;
     flow.showCheck = false;
 
-    const chipEls = ctx.C.rich.querySelectorAll(".g-chip");
-    chipEls.forEach((el, i) => {
-      const delay = i === idx ? 0 : 40 + Math.abs(i - idx) * 30;
-      el.style.animationDelay = `${delay}ms`;
-      el.classList.add("g-chip-exit");
-    });
-    const wrap = ctx.C.rich.querySelector(".g-chips-wrap");
-    if (wrap) wrap.classList.add("collapsed");
-    const empty = ctx.C.rich.querySelector(".g-listen-empty");
-    if (empty) {
-      empty.style.transition = "opacity 300ms ease";
-      empty.style.opacity = "0";
-    }
-
-    const shape = render.glassStateShape(flow.state);
-    const geo = render.dynamicGeo(shape, render.contentHeightPx());
-    const cur = ctx.morph.getCurrentMainGeometry() || {};
-    if (Math.abs(geo.main.h - (Number(cur.h) || 0)) > 1 || Math.abs(geo.main.ty - (Number(cur.ty) || 0)) > 1) {
-      ctx.morph.morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
-    }
-
-    setTimeout(() => {
-      if (!isEpochAlive(epoch)) return;
-      const field = ctx.C.rich.querySelector(".g-listen-field");
-      if (!field) return;
-      field.dataset.pulseLock = "1";
-      field.classList.add("has-text");
-      const old = field.querySelector(".g-listen-empty");
-      const textEl = document.createElement("div");
-      textEl.className = "g-listen-text g-text-magic";
-      textEl.textContent = chip.message;
-      if (old) old.replaceWith(textEl);
-      else field.appendChild(textEl);
-      field.classList.remove("text-arriving");
-      void field.offsetHeight;
-      field.classList.add("text-arriving");
-      setTimeout(() => {
-        if (!isEpochAlive(epoch)) return;
-        delete field.dataset.pulseLock;
-      }, 920);
-    }, 300);
-
-    setTimeout(() => {
-      if (!isEpochAlive(epoch)) return;
-      flow.showCheck = true;
-      forceControlsRebuild();
-      renderControls();
-      const shape2 = render.glassStateShape(flow.state);
-      const geo2 = render.dynamicGeo(shape2, render.contentHeightPx());
-      ctx.morph.morphTo(shape2, { icon: "", primary: "", secondary: "", detail: "" }, geo2);
-    }, 560);
+    // Go directly to confirmation step when chip is selected
+    flow.msg = String(flow.composeText || flow.msg || "").trim();
+    transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
+    ctx.input.blur();
   }
 
   function doAction(index) {
@@ -551,14 +505,32 @@ export function createMessageSendFlow(ctx) {
   function handleInputChange(value) {
     const text = String(value || "");
     flow.composeText = text;
+    
+    // Clear any existing auto-confirm timer
+    if (timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
+    
     if (timers.pause) {
       clearTimeout(timers.pause);
       timers.pause = null;
     }
+    
     if (text.trim()) {
       flow.showChips = false;
       flow.showCheck = true;
       flow.msg = text.trim();
+      
+      // Set auto-confirm timer for 2 seconds after speech stops
+      timers.autoConfirm = setTimeout(() => {
+        if (flow.state === GS.COMPOSE && flow.active) {
+          // Auto-confirm when user stops speaking for 2 seconds
+          flow.msg = String(flow.composeText || flow.msg || "").trim();
+          transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
+          ctx.input.blur();
+        }
+      }, 2000);
     } else {
       flow.showChips = true;
       flow.showCheck = false;

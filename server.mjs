@@ -29,6 +29,12 @@ async function loadEnvFile() {
 
 await loadEnvFile();
 const PORT = Number(process.env.PORT || 5173);
+const BASE_URL = String(process.env.BASE_URL || '');
+
+function stripBaseUrl(path) {
+  if (!BASE_URL || !path.startsWith(BASE_URL)) return path;
+  return path.slice(BASE_URL.length);
+}
 
 function json(res, status, data) {
   res.writeHead(status, {
@@ -477,7 +483,10 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const isApiRoute = req.url.startsWith('/api/');
+  // Strip BASE_URL prefix for Serval deployment
+  const urlPath = stripBaseUrl(req.url);
+
+  const isApiRoute = urlPath.startsWith('/api/');
   if (isApiRoute) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -491,23 +500,24 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === 'POST' && req.url.startsWith('/api/ai-route')) {
+  // API routes - handle both bare and prefixed paths
+  if (req.method === 'POST' && urlPath.startsWith('/api/ai-route')) {
     await handleAiRoute(req, res);
     return;
   }
-  if (req.method === 'POST' && req.url.startsWith('/api/gemini')) {
+  if (req.method === 'POST' && urlPath.startsWith('/api/gemini')) {
     await handleGeminiRoute(req, res);
     return;
   }
-  if (req.method === 'POST' && req.url.startsWith('/api/tts')) {
+  if (req.method === 'POST' && urlPath.startsWith('/api/tts')) {
     await handleTtsRoute(req, res);
     return;
   }
-  if (req.method === 'GET' && req.url.startsWith('/api/phrases')) {
+  if (req.method === 'GET' && urlPath.startsWith('/api/phrases')) {
     await handlePhrasesGet(req, res);
     return;
   }
-  if (req.method === 'POST' && req.url.startsWith('/api/phrases')) {
+  if (req.method === 'POST' && urlPath.startsWith('/api/phrases')) {
     await handlePhrasesSave(req, res);
     return;
   }
@@ -517,7 +527,31 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const path = safePath(req.url);
+  // SPA fallback for Serval deployment - scoped to BASE_URL
+  if (BASE_URL && req.url.startsWith(BASE_URL) && !urlPath.includes('.')) {
+    const spaPath = urlPath === '/' || urlPath === '' ? '/index.html' : urlPath;
+    const targetFile = spaPath === '/ai' ? '/ai.html' : (spaPath === '/prototype' ? '/index.html' : spaPath);
+    const filePath = safePath(targetFile);
+    if (filePath && existsSync(filePath)) {
+      try {
+        const buf = await readFile(filePath);
+        const ext = filePath.slice(filePath.lastIndexOf('.'));
+        const mime = MIME[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
+        if (req.method === 'HEAD') {
+          res.end();
+          return;
+        }
+        res.end(buf);
+        return;
+      } catch {
+        sendText(res, 500, 'Internal Server Error');
+        return;
+      }
+    }
+  }
+
+  const path = safePath(urlPath);
   if (!path || !existsSync(path)) {
     sendText(res, 404, 'Not Found');
     return;

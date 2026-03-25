@@ -1,3 +1,5 @@
+import { apiUrl } from '../utils.js';
+
 let audioCtx = null;
 let currentSource = null;
 let currentUtterance = null;
@@ -155,7 +157,7 @@ async function fetchTtsData(text, { forceRefresh = false } = {}) {
   }
 
   const requestPromise = (async () => {
-    const res = await fetch('/api/tts', {
+    const res = await fetch(apiUrl('api/tts'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

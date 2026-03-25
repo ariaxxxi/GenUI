@@ -105,17 +105,20 @@ export function createMessageSendRender({
     if (flow.state === GS.IDLE) return "";
     if (flow.state === GS.THINKING || flow.state === GS.SENDING) return '<div class="g-center-row"><div class="g-spinner"></div><span id="g-thinking-dots">·</span></div>';
     if (flow.state === GS.DISAMBIGUATE) {
-      const rows = flow.disambiguateContacts.map((contact, i) => `<div class="g-contact-row ${i === flow.sel ? "selected" : ""}" data-g-contact="${i}"><div class="g-ava">${contact.initials}</div><div class="g-contact-name">${contact.name}</div></div>`).join("");
+      const rows = flow.disambiguateContacts.map((contact, i) => `<div class="g-contact-row ${i === flow.sel ? "selected" : ""}" data-g-contact="${i}"><div class="g-ava">${contact.avatar ? `<img src="${contact.avatar}" alt="${contact.name}" class="g-ava-img"/>` : contact.initials}</div><div class="g-contact-name">${contact.name}</div></div>`).join("");
       return `<div data-glass-body><div class="g-card-list">${rows}</div></div>`;
     }
     if (flow.state === GS.COMPOSE) {
       const contact = flow.contact;
       const chips = (contact?.chips || []).map((chip, i) => `<div class="g-chip ${i === flow.sel ? "selected" : ""}">${chip.label}</div>`).join("");
       const hasText = !!String(flow.composeText || "").trim();
-      return `<div data-glass-body><div class="g-compose-card"><div class="g-card-header"><div class="g-ava">${contact.initials}</div><div class="g-to-text">To: <span class="g-to-name">${contact.name}</span></div></div><div class="g-chips-wrap ${flow.showChips && !hasText ? "" : "collapsed"}"><div class="g-chips">${chips}</div></div><div class="g-listen-field compose-input ${hasText ? "has-text" : ""}">${hasText ? `<div class="g-listen-text">${flow.composeText}</div>` : '<div class="g-listen-empty">Listening...</div>'}</div></div></div>`;
+      const avaContent = contact?.avatar ? `<img src="${contact.avatar}" alt="${contact.name}" class="g-ava-img"/>` : (contact?.initials || "");
+      return `<div data-glass-body><div class="g-compose-card"><div class="g-card-header"><div class="g-ava">${avaContent}</div><div class="g-to-text">To: <span class="g-to-name">${contact.name}</span></div></div><div class="g-chips-wrap ${flow.showChips && !hasText ? "" : "collapsed"}"><div class="g-chips">${chips}</div></div><div class="g-listen-field compose-input ${hasText ? "has-text" : ""}">${hasText ? `<div class="g-listen-text">${flow.composeText}</div>` : '<div class="g-listen-empty">Listening...</div>'}</div></div></div>`;
     }
     if (flow.state === GS.CONFIRM) {
-      return `<div data-glass-body><div class="g-compose-card"><div class="g-card-header"><div class="g-ava">${flow.contact.initials}</div><div class="g-to-text">To: <span class="g-to-name">${flow.contact.name}</span></div></div><div class="g-listen-field" style="box-shadow:inset 0 1px 4px rgba(255,255,255,0.06), inset 0 0 20px rgba(255,255,255,0.02);"><div class="g-listen-text">${flow.msg || ""}</div></div></div></div>`;
+      const contact = flow.contact;
+      const avaContent = contact?.avatar ? `<img src="${contact.avatar}" alt="${contact.name}" class="g-ava-img"/>` : (contact?.initials || "");
+      return `<div data-glass-body><div class="g-compose-card"><div class="g-card-header"><div class="g-ava">${avaContent}</div><div class="g-to-text">To: <span class="g-to-name">${contact.name}</span></div></div><div class="g-listen-field" style="box-shadow:inset 0 1px 4px rgba(255,255,255,0.06), inset 0 0 20px rgba(255,255,255,0.02);"><div class="g-listen-text">${flow.msg || ""}</div></div></div></div>`;
     }
     if (flow.state === GS.SENT) return '<div data-glass-sent class="g-sent-toast"><span class="g-sent-emoji">✅</span><span>Message sent</span></div>';
     return "";
@@ -219,7 +222,7 @@ export function createMessageSendRender({
     } else if (flow.state === GS.DISAMBIGUATE) {
       setSimInputState({ label: "Voice Command", placeholder: 'Say a name, e.g. "Tanaka"', hint: "", dictating: false });
     } else if (flow.state === GS.COMPOSE) {
-      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: 'Keep talking to edit · Space = confirm · say "send"', dictating: true });
+      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: 'Keep talking to edit · say "send"', dictating: true });
     } else if (flow.state === GS.CONFIRM) {
       setSimInputState({ label: "Voice Command", placeholder: '"send", "edit", or "cancel"', hint: "", dictating: false });
     }
