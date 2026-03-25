@@ -45,6 +45,7 @@ let homeState = HOME_STATES.CONTEXT;
 let homeContextIndex = 0;
 let aiAwake = false;
 let sleepToListeningAnimTimer = null;
+let listeningPromptText = "";
 const isWeatherIntent = (text) => /\b(weather|forecast|temperature|rain|sunny|cloudy|humidity)\b/i.test(String(text || ""));
 const stripWakeWord = (text) => String(text || "").replace(/\bhey\s+bixby\b/ig, " ").replace(/\s+/g, " ").trim();
 
@@ -160,6 +161,7 @@ function enterSleep(options = {}) {
     if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
   }
   aiAwake = false;
+  listeningPromptText = "";
   voice?.clearVoiceVizStyles?.();
   shell.stopSiriOrb();
   clearGlassFlowUiImmediate();
@@ -182,6 +184,7 @@ function enterHomeContext(options = {}) {
   const content = homeContextContent();
   const fromSleep = previous === HOME_STATES.SLEEP;
   aiAwake = false;
+  listeningPromptText = "";
   voice?.clearVoiceVizStyles?.();
   shell.stopSiriOrb();
   clearGlassFlowUiImmediate();
@@ -218,6 +221,7 @@ function returnToHomeContext() {
 
 function armAiWakeListening() {
   aiAwake = true;
+  listeningPromptText = "";
   const fromSleep = homeState === HOME_STATES.SLEEP;
   if (homeState === HOME_STATES.SLEEP) {
     voice?.clearVoiceVizStyles?.();
@@ -251,16 +255,39 @@ function updateActive(shape) {
   });
   const prompt = document.getElementById("home-start-prompt");
   if (!prompt) return;
+  const positionListeningPrompt = (hasText) => {
+    if (shape !== "listening" || !hasText) {
+      prompt.style.top = "";
+      prompt.style.bottom = "";
+      return;
+    }
+    const stage = document.getElementById("stage");
+    const main = document.getElementById("drop-main");
+    if (!stage || !main) return;
+    const stageRect = stage.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const promptH = prompt.offsetHeight || 24;
+    prompt.style.top = `${Math.max(8, Math.round(mainRect.top - stageRect.top - promptH - 12))}px`;
+    prompt.style.bottom = "auto";
+  };
+  const updatePromptText = () => {
+    prompt.textContent = shape === "listening" ? String(listeningPromptText || "").trim() : "";
+    positionListeningPrompt(!!prompt.textContent);
+  };
   if (homeState === HOME_STATES.SLEEP) {
+    updatePromptText();
     prompt.classList.remove("visible", "to-thinking");
     return;
   }
   if (shape === "circle" || shape === "listening") {
+    updatePromptText();
     prompt.classList.remove("to-thinking");
-    prompt.classList.add("visible");
+    prompt.classList.toggle("visible", shape !== "listening" || !!prompt.textContent);
   } else if (shape === "magic") {
+    updatePromptText();
     shell.animateHomePromptToThinking();
   } else {
+    updatePromptText();
     prompt.classList.remove("visible");
   }
 }
@@ -300,10 +327,19 @@ const voice = initVoiceEngine({
   onTranscriptUpdate: (text, isFinal) => {
     if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
     const transcript = String(text || "");
-    if (input) input.value = transcript;
+    listeningPromptText = transcript;
+    if (input) {
+      input.value = transcript;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (morph.getCurrentShape() === "listening") updateActive("listening");
     if (!isFinal) return;
     const finalText = transcript.trim();
-    if (!finalText) return;
+    if (!finalText) {
+      listeningPromptText = "";
+      if (morph.getCurrentShape() === "listening") updateActive("listening");
+      return;
+    }
     const hasWakeWord = WAKE_WORD_RE.test(finalText);
     if (!aiAwake) {
       if (!hasWakeWord) {
@@ -314,19 +350,25 @@ const voice = initVoiceEngine({
     }
     const requestText = hasWakeWord ? stripWakeWord(finalText) : finalText;
     if (!requestText) {
+      listeningPromptText = "";
       if (input) input.value = "";
+      if (morph.getCurrentShape() === "listening") updateActive("listening");
       return;
     }
     if (isWeatherIntent(requestText)) {
       void actions?.processRequest(requestText);
+      listeningPromptText = "";
       if (input) input.value = "";
+      if (morph.getCurrentShape() === "listening") updateActive("listening");
       return;
     }
     void actions?.processRequest(requestText);
+    listeningPromptText = "";
     if (input) input.value = "";
+    if (morph.getCurrentShape() === "listening") updateActive("listening");
   },
 });
-const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, input, addChatBubble, hideTypingBubble, returnToHomeContext });
+const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, voice, input, addChatBubble, hideTypingBubble, returnToHomeContext });
 const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, playEarcon: playSimEarcon, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive, returnToHomeContext });
 const demo = initDemoControls({ document, SHAPES, SCENARIO_SHAPES, createScenario, selectedScenario, previewScenario, morph, shell, voice, renderShapeForStageId, updateActive, getCurrentShape: morph.getCurrentShape, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, messageFlow, startGlassFlow: () => messageFlow.start() });
 actions = initInputActions({ input, ensureHomeAwake, canProcessRequest: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.(), responseMode: () => responseMode, RESPONSE_MODE, selectedScenario, scenarioLibrary: () => scenarioLibrary, createScenario, createIcon, renderScenarioUi: sidebar.renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, previewScenario, messageFlow, flightFlow, voice, morph });

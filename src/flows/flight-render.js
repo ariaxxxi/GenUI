@@ -1,4 +1,18 @@
-export function createFlightRender({ SHAPES, morphTo, hideRich, showRich, stopSiriOrb, addChatBubble, getFlow, buildRouteRowHtml }) {
+export function createFlightRender({
+  SHAPES,
+  morphTo,
+  hideRich,
+  showRich,
+  stopSiriOrb,
+  setIntentHeader,
+  hideIntentHeader,
+  positionIntentHeaderAboveMain,
+  trackIntentHeaderForTransition,
+  startCommandListening,
+  addChatBubble,
+  getFlow,
+  buildRouteRowHtml,
+}) {
   const THINKING_HOLD_MS = 3000;
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
 
@@ -37,9 +51,32 @@ export function createFlightRender({ SHAPES, morphTo, hideRich, showRich, stopSi
   function renderStep(skipGreet = false) {
     const flow = getFlow();
     const step = flow.step();
+    const stageEl = document.getElementById("stage");
+    const isDestinationStep = step.type === "destination";
+    const isDatesStep = step.type === "dates";
+    if (stageEl) {
+      stageEl.classList.toggle("flight-destination-active", isDestinationStep);
+      stageEl.classList.toggle("flight-voice-viz", isDestinationStep || isDatesStep);
+    }
     stopSiriOrb();
     hideRich();
     flow.C.thumb.style.opacity = "0";
+    if (isDestinationStep || isDatesStep) startCommandListening?.();
+    if (isDestinationStep) {
+      setIntentHeader?.("Where are you going?", null);
+      const hdr = document.getElementById("intent-header");
+      if (hdr) hdr.classList.add("glass-intent");
+      positionIntentHeaderAboveMain?.();
+      trackIntentHeaderForTransition?.();
+    } else if (isDatesStep) {
+      setIntentHeader?.("When?", null);
+      const hdr = document.getElementById("intent-header");
+      if (hdr) hdr.classList.add("glass-intent");
+      positionIntentHeaderAboveMain?.();
+      trackIntentHeaderForTransition?.();
+    } else {
+      hideIntentHeader?.();
+    }
     if (step.shape === "pill") morphTo("pill", step.type === "destination" ? { icon: "", primary: "", secondary: "" } : { icon: "✈", primary: "", secondary: "" });
     else if (step.shape === "card-form") morphTo("card-form", { icon: "", primary: "", secondary: "" }, step.type === "dates" ? DATE_SELECTION_STEP_GEO : null);
     else if (step.shape === "card-list") morphTo("card-list", { icon: "", primary: "", secondary: "" });

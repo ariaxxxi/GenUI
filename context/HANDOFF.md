@@ -1215,3 +1215,40 @@ Sleep -> Listening direct wake (button + wake-word), disable auto-home wake from
 
 ## Recommended next step
 1. Manual run with microphone: from sleep, say “hey bixby” and verify direct transition to listening without interim home-context display.
+
+---
+
+## Task title
+Flight destination/date header + command voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Added step-specific glass intent headers in flight flow:
+  - Destination step: `where are you going?`
+  - Dates step: `when?`
+- Headers use the same intent-header styling/placement behavior as the existing `Which Hiro?` treatment (`glass-intent` + tracked positioning above main container).
+- Enabled command-mode listening on destination and dates steps to ensure live voice-viz behavior is active.
+- Added a stage class (`flight-voice-viz`) on destination/dates steps so voice visualization also applies glow/shadow to the stage container itself during those steps.
+- Preserved/extended cleanup on flow reset:
+  - hide intent header
+  - remove `flight-destination-active` and `flight-voice-viz` classes
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/ai/voice-engine.js`
+
+## Validation performed
+- Static verification of flow wiring:
+  - Flight render receives shell header callbacks and command-listening callback.
+  - Destination/dates steps toggle expected stage classes and header text.
+  - Voice engine now applies drop container shadow when `#stage.flight-voice-viz` is present.
+
+## Remaining issues / caveats
+- No browser run executed in this patch step; behavior should be validated in interactive AI mode for exact visual intensity/timing.
+
+## Recommended next step
+1. Manual check in `ai.html`: start flight flow and verify headers and voice glow on destination/date steps, then confirm header/extra classes clear on subsequent steps and on reset to home.

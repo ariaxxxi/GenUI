@@ -1164,6 +1164,9 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   width: 100%;
   height: 100%;
 }
+#stage.flight-destination-active #home-state-dot {
+  opacity: 0 !important;
+}
 .flight-route-row-core {
   display: grid;
   grid-template-columns: 1fr 24px 1fr;

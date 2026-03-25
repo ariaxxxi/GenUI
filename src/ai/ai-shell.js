@@ -51,7 +51,8 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const dot = document.getElementById('intent-step-dot');
     const slbl = document.getElementById('intent-step-lbl');
     if (!hdr || !lbl || !dot || !slbl) return;
-    lbl.textContent = label;
+    const normalizedLabel = String(label || '').replace(/^\s*([a-z])/, (m, c) => m.replace(c, c.toUpperCase()));
+    lbl.textContent = normalizedLabel;
     if (step) { slbl.textContent = step; dot.classList.add('visible'); }
     else { slbl.textContent = ''; dot.classList.remove('visible'); }
     hdr.style.display = 'flex';
