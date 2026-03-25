@@ -270,7 +270,8 @@ body[data-ai-home-state="context"] #home-state-dot {
   letter-spacing: 0;
   text-transform: none;
   color: rgba(255,255,255,0.6);
-  margin-left: 10px;
+  margin-left: 0;
+  padding-left: 0;
 }
 #intent-header.visible {
   opacity: 1; transform: translateY(0);

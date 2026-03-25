@@ -1,5 +1,6 @@
 export function initAiShell({ document, C, input, clearListPills, morphTo, getAnimDuration, getGlassState, getGlassUi, getVoiceMode }) {
   let intentHeaderTrackRaf = null;
+  let intentHeaderShowTimer = null;
   let aiBridgeTimer = null;
   let aiBreathingTimer = null;
   let homePromptExitTimer = null;
@@ -57,7 +58,20 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     if (step) { slbl.textContent = step; dot.classList.add('visible'); }
     else { slbl.textContent = ''; dot.classList.remove('visible'); }
     hdr.style.display = 'flex';
-    hdr.classList.add('visible');
+    if (intentHeaderShowTimer) {
+      clearTimeout(intentHeaderShowTimer);
+      intentHeaderShowTimer = null;
+    }
+    const fromThinking = document.body?.dataset?.currentShape === 'magic';
+    if (fromThinking) {
+      hdr.classList.remove('visible');
+      intentHeaderShowTimer = setTimeout(() => {
+        intentHeaderShowTimer = null;
+        hdr.classList.add('visible');
+      }, 220);
+    } else {
+      hdr.classList.add('visible');
+    }
   }
 
   function cancelIntentHeaderTracking() {
@@ -74,8 +88,10 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const stageRect = stage.getBoundingClientRect();
     const mainRect = main.getBoundingClientRect();
     const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
-    const left = Math.round(mainRect.left - stageRect.left + 2);
+    const centerX = Math.round((mainRect.left + (mainRect.width / 2)) - stageRect.left);
     const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - 18));
+    const headerW = Math.ceil(hdr.getBoundingClientRect().width || hdr.offsetWidth || 0);
+    const left = Math.round(centerX - (headerW / 2));
     hdr.style.left = `${left}px`;
     hdr.style.top = `${top}px`;
   }
@@ -142,6 +158,10 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     hdr.style.display = 'none';
     hdr.style.left = '';
     hdr.style.top = '';
+    if (intentHeaderShowTimer) {
+      clearTimeout(intentHeaderShowTimer);
+      intentHeaderShowTimer = null;
+    }
     cancelIntentHeaderTracking();
   }
 

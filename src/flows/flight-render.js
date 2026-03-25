@@ -15,7 +15,6 @@ export function createFlightRender({
 }) {
   const THINKING_HOLD_MS = 3000;
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
-  let headerShowTimer = null;
 
   function optionRows(options) {
     const flow = getFlow();
@@ -50,10 +49,6 @@ export function createFlightRender({
   }
 
   function renderStep(skipGreet = false) {
-    if (headerShowTimer) {
-      clearTimeout(headerShowTimer);
-      headerShowTimer = null;
-    }
     const flow = getFlow();
     const step = flow.step();
     const stageEl = document.getElementById("stage");
@@ -75,16 +70,7 @@ export function createFlightRender({
       trackIntentHeaderForTransition?.();
     };
     if (isDestinationStep) {
-      const fromThinking = document.body.dataset.currentShape === "magic";
-      if (fromThinking) {
-        hideIntentHeader?.();
-        headerShowTimer = setTimeout(() => {
-          headerShowTimer = null;
-          showHeader("Where are you going?");
-        }, 220);
-      } else {
-        showHeader("Where are you going?");
-      }
+      showHeader("Where are you going?");
     } else if (isDatesStep) {
       showHeader("When?");
     } else {
