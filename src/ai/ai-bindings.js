@@ -229,6 +229,7 @@ function armAiWakeListening() {
   aiAwake = true;
   listeningPromptText = "";
   const fromSleep = homeState === HOME_STATES.SLEEP;
+  const fromHome = homeState === HOME_STATES.CONTEXT && morph.getCurrentShape() === "circle";
   if (homeState === HOME_STATES.SLEEP) {
     voice?.clearVoiceVizStyles?.();
     shell.stopSiriOrb();
@@ -239,13 +240,16 @@ function armAiWakeListening() {
   }
   if (!messageFlow?.isActive() && !flightFlow?.isActive()) {
     voice?.voiceEngine?.start?.("command");
-    if (fromSleep) {
+    if (fromSleep || fromHome) {
       document.body.classList.remove("sleep-to-listening");
+      document.body.classList.remove("home-to-listening");
       void document.body.offsetWidth;
-      document.body.classList.add("sleep-to-listening");
+      if (fromSleep) document.body.classList.add("sleep-to-listening");
+      if (fromHome) document.body.classList.add("home-to-listening");
       if (sleepToListeningAnimTimer) clearTimeout(sleepToListeningAnimTimer);
       sleepToListeningAnimTimer = setTimeout(() => {
         document.body.classList.remove("sleep-to-listening");
+        document.body.classList.remove("home-to-listening");
         sleepToListeningAnimTimer = null;
       }, 560);
     }

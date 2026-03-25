@@ -2005,9 +2005,23 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
     transform: scale(1);
   }
 }
+@keyframes home-listening-orb-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.74);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 body.sleep-to-listening #drop-main.listening-orb #siri-orb,
 body.sleep-to-listening #drop-main.listening-orb #siri-orb.visible {
   animation: sleep-listening-orb-in 520ms cubic-bezier(0.22,1,0.36,1) both;
+}
+body.home-to-listening #drop-main.listening-orb #siri-orb,
+body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
+  animation: home-listening-orb-in 520ms cubic-bezier(0.22,1,0.36,1) both;
 }
 #siri-orb canvas {
   position: absolute;

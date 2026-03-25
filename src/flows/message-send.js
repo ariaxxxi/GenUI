@@ -18,7 +18,7 @@ const CONTACTS = [
 export function createMessageSendFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
-  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "" };
+  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
   const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
@@ -280,6 +280,9 @@ export function createMessageSendFlow(ctx) {
     flow.aiVoice = "";
     flow.interimText = "";
     flow._pendingMsg = "";
+    flow.replaceComposeOnNextDictation = false;
+    flow.dictationInterimActive = false;
+    flow.dictationBaseText = "";
     speakOutput("");
     if (ctx.C?.rich) {
       ctx.C.rich.innerHTML = "";
@@ -449,6 +452,7 @@ export function createMessageSendFlow(ctx) {
       flow.showChips = false;
       flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
+      flow.replaceComposeOnNextDictation = true;
       transitionTo(GS.COMPOSE, phrase("edit_message"));
       scheduleComposeIdleReturn(3500);
       setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
@@ -494,6 +498,9 @@ export function createMessageSendFlow(ctx) {
       flow.showChips = false;
       flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
+      flow.replaceComposeOnNextDictation = true;
+      flow.dictationInterimActive = false;
+      flow.dictationBaseText = "";
       transitionTo(GS.COMPOSE, phrase("edit_message"));
       scheduleComposeIdleReturn(3500);
       setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
@@ -518,7 +525,49 @@ export function createMessageSendFlow(ctx) {
   }
 
   function normalizeChipCopyText(value) {
-    return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+    return String(value || "")
+      .trim()
+      .replace(/[.,!?;:，。！？；：'"`“”‘’()[\]{}]/g, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+  function capitalizeFirstCharacter(value) {
+    const text = String(value || "");
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  function isQuestionLike(text) {
+    const value = String(text || "").trim();
+    if (!value) return false;
+    if (/[?？]\s*$/.test(value)) return true;
+    if (/[吗麼么呢]\s*$/.test(value)) return true;
+    if (/^(what|when|where|who|why|how|which|can|could|would|should|do|does|did|is|are|am|will|won't|isn't|aren't|don't|doesn't|didn't)\b/i.test(value)) return true;
+    return /\b(how are you|how is|how do|what do you|would you|could you|can you)\b/i.test(value);
+  }
+  function autoPunctuateByStructure(text) {
+    const raw = String(text || "").trim();
+    if (!raw) return "";
+    const match = raw.match(/^(.*?)(["'”’)\]]*)$/);
+    const core = (match?.[1] || raw).trim();
+    const closers = match?.[2] || "";
+    if (!core) return raw;
+    if (/[.!?。！？]$/.test(core)) return `${core}${closers}`;
+    const hasHan = /[\u3400-\u9FFF]/.test(core);
+    const terminal = isQuestionLike(core) ? (hasHan ? "？" : "?") : (hasHan ? "。" : ".");
+    return `${core}${terminal}${closers}`;
+  }
+  function mergeFinalDictation(existing, incoming) {
+    const prev = String(existing || "").trim();
+    const next = String(incoming || "").trim();
+    if (!next) return prev;
+    if (!prev) return next;
+    const prevNorm = normalizeChipCopyText(prev);
+    const nextNorm = normalizeChipCopyText(next);
+    if (!nextNorm) return prev;
+    if (prevNorm === nextNorm || prevNorm.endsWith(nextNorm)) return prev;
+    if (nextNorm.startsWith(prevNorm)) return next;
+    const needsSpace = !/[“"(\[]$/.test(prev);
+    return `${prev}${needsSpace ? " " : ""}${next}`;
   }
 
   function findExactChipMessageIndex(text) {
@@ -531,6 +580,8 @@ export function createMessageSendFlow(ctx) {
   function handleInputChange(value, options = {}) {
     const text = String(value || "");
     const allowChipMatch = options?.allowChipMatch === true;
+    const fromDictation = options?.fromDictation === true;
+    if (!fromDictation && text.trim()) flow.replaceComposeOnNextDictation = false;
     flow.composeText = text;
 
     if (timers.autoConfirm) {
@@ -635,7 +686,29 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (flow.state === GS.COMPOSE) {
-      handleInputChange(text, { allowChipMatch: isFinal === true });
+      const spoken = capitalizeFirstCharacter(text);
+      if (!isFinal) {
+        if (!flow.dictationInterimActive) {
+          flow.dictationBaseText = flow.replaceComposeOnNextDictation ? "" : (flow.composeText || flow.msg || "");
+          flow.dictationInterimActive = true;
+        }
+        const live = flow.replaceComposeOnNextDictation
+          ? spoken
+          : mergeFinalDictation(flow.dictationBaseText, spoken);
+        handleInputChange(live, { allowChipMatch: false, fromDictation: true });
+        return;
+      }
+      const dictationText = autoPunctuateByStructure(spoken);
+      const base = flow.dictationInterimActive
+        ? flow.dictationBaseText
+        : (flow.replaceComposeOnNextDictation ? "" : (flow.composeText || flow.msg || ""));
+      const merged = flow.replaceComposeOnNextDictation
+        ? dictationText
+        : mergeFinalDictation(base, dictationText);
+      flow.dictationInterimActive = false;
+      flow.dictationBaseText = "";
+      flow.replaceComposeOnNextDictation = false;
+      handleInputChange(merged, { allowChipMatch: true, fromDictation: true });
       return;
     }
     if (flow.state === GS.CONFIRM && isFinal && text) {
