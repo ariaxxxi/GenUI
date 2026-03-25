@@ -101,8 +101,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     let mode = "";
-    if (flow.state === GS.COMPOSE) mode = "compose";
-    else if (flow.state === GS.CONFIRM) mode = "confirm";
+    if (flow.state === GS.CONFIRM) mode = "confirm";
     if (!mode) {
       if (controlsMode === "confirm") {
         const row = layer.querySelector(".g-action-row");
@@ -136,18 +135,12 @@ export function createMessageSendFlow(ctx) {
       }
     }
     if (controlsMode !== mode) {
-      layer.innerHTML = mode === "compose"
-        ? `<div class="g-glass-controls"><div class="g-checkmark ${flow.showCheck ? "enter" : "hidden"}"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L9 18l10-14"/></svg></div></div>`
-        : `<div class="g-glass-controls"><div class="g-action-row enter">${[
+      layer.innerHTML = `<div class="g-glass-controls"><div class="g-action-row enter">${[
           `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>`,
           `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>`,
           `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>`,
         ].map((icon, i) => `<div class="g-action-btn ${i === flow.sel ? "selected" : ""}">${icon}</div>`).join("")}</div></div>`;
       controlsMode = mode;
-    } else if (mode === "compose") {
-      // Checkmark is now always visible during compose to indicate auto-confirmation
-      const mark = layer.querySelector(".g-checkmark");
-      if (mark) mark.classList.remove("hidden");
     } else {
       layer.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.sel));
     }
@@ -157,7 +150,7 @@ export function createMessageSendFlow(ctx) {
       cancelControlsTracking();
       return;
     }
-    if (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && flow.showCheck)) {
+    if (flow.state === GS.CONFIRM) {
       trackControlsForTransition();
     } else {
       cancelControlsTracking();
@@ -212,6 +205,10 @@ export function createMessageSendFlow(ctx) {
   }
 
   function transitionTo(state, voiceText = "") {
+    if (state !== GS.COMPOSE && timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
     if (timers.dots) clearInterval(timers.dots);
     timers.dots = null;
     if (flow.state === GS.COMPOSE && state !== GS.COMPOSE) {
@@ -448,10 +445,11 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (index === 1) {
-    flow.showChips = false;
-    flow.showCheck = !!String(flow.composeText || "").trim();
-    flow.composeText = flow.msg || flow.composeText;
+      flow.showChips = false;
+      flow.showCheck = false;
+      flow.composeText = flow.msg || flow.composeText;
       transitionTo(GS.COMPOSE, phrase("edit_message"));
+      scheduleComposeIdleReturn(3500);
       setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
       return;
     }
@@ -469,7 +467,7 @@ export function createMessageSendFlow(ctx) {
         flow.msg = pending;
         flow.composeText = pending;
         flow.showChips = false;
-        flow.showCheck = true;
+        flow.showCheck = false;
         transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: contact.name.split(" ")[0] }));
       } else {
         beginCompose(contact, phrase("compose_prompt"));
@@ -480,7 +478,7 @@ export function createMessageSendFlow(ctx) {
       selectChipWithAnimation(flow.sel);
       return;
     }
-    if (flow.state === GS.COMPOSE && flow.showCheck) {
+    if (flow.state === GS.COMPOSE && !flow.showChips && String(flow.composeText || "").trim()) {
       flow.msg = String(flow.composeText || flow.msg || "").trim();
       transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
       ctx.input.blur();
@@ -493,39 +491,52 @@ export function createMessageSendFlow(ctx) {
     const epoch = flowEpoch;
     if (flow.state === GS.CONFIRM) {
       flow.showChips = false;
-      flow.showCheck = !!String(flow.composeText || "").trim();
+      flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
       transitionTo(GS.COMPOSE, phrase("edit_message"));
+      scheduleComposeIdleReturn(3500);
       setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
       return;
     }
     if (flow.state === GS.COMPOSE || flow.state === GS.DISAMBIGUATE) reset();
   }
 
-  function handleInputChange(value) {
-    const text = String(value || "");
-    flow.composeText = text;
-    
-    // Clear any existing auto-confirm timer
+  function scheduleComposeIdleReturn(ms = 3500) {
     if (timers.autoConfirm) {
       clearTimeout(timers.autoConfirm);
       timers.autoConfirm = null;
     }
-    
+    timers.autoConfirm = setTimeout(() => {
+      if (flow.state !== GS.COMPOSE || !flow.active) return;
+      const msg = String(flow.composeText || flow.msg || "").trim();
+      if (!msg) return;
+      flow.msg = msg;
+      transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
+      ctx.input.blur();
+    }, ms);
+  }
+
+  function handleInputChange(value) {
+    const text = String(value || "");
+    flow.composeText = text;
+
+    if (timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
+
     if (timers.pause) {
       clearTimeout(timers.pause);
       timers.pause = null;
     }
-    
+
     if (text.trim()) {
       flow.showChips = false;
-      flow.showCheck = true;
+      flow.showCheck = false;
       flow.msg = text.trim();
-      
-      // Set auto-confirm timer for 2 seconds after speech stops
+
       timers.autoConfirm = setTimeout(() => {
         if (flow.state === GS.COMPOSE && flow.active) {
-          // Auto-confirm when user stops speaking for 2 seconds
           flow.msg = String(flow.composeText || flow.msg || "").trim();
           transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
           ctx.input.blur();
@@ -544,12 +555,7 @@ export function createMessageSendFlow(ctx) {
     if (!value) return;
     ctx.addSimLog(value, "user");
     if (flow.state === GS.COMPOSE) {
-      flow.composeText = value;
-      flow.msg = value;
-      flow.showChips = false;
-      flow.showCheck = true;
-      render.render(false);
-      ctx.input.blur();
+      handleInputChange(value);
       return;
     }
     const voiceAction = voice.parseComposeVoice(value, { ...flow, GS });
@@ -572,7 +578,7 @@ export function createMessageSendFlow(ctx) {
             flow.msg = msg;
             flow.composeText = msg;
             flow.showChips = false;
-            flow.showCheck = true;
+            flow.showCheck = false;
             transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: fallback[0].name.split(" ")[0] }));
           } else {
             beginCompose(fallback[0], phrase("compose_prompt"));

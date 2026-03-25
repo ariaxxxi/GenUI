@@ -47,7 +47,7 @@ export function createMessageSendRender({
     const flow = getFlow();
     const base = SHAPES[shape] || SHAPES.card;
     const shellHeight = clampFn(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
-    const controlsLift = (shape === "card" || (shape === "card-form" && flow.showCheck)) ? CONTROLS_LIFT : 0;
+    const controlsLift = shape === "card" ? CONTROLS_LIFT : 0;
     return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
   }
 
@@ -222,7 +222,7 @@ export function createMessageSendRender({
     } else if (flow.state === GS.DISAMBIGUATE) {
       setSimInputState({ label: "Voice Command", placeholder: 'Say a name, e.g. "Tanaka"', hint: "", dictating: false });
     } else if (flow.state === GS.COMPOSE) {
-      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: 'Keep talking to edit · say "send"', dictating: true });
+      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: "Auto confirm after 2s silence", dictating: true });
     } else if (flow.state === GS.CONFIRM) {
       setSimInputState({ label: "Voice Command", placeholder: '"send", "edit", or "cancel"', hint: "", dictating: false });
     }

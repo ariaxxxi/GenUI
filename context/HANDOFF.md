@@ -1121,3 +1121,97 @@ Fix prototype Legacy shape buttons (Split) no-op
 
 ## Recommended next step
 1. If needed, we can re-add `#shape-panel` UI for Custom shape editing to fully restore previous Legacy custom workflow.
+
+---
+
+## Task title
+Compose stage: remove confirm check button and auto-confirm after 2s silence
+
+## Completion status
+- Completed
+
+## Summary
+- Removed compose-stage confirm check button overlay behavior.
+- Updated compose flow to auto-transition to Confirm after 2 seconds of no new dictation/input.
+- Kept confirm stage actions (`send`, `edit`, `cancel`) unchanged.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- Verified compose overlay controls now render only for Confirm state (no compose checkmark rendered).
+- Verified compose input handler maintains a 2s auto-confirm timer and transitions to Confirm when timer elapses.
+- Updated compose hint copy to: `Auto confirm after 2s silence`.
+
+## Remaining issues / caveats
+- Existing unrelated smoke/UI flakiness in this branch remains (debug-toggle interception); not introduced by this change.
+
+## Recommended next step
+1. Manual browser pass in `ai.html`: dictate message in Compose, stop for ~2s, confirm it auto-navigates to Confirm without a compose check button.
+
+---
+
+## Task title
+Prototype mode: add Home Context preset + AI-like Listening/Thinking legacy buttons
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new built-in stage preset `home-context` (rendered as pill) for prototype mode stage library.
+- Added prototype runtime style sync for `home-context` stage so primary/secondary use home-context typography treatment.
+- Updated prototype Legacy / Debug section to include AI-equivalent:
+  - `Listening` -> `manualShape('listening')`
+  - `Thinking` -> `manualShape('magic')`
+- Kept existing `Home`, `List`, `Split`, `Custom` controls.
+
+## Files changed
+- `src/shared/scenario-data.js`
+- `src/tool/index-app.js`
+- `src/styles/editor.css`
+- `index.html`
+
+## Validation performed
+- Headless browser check on `index.html`:
+  - Stage chips include `Home Context` preset.
+  - Legacy `Listening` and `Thinking` buttons are clickable and morph stage geometry.
+
+## Remaining issues / caveats
+- Home-context stage uses stage content/icon from current scenario; if exact AI home-context copy/icon is required for prototype preset defaults, that should be added as a separate content-default pass.
+
+## Recommended next step
+1. If desired, I can set deterministic default content/icon for `home-context` preset (e.g., dot icon + split primary/secondary copy) so new scenarios match AI home look out of the box.
+
+---
+
+## Task title
+Sleep -> Listening direct wake (button + wake-word), disable auto-home wake from text input
+
+## Completion status
+- Completed
+
+## Summary
+- Updated AI wake flow so sleep can transition directly to listening without going through home context morph.
+- Listening trigger paths now use direct wake-listening behavior:
+  - Legacy `Listening` button now calls `armAiWakeListening()`.
+  - Keyboard `L` and `0` paths use `armAiWakeListening()`.
+- Removed auto-home wake behavior from typed input while sleeping:
+  - typing into `#sim-input` in sleep no longer calls `ensureHomeAwake()` or morphs to home/listening.
+- Gated request processing so typed/chip actions don’t execute while AI is asleep unless already awake/flow-active.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/ai/input-actions.js`
+- `ai.html`
+
+## Validation performed
+- Headless browser check on `ai.html`:
+  - In sleep, typing text keeps state as `sleep` + shape `circle`.
+  - Clicking `Listening` in sleep transitions to `homeState=context` and shape `listening` directly.
+
+## Remaining issues / caveats
+- Wake-word validation in automated headless run is limited by SpeechRecognition availability; path uses same `armAiWakeListening()` function as the verified button trigger.
+
+## Recommended next step
+1. Manual run with microphone: from sleep, say “hey bixby” and verify direct transition to listening without interim home-context display.

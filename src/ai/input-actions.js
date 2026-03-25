@@ -1,6 +1,7 @@
 export function initInputActions({
   input,
   ensureHomeAwake,
+  canProcessRequest,
   responseMode,
   RESPONSE_MODE,
   selectedScenario,
@@ -73,7 +74,7 @@ export function initInputActions({
   }
 
   async function processRequest(userText) {
-    ensureHomeAwake?.();
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) return false;
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
     if (isMessageIntent(userText)) return startMessageFlowWithText(userText);
     morph.hideRich();
@@ -84,7 +85,7 @@ export function initInputActions({
   }
 
   function handleSend() {
-    ensureHomeAwake?.();
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
@@ -115,7 +116,7 @@ export function initInputActions({
 
   function fireChip(el) {
     const text = String(el?.textContent || "").trim();
-    ensureHomeAwake?.();
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) return;
     clearActiveFlows();
     input.value = text;
     setTimeout(() => {
