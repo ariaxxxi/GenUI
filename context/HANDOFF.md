@@ -1,6 +1,54 @@
 # Handoff
 
 ## Task title
+Step 1: Screen Composer For AI Page
+
+## Completion status
+- Completed
+
+## Summary
+- Added shared Screen Composer module at `src/shared/screen-composer.js`.
+- Implemented primitive mapping and spec-driven rendering:
+  - `contact_header`
+  - `selection_list`
+  - `chip_bar`
+  - `text_bubble`
+  - `input_field`
+  - `info_card`
+  - `compact_status`
+  - `flight_route_step`
+- Added `renderScreenMarkup(spec)` helper for spec-to-HTML generation and offscreen measurement use.
+- Refactored `src/flows/message-send-render.js`:
+  - replaced inline `buildContent()` assembly with `buildScreenSpec()`
+  - `render()` now composes `#c-rich` through Screen Composer
+  - preserved existing morph sizing logic, root class/dataset/style handling, and sim-input behavior
+- Refactored `src/flows/flight-render.js`:
+  - added `buildScreenSpec(step)`
+  - moved step content rendering to Screen Composer
+  - preserved existing morph shape selection, destination/date visuals via `renderFlightRouteStep`, and dynamic container sizing
+- Kept message controls overlay timing/position behavior in `src/flows/message-send.js`, but changed it to consume action specs emitted by the renderer instead of building action markup inline. This preserves confirm/edit/cancel overlay behavior and supports the compose check action in the external controls layer.
+
+## Files changed
+- `src/shared/screen-composer.js` (new)
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-render.js`
+
+## Validation performed
+- Module parse/import validation:
+  - `node -e "import('./src/shared/screen-composer.js'); import('./src/flows/message-send-render.js'); import('./src/flows/message-send.js'); import('./src/flows/flight-render.js'); console.log('ok')"`
+
+## Remaining issues / caveats
+- No interactive browser smoke pass was run in this turn, so visual parity and transition timing still need live validation in `ai.html`.
+- Message controls are spec-driven now, but their exit animation/positioning lifecycle still lives in `message-send.js` by design to avoid motion regressions. This is an intentional compatibility seam for Step 1.
+
+## Recommended next step
+1. Run a manual AI-page parity pass for:
+   - message: disambiguate -> compose -> confirm -> sent
+   - flight: destination -> dates -> passengers -> choose flight -> confirm -> payment -> done
+2. If stable, Step 2 can move the remaining overlay-specific control lifecycle behind the shared composer boundary.
+
+## Task title
 Add stage capture utilities (AI + prototype): Copy PNG + Export SVG
 
 ## Completion status

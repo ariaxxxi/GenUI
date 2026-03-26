@@ -1076,7 +1076,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 }
 .g-flight-content-pad {
   padding-top: 10px;
-  padding-bottom: 10px;
+  padding-bottom: 16px;
 }
 .g-glass-controls {
   display: flex;

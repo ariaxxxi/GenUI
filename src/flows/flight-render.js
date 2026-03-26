@@ -1,9 +1,4 @@
-import {
-  renderCompactStatus,
-  renderFlightRouteStep,
-  renderInfoCard,
-  renderSelectionList,
-} from "./ui-primitives.js";
+import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
 
 export function createFlightRender({
   SHAPES,
@@ -59,15 +54,28 @@ export function createFlightRender({
 
   function toastGeo(labelText = "Trip booked") {
     const base = SHAPES.pill || SHAPES.card;
-    const text = String(labelText || "").trim();
-    const estW = clamp(Math.round(text.length * 11 + 96), 160, 360);
-    const h = 52;
-    return { ...base, main: { ...base.main, w: estW, h, tx: -(estW / 2), ty: -(h / 2) - 18 } };
+    const textEl = document.getElementById("c-rich")?.querySelector("[data-glass-sent]");
+    let w = 200;
+    let h = 52;
+    if (textEl) {
+      const rect = textEl.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        w = clamp(Math.round(rect.width + 48), 140, 360);
+        h = clamp(Math.round(rect.height + 32), 52, 140);
+      } else {
+        const text = String(labelText || "").trim();
+        w = clamp(Math.round(text.length * 11 + 96), 160, 360);
+      }
+    } else {
+      const text = String(labelText || "").trim();
+      w = clamp(Math.round(text.length * 11 + 96), 160, 360);
+    }
+    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) - 18 } };
   }
 
   function optionRows(options) {
     const flow = getFlow();
-    return renderSelectionList({
+    return {
       selectedIndex: flow.focused,
       rowDataAttr: "data-flight-opt",
       items: options.map((opt) => ({
@@ -76,7 +84,7 @@ export function createFlightRender({
         subtitle: String(opt.sub || "").replace(/\s*·\s*\$\d[\d,]*/g, "").trim(),
         detail: ((String(opt.sub || "").match(/\$\d[\d,]*/) || [""])[0]) || "",
       })),
-    });
+    };
   }
 
   function buildConfirmRows() {
@@ -87,34 +95,125 @@ export function createFlightRender({
     const toCode = flow.cityToAirport(flow.data.destination || "");
     const outTime = flow.data.flight || "7:10 AM - 10:30 AM";
     const backTime = flow.data.returnFlight || "2:10 PM - 11:30 PM";
-    return renderInfoCard({
+    return {
       sections: [
         { eyebrow: `Departing flight • ${departDate}`, title: outTime, subtitle: `${fromCode} - ${toCode}` },
         { eyebrow: `Returning flight • ${returnDate}`, title: backTime, subtitle: `${toCode} - ${fromCode}` },
       ],
       footerLabel: "Total",
       footerValue: "$395",
-    });
+    };
   }
 
   function buildPaymentRows() {
     const flow = getFlow();
     const options = flow.step().options || [];
-    return renderSelectionList({
+    return {
       selectedIndex: flow.focused,
       rowDataAttr: "data-flight-opt",
       items: options.map((opt) => ({
         icon: opt.icon || "💳",
         title: opt.name || "",
         subtitle: opt.sub || "",
-        detail: "Space",
+        detail: "",
       })),
-    });
+    };
+  }
+
+  function buildScreenSpec(step) {
+    const flow = getFlow();
+    if (step.type === "destination") {
+      const dest = String(flow.data.destination || "").trim();
+      return {
+        intentHeader: "Where to?",
+        layout: ["flight_route_step"],
+        props: {
+          flight_route_step: {
+            mode: "destination",
+            routeRowHtml: buildRouteRowHtml(
+              flow.data.origin || "SFO",
+              dest ? flow.cityToAirport(dest) : "Destination",
+              { originReady: true, destinationReady: !!dest }
+            ),
+          },
+        },
+      };
+    }
+    if (step.type === "dates") {
+      const destination = String(flow.data.destination || "").trim();
+      return {
+        intentHeader: "When?",
+        layout: ["flight_route_step"],
+        props: {
+          flight_route_step: {
+            mode: "dates",
+            routeRowHtml: buildRouteRowHtml(
+              flow.data.origin,
+              destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?",
+              { originReady: true, destinationReady: !!destination }
+            ),
+            depart: flow.data.depart || "",
+            ret: flow.data.return || "",
+          },
+        },
+      };
+    }
+    if (step.type === "options") {
+      return {
+        intentHeader: step.label || "",
+        layout: ["selection_list"],
+        wrapBody: true,
+        bodyClass: "g-flight-content-pad",
+        props: {
+          selection_list: optionRows(step.options || []),
+        },
+      };
+    }
+    if (step.type === "thinking") {
+      return {
+        layout: ["compact_status"],
+        props: {
+          compact_status: { type: "loading", label: "Searching flights...", dotsId: "g-thinking-dots" },
+        },
+      };
+    }
+    if (step.type === "confirm") {
+      return {
+        intentHeader: "Confirm flight",
+        layout: ["info_card"],
+        wrapBody: true,
+        bodyClass: "g-flight-content-pad",
+        props: {
+          info_card: buildConfirmRows(),
+        },
+      };
+    }
+    if (step.type === "payment") {
+      return {
+        intentHeader: "Payment",
+        layout: ["selection_list"],
+        wrapBody: true,
+        bodyClass: "g-flight-content-pad",
+        props: {
+          selection_list: buildPaymentRows(),
+        },
+      };
+    }
+    if (step.type === "done") {
+      return {
+        layout: ["compact_status"],
+        props: {
+          compact_status: { type: "success", label: "Trip booked" },
+        },
+      };
+    }
+    return { layout: [] };
   }
 
   function renderStep(skipGreet = false) {
     const flow = getFlow();
     const step = flow.step();
+    const screenSpec = buildScreenSpec(step);
     const stageEl = document.getElementById("stage");
     const isDestinationStep = step.type === "destination";
     const isDatesStep = step.type === "dates";
@@ -124,58 +223,13 @@ export function createFlightRender({
     }
     stopSiriOrb();
     hideRich();
+    document.body.classList.add("glass-flow-active");
     flow.C.thumb.style.opacity = "0";
     if (isDestinationStep || isDatesStep) startCommandListening?.();
-    const showHeader = (label) => {
-      setIntentHeader?.(label, null);
-      const hdr = document.getElementById("intent-header");
-      if (hdr) hdr.classList.add("glass-intent");
-      positionIntentHeaderAboveMain?.();
-      trackIntentHeaderForTransition?.();
-    };
-    let headerLabel = "";
-    if (isDestinationStep) headerLabel = "Where to?";
-    else if (isDatesStep) headerLabel = "When?";
-    else if (step.type === "options") headerLabel = step.label || "";
-    else if (step.type === "confirm") headerLabel = "Confirm flight";
-    else if (step.type === "payment") headerLabel = "Payment";
-    if (headerLabel) showHeader(headerLabel);
-    else hideIntentHeader?.();
-    let html = "";
-    if (step.type === "destination") {
-      const dest = String(flow.data.destination || "").trim();
-      html = renderFlightRouteStep({
-        mode: "destination",
-        routeRowHtml: buildRouteRowHtml(
-          flow.data.origin || "SFO",
-          dest ? flow.cityToAirport(dest) : "Destination",
-          { originReady: true, destinationReady: !!dest }
-        ),
-      });
-    } else if (step.type === "dates") {
-      const destination = String(flow.data.destination || "").trim();
-      html = renderFlightRouteStep({
-        mode: "dates",
-        routeRowHtml: buildRouteRowHtml(
-          flow.data.origin,
-          destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?",
-          { originReady: true, destinationReady: !!destination }
-        ),
-        depart: flow.data.depart || "",
-        ret: flow.data.return || "",
-      });
-    } else if (step.type === "options") {
-      html = `<div class="g-flight-content-pad">${optionRows(step.options || [])}</div>`;
-    } else if (step.type === "thinking") {
+    const html = renderScreenMarkup(screenSpec);
+    if (step.type === "thinking") {
       addChatBubble("ai", "Searching flights...");
-      html = renderCompactStatus({ type: "loading", label: "Searching flights...", dotsId: "g-thinking-dots" });
       flow.setThinkingTimer(setTimeout(() => { flow.setThinkingTimer(null); flow.nextStep(true); }, THINKING_HOLD_MS));
-    } else if (step.type === "confirm") {
-      html = `<div class="g-flight-content-pad">${buildConfirmRows()}</div>`;
-    } else if (step.type === "payment") {
-      html = `<div class="g-flight-content-pad">${buildPaymentRows()}</div>`;
-    } else if (step.type === "done") {
-      html = renderCompactStatus({ type: "success", label: "Trip booked", icon: "✅" });
     }
 
     if (step.type === "destination") {
@@ -193,10 +247,34 @@ export function createFlightRender({
     } else if (step.shape === "magic") {
       morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
     }
-    if (html) setTimeout(() => showRich(html), 180);
+    if (html) {
+      setTimeout(() => {
+        const richRoot = document.getElementById("c-rich");
+        if (!richRoot) return;
+        richRoot.style.opacity = "0";
+        composeScreen({
+          documentRef: document,
+          richRoot,
+          setIntentHeader,
+          hideIntentHeader,
+          positionIntentHeaderAboveMain,
+          trackIntentHeaderForTransition,
+          spec: screenSpec,
+        });
+        richRoot.classList.add("visible");
+        requestAnimationFrame(() => requestAnimationFrame(() => { richRoot.style.opacity = "1"; }));
+        if (step.type === "done") {
+          requestAnimationFrame(() => {
+            morphTo("pill", { icon: "", primary: "", secondary: "", detail: "" }, toastGeo("Trip booked"));
+          });
+        }
+      }, 180);
+    } else {
+      hideIntentHeader?.();
+    }
     if (!skipGreet && step.aiGreet) addChatBubble("ai", step.aiGreet);
     if (step.type === "done") setTimeout(() => flow.resetToHome(), 2800);
   }
 
-  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildPaymentRows, renderStep };
+  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildPaymentRows, buildScreenSpec, renderStep };
 }
