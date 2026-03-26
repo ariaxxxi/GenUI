@@ -23,9 +23,11 @@ body[data-page-mode="ai"] #sidebar {
 .ai-legacy-debug {
   position: fixed;
   left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 60px;
+  transform: none;
   width: 180px;
+  max-height: calc(100vh - 132px);
+  overflow: auto;
   z-index: 900;
   display: flex;
   flex-direction: column;
@@ -263,12 +265,13 @@ body[data-ai-home-state="context"] #home-state-dot {
 }
 #intent-header.glass-intent #intent-label {
   font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1;
-  letter-spacing: 0;
-  text-transform: none;
-  color: rgba(255,255,255,0.6);
-  margin-left: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  margin-left: 0;
+  padding-left: 0;
 }
 #intent-header.visible {
   opacity: 1; transform: translateY(0);
@@ -279,7 +282,7 @@ body[data-ai-home-state="context"] #home-state-dot {
   left: 50%; transform: translateX(-50%);
   pointer-events: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 20px;
+  font-size: 18px;
   color: rgba(255,255,255,0.6);
   text-align: center;
   white-space: nowrap;
@@ -718,7 +721,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   align-items: center;
   gap: 16px;
   padding: 12px 14px;
-  border-radius: 999px;
+  border-radius: 24px;
   background: transparent;
   box-shadow: none;
   border: none;
@@ -737,6 +740,19 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   font-size: 15px; font-weight: 600;
   color: rgba(255,255,255,0.50);
   flex-shrink: 0;
+  overflow: hidden;
+  transition: opacity 200ms ease;
+}
+.g-ava-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.8;
+  transition: opacity 200ms ease;
+}
+.g-contact-row.selected .g-ava-img {
+  opacity: 1;
 }
 .g-contact-name {
   font-family: 'DM Sans', sans-serif;
@@ -745,9 +761,42 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   color: rgba(255,255,255,0.50);
   transition: color 200ms ease, font-weight 200ms ease;
 }
+.g-contact-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.g-contact-row.has-meta {
+  align-items: flex-start;
+}
+.g-contact-subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.38);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.g-contact-detail {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.30);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .g-contact-row.selected .g-contact-name {
   font-weight: 600;
   color: rgba(255,255,255,1);
+}
+.g-contact-row.selected .g-contact-subtitle,
+.g-contact-row.selected .g-contact-detail {
+  color: rgba(255,255,255,0.72);
 }
 .g-center-row {
   display: flex;
@@ -969,6 +1018,66 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   word-break: break-word;
   overflow-wrap: anywhere;
 }
+.g-info-stack {
+  display: flex;
+  flex-direction: column;
+}
+.g-info-gap {
+  height: 14px;
+}
+.g-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.g-info-eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.38);
+  letter-spacing: .02em;
+}
+.g-info-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.90);
+  line-height: 1.3;
+}
+.g-info-subtitle,
+.g-info-detail {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.38);
+  line-height: 1.25;
+}
+.g-info-detail {
+  color: rgba(255,255,255,0.30);
+}
+.g-info-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+.g-info-footer-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.38);
+}
+.g-info-footer-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.90);
+}
+.g-flight-content-pad {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
 .g-glass-controls {
   display: flex;
   justify-content: center;
@@ -1149,6 +1258,13 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   width: 100%;
   height: 100%;
 }
+#stage.flight-destination-active #home-state-dot {
+  opacity: 0 !important;
+}
+#stage.flight-destination-active #c-thumb {
+  opacity: 0 !important;
+  transform: scale(0.6) !important;
+}
 .flight-route-row-core {
   display: grid;
   grid-template-columns: 1fr 24px 1fr;
@@ -1164,6 +1280,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   font-weight: 600;
   line-height: 1;
   color: rgba(255,255,255,1);
+}
+.flight-destination-origin.placeholder {
+  font-family: 'Inter', 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.3);
 }
 .flight-destination-swap {
   justify-self: center;
@@ -1186,8 +1308,17 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 .flight-destination-target.placeholder {
   font-family: 'Inter', 'DM Sans', sans-serif;
   font-size: 20px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.3);
+  font-weight: 400;
+  color: rgba(255,255,255,0.24);
+}
+body.mode-ai .flight-destination-target.placeholder {
+  font-size: 20px !important;
+}
+body.mode-ai .flight-destination-target.destination-placeholder-fixed {
+  font-family: 'Inter', 'DM Sans', sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  color: rgba(255,255,255,0.24) !important;
 }
 .flight-destination-target.filled {
   font-family: 'DM Sans', sans-serif;
@@ -1957,6 +2088,34 @@ input[type=range]::-webkit-slider-thumb:hover { background: #fff; }
 }
 #drop-main.listening-orb #siri-orb.visible,
 #drop-main.listening-orb #siri-orb { opacity: 1; transform: scale(1); }
+@keyframes sleep-listening-orb-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.68);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes home-listening-orb-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.74);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+body.sleep-to-listening #drop-main.listening-orb #siri-orb,
+body.sleep-to-listening #drop-main.listening-orb #siri-orb.visible {
+  animation: sleep-listening-orb-in 520ms cubic-bezier(0.22,1,0.36,1) both;
+}
+body.home-to-listening #drop-main.listening-orb #siri-orb,
+body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
+  animation: home-listening-orb-in 520ms cubic-bezier(0.22,1,0.36,1) both;
+}
 #siri-orb canvas {
   position: absolute;
   inset: 0;
@@ -2018,6 +2177,22 @@ body[data-ai-home-state="sleep"] #home-start-prompt,
 body[data-ai-home-state="sleep"] #glass-orb-label,
 body[data-ai-home-state="sleep"] #home-state-dot {
   opacity: 0 !important;
+}
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-left,
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-right,
+body[data-ai-home-state="context"][data-current-shape="circle"] #list-pills,
+body[data-ai-home-state="context"][data-current-shape="circle"] #glass-controls-layer,
+body[data-ai-home-state="context"][data-current-shape="circle"] #home-start-prompt,
+body[data-ai-home-state="context"][data-current-shape="circle"] #glass-orb-label,
+body[data-ai-home-state="context"][data-current-shape="circle"] #home-state-dot {
+  opacity: 0 !important;
+}
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main {
+  opacity: 0.96 !important;
+  background: rgba(255,255,255,0.08) !important;
+}
+body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::after {
+  box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
 #drop-main:not(.listening-orb) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 #drop-main { z-index: 3; }

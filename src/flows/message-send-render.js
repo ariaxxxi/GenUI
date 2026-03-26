@@ -1,3 +1,13 @@
+import {
+  renderActionRow,
+  renderChipBar,
+  renderCompactStatus,
+  renderContactHeader,
+  renderInputField,
+  renderSelectionList,
+  renderTextBubble,
+} from "./ui-primitives.js";
+
 export function createMessageSendRender({
   document,
   SHAPES,
@@ -47,7 +57,7 @@ export function createMessageSendRender({
     const flow = getFlow();
     const base = SHAPES[shape] || SHAPES.card;
     const shellHeight = clampFn(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
-    const controlsLift = (shape === "card" || (shape === "card-form" && flow.showCheck)) ? CONTROLS_LIFT : 0;
+    const controlsLift = shape === "card" ? CONTROLS_LIFT : 0;
     return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
   }
 
@@ -103,21 +113,28 @@ export function createMessageSendRender({
   function buildContent() {
     const flow = getFlow();
     if (flow.state === GS.IDLE) return "";
-    if (flow.state === GS.THINKING || flow.state === GS.SENDING) return '<div class="g-center-row"><div class="g-spinner"></div><span id="g-thinking-dots">·</span></div>';
+    if (flow.state === GS.THINKING || flow.state === GS.SENDING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
     if (flow.state === GS.DISAMBIGUATE) {
-      const rows = flow.disambiguateContacts.map((contact, i) => `<div class="g-contact-row ${i === flow.sel ? "selected" : ""}" data-g-contact="${i}"><div class="g-ava">${contact.initials}</div><div class="g-contact-name">${contact.name}</div></div>`).join("");
-      return `<div data-glass-body><div class="g-card-list">${rows}</div></div>`;
+      return `<div data-glass-body>${renderSelectionList({ selectedIndex: flow.sel, items: flow.disambiguateContacts.map((contact) => ({ title: contact.name, initials: contact.initials, avatar: contact.avatar })) })}</div>`;
     }
     if (flow.state === GS.COMPOSE) {
       const contact = flow.contact;
-      const chips = (contact?.chips || []).map((chip, i) => `<div class="g-chip ${i === flow.sel ? "selected" : ""}">${chip.label}</div>`).join("");
       const hasText = !!String(flow.composeText || "").trim();
-      return `<div data-glass-body><div class="g-compose-card"><div class="g-card-header"><div class="g-ava">${contact.initials}</div><div class="g-to-text">To: <span class="g-to-name">${contact.name}</span></div></div><div class="g-chips-wrap ${flow.showChips && !hasText ? "" : "collapsed"}"><div class="g-chips">${chips}</div></div><div class="g-listen-field compose-input ${hasText ? "has-text" : ""}">${hasText ? `<div class="g-listen-text">${flow.composeText}</div>` : '<div class="g-listen-empty">Listening...</div>'}</div></div></div>`;
+      const chipsHtml = renderChipBar({
+        chips: (contact?.chips || []).map((chip, idx) => ({ id: String(idx), label: chip.label })),
+        selectedIndex: flow.sel,
+        navigable: true,
+        collapsed: !(flow.showChips && !hasText),
+      });
+      const inputHtml = renderInputField({ text: flow.composeText, placeholder: "Listening...", hasText });
+      const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
+      return `<div data-glass-body><div class="g-compose-card">${renderContactHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "" })}${chipsHtml}${inputHtml}${maybeCheckRow}</div></div>`;
     }
     if (flow.state === GS.CONFIRM) {
-      return `<div data-glass-body><div class="g-compose-card"><div class="g-card-header"><div class="g-ava">${flow.contact.initials}</div><div class="g-to-text">To: <span class="g-to-name">${flow.contact.name}</span></div></div><div class="g-listen-field" style="box-shadow:inset 0 1px 4px rgba(255,255,255,0.06), inset 0 0 20px rgba(255,255,255,0.02);"><div class="g-listen-text">${flow.msg || ""}</div></div></div></div>`;
+      const contact = flow.contact;
+      return `<div data-glass-body><div class="g-compose-card">${renderContactHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "" })}${renderTextBubble({ text: flow.msg || "", mode: "static", hasText: !!String(flow.msg || "").trim() })}</div></div>`;
     }
-    if (flow.state === GS.SENT) return '<div data-glass-sent class="g-sent-toast"><span class="g-sent-emoji">✅</span><span>Message sent</span></div>';
+    if (flow.state === GS.SENT) return renderCompactStatus({ type: "success", label: "Message sent" });
     return "";
   }
 
@@ -219,7 +236,7 @@ export function createMessageSendRender({
     } else if (flow.state === GS.DISAMBIGUATE) {
       setSimInputState({ label: "Voice Command", placeholder: 'Say a name, e.g. "Tanaka"', hint: "", dictating: false });
     } else if (flow.state === GS.COMPOSE) {
-      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: 'Keep talking to edit · Space = confirm · say "send"', dictating: true });
+      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: "Auto confirm after 2s silence", dictating: true });
     } else if (flow.state === GS.CONFIRM) {
       setSimInputState({ label: "Voice Command", placeholder: '"send", "edit", or "cancel"', hint: "", dictating: false });
     }

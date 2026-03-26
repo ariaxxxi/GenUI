@@ -2,32 +2,6 @@ function fileSafeTimestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-function isElementNode(value) {
-  return value && value.nodeType === Node.ELEMENT_NODE;
-}
-
-function inlineComputedStyles(sourceEl, cloneEl) {
-  if (!isElementNode(sourceEl) || !isElementNode(cloneEl)) return;
-  const sourceStyle = window.getComputedStyle(sourceEl);
-  let cssText = "";
-  for (let i = 0; i < sourceStyle.length; i += 1) {
-    const prop = sourceStyle[i];
-    cssText += `${prop}:${sourceStyle.getPropertyValue(prop)};`;
-  }
-  cloneEl.setAttribute("style", cssText);
-
-  const sourceChildren = sourceEl.children || [];
-  const cloneChildren = cloneEl.children || [];
-  const count = Math.min(sourceChildren.length, cloneChildren.length);
-  for (let i = 0; i < count; i += 1) {
-    inlineComputedStyles(sourceChildren[i], cloneChildren[i]);
-  }
-}
-
-function svgToDataUrl(svgText) {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
-}
-
 export function getStageCaptureRoot(selector = "#stage", documentRef = document) {
   const root = documentRef.querySelector(selector);
   if (!root) {
@@ -53,137 +27,266 @@ export function getCaptureHotkeyAction(event) {
   return null;
 }
 
-export function buildStageSvg({ root, documentRef = document } = {}) {
+/* ── Preprocessing: inline cross-origin images before capture ── */
+
+const TRANSPARENT_1PX = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==";
+
+function imgToDataUrl(imgEl) {
+  const c = document.createElement("canvas");
+  c.width = imgEl.naturalWidth || imgEl.width || 1;
+  c.height = imgEl.naturalHeight || imgEl.height || 1;
+  c.getContext("2d").drawImage(imgEl, 0, 0);
+  return c.toDataURL("image/png");
+}
+
+/**
+ * Pre-process images: replace cross-origin <img> src with inline data URLs.
+ * This prevents CORS errors during capture. Returns a restore function.
+ */
+function preprocessImages(root) {
+  const originals = [];
+  root.querySelectorAll("img").forEach((img) => {
+    const src = img.src;
+    if (!src || src.startsWith("data:")) return;
+    const originalSrc = src;
+    try {
+      // If the image is already loaded and same-origin, convert via canvas
+      if (img.complete && img.naturalWidth > 0) {
+        img.src = imgToDataUrl(img);
+        originals.push({ img, originalSrc });
+      }
+    } catch (_) {
+      // Cross-origin tainted — use placeholder
+      img.src = TRANSPARENT_1PX;
+      originals.push({ img, originalSrc });
+    }
+  });
+  return () => {
+    for (const { img, originalSrc } of originals) {
+      img.src = originalSrc;
+    }
+  };
+}
+
+/**
+ * Pre-process canvas elements: convert to static images.
+ * Returns a restore function.
+ */
+function preprocessCanvases(root) {
+  const originals = [];
+  root.querySelectorAll("canvas").forEach((canvas) => {
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      img.width = canvas.width;
+      img.height = canvas.height;
+      img.style.cssText = canvas.style.cssText;
+      canvas.parentNode.insertBefore(img, canvas);
+      canvas.style.display = "none";
+      originals.push({ canvas, img });
+    } catch (_) { /* tainted — skip */ }
+  });
+  return () => {
+    for (const { canvas, img } of originals) {
+      canvas.style.display = "";
+      img.remove();
+    }
+  };
+}
+
+/* ── Font embedding: inline Google Fonts as base64 @font-face ── */
+
+let _fontStyleEl = null;
+
+async function ensureFontsInlined() {
+  // Only do this once
+  if (_fontStyleEl) return;
+
+  const fontLinks = document.querySelectorAll('link[rel="stylesheet"][href*="fonts.googleapis.com"]');
+  if (fontLinks.length === 0) return;
+
+  const allRules = [];
+  for (const link of fontLinks) {
+    try {
+      const resp = await fetch(link.href);
+      const cssText = await resp.text();
+      const fontFaceRegex = /@font-face\s*\{[^}]+\}/g;
+      let match;
+      while ((match = fontFaceRegex.exec(cssText)) !== null) {
+        allRules.push(match[0]);
+      }
+    } catch (_) { /* fetch failed */ }
+  }
+
+  if (allRules.length === 0) return;
+
+  // Fetch each font URL and replace with base64 data URL
+  const urlCache = new Map();
+  const inlinedRules = [];
+
+  for (const rule of allRules) {
+    let inlined = rule;
+    const urlRegex = /url\(([^)]+)\)/g;
+    let m;
+    const urls = [];
+    while ((m = urlRegex.exec(rule)) !== null) {
+      const url = m[1].replace(/['"]/g, "");
+      if (!url.startsWith("data:")) urls.push({ full: m[0], url });
+    }
+
+    for (const { full, url } of urls) {
+      if (!urlCache.has(url)) {
+        try {
+          const resp = await fetch(url);
+          const blob = await resp.blob();
+          const dataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+          urlCache.set(url, dataUrl);
+        } catch (_) {
+          urlCache.set(url, null);
+        }
+      }
+      const dataUrl = urlCache.get(url);
+      if (dataUrl) {
+        inlined = inlined.replace(full, `url(${dataUrl})`);
+      }
+    }
+    inlinedRules.push(inlined);
+  }
+
+  // Inject as a <style> element so all capture libraries can access these fonts
+  _fontStyleEl = document.createElement("style");
+  _fontStyleEl.textContent = inlinedRules.join("\n");
+  document.head.appendChild(_fontStyleEl);
+}
+
+/* ── Capture via modern-screenshot ── */
+
+function getCaptureOptions(root) {
+  const width = Math.ceil(root.getBoundingClientRect().width);
+  return {
+    backgroundColor: null,
+    scale: 2,
+    width,
+    height: width,
+    style: {
+      "mix-blend-mode": "normal",
+      "animation": "none",
+      width: width + "px",
+      height: width + "px",
+      overflow: "hidden",
+    },
+    fetch: {
+      placeholderImage: TRANSPARENT_1PX,
+      bypassingCache: false,
+    },
+    timeout: 30000,
+  };
+}
+
+function hideStageOutline() {
+  const style = document.createElement("style");
+  style.textContent = "#stage::after { box-shadow: none !important; }";
+  document.head.appendChild(style);
+  return () => style.remove();
+}
+
+async function captureToBlob(root) {
+  const { domToBlob } = window.modernScreenshot;
+  await ensureFontsInlined();
+  const restoreOutline = hideStageOutline();
+  const restoreImages = preprocessImages(root);
+  const restoreCanvases = preprocessCanvases(root);
+  try {
+    return await domToBlob(root, getCaptureOptions(root));
+  } finally {
+    restoreCanvases();
+    restoreImages();
+    restoreOutline();
+  }
+}
+
+async function captureToPng(root) {
+  const { domToPng } = window.modernScreenshot;
+  await ensureFontsInlined();
+  const restoreOutline = hideStageOutline();
+  const restoreImages = preprocessImages(root);
+  const restoreCanvases = preprocessCanvases(root);
+  try {
+    return await domToPng(root, getCaptureOptions(root));
+  } finally {
+    restoreCanvases();
+    restoreImages();
+    restoreOutline();
+  }
+}
+
+/* ── Public API ── */
+
+export async function copyStagePngToClipboard({ root, documentRef = document } = {}) {
   const captureRoot = root || getStageCaptureRoot("#stage", documentRef);
-  if (!captureRoot) return null;
+  if (!captureRoot) return false;
 
-  const rect = captureRoot.getBoundingClientRect();
-  const width = Math.max(1, Math.ceil(rect.width));
-  const height = Math.max(1, Math.ceil(rect.height));
-  const clone = captureRoot.cloneNode(true);
-  inlineComputedStyles(captureRoot, clone);
-  clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-  clone.style.margin = "0";
+  if (!navigator.clipboard || typeof window.ClipboardItem === "undefined" || !navigator.clipboard.write) {
+    console.warn("[stage-capture] Clipboard image write not supported.");
+    return false;
+  }
 
-  const nsSvg = "http://www.w3.org/2000/svg";
-  const svgEl = documentRef.createElementNS(nsSvg, "svg");
-  svgEl.setAttribute("xmlns", nsSvg);
-  svgEl.setAttribute("width", String(width));
-  svgEl.setAttribute("height", String(height));
-  svgEl.setAttribute("viewBox", `0 0 ${width} ${height}`);
-
-  const foreignObject = documentRef.createElementNS(nsSvg, "foreignObject");
-  foreignObject.setAttribute("x", "0");
-  foreignObject.setAttribute("y", "0");
-  foreignObject.setAttribute("width", "100%");
-  foreignObject.setAttribute("height", "100%");
-
-  const wrapper = documentRef.createElement("div");
-  wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-  wrapper.style.width = "100%";
-  wrapper.style.height = "100%";
-  wrapper.appendChild(clone);
-  foreignObject.appendChild(wrapper);
-  svgEl.appendChild(foreignObject);
-
-  const serialized = new XMLSerializer().serializeToString(svgEl);
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>${serialized}`;
-
-  return { svg, width, height };
+  try {
+    const blob = await captureToBlob(captureRoot);
+    if (!blob) {
+      console.warn("[stage-capture] Capture returned no blob.");
+      return false;
+    }
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    return true;
+  } catch (err) {
+    console.warn("[stage-capture] PNG copy failed:", err);
+    return false;
+  }
 }
 
 export async function exportStageSvg({ root, filenamePrefix = "stage", documentRef = document } = {}) {
-  const payload = buildStageSvg({ root, documentRef });
-  if (!payload) return false;
-  const blob = new Blob([payload.svg], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const anchor = documentRef.createElement("a");
-  anchor.href = url;
-  anchor.download = `${filenamePrefix}-${fileSafeTimestamp()}.svg`;
-  documentRef.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-  return true;
-}
+  const captureRoot = root || getStageCaptureRoot("#stage", documentRef);
+  if (!captureRoot) return false;
 
-function createCanvas(width, height) {
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(width * dpr));
-  canvas.height = Math.max(1, Math.round(height * dpr));
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.scale(dpr, dpr);
-  return canvas;
-}
-
-async function drawSvgToCanvas(svgBlob, svgText, width, height) {
-  const canvas = createCanvas(width, height);
-  if (!canvas) return null;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-
-  if (typeof createImageBitmap === "function") {
-    try {
-      const bitmap = await createImageBitmap(svgBlob);
-      ctx.drawImage(bitmap, 0, 0, width, height);
-      bitmap.close?.();
-      return canvas;
-    } catch (err) {
-      console.warn("[stage-capture] createImageBitmap failed, falling back to Image:", err);
+  try {
+    const pngDataUrl = await captureToPng(captureRoot);
+    if (!pngDataUrl) {
+      console.warn("[stage-capture] Capture returned no data.");
+      return false;
     }
-  }
 
-  const sources = [URL.createObjectURL(svgBlob), svgToDataUrl(svgText)];
-  try {
-    for (const src of sources) {
-      const image = new Image();
-      const loaded = new Promise((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = (err) => reject(err);
-      });
-      image.src = src;
-      await loaded;
-      ctx.clearRect(0, 0, width, height);
-      ctx.drawImage(image, 0, 0, width, height);
-      return canvas;
-    }
-  } finally {
-    URL.revokeObjectURL(sources[0]);
-  }
-  return null;
-}
+    const rect = captureRoot.getBoundingClientRect();
+    const size = Math.ceil(rect.width) * 2;
+    const width = size;
+    const height = size;
 
-export async function copyStagePngToClipboard({ root, documentRef = document } = {}) {
-  const payload = buildStageSvg({ root, documentRef });
-  if (!payload) return false;
-  const svgBlob = new Blob([payload.svg], { type: "image/svg+xml;charset=utf-8" });
-  let canvas = null;
-  try {
-    canvas = await drawSvgToCanvas(svgBlob, payload.svg, payload.width, payload.height);
-  } catch (err) {
-    console.warn("[stage-capture] Failed to render SVG image for clipboard copy:", err);
-    return false;
-  }
-  if (!canvas) {
-    console.warn("[stage-capture] Unable to render canvas for clipboard copy.");
-    return false;
-  }
-  const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!pngBlob) {
-    console.warn("[stage-capture] Failed to encode PNG blob.");
-    return false;
-  }
-  if (!navigator.clipboard || typeof window.ClipboardItem === "undefined" || !navigator.clipboard.write) {
-    console.warn("[stage-capture] Clipboard image write not supported in this environment.");
-    return false;
-  }
-  try {
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
+    // Figma-compatible SVG with embedded PNG raster at 2x
+    const svgContent = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+      `<image href="${pngDataUrl}" x="0" y="0" width="${width}" height="${height}"/>`,
+      "</svg>",
+    ].join("");
+
+    const blob = new Blob([svgContent], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = documentRef.createElement("a");
+    anchor.href = url;
+    anchor.download = `${filenamePrefix}-${fileSafeTimestamp()}.svg`;
+    documentRef.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
     return true;
   } catch (err) {
-    console.warn("[stage-capture] Clipboard write failed:", err);
+    console.warn("[stage-capture] SVG export failed:", err);
     return false;
   }
 }

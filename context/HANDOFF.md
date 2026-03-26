@@ -1060,3 +1060,358 @@ Clear voice visualization shadow when returning to home stage
 
 ## Recommended next step
 1. Manual check in `ai.html`: run message/weather flow, return to home, confirm no residual container voice shadow remains.
+
+---
+
+## Task title
+Fix index components toggles so they actually add/remove stage components
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed stage component toggles in `index.html` flow so checkbox state now drives actual UI behavior.
+- Root cause: component mutations were applied to stage data, but render paths did not consume component flags for content visibility.
+- Implemented two runtime fixes:
+  - Editor visibility now follows stage components (`icon`, `primary`, `secondary`, `detail`, `image`).
+  - Stage render content now respects component presence; removed components render as empty/absent.
+
+## Files changed
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/morph-layout.js`
+
+## Validation performed
+- Manual headless repro on `index.html` (`http://localhost:5211`):
+  - Unchecked `primary` component toggle.
+  - Confirmed checkbox state persisted (`true -> false`).
+  - Confirmed `#editor-primary-field` became hidden.
+  - Confirmed `#c-primary` stage text became empty.
+
+## Remaining issues / caveats
+- None found for this scoped fix.
+
+## Recommended next step
+1. Quick visual pass in browser for other component toggles (`icon`, `secondary`, `detail`, `image`) to confirm expected behavior parity.
+
+---
+
+## Task title
+Fix prototype Legacy shape buttons (Split) no-op
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed `manualShape(...)` runtime crash that prevented Legacy shape buttons from working.
+- Root cause: `manualShape` unconditionally accessed optional elements (`#shape-panel`, `#input-area`) and threw when they were absent in current prototype layout.
+- Added null-safe guards so Split (and other manualShape buttons) execute without throwing.
+
+## Files changed
+- `src/tool/modules/manual-demo.js`
+
+## Validation performed
+- Headless browser check on `index.html`:
+  - opened Config -> Legacy / Debug
+  - clicked `Split`
+  - confirmed stage width changed from `420px` to `100px` (split geometry applied)
+
+## Remaining issues / caveats
+- None for this scoped fix.
+
+## Recommended next step
+1. If needed, we can re-add `#shape-panel` UI for Custom shape editing to fully restore previous Legacy custom workflow.
+
+---
+
+## Task title
+Compose stage: remove confirm check button and auto-confirm after 2s silence
+
+## Completion status
+- Completed
+
+## Summary
+- Removed compose-stage confirm check button overlay behavior.
+- Updated compose flow to auto-transition to Confirm after 2 seconds of no new dictation/input.
+- Kept confirm stage actions (`send`, `edit`, `cancel`) unchanged.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- Verified compose overlay controls now render only for Confirm state (no compose checkmark rendered).
+- Verified compose input handler maintains a 2s auto-confirm timer and transitions to Confirm when timer elapses.
+- Updated compose hint copy to: `Auto confirm after 2s silence`.
+
+## Remaining issues / caveats
+- Existing unrelated smoke/UI flakiness in this branch remains (debug-toggle interception); not introduced by this change.
+
+## Recommended next step
+1. Manual browser pass in `ai.html`: dictate message in Compose, stop for ~2s, confirm it auto-navigates to Confirm without a compose check button.
+
+---
+
+## Task title
+Prototype mode: add Home Context preset + AI-like Listening/Thinking legacy buttons
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new built-in stage preset `home-context` (rendered as pill) for prototype mode stage library.
+- Added prototype runtime style sync for `home-context` stage so primary/secondary use home-context typography treatment.
+- Updated prototype Legacy / Debug section to include AI-equivalent:
+  - `Listening` -> `manualShape('listening')`
+  - `Thinking` -> `manualShape('magic')`
+- Kept existing `Home`, `List`, `Split`, `Custom` controls.
+
+## Files changed
+- `src/shared/scenario-data.js`
+- `src/tool/index-app.js`
+- `src/styles/editor.css`
+- `index.html`
+
+## Validation performed
+- Headless browser check on `index.html`:
+  - Stage chips include `Home Context` preset.
+  - Legacy `Listening` and `Thinking` buttons are clickable and morph stage geometry.
+
+## Remaining issues / caveats
+- Home-context stage uses stage content/icon from current scenario; if exact AI home-context copy/icon is required for prototype preset defaults, that should be added as a separate content-default pass.
+
+## Recommended next step
+1. If desired, I can set deterministic default content/icon for `home-context` preset (e.g., dot icon + split primary/secondary copy) so new scenarios match AI home look out of the box.
+
+---
+
+## Task title
+Sleep -> Listening direct wake (button + wake-word), disable auto-home wake from text input
+
+## Completion status
+- Completed
+
+## Summary
+- Updated AI wake flow so sleep can transition directly to listening without going through home context morph.
+- Listening trigger paths now use direct wake-listening behavior:
+  - Legacy `Listening` button now calls `armAiWakeListening()`.
+  - Keyboard `L` and `0` paths use `armAiWakeListening()`.
+- Removed auto-home wake behavior from typed input while sleeping:
+  - typing into `#sim-input` in sleep no longer calls `ensureHomeAwake()` or morphs to home/listening.
+- Gated request processing so typed/chip actions don’t execute while AI is asleep unless already awake/flow-active.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/ai/input-actions.js`
+- `ai.html`
+
+## Validation performed
+- Headless browser check on `ai.html`:
+  - In sleep, typing text keeps state as `sleep` + shape `circle`.
+  - Clicking `Listening` in sleep transitions to `homeState=context` and shape `listening` directly.
+
+## Remaining issues / caveats
+- Wake-word validation in automated headless run is limited by SpeechRecognition availability; path uses same `armAiWakeListening()` function as the verified button trigger.
+
+## Recommended next step
+1. Manual run with microphone: from sleep, say “hey bixby” and verify direct transition to listening without interim home-context display.
+
+---
+
+## Task title
+Flight destination/date header + command voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Added step-specific glass intent headers in flight flow:
+  - Destination step: `where are you going?`
+  - Dates step: `when?`
+- Headers use the same intent-header styling/placement behavior as the existing `Which Hiro?` treatment (`glass-intent` + tracked positioning above main container).
+- Enabled command-mode listening on destination and dates steps to ensure live voice-viz behavior is active.
+- Added a stage class (`flight-voice-viz`) on destination/dates steps so voice visualization also applies glow/shadow to the stage container itself during those steps.
+- Preserved/extended cleanup on flow reset:
+  - hide intent header
+  - remove `flight-destination-active` and `flight-voice-viz` classes
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/ai/voice-engine.js`
+
+## Validation performed
+- Static verification of flow wiring:
+  - Flight render receives shell header callbacks and command-listening callback.
+  - Destination/dates steps toggle expected stage classes and header text.
+  - Voice engine now applies drop container shadow when `#stage.flight-voice-viz` is present.
+
+## Remaining issues / caveats
+- No browser run executed in this patch step; behavior should be validated in interactive AI mode for exact visual intensity/timing.
+
+## Recommended next step
+1. Manual check in `ai.html`: start flight flow and verify headers and voice glow on destination/date steps, then confirm header/extra classes clear on subsequent steps and on reset to home.
+
+---
+
+## Task title
+Flow startup thinking hold + orb-top thinking copy
+
+## Completion status
+- Completed
+
+## Summary
+- Added a mandatory startup thinking phase for both flows (`1600ms`) before entering their first actionable step.
+- Message flow startup now enters `THINKING` first and shows orb-top text `Searching contact...`.
+- Flight flow startup now morphs to magic/thinking first and shows orb-top text `Initiating...`.
+- Added shell-level orb-label override APIs so non-message flows can show centered text above orb:
+  - `setOrbLabel(text)`
+  - `clearOrbLabel()`
+- Updated message flow seeded-start callers to pass seed text into `messageFlow.start(seedText)` so seeded requests respect the startup hold instead of bypassing it.
+
+## Files changed
+- `src/ai/ai-shell.js`
+- `src/flows/message-send.js`
+- `src/ai/input-actions.js`
+- `src/flows/flight-booking.js`
+
+## Validation performed
+- Static code-path validation only:
+  - both flow start paths now include `1600ms` startup timers
+  - required startup copy strings are wired
+  - orb-label override API is integrated into flight startup/reset
+
+## Remaining issues / caveats
+- No browser runtime test executed in this step.
+
+## Recommended next step
+1. Manual verify in `ai.html`: start send-message and book-flight flows; confirm they both show startup thinking for ~1.6s with correct copy above orb before continuing.
+
+---
+
+## Task title
+Post-flow listening reliability + header/label polish + flight header transition fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed a regression where re-entering listening after completing a flow sometimes looked active but did not actually listen:
+  - Added passive command-listening re-arm when returning to sleep/home states.
+  - Ensured `armAiWakeListening()` explicitly starts command recognition before morphing to listening.
+- Tuned top labels/headers for spacing and readability:
+  - Thinking/orb-top label font size reduced (20px -> 18px).
+  - Orb-top label vertical offset increased upward for more gap.
+  - Intent header vertical offset increased upward for more gap from container.
+- Fixed flight flow header glitch during transition from startup thinking (magic) to destination:
+  - Destination header is now delayed slightly after morph settles when entering from thinking.
+  - Added timer cleanup to avoid stale/double header flashes.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `src/ai/ai-shell.js`
+- `src/styles/ai.css`
+- `src/flows/flight-render.js`
+
+## Validation performed
+- Static verification of code paths and timing logic.
+- No full interactive browser pass executed in this update.
+
+## Remaining issues / caveats
+- Final motion quality should be verified manually at runtime for exact visual feel/timing.
+
+## Recommended next step
+1. Manual regression pass in `ai.html`:
+   - complete message/flight flow -> re-enter listening and verify speech is captured.
+   - confirm orb-top thinking text and intent headers have the new spacing.
+   - confirm no header jump on flight thinking -> destination transition.
+
+---
+
+## Task title
+GlassOS primitive refactor + broader migration (message full, flight subset)
+
+## Completion status
+- Completed
+
+## Summary
+- Added a shared primitive renderer module for glass flow UI:
+  - `renderContactHeader`
+  - `renderSelectionList`
+  - `renderChipBar`
+  - `renderTextBubble`
+  - `renderInfoCard`
+  - `renderActionRow`
+  - `renderInputField`
+  - `renderCompactStatus`
+- Refactored message flow rendering to compose primitives instead of inline screen templates while keeping existing state/timer logic and CSS classes.
+- Switched confirm action controls markup to the shared `renderActionRow` primitive (same visuals/icons, parent still controls selection state).
+- Migrated flight flow subset to primitives:
+  - options/payment rows -> `renderSelectionList` (flight variant)
+  - confirm summary cards -> `renderInfoCard` (flight-confirm variant)
+  - done summary -> `renderInfoCard`
+- Preserved existing class-based styling and transition behavior; no visual token redesign introduced.
+
+## Files changed
+- `src/flows/ui-primitives.js` (new)
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-render.js`
+
+## Validation performed
+- Module import/parse validation:
+  - `node -e "import('./src/flows/message-send-render.js'); import('./src/flows/message-send.js'); import('./src/flows/flight-render.js'); import('./src/flows/ui-primitives.js'); console.log('ok')"`
+- No browser runtime smoke run executed in this pass.
+
+## Remaining issues / caveats
+- `flow.showCheck` remains parent-driven but is currently never set to `true` by existing runtime logic; compose paused-check visual path is implemented at primitive level but not newly activated in flow logic.
+- Full visual parity should be confirmed interactively in `ai.html` for edge transitions.
+
+## Recommended next step
+1. Manual smoke in `ai.html`:
+   - send-message full path (disambiguate -> compose -> confirm -> sending -> sent)
+   - flight options/payment selection highlighting and confirm/done cards
+2. If needed, wire the compose pause-check timing to set `showCheck=true` when required by product behavior.
+
+---
+
+## Task title
+Flight full primitive migration + message-style list unification
+
+## Completion status
+- Completed
+
+## Summary
+- Migrated flight flow rendering to primitive-only output for all step content:
+  - destination -> `renderInfoCard`
+  - dates -> `renderInfoCard`
+  - options -> `renderSelectionList` (message-style rows)
+  - thinking -> `renderCompactStatus(loading)`
+  - confirm -> `renderInfoCard` stacked sections + footer
+  - payment -> `renderSelectionList` (message-style rows)
+  - done -> `renderInfoCard`
+- Removed remaining flight-specific list renderer usage (`rich-flight-row` path) from flight render logic.
+- Extended shared primitives:
+  - `renderSelectionList` now supports canonical message-style rows with `title/subtitle/detail`, icon/avatar/initials mapping, and configurable row data attribute.
+  - `renderInfoCard` now supports section stacks and optional footer summary.
+- Added minimal CSS for new primitive data slots (`g-contact-body`, `g-contact-subtitle`, `g-contact-detail`, `g-info-*`) while preserving existing visual language.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/flight-render.js`
+- `src/styles/ai.css`
+
+## Validation performed
+- Module parse/import check:
+  - `node -e "import('./src/flows/ui-primitives.js'); import('./src/flows/flight-render.js'); import('./src/flows/flight-booking.js'); import('./src/flows/message-send-render.js'); console.log('ok')"`
+
+## Remaining issues / caveats
+- Flight-specific legacy CSS selectors (`.rich-flight-row`, destination/date legacy blocks) remain in stylesheet but are no longer used by the updated flight renderer output.
+- No browser runtime smoke test executed in this pass.
+
+## Recommended next step
+1. Manual `ai.html` flight run-through to verify:
+   - list rows now match message-style selection visuals
+   - destination/date/confirm/done screens render correctly with primitive cards
+   - keyboard focus and selection transitions remain stable.

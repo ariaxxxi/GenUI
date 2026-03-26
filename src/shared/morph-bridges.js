@@ -63,7 +63,8 @@ export function createMorphBridges(ctx) {
       left.style.transform = 'translate(-48px,-48px)'; right.style.transform = 'translate(-48px,-48px)'; left.style.opacity = '0'; right.style.opacity = '0'; left.style.pointerEvents = 'none'; right.style.pointerEvents = 'none';
       state.currentShape = 'dot';
       state.lastMainGeo = { ...SHAPES.dot.main };
-      runtime.applyContentPositions('dot', SHAPES.dot.main.w, SHAPES.dot.main.h);
+      // Keep split->dot intermediate pass visually clean (no inner thumb flash).
+      runtime.applyContentPositions('dot', SHAPES.dot.main.w, SHAPES.dot.main.h, 0, 0, 'split');
       if (shape === 'dot') {
         if (contentData) runtime.applyContent(contentData);
         callbacks.updateActive('dot');

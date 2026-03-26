@@ -65,8 +65,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
         document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
         return;
       }
+      const flightContainerViz = document.getElementById('stage')?.classList.contains('flight-voice-viz') === true;
       if (glowEl) glowEl.style.boxShadow = shadow(level);
-      if (state === GS.DISAMBIGUATE) {
+      if (state === GS.DISAMBIGUATE || flightContainerViz) {
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
       } else {
         if (dropMain) dropMain.style.setProperty('box-shadow', '');

@@ -24,7 +24,7 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     currentTransitionAnimMs: 450,
   };
 
-  const constants = { P:20, PILL_NO_ICON_P:32, PILL_ICON_P:16, CARD_P:24, BOTTOM_ALIGN_REF_H:580, CARD_MEDIA_BOTTOM_P:30, CARD_DIVIDER_GAP:10, CARD_PRIMARY_GAP:14, CARD_PRIMARY_TO_SECONDARY_GAP:8, CARD_SECONDARY_TO_DETAIL_GAP:8, CARD_DETAIL_TO_MEDIA_GAP:24, CARD_MEDIA_STACK_GAP:8, TS:60, TBR:'30px', GAP:8 };
+  const constants = { P:20, PILL_NO_ICON_P:32, PILL_ICON_P:16, CARD_P:24, BOTTOM_ALIGN_REF_H:420, CARD_MEDIA_BOTTOM_P:30, CARD_DIVIDER_GAP:10, CARD_PRIMARY_GAP:14, CARD_PRIMARY_TO_SECONDARY_GAP:8, CARD_SECONDARY_TO_DETAIL_GAP:8, CARD_DETAIL_TO_MEDIA_GAP:24, CARD_MEDIA_STACK_GAP:8, TS:60, TBR:'30px', GAP:8 };
   const runtime = {};
   const ctx = { DROPS, C, detailMeasureEl, callbacks, constants, state, runtime };
   const layout = createMorphLayout(ctx);

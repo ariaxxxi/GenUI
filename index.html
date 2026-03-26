@@ -27,7 +27,6 @@
   }
 </style>
 
-<div id="wordmark">genui sys</div>
 
 <div id="left-sidebar">
   <div class="sb-section" data-collapsible="1">
@@ -406,16 +405,10 @@
           <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
           <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
         </div>
-        <div id="shape-panel">
-          <div class="sp-group"><span class="sp-lbl">Width</span><input class="sp-inp" id="sp-w" type="text" inputmode="numeric" value="280"/></div>
-          <div class="sp-group"><span class="sp-lbl">Height</span><input class="sp-inp" id="sp-h" type="text" inputmode="numeric" value="140"/></div>
-          <div class="sp-group"><span class="sp-lbl">Radius</span><input class="sp-inp" id="sp-r" type="text" inputmode="numeric" value="24"/></div>
-          <button id="sp-apply" onclick="applyCustomShape()">Apply</button>
-        </div>
       </div>
     </div>
 
-    <div class="sb-section collapsed" data-collapsible="1">
+    <div class="sb-section" data-collapsible="1">
       <button class="sb-section-toggle" type="button">
         <div class="sb-heading">Export</div>
         <span class="sb-chevron">▾</span>
@@ -423,7 +416,7 @@
       <div class="sb-section-body">
         <div class="sb-btn-row">
           <button class="sb-mini-btn" type="button" onclick="copyStagePng()">Copy PNG</button>
-          <button class="sb-mini-btn" type="button" onclick="exportStageSvg()">Export SVG</button>
+          <button class="sb-mini-btn" type="button" onclick="exportStageSvg()" disabled style="opacity:0.3;cursor:not-allowed">Export SVG</button>
         </div>
       </div>
     </div>
@@ -435,6 +428,7 @@
 
 <a class="entry-point-btn" href="./ai.html">ai mode</a>
 
+<script src="src/shared/modern-screenshot.min.js"></script>
 <script type="module" src="src/tool/index-app.js"></script>
 </body>
 </html>

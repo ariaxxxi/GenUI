@@ -1,6 +1,7 @@
 export function initInputActions({
   input,
   ensureHomeAwake,
+  canProcessRequest,
   responseMode,
   RESPONSE_MODE,
   selectedScenario,
@@ -28,8 +29,7 @@ export function initInputActions({
     clearActiveFlows();
     morph.hideRich();
     if (input) input.value = "";
-    messageFlow.start();
-    setTimeout(() => { void messageFlow.handleInputSubmit(userText); }, 60);
+    messageFlow.start(userText);
     return true;
   }
 
@@ -73,7 +73,7 @@ export function initInputActions({
   }
 
   async function processRequest(userText) {
-    ensureHomeAwake?.();
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) return false;
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
     if (isMessageIntent(userText)) return startMessageFlowWithText(userText);
     morph.hideRich();
@@ -84,7 +84,7 @@ export function initInputActions({
   }
 
   function handleSend() {
-    ensureHomeAwake?.();
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
@@ -115,7 +115,7 @@ export function initInputActions({
 
   function fireChip(el) {
     const text = String(el?.textContent || "").trim();
-    ensureHomeAwake?.();
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) return;
     clearActiveFlows();
     input.value = text;
     setTimeout(() => {
@@ -123,8 +123,7 @@ export function initInputActions({
         input.value = "";
         clearActiveFlows();
         morph.hideRich();
-        messageFlow.start();
-        setTimeout(() => { void messageFlow.handleInputSubmit("send message to hiro"); }, 60);
+        messageFlow.start("send message to hiro");
         return;
       }
       input.value = "";

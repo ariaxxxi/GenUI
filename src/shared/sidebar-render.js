@@ -93,6 +93,9 @@ export function createSidebarRender(ctx, refs) {
   function renderScenarioEditor() {
     const scenario = ctx.selectedScenario();
     const stage = ctx.stageById(scenario?.shape);
+    const visibleTextFields = ctx.stageVisibleEditorFields(stage);
+    const hasIcon = ctx.stageHasComponent(stage, 'icon');
+    const hasImage = ctx.stageHasComponent(stage, 'image');
     if (ctx.UI.scenarioName) ctx.UI.scenarioName.value = scenario?.name || '';
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
@@ -111,6 +114,11 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioSecondaryColor) ctx.UI.scenarioSecondaryColor.value = typography.secondary.color;
     if (ctx.UI.scenarioDetailSize) ctx.UI.scenarioDetailSize.value = String(typography.detail.size);
     if (ctx.UI.scenarioDetailColor) ctx.UI.scenarioDetailColor.value = typography.detail.color;
+    if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !hasIcon);
+    if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', !visibleTextFields.has('primary'));
+    if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', !visibleTextFields.has('secondary'));
+    if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', !visibleTextFields.has('detail'));
+    if (ctx.UI.editorMedia) ctx.UI.editorMedia.classList.toggle('hidden', !hasImage);
     renderScenarioStageChips();
     renderStageConfigPanel();
     renderScenarioMediaEditor(scenario, stage);

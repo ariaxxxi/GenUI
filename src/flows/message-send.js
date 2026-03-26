@@ -1,14 +1,15 @@
 import { createMessageSendRender } from "./message-send-render.js";
 import { createMessageSendVoice } from "./message-send-voice.js";
+import { renderActionRow } from "./ui-primitives.js";
 import { phrase } from "../ai/phrases.js";
 
 const CONTACTS = [
-  { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", chips: [
+  { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", avatar: "src/assets/avatar1.png", chips: [
     { label: "Design review", message: "Hey, do you have time for a design review sometime?" },
     { label: "Share a file", message: "I have a file to share with you — when's a good time?" },
     { label: "Schedule a sync", message: "Want to schedule a quick sync this week?" },
   ]},
-  { id: 2, name: "Hiro Horri", initials: "HH", relation: "Friend", chips: [
+  { id: 2, name: "Hiro Horii", initials: "HH", relation: "Friend", avatar: "src/assets/avatar2.png", chips: [
     { label: "What's up?", message: "Hey! What's up? Haven't caught up in a while." },
     { label: "Lunch this week?", message: "Hey, want to grab lunch sometime this week?" },
     { label: "Check this out", message: "Hey, I found something cool I wanted to share with you!" },
@@ -16,9 +17,10 @@ const CONTACTS = [
 ];
 
 export function createMessageSendFlow(ctx) {
+  const FLOW_START_THINK_MS = 1600;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
-  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "" };
-  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null };
+  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
+  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   const controlsGap = 14;
@@ -101,8 +103,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     let mode = "";
-    if (flow.state === GS.COMPOSE) mode = "compose";
-    else if (flow.state === GS.CONFIRM) mode = "confirm";
+    if (flow.state === GS.CONFIRM) mode = "confirm";
     if (!mode) {
       if (controlsMode === "confirm") {
         const row = layer.querySelector(".g-action-row");
@@ -136,17 +137,15 @@ export function createMessageSendFlow(ctx) {
       }
     }
     if (controlsMode !== mode) {
-      layer.innerHTML = mode === "compose"
-        ? `<div class="g-glass-controls"><div class="g-checkmark ${flow.showCheck ? "enter" : "hidden"}"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L9 18l10-14"/></svg></div></div>`
-        : `<div class="g-glass-controls"><div class="g-action-row enter">${[
-          `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>`,
-          `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>`,
-          `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>`,
-        ].map((icon, i) => `<div class="g-action-btn ${i === flow.sel ? "selected" : ""}">${icon}</div>`).join("")}</div></div>`;
+      layer.innerHTML = `<div class="g-glass-controls">${renderActionRow({
+        selectedIndex: flow.sel,
+        actions: [
+          { id: "send", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>` },
+          { id: "edit", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>` },
+          { id: "cancel", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>` },
+        ],
+      })}</div>`;
       controlsMode = mode;
-    } else if (mode === "compose") {
-      const mark = layer.querySelector(".g-checkmark");
-      if (mark) mark.classList.toggle("hidden", !flow.showCheck);
     } else {
       layer.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.sel));
     }
@@ -156,7 +155,7 @@ export function createMessageSendFlow(ctx) {
       cancelControlsTracking();
       return;
     }
-    if (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && flow.showCheck)) {
+    if (flow.state === GS.CONFIRM) {
       trackControlsForTransition();
     } else {
       cancelControlsTracking();
@@ -211,6 +210,10 @@ export function createMessageSendFlow(ctx) {
   }
 
   function transitionTo(state, voiceText = "") {
+    if (state !== GS.COMPOSE && timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
     if (timers.dots) clearInterval(timers.dots);
     timers.dots = null;
     if (flow.state === GS.COMPOSE && state !== GS.COMPOSE) {
@@ -281,6 +284,9 @@ export function createMessageSendFlow(ctx) {
     flow.aiVoice = "";
     flow.interimText = "";
     flow._pendingMsg = "";
+    flow.replaceComposeOnNextDictation = false;
+    flow.dictationInterimActive = false;
+    flow.dictationBaseText = "";
     speakOutput("");
     if (ctx.C?.rich) {
       ctx.C.rich.innerHTML = "";
@@ -427,57 +433,10 @@ export function createMessageSendFlow(ctx) {
     flow.showChips = false;
     flow.showCheck = false;
 
-    const chipEls = ctx.C.rich.querySelectorAll(".g-chip");
-    chipEls.forEach((el, i) => {
-      const delay = i === idx ? 0 : 40 + Math.abs(i - idx) * 30;
-      el.style.animationDelay = `${delay}ms`;
-      el.classList.add("g-chip-exit");
-    });
-    const wrap = ctx.C.rich.querySelector(".g-chips-wrap");
-    if (wrap) wrap.classList.add("collapsed");
-    const empty = ctx.C.rich.querySelector(".g-listen-empty");
-    if (empty) {
-      empty.style.transition = "opacity 300ms ease";
-      empty.style.opacity = "0";
-    }
-
-    const shape = render.glassStateShape(flow.state);
-    const geo = render.dynamicGeo(shape, render.contentHeightPx());
-    const cur = ctx.morph.getCurrentMainGeometry() || {};
-    if (Math.abs(geo.main.h - (Number(cur.h) || 0)) > 1 || Math.abs(geo.main.ty - (Number(cur.ty) || 0)) > 1) {
-      ctx.morph.morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
-    }
-
-    setTimeout(() => {
-      if (!isEpochAlive(epoch)) return;
-      const field = ctx.C.rich.querySelector(".g-listen-field");
-      if (!field) return;
-      field.dataset.pulseLock = "1";
-      field.classList.add("has-text");
-      const old = field.querySelector(".g-listen-empty");
-      const textEl = document.createElement("div");
-      textEl.className = "g-listen-text g-text-magic";
-      textEl.textContent = chip.message;
-      if (old) old.replaceWith(textEl);
-      else field.appendChild(textEl);
-      field.classList.remove("text-arriving");
-      void field.offsetHeight;
-      field.classList.add("text-arriving");
-      setTimeout(() => {
-        if (!isEpochAlive(epoch)) return;
-        delete field.dataset.pulseLock;
-      }, 920);
-    }, 300);
-
-    setTimeout(() => {
-      if (!isEpochAlive(epoch)) return;
-      flow.showCheck = true;
-      forceControlsRebuild();
-      renderControls();
-      const shape2 = render.glassStateShape(flow.state);
-      const geo2 = render.dynamicGeo(shape2, render.contentHeightPx());
-      ctx.morph.morphTo(shape2, { icon: "", primary: "", secondary: "", detail: "" }, geo2);
-    }, 560);
+    // Go directly to confirmation step when chip is selected
+    flow.msg = String(flow.composeText || flow.msg || "").trim();
+    transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
+    ctx.input.blur();
   }
 
   function doAction(index) {
@@ -494,10 +453,12 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (index === 1) {
-    flow.showChips = false;
-    flow.showCheck = !!String(flow.composeText || "").trim();
-    flow.composeText = flow.msg || flow.composeText;
+      flow.showChips = false;
+      flow.showCheck = false;
+      flow.composeText = flow.msg || flow.composeText;
+      flow.replaceComposeOnNextDictation = true;
       transitionTo(GS.COMPOSE, phrase("edit_message"));
+      scheduleComposeIdleReturn(3500);
       setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
       return;
     }
@@ -515,7 +476,7 @@ export function createMessageSendFlow(ctx) {
         flow.msg = pending;
         flow.composeText = pending;
         flow.showChips = false;
-        flow.showCheck = true;
+        flow.showCheck = false;
         transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: contact.name.split(" ")[0] }));
       } else {
         beginCompose(contact, phrase("compose_prompt"));
@@ -526,7 +487,7 @@ export function createMessageSendFlow(ctx) {
       selectChipWithAnimation(flow.sel);
       return;
     }
-    if (flow.state === GS.COMPOSE && flow.showCheck) {
+    if (flow.state === GS.COMPOSE && !flow.showChips && String(flow.composeText || "").trim()) {
       flow.msg = String(flow.composeText || flow.msg || "").trim();
       transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
       ctx.input.blur();
@@ -539,26 +500,123 @@ export function createMessageSendFlow(ctx) {
     const epoch = flowEpoch;
     if (flow.state === GS.CONFIRM) {
       flow.showChips = false;
-      flow.showCheck = !!String(flow.composeText || "").trim();
+      flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
+      flow.replaceComposeOnNextDictation = true;
+      flow.dictationInterimActive = false;
+      flow.dictationBaseText = "";
       transitionTo(GS.COMPOSE, phrase("edit_message"));
+      scheduleComposeIdleReturn(3500);
       setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
       return;
     }
     if (flow.state === GS.COMPOSE || flow.state === GS.DISAMBIGUATE) reset();
   }
 
-  function handleInputChange(value) {
+  function scheduleComposeIdleReturn(ms = 3500) {
+    if (timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
+    timers.autoConfirm = setTimeout(() => {
+      if (flow.state !== GS.COMPOSE || !flow.active) return;
+      const msg = String(flow.composeText || flow.msg || "").trim();
+      if (!msg) return;
+      flow.msg = msg;
+      transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
+      ctx.input.blur();
+    }, ms);
+  }
+
+  function normalizeChipCopyText(value) {
+    return String(value || "")
+      .trim()
+      .replace(/[.,!?;:，。！？；：'"`“”‘’()[\]{}]/g, "")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+  function capitalizeFirstCharacter(value) {
     const text = String(value || "");
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  function isQuestionLike(text) {
+    const value = String(text || "").trim();
+    if (!value) return false;
+    if (/[?？]\s*$/.test(value)) return true;
+    if (/[吗麼么呢]\s*$/.test(value)) return true;
+    if (/^(what|when|where|who|why|how|which|can|could|would|should|do|does|did|is|are|am|will|won't|isn't|aren't|don't|doesn't|didn't)\b/i.test(value)) return true;
+    return /\b(how are you|how is|how do|what do you|would you|could you|can you)\b/i.test(value);
+  }
+  function autoPunctuateByStructure(text) {
+    const raw = String(text || "").trim();
+    if (!raw) return "";
+    const match = raw.match(/^(.*?)(["'”’)\]]*)$/);
+    const core = (match?.[1] || raw).trim();
+    const closers = match?.[2] || "";
+    if (!core) return raw;
+    if (/[.!?。！？]$/.test(core)) return `${core}${closers}`;
+    const hasHan = /[\u3400-\u9FFF]/.test(core);
+    const terminal = isQuestionLike(core) ? (hasHan ? "？" : "?") : (hasHan ? "。" : ".");
+    return `${core}${terminal}${closers}`;
+  }
+  function mergeFinalDictation(existing, incoming) {
+    const prev = String(existing || "").trim();
+    const next = String(incoming || "").trim();
+    if (!next) return prev;
+    if (!prev) return next;
+    const prevNorm = normalizeChipCopyText(prev);
+    const nextNorm = normalizeChipCopyText(next);
+    if (!nextNorm) return prev;
+    if (prevNorm === nextNorm || prevNorm.endsWith(nextNorm)) return prev;
+    if (nextNorm.startsWith(prevNorm)) return next;
+    const needsSpace = !/[“"(\[]$/.test(prev);
+    return `${prev}${needsSpace ? " " : ""}${next}`;
+  }
+
+  function findExactChipMessageIndex(text) {
+    const target = normalizeChipCopyText(text);
+    if (!target) return -1;
+    const chips = flow.contact?.chips || [];
+    return chips.findIndex((chip) => normalizeChipCopyText(chip?.message || "") === target);
+  }
+
+  function handleInputChange(value, options = {}) {
+    const text = String(value || "");
+    const allowChipMatch = options?.allowChipMatch === true;
+    const fromDictation = options?.fromDictation === true;
+    if (!fromDictation && text.trim()) flow.replaceComposeOnNextDictation = false;
     flow.composeText = text;
+
+    if (timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
+
     if (timers.pause) {
       clearTimeout(timers.pause);
       timers.pause = null;
     }
+
     if (text.trim()) {
+      if (allowChipMatch) {
+        const exactChipIndex = findExactChipMessageIndex(text);
+        if (exactChipIndex >= 0) {
+          selectChipWithAnimation(exactChipIndex);
+          return;
+        }
+      }
       flow.showChips = false;
-      flow.showCheck = true;
+      flow.showCheck = false;
       flow.msg = text.trim();
+
+      timers.autoConfirm = setTimeout(() => {
+        if (flow.state === GS.COMPOSE && flow.active) {
+          flow.msg = String(flow.composeText || flow.msg || "").trim();
+          transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
+          ctx.input.blur();
+        }
+      }, 2000);
     } else {
       flow.showChips = true;
       flow.showCheck = false;
@@ -567,17 +625,13 @@ export function createMessageSendFlow(ctx) {
     render.render(false);
   }
 
-  async function handleInputSubmit(text) {
+  async function handleInputSubmit(text, options = {}) {
+    const skipThinking = options?.skipThinking === true;
     const value = String(text || "").trim();
     if (!value) return;
     ctx.addSimLog(value, "user");
     if (flow.state === GS.COMPOSE) {
-      flow.composeText = value;
-      flow.msg = value;
-      flow.showChips = false;
-      flow.showCheck = true;
-      render.render(false);
-      ctx.input.blur();
+      handleInputChange(value);
       return;
     }
     const voiceAction = voice.parseComposeVoice(value, { ...flow, GS });
@@ -588,7 +642,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (flow.state === GS.IDLE || flow.state === GS.DISAMBIGUATE) {
-      transitionTo(GS.THINKING, "");
+      if (!skipThinking) transitionTo(GS.THINKING, "Searching contact...");
       const intent = await voice.parseIntent(value);
       const matches = voice.findContacts(intent.recipient, value);
       timers.thinking = setTimeout(() => {
@@ -600,7 +654,7 @@ export function createMessageSendFlow(ctx) {
             flow.msg = msg;
             flow.composeText = msg;
             flow.showChips = false;
-            flow.showCheck = true;
+            flow.showCheck = false;
             transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: fallback[0].name.split(" ")[0] }));
           } else {
             beginCompose(fallback[0], phrase("compose_prompt"));
@@ -636,7 +690,29 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (flow.state === GS.COMPOSE) {
-      handleInputChange(text);
+      const spoken = capitalizeFirstCharacter(text);
+      if (!isFinal) {
+        if (!flow.dictationInterimActive) {
+          flow.dictationBaseText = flow.replaceComposeOnNextDictation ? "" : (flow.composeText || flow.msg || "");
+          flow.dictationInterimActive = true;
+        }
+        const live = flow.replaceComposeOnNextDictation
+          ? spoken
+          : mergeFinalDictation(flow.dictationBaseText, spoken);
+        handleInputChange(live, { allowChipMatch: false, fromDictation: true });
+        return;
+      }
+      const dictationText = autoPunctuateByStructure(spoken);
+      const base = flow.dictationInterimActive
+        ? flow.dictationBaseText
+        : (flow.replaceComposeOnNextDictation ? "" : (flow.composeText || flow.msg || ""));
+      const merged = flow.replaceComposeOnNextDictation
+        ? dictationText
+        : mergeFinalDictation(base, dictationText);
+      flow.dictationInterimActive = false;
+      flow.dictationBaseText = "";
+      flow.replaceComposeOnNextDictation = false;
+      handleInputChange(merged, { allowChipMatch: true, fromDictation: true });
       return;
     }
     if (flow.state === GS.CONFIRM && isFinal && text) {
@@ -645,7 +721,7 @@ export function createMessageSendFlow(ctx) {
     }
   }
 
-  function start() {
+  function start(seedText = "") {
     flowEpoch += 1;
     const epoch = flowEpoch;
     clearTimers();
@@ -660,12 +736,19 @@ export function createMessageSendFlow(ctx) {
     flow.showCheck = false;
     flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
     if (ctx.input) ctx.input.value = "";
-    render.render(true);
-    setTimeout(() => {
+    transitionTo(GS.THINKING, "Searching contact...");
+    timers.startup = setTimeout(() => {
+      timers.startup = null;
       if (!isEpochAlive(epoch)) return;
+      transitionTo(GS.IDLE, "");
+      const seeded = String(seedText || "").trim();
+      if (seeded) {
+        void handleInputSubmit(seeded, { skipThinking: true });
+        return;
+      }
       ctx.input.focus();
       ctx.voice.voiceEngine.start("command");
-    }, 50);
+    }, FLOW_START_THINK_MS);
   }
 
   return {

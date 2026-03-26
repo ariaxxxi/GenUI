@@ -294,11 +294,11 @@ export function initManualDemo({
   }
 
   function manualShape(shape) {
-    document.getElementById('shape-panel').classList.remove('visible');
+    document.getElementById('shape-panel')?.classList.remove('visible');
     hideRich();
     hideIntentHeader();
     document.getElementById('stage').classList.remove('flow-active');
-    document.getElementById('input-area').classList.remove('hidden');
+    document.getElementById('input-area')?.classList.remove('hidden');
     const currentShape = getCurrentShape();
     const leavingSplit = currentShape === 'split' && shape !== 'split';
     const leavingList = currentShape === 'list' && shape !== 'list';

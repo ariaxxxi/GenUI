@@ -1,0 +1,6 @@
+{
+  "start_commands": [
+    "npm install",
+    "node server.mjs"
+  ]
+}

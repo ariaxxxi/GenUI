@@ -161,7 +161,7 @@
 <div id="sim-panel">
   <div id="sim-header">
     <div id="sim-title">GlassOS Simulator</div>
-    <div id="sim-key-legend"><kbd>↑↓</kbd> nav · <kbd>Space</kbd> confirm · <kbd>Esc</kbd> back</div>
+    <div id="sim-key-legend"><kbd>1/Space</kbd> confirm · <kbd>F/B</kbd> nav · <kbd>L</kbd> listen · <kbd>Esc</kbd> back</div>
   </div>
   <div id="sim-input-section">
     <div id="sim-input-label">Voice Command</div>
@@ -173,6 +173,7 @@
   </div>
   <div id="sim-quick-chips">
     <button class="sim-quick-chip" onclick="fireChip(this)">Send message to Hiro</button>
+    <button class="sim-quick-chip" onclick="fireChip(this)">Book a flight</button>
     <button class="sim-quick-chip" onclick="fireChip(this)">What's the weather</button>
   </div>
   <div id="sim-voice-out">
@@ -185,10 +186,10 @@
   </div>
   <div id="sim-log"></div>
   <div id="sim-kbd">
-    <div class="sim-key-badge"><kbd>↑↓</kbd> <span>Nav</span></div>
-    <div class="sim-key-badge"><kbd>Space</kbd> <span>OK</span></div>
+    <div class="sim-key-badge"><kbd>1/Space</kbd> <span>Confirm</span></div>
+    <div class="sim-key-badge"><kbd>F/B</kbd> <span>Nav</span></div>
+    <div class="sim-key-badge"><kbd>L</kbd> <span>Listen</span></div>
     <div class="sim-key-badge"><kbd>Esc</kbd> <span>Back</span></div>
-    <div class="sim-key-badge"><kbd>Enter</kbd> <span>Send</span></div>
   </div>
 </div>
 
@@ -482,6 +483,12 @@
     </div>
     <input id="debug-ai-voice-toggle" class="sb-toggle-input" type="checkbox" checked/>
   </label>
+  <label class="sb-toggle" for="debug-disable-text-input-toggle">
+    <div class="sb-toggle-copy">
+      <strong>Disable Text Input</strong>
+    </div>
+    <input id="debug-disable-text-input-toggle" class="sb-toggle-input" type="checkbox"/>
+  </label>
   <label class="sb-toggle" for="debug-fullscreen-stage-outline-toggle">
     <div class="sb-toggle-copy">
       <strong>Frame</strong>
@@ -491,13 +498,13 @@
   <div class="ai-legacy-actions">
     <button class="sb-shape-btn" data-home-state="sleep" type="button" onclick="setHomeState('sleep')">Sleep</button>
     <button class="sb-shape-btn" data-home-state="context" type="button" onclick="setHomeState('context')">Home</button>
-    <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
+    <button class="sb-shape-btn" data-shape="listening" type="button" onclick="armAiWakeListening({ source: 'legacy-button', force: true })">Listening</button>
     <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Magic</button>
   </div>
   <div class="ai-legacy-title">Export</div>
   <div class="ai-legacy-actions">
     <button class="sb-shape-btn" type="button" onclick="copyStagePng()">Copy PNG</button>
-    <button class="sb-shape-btn" type="button" onclick="exportStageSvg()">Export SVG</button>
+    <button class="sb-shape-btn" type="button" onclick="exportStageSvg()" disabled style="opacity:0.3;cursor:not-allowed">Export SVG</button>
   </div>
 </div>
 
@@ -509,6 +516,7 @@ if (location.protocol === 'file:') {
   const s = document.createElement('script'); s.src = 'src/shapes.legacy.js'; document.head.appendChild(s);
 } 
 </script>
+<script src="src/shared/modern-screenshot.min.js"></script>
 <script type="module" src="src/ai-app.js"></script>
 </body>
 </html>
