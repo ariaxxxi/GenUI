@@ -1,6 +1,92 @@
 # Handoff
 
 ## Task title
+Flight Confirm Card: Collapsible Rich Confirmation + Step 3 Readiness Validation
+
+## Completion status
+- Partially completed
+
+## Summary
+- Implemented the flight confirm card as a reusable in-place expandable confirmation pattern:
+  - collapsed summary remains the default state
+  - a visible top-right chevron affordance is rendered inside the confirm card
+  - `show details` expands the same card in place
+  - chevron click also toggles the expanded state
+- Upgraded flight recommendation data in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js) so confirm details use actual structured selected-flight data instead of placeholder strings:
+  - airline logo
+  - price
+  - outbound times
+  - inbound times
+- Updated flight confirm rendering in [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js):
+  - collapsed summary shows route, dates + total price, payment
+  - expanded content shows departing section, returning section, total row
+  - confirm enters collapsed by default when returning from recommendation/payment paths
+- Extended the shared info-card primitive in [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) for future rich confirmations:
+  - expandable summary shell
+  - animated detail reveal via `max-height` / `opacity` / `margin-top`
+  - optional chevron affordance
+  - section cards with media/logo support
+- Added confirm voice collapse support in [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js):
+  - `hide details`
+  - `collapse details`
+  - `close details`
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/ui-primitives.js`
+- Code-path verification performed for:
+  - collapsed confirm default on step entry
+  - structured selected-flight data feeding expanded sections
+  - render-side date normalization still applied in date + confirm screens
+
+## Remaining issues / caveats
+- The required live browser validation matrix from `context/task.md` was not completed in this pass.
+- Because the browser validation gate is still open, readiness for Step 3 is not proven.
+- Step 3 verdict: `Not safe to move to Step 3`
+- The blocker is process, not a known syntax/runtime parse failure: the task explicitly requires browser validation for flight, coffee, and message regressions before Step 3 can start.
+
+## Recommended next step
+1. Run the live `ai.html` validation matrix from `context/task.md`.
+2. Verify these flight-specific cases first:
+   - collapsed confirm shows chevron and summary only
+   - `show details` expands in place
+   - expanded confirm reflects the selected flight option for default, cheaper, and nonstop paths
+   - no-default-payment path still returns to collapsed confirm correctly
+3. If those pass along with coffee/message regression, then update the gate to `Safe to move to Step 3`.
+
+## Rich confirmation rule
+Use this pattern when a confirmation has supporting detail but the user decision is still binary and should remain lightweight in the 420×420 glasses frame.
+
+- Collapsed state must contain:
+  - the minimum summary needed to confirm confidently
+  - a visible chevron affordance whenever hidden detail exists
+- Expanded state must contain:
+  - only the supporting detail that increases confidence in the action
+  - the same card shell, expanded in place
+- Interaction rule:
+  - confirm actions stay minimal
+  - detail is revealed inside the same card, never via a separate review screen
+- Never do this:
+  - separate review page
+  - multi-card confirm stack as the default state
+  - scroll-heavy confirmation UI
+  - verbose repetition of already summarized choices
+
+
+# Handoff
+
+## Task title
 Revision Pass: Fix slot reopening, flight confirm accuracy, and payment default fallback
 
 ## Completion status

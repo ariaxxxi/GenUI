@@ -64,22 +64,35 @@ export function renderInfoCard({
   subtitle = "",
   body = "",
   detail = "",
+  expandable = false,
+  expanded = false,
+  chevron = true,
   sections = [],
   footerLabel = "",
   footerValue = "",
 } = {}) {
   const normalizedSections = Array.isArray(sections) ? sections.filter(Boolean) : [];
+  const shouldShowDetails = normalizedSections.length > 0 || footerLabel || footerValue;
+  const chevronHtml = expandable && chevron && shouldShowDetails
+    ? `<button type="button" class="g-info-chevron ${expanded ? "expanded" : ""}" aria-label="${expanded ? "Collapse details" : "Expand details"}" aria-expanded="${expanded ? "true" : "false"}"><span class="g-info-chevron-icon"></span></button>`
+    : "";
   if (normalizedSections.length > 0) {
-    const sectionHtml = normalizedSections.map((section) => `<div class="g-listen-field g-info-card">${renderTextLine("g-info-eyebrow", section?.eyebrow || "")}${renderTextLine("g-info-title", section?.title || "")}${renderTextLine("g-info-subtitle", section?.subtitle || "")}${renderTextLine("g-info-detail", section?.detail || "")}</div>`).join('<div class="g-info-gap"></div>');
+    const sectionHtml = normalizedSections.map((section) => {
+      const sectionMedia = section?.avatar
+        ? renderAvatar({ avatar: section.avatar, initials: section.initials || "", name: section?.title || "", kind: section?.avatarKind || "logo", cls: "g-info-section-ava" })
+        : "";
+      const bodyHtml = `${renderTextLine("g-info-eyebrow", section?.eyebrow || "")}${renderTextLine("g-info-title", section?.title || "")}${renderTextLine("g-info-subtitle", section?.subtitle || "")}${renderTextLine("g-info-detail", section?.detail || "")}`;
+      return `<div class="g-listen-field g-info-card">${sectionMedia ? `<div class="g-info-card-row">${sectionMedia}<div class="g-info-card-body">${bodyHtml}</div></div>` : bodyHtml}</div>`;
+    }).join('<div class="g-info-gap"></div>');
     const footerHtml = footerLabel || footerValue ? `<div class="g-info-footer"><div class="g-info-footer-label">${esc(footerLabel || "")}</div><div class="g-info-footer-value">${esc(footerValue || "")}</div></div>` : "";
-    return `<div class="g-info-stack">${sectionHtml}${footerHtml}</div>`;
+    return `<div class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""}"><div class="g-info-summary-head">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}${chevronHtml}</div><div class="g-info-expand-region">${sectionHtml}${footerHtml}</div></div>`;
   }
   const mediaText = avatar ? "" : (initials || avatarText || icon || "");
   const hasMedia = !!(String(avatar || "").trim() || String(mediaText || "").trim());
   if (hasMedia) {
-    return `<div class="g-info-inline">${renderAvatar({ avatar, initials: mediaText, name: title, kind: "logo" })}<div class="g-contact-body">${renderTextLine("g-info-title", title)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div></div>`;
+    return `<div class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""}"><div class="g-info-summary-head g-info-summary-head--inline">${renderAvatar({ avatar, initials: mediaText, name: title, kind: "logo" })}<div class="g-contact-body">${renderTextLine("g-info-title", title)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div>${chevronHtml}</div></div>`;
   }
-  return `<div class="g-info-plain">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div>`;
+  return `<div class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""}"><div class="g-info-summary-head">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}${chevronHtml}</div></div>`;
 }
 
 export function renderFlightRouteStep({

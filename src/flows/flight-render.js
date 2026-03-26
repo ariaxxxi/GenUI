@@ -152,12 +152,33 @@ export function createFlightRender({
     const fromCode = flow.data.origin || "SFO";
     const toCode = flow.cityToAirport(flow.data.destination || "");
     const priceMatch = String(selected?.sub || "").match(/\$\d[\d,]*/);
-    const price = priceMatch?.[0] || "$395";
-    const detailExtra = flow.showConfirmDetails ? ` · ${selected?.sub || flow.data.flight || "10:15 → 15:40"}` : "";
+    const price = selected?.price || priceMatch?.[0] || "$395";
+    const outboundRange = selected?.outbound ? `${selected.outbound.departTime} - ${selected.outbound.arriveTime}` : (flow.data.flight || "7:10 AM - 10:30 AM");
+    const returnRange = selected?.inbound ? `${selected.inbound.departTime} - ${selected.inbound.arriveTime}` : (flow.data.returnFlight || "2:10 PM - 11:30 PM");
     return {
       title: `${fromCode} → ${toCode}`,
-      subtitle: `${departDate}–${returnDate} · ${price}`,
-      detail: `${flow.data.paymentMethod || flow.defaultPaymentMethod || "Apple Pay ···· 9421"}${detailExtra}`,
+      subtitle: `${departDate} - ${returnDate} · ${price}`,
+      detail: `${flow.data.paymentMethod || flow.defaultPaymentMethod || "Apple Pay ···· 9421"}`,
+      expandable: true,
+      expanded: !!flow.showConfirmDetails,
+      sections: [
+        {
+          avatar: selected?.avatar || "",
+          avatarKind: selected?.avatarKind || "logo",
+          eyebrow: `Departing flight • ${departDate}`,
+          title: outboundRange,
+          subtitle: `${fromCode} - ${toCode}`,
+        },
+        {
+          avatar: selected?.avatar || "",
+          avatarKind: selected?.avatarKind || "logo",
+          eyebrow: `Returning flight • ${returnDate}`,
+          title: returnRange,
+          subtitle: `${toCode} - ${fromCode}`,
+        },
+      ],
+      footerLabel: "Total",
+      footerValue: price,
     };
   }
 
@@ -381,6 +402,16 @@ export function createFlightRender({
               });
             });
           });
+        }
+        if (step.type === "confirm") {
+          const toggle = richRoot.querySelector(".g-info-chevron");
+          if (toggle) {
+            toggle.onclick = () => {
+              const flowState = getFlow();
+              flowState.showConfirmDetails = !flowState.showConfirmDetails;
+              renderStep(true);
+            };
+          }
         }
       }, 180);
     } else {

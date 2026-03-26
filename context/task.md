@@ -1,52 +1,62 @@
 # Task
 
 ## Title
-Validation Gate: Fix remaining flight state bug and complete manual acceptance checks before Step 3
+Flight Confirm Card: Collapsible Rich Confirmation + Step 3 Readiness Validation
 
 ## Status
 Ready for implementation
 
 ## Objective
-Do not begin Step 3 yet.
+Do not start Step 3 yet.
 
-This task is a validation gate for the Step 2 / revision work. The implementer must:
+This task replaces the prior revision task entirely.
 
-1. fix the remaining flight runtime state bug
-2. run the manual validation matrix that was required by the previous task but not completed
-3. record whether the codebase is actually safe to move to Step 3
+The implementer must complete two things in one pass:
 
-The goal is to make the current Step 2 foundation trustworthy before adding more routing and AI behavior on top.
+1. finish the current flight confirmation UX so it follows the new collapsible-card pattern
+2. verify the current Step 2/revision foundation is safe before any Step 3 work begins
+
+The core deliverable is a flight confirmation page that:
+
+- is collapsed by default
+- shows a visible expand/collapse affordance
+- expands in place when the user says `show details`
+- preserves the currently selected flight data accurately
+
+Then the implementer must run the required manual validation matrix and state clearly in `context/HANDOFF.md` whether the repo is safe to move to Step 3.
+
+This task must also summarize the confirmation pattern clearly enough that future flows can reuse it without re-deciding the interaction model.
 
 ## In scope
-- Fix the flight flow state aliasing bug between `flow.data` and `api.data`
-- Verify that render and AI logic read the current flight state after resets and updates
-- Run the manual validation matrix for coffee, flight, and message regression
-- Add the new universal confirmation-card rule for rich confirmations:
-  - collapsed summary by default
-  - expandable detail view on demand
-  - visible expand/collapse affordance
-- Update `context/HANDOFF.md` with exact validation results and a clear Step 3 readiness recommendation
+- Fix any remaining flight runtime state issues required for confirm rendering to be correct
+- Implement collapsible confirm-card behavior for flight
+- Add the visible arrow affordance on the confirm card
+- Keep collapsed summary as the default confirm state
+- Expand the same card in place for rich details
+- Ensure expanded details reflect the actual selected flight and payment state
+- Summarize the reusable rich-confirmation pattern so future flows can follow it
+- Run the manual validation matrix for flight, coffee, and message regression
+- Record Step 3 readiness in `context/HANDOFF.md`
 
 ## Out of scope
 - Step 3 implementation
 - New intent routing work
 - Gemini classifier changes
-- Architecture refactor beyond what is required to fix the flight state bug
-- Full migration of flight or message onto the generic engine
-- New UI design work
-
-Do not redesign unrelated screens. Only update confirmation-card behavior where needed to satisfy this task and document the universal rule for future rich confirmations.
+- Full migration of flight to the generic engine
+- Full migration of message to the generic engine
+- Visual redesign of unrelated screens
+- New primitives unless absolutely required for the confirm-card pattern
+- Broad architecture refactors
 
 ## Relevant context
-- The previous revision task was marked completed in `context/HANDOFF.md`, but the required manual validation was not performed.
-- There is still a concrete flight runtime bug: `resetData()` replaces `flow.data`, while `api.data` is assigned only once and can become stale.
-- `flight-render.js` and `flight-ai.js` both read `getFlow().data`, so stale references can make the confirm card, prompts, and flow transitions inconsistent.
-- Step 3 should not start on top of an unverified or internally inconsistent Step 2 foundation.
-- New UX rule from the user:
-  - rich confirmation pages must be collapsible cards
-  - collapsed is the default state
-  - expanded state is available by voice (`show details`) or by the system's expand interaction
-  - this rule should generalize beyond flight to future rich confirmations such as orders and bookings
+- Flight still uses a bespoke runtime state machine.
+- Coffee is currently the engine-driven reference flow.
+- The user has defined a new universal UX rule:
+  - if a confirmation screen has rich supporting detail, the default state is a collapsed summary card
+  - the same card can expand to show richer detail
+  - the card should visibly communicate that it can expand
+- The previous pass fixed most of the Step 2 issues, but readiness for Step 3 is still gated by real browser validation.
+- Glasses mode is constrained to a 420×420 visual frame. The confirm experience must stay minimal and in-place. No separate review page should be introduced.
 
 ## Files to inspect
 - `AGENTS.md`
@@ -69,118 +79,132 @@ Do not redesign unrelated screens. Only update confirmation-card behavior where 
 - `src/styles/ai.css`
 - `context/HANDOFF.md`
 
-Only touch other files if required to complete validation safely, and document why in `context/HANDOFF.md`.
+Only change other files if they are strictly required to complete this task safely, and explain why in `context/HANDOFF.md`.
 
 ## Implementation steps
-1. Fix the flight state aliasing bug.
-   - Inspect how `flow.data` and `api.data` are wired in `src/flows/flight-booking.js`.
-   - Ensure all runtime readers see the current state after `resetData()` and after later mutations.
-   - Acceptable approaches:
-     - keep one stable object and mutate it in place
-     - or expose `data` as a getter that always returns the current `flow.data`
-   - Do not leave any code path where render or AI logic can read stale state.
+1. Verify and fix the current flight state source if needed.
+   - Inspect how flight confirm render and flight AI read runtime state.
+   - Ensure confirm render, detail expansion, and voice handling all read current state, not stale aliased state.
+   - If there is still a stale-state bug between `flow.data` and exposed runtime accessors, fix it before implementing the UI behavior.
 
-2. Verify all current flight readers use the corrected state source.
-   - Check `src/flows/flight-render.js`
-   - Check `src/flows/flight-ai.js`
-   - Confirm selected flight, payment method, dates, and destination are read from current runtime state.
+2. Implement the collapsible confirm-card pattern for flight.
+   - Keep the current summary-first confirm content as the collapsed default.
+   - Add a top-right chevron/arrow affordance inside the card.
+   - Expanded detail must open inside the same card, not on a new screen.
+   - `show details` must expand the card.
+   - If a collapse voice command is easy to support, it may be added, but expansion is the required behavior.
 
-3. Update the flight confirmation page to follow the new collapsible rich-confirmation rule.
-   - The flight confirm card must be collapsed by default.
-   - In collapsed state, keep the current summary-first behavior:
-     - route
-     - dates + total price
-     - payment method
-   - Add a visible arrow affordance at the top-right of the card to indicate expand/collapse.
-   - When expanded, the card should reveal rich detail content in the spirit of the provided reference:
+3. Keep the confirm interaction model minimal.
+   - Confirm action row remains `✅` and `❌`.
+   - Do not add a new action-row button for details in this pass unless strictly necessary.
+   - Default highlight on entering confirm remains `✅`.
+
+4. Implement the expanded rich detail layout.
+   - When expanded, the flight confirm card must show:
      - departing flight section
      - returning flight section
      - total price row
-   - Use one confirmation card container that expands internally. Do not create a separate review screen.
-   - `show details` must expand the card.
-   - If there is an existing hide/collapse phrase path, it may collapse the card back, but expansion is the required behavior for this task.
+   - These details must reflect the actual selected flight option and the actual trip dates/payment state.
+   - Do not show generic placeholder detail that can drift from the selected option.
 
-4. Treat this as a universal rule for future rich confirmations.
-   - Add the flight implementation in a way that clearly establishes the reusable pattern.
-   - The future rule is:
-     - if a confirmation has rich supporting detail, the default view is collapsed summary
-     - expanded detail stays in the same card
-     - the card shows an expand/collapse affordance
-   - Document this in `context/HANDOFF.md` so the next planner/implementer can apply it to future flows.
+5. Treat this as the reusable rule for future rich confirmations.
+   - Implement flight in a way that clearly establishes the pattern for future flows like order confirmations and bookings.
+   - Document the rule in `context/HANDOFF.md` as a reusable product rule, not as a flight-only hack.
+   - Include a short summary section that states:
+     - when to use this pattern
+     - what collapsed state must contain
+     - what expanded state must contain
+     - what interaction affordance must always be present
+     - what should never happen (for example: separate review screen, scroll-heavy confirm UI, multi-card confirm stack)
 
-5. Run the manual validation matrix in the browser.
-   - Use the actual `ai.html` flow, not code inspection only.
-   - Record pass/fail for each case.
+6. Run the manual validation matrix in the browser.
+   - Use the actual `ai.html` flow.
+   - Do not rely on syntax checks alone.
+   - Record pass/fail for each item in `context/HANDOFF.md`.
 
-6. Document Step 3 readiness explicitly in `context/HANDOFF.md`.
-   - If all required checks pass, say Step 3 is safe to start.
-   - If any check fails, say Step 3 is blocked and list the exact blocker.
+7. State Step 3 readiness explicitly in `context/HANDOFF.md`.
+   - If everything required passes: write `Safe to move to Step 3`
+   - If anything fails: write `Not safe to move to Step 3` and list the blocker(s)
 
 ## Acceptance criteria
-- Flight render and AI logic no longer read stale `data` after reset or later updates.
-- Flight confirm is a collapsible card with a visible arrow affordance in the top-right.
-- Flight confirm loads collapsed by default.
-- Saying `show details` expands the same confirmation card instead of navigating to a different screen.
-- Expanded flight confirm shows:
-  - departing flight block
-  - returning flight block
+- Flight confirm is a collapsible card.
+- Flight confirm is collapsed by default.
+- Flight confirm shows a visible top-right expand/collapse affordance.
+- Saying `show details` expands the same card instead of navigating to a different screen.
+- Expanded confirm shows:
+  - departing flight detail block
+  - returning flight detail block
   - total price row
-- Expanded content reflects the currently selected flight and trip details.
-- Coffee flow still works with:
-  - default payment available
-  - no default payment available
-- Coffee confirm voice edits still work for:
-  - `change drink`
-  - `change size`
-- Flight flow still works for:
-  - default recommendation path
-  - cheaper alternative path
-  - nonstop alternative path
-  - `show details`
-  - no-default-payment path
-- Message flow still works as a regression check.
-- `context/HANDOFF.md` clearly states one of:
-  - `Safe to move to Step 3`
-  - `Not safe to move to Step 3`
+- Expanded details reflect the actual selected flight and current trip state.
+- Collapsed summary still shows:
+  - route
+  - dates + total price
+  - payment method
+- Confirm action row remains `✅` and `❌`.
+- Coffee flow still passes regression checks.
+- Message send flow still passes regression checks.
+- `context/HANDOFF.md` states clearly whether Step 3 is safe or blocked.
+- `context/HANDOFF.md` includes a short reusable summary of the rich-confirmation pattern for future flows.
 
 ## Validation checklist
-- Manual test: coffee flow with default payment available
-- Manual test: coffee flow with no default payment available
-- Manual test: coffee confirm voice edit for drink
-- Manual test: coffee confirm voice edit for size
 - Manual test: flight flow using default recommendation
 - Manual test: flight flow selecting cheaper alternative
 - Manual test: flight flow selecting nonstop alternative
 - Manual test: flight `show details`
 - Manual test: flight collapsed confirm loads with visible expand arrow
-- Manual test: flight expanded confirm stays inside the same card/screen
+- Manual test: flight expanded confirm stays in the same card/screen
 - Manual test: flight flow with no default payment available
+- Manual test: coffee flow with default payment available
+- Manual test: coffee flow with no default payment available
+- Manual test: coffee confirm voice edit for drink
+- Manual test: coffee confirm voice edit for size
 - Manual test: message send regression
 
-For payment-default simulation, use the same localStorage seam documented in `context/HANDOFF.md`.
+For payment-default simulation, use the existing localStorage seam documented in `context/HANDOFF.md`.
 
 ## Risks / notes
-- This task is intentionally narrow. Do not start Step 3 work while fixing or validating.
-- Do not claim readiness from syntax checks alone.
-- If the manual validation exposes new bugs, stop expanding scope and document them clearly in `context/HANDOFF.md`.
-- The key question for this task is readiness, not feature progress.
-- The expand/collapse interaction must preserve the glasses constraint:
-  - one card
-  - no extra review screen
-  - no scrollable long review surface
+- This task is intentionally a gate. Do not begin Step 3 work during this pass.
+- Do not convert the flight flow into a separate review screen.
+- Do not introduce scrolling long-form review UI for the glasses confirm experience.
+- Keep the change narrow: implement the collapsible detail pattern within the existing confirm experience.
+- If browser validation exposes additional bugs, do not silently broaden scope. Document them clearly in `context/HANDOFF.md`.
+
+## Open questions
+- None. Complete the implementation and report readiness status in `context/HANDOFF.md`.
 
 ## Rich Confirmation Rule
-This task establishes a reusable confirmation rule for future flows that have rich supporting detail.
+This task establishes the reusable confirmation rule for future rich confirmations.
 
 ### Default state
 - One confirmation card
-- Summary-first, collapsed by default
-- Top-right arrow affordance is always visible when detail exists
+- Collapsed summary by default
+- Visible top-right chevron/arrow affordance whenever rich detail exists
+- This summary format is the default for future rich confirmations such as flights, food orders, shopping orders, reservations, and bookings
 
 ### Expanded state
 - The same card expands internally
-- Rich detail is revealed below the summary content
-- Use animated expansion, not screen replacement
+- Rich detail appears below the summary content
+- No screen replacement
+- No separate review page
+
+### Pattern summary for future flows
+Use this pattern whenever a confirmation involves rich supporting detail but the user should make a simple yes/no decision.
+
+Future flows should follow this summary:
+
+- Start collapsed
+- Show one summary card only
+- Include a visible expand/collapse affordance
+- Keep confirm actions minimal
+- Expand within the same card when the user asks for details
+- Show only the detail that supports confidence in the action
+
+Future flows should not:
+
+- open a separate review screen
+- stack multiple review cards by default
+- require scrolling to confirm
+- repeat every prior choice in verbose form when the summary already covers the decision
 
 ### Flight expanded layout
 Use this structure inside the expanded card:
@@ -207,50 +231,47 @@ Total                                         $395
 
 ### Visual spec
 - Card container:
-  - reuse existing glass confirm card shell
-  - no new outer screen container
+  - reuse the existing glass confirm card shell
+  - no new outer screen wrapper
 - Chevron affordance:
   - position: top-right inside the card
-  - collapsed: points down or indicates expandable state
-  - expanded: rotates upward
   - color: `rgba(255,255,255,0.72)`
-  - hit target is not required for mouse interaction; it is a visual affordance
-- Expanded sections:
-  - each section remains inside the same card
-  - section label color: `rgba(255,255,255,0.6)`
-  - primary detail text color: `rgba(255,255,255,0.96)`
-  - route/meta text color: `rgba(255,255,255,0.56)`
+  - collapsed state: points toward expand direction
+  - expanded state: rotates upward
+- Summary text:
+  - primary text: `rgba(255,255,255,0.96)`
+  - secondary text: `rgba(255,255,255,0.72)`
+- Expanded section labels:
+  - `rgba(255,255,255,0.6)`
+- Expanded route/meta text:
+  - `rgba(255,255,255,0.56)`
 - Total row:
-  - label color: `rgba(255,255,255,0.72)`
-  - value color should preserve the existing success/price emphasis if already present; otherwise use `rgba(80,255,180,1)`
+  - label: `rgba(255,255,255,0.72)`
+  - value: preserve current positive/price emphasis if already present; otherwise `rgba(80,255,180,1)`
 
 ### Animation spec
-- Expand/collapse must happen in place within the same card.
+- Expand/collapse happens in place within the same card.
 - Do not use `display: none` for the animated reveal.
-- Use:
+- Animate using:
   - `max-height`
   - `opacity`
   - `margin-top`
-- Timing:
-  - duration: `240ms`
-  - easing: `ease`
-- Collapsed:
-  - detail container `max-height: 0`
+- Duration: `240ms`
+- Easing: `ease`
+- Collapsed detail state:
+  - `max-height: 0`
   - `opacity: 0`
   - `margin-top: 0`
-- Expanded:
-  - detail container `max-height` large enough for full detail content
+- Expanded detail state:
+  - `max-height`: large enough for full detail content
   - `opacity: 1`
   - `margin-top: 16px`
 
 ### Interaction rule
-- Default on entering confirm: collapsed card, `✅` highlighted by default
+- On entering confirm: collapsed card, `✅` highlighted by default
 - Voice:
-  - `show details` expands
-  - if implemented, `hide details` collapses
+  - `show details` expands the card
+  - optional: `hide details` collapses
 - Keyboard:
-  - existing confirm navigation must remain unchanged
-  - expand/collapse should not introduce a new action-row button in this task unless strictly necessary
-
-## Open questions
-- None. The implementer should complete the validation gate and report readiness status in `context/HANDOFF.md`.
+  - keep existing confirm navigation behavior
+  - do not add a required new key path for details in this task unless strictly necessary

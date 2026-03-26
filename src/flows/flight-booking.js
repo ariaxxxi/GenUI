@@ -15,13 +15,51 @@ const PAYMENT_METHODS = [
 ];
 const DEFAULT_PAYMENT_METHOD = PAYMENT_METHODS[0].name;
 const DEFAULT_FLIGHT_RECOMMENDATION_INDEX = 1;
+const FLIGHT_RECOMMENDATIONS = [
+  {
+    icon: "🟢",
+    avatar: AIRLINE_LOGOS.ANA,
+    avatarKind: "logo",
+    airline: "ANA",
+    name: "06:45 → 09:30",
+    sub: "ANA · Non-stop · $842",
+    price: "$842",
+    stops: "Non-stop",
+    outbound: { departTime: "6:45 AM", arriveTime: "9:30 AM" },
+    inbound: { departTime: "1:25 PM", arriveTime: "4:10 PM" },
+  },
+  {
+    icon: "🟡",
+    avatar: AIRLINE_LOGOS.JAL,
+    avatarKind: "logo",
+    airline: "JAL",
+    name: "07:10 → 10:30",
+    sub: "JAL · 1 stop · $631",
+    price: "$631",
+    stops: "1 stop",
+    outbound: { departTime: "7:10 AM", arriveTime: "10:30 AM" },
+    inbound: { departTime: "2:10 PM", arriveTime: "11:30 PM" },
+  },
+  {
+    icon: "🟢",
+    avatar: AIRLINE_LOGOS.United,
+    avatarKind: "logo",
+    airline: "United",
+    name: "22:00 → 06:15+1",
+    sub: "United · Non-stop · $912",
+    price: "$912",
+    stops: "Non-stop",
+    outbound: { departTime: "10:00 PM", arriveTime: "6:15 AM +1" },
+    inbound: { departTime: "8:10 AM", arriveTime: "4:25 PM" },
+  },
+];
 
 const FLOW_STEPS = [
   { type: "destination", shape: "pill", aiGreet: "Where would you like to go?" },
   { type: "dates", shape: "card-form", aiGreet: "When are you departing, and when do you return?" },
   { type: "options", shape: "card-list", label: "Passengers", key: "passengers", aiGreet: "How many passengers?", options: [{ icon: "🧑", name: "1 adult", sub: "Just me" }, { icon: "👫", name: "2 adults", sub: "Pair" }, { icon: "👨‍👩‍👧", name: "Family · 2+", sub: "Adults with children" }] },
   { type: "thinking", shape: "magic", aiGreet: null },
-  { type: "recommendation", shape: "card", label: "Recommended flight", key: "flight", aiGreet: "I found a flight I recommend. Want to book it or see alternatives?", options: [{ icon: "🟢", avatar: AIRLINE_LOGOS.ANA, avatarKind: "logo", name: "06:45 → 09:30", sub: "ANA · Non-stop · $842" }, { icon: "🟡", avatar: AIRLINE_LOGOS.JAL, avatarKind: "logo", name: "10:15 → 15:40", sub: "JAL · 1 stop · $631" }, { icon: "🟢", avatar: AIRLINE_LOGOS.United, avatarKind: "logo", name: "22:00 → 06:15+1", sub: "United · Non-stop · $912" }] },
+  { type: "recommendation", shape: "card", label: "Recommended flight", key: "flight", aiGreet: "I found a flight I recommend. Want to book it or see alternatives?", options: FLIGHT_RECOMMENDATIONS },
   { type: "payment", shape: "card-list", label: "Payment", key: "payment", aiGreet: "How would you like to pay?", options: PAYMENT_METHODS },
   { type: "confirm", shape: "card", aiGreet: "SFO to your destination, with your default payment. Book it?" },
   { type: "done", shape: "card", aiGreet: null },
@@ -105,8 +143,8 @@ export function createFlightBookingFlow(ctx) {
     get selectedFlightOption() { return flow.selectedFlightOption; },
     setSelectedFlightOption(option) {
       flow.selectedFlightOption = option ? { ...option } : null;
-      flow.data.flight = option?.name || "";
-      flow.data.returnFlight = option?.sub?.split("·")?.[0]?.trim() || "";
+      flow.data.flight = option ? `${option.outbound?.departTime || ""} - ${option.outbound?.arriveTime || ""}`.trim() : "";
+      flow.data.returnFlight = option ? `${option.inbound?.departTime || ""} - ${option.inbound?.arriveTime || ""}`.trim() : "";
     },
     currentFlightOptions() { return FLOW_STEPS.find((entry) => entry.type === "recommendation")?.options || []; },
     recommendedFlightIndex(mode = flow.recommendationMode) {
@@ -124,6 +162,7 @@ export function createFlightBookingFlow(ctx) {
       let nextIndex = flow.stepIndex + 1;
       while (nextIndex < FLOW_STEPS.length && FLOW_STEPS[nextIndex]?.type === "payment" && flow.data.paymentMethod) nextIndex += 1;
       if (nextIndex >= FLOW_STEPS.length) return;
+      if (FLOW_STEPS[nextIndex]?.type === "confirm") flow.showConfirmDetails = false;
       flow.stepIndex = nextIndex;
       flow.focused = 0;
       render.renderStep(skipGreet);
@@ -137,7 +176,7 @@ export function createFlightBookingFlow(ctx) {
       while (nextIndex < FLOW_STEPS.length && FLOW_STEPS[nextIndex]?.type === "payment" && flow.data.paymentMethod) nextIndex += 1;
       return FLOW_STEPS[nextIndex] || null;
     },
-    jumpToStep(target) { const idx = api.stepIndexBy(target.type, target.key || null); if (idx < 0) return false; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); return true; },
+    jumpToStep(target) { const idx = api.stepIndexBy(target.type, target.key || null); if (idx < 0) return false; if (FLOW_STEPS[idx]?.type === "confirm") flow.showConfirmDetails = false; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); return true; },
     normalizeCity,
     cityToAirport,
     advanceAfterDatesConfirm() { if (flow.editReturnStepIndex != null) { const idx = flow.editReturnStepIndex; flow.editReturnStepIndex = null; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); } else api.nextStep(true); },

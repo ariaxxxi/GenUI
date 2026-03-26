@@ -225,6 +225,11 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
         addChatBubble("ai", "Here are the flight details.");
         return flow.renderStep(true);
       }
+      if (/\b(hide details|collapse details|close details)\b/.test(rawText.toLowerCase())) {
+        flow.showConfirmDetails = false;
+        addChatBubble("ai", "Back to the summary.");
+        return flow.renderStep(true);
+      }
     }
     if (step.type === "recommendation") {
       if (applyRecommendationRefinement(rawText, flow)) {
