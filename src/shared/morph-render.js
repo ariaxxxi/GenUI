@@ -72,8 +72,9 @@ export function createMorphRender(ctx) {
   function applyThumbVisualMode(shape) {
     const icon = state.thumbContentState.kind === 'image' ? '__image__' : (C.thumbLabel.textContent || '').trim();
     const homeEmpty = (shape === 'circle' || shape === 'listening') && !icon;
+    const hasTextOrEmojiIcon = state.thumbContentState.kind === 'emoji' && !!icon;
     C.thumb.classList.toggle('thumb-empty', homeEmpty);
-    const plain = isIconOnlyThumb(shape);
+    const plain = hasTextOrEmojiIcon || isIconOnlyThumb(shape);
     C.thumb.classList.toggle('thumb-plain-icon', plain && !homeEmpty);
     if (!plain || homeEmpty) { C.thumb.style.fontSize = ''; C.thumb.style.color = ''; return; }
     C.thumb.style.fontSize = `${({ circle:42, listening:42, magic:42, dot:42, pill:40, card:48, 'card-s':48, 'card-form':48, 'card-list':48, custom:40 })[shape] || 40}px`;
@@ -177,7 +178,9 @@ export function createMorphRender(ctx) {
     C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
     applyThumbVisualMode(shape);
     let thumbOpacity = pos.thumb.op;
-    if (shape === 'circle') thumbOpacity = 0;
+    if (shape === 'circle' || shape === 'idle') thumbOpacity = 0;
+    else if (shape === 'dot' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
+    else if (shape === 'dot' && fromShape === 'split') thumbOpacity = 0;
     else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
     const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
@@ -296,7 +299,15 @@ export function createMorphRender(ctx) {
     const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
     const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
     const autoInDelay = fromShape === 'dot' && shape === 'pill' ? 180 : (fromShape === 'idle' && shape === 'dot') ? 0 : (fromShape === 'dot' && (shape === 'card' || shape === 'card-s')) ? 200 : (nextArea > prevArea * 1.08 ? 300 : 0);
-    const autoOutDelay = ((fromShape === 'pill' && shape === 'dot') || (fromShape === 'card' && shape === 'dot') || (fromShape === 'card-s' && shape === 'dot') || (fromShape === 'card' && shape === 'pill') || (fromShape === 'card-s' && shape === 'pill') || (fromShape === 'dot' && shape === 'idle')) ? 0 : (nextArea < prevArea * 0.92 ? 120 : 0);
+    const autoOutDelay = (
+      shape === 'idle' ||
+      (fromShape === 'pill' && shape === 'dot') ||
+      (fromShape === 'card' && shape === 'dot') ||
+      (fromShape === 'card-s' && shape === 'dot') ||
+      (fromShape === 'card' && shape === 'pill') ||
+      (fromShape === 'card-s' && shape === 'pill') ||
+      (fromShape === 'dot' && shape === 'idle')
+    ) ? 0 : (nextArea < prevArea * 0.92 ? 120 : 0);
     const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
     const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
     state.currentShape = shape;
