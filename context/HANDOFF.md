@@ -1326,3 +1326,92 @@ Post-flow listening reliability + header/label polish + flight header transition
    - complete message/flight flow -> re-enter listening and verify speech is captured.
    - confirm orb-top thinking text and intent headers have the new spacing.
    - confirm no header jump on flight thinking -> destination transition.
+
+---
+
+## Task title
+GlassOS primitive refactor + broader migration (message full, flight subset)
+
+## Completion status
+- Completed
+
+## Summary
+- Added a shared primitive renderer module for glass flow UI:
+  - `renderContactHeader`
+  - `renderSelectionList`
+  - `renderChipBar`
+  - `renderTextBubble`
+  - `renderInfoCard`
+  - `renderActionRow`
+  - `renderInputField`
+  - `renderCompactStatus`
+- Refactored message flow rendering to compose primitives instead of inline screen templates while keeping existing state/timer logic and CSS classes.
+- Switched confirm action controls markup to the shared `renderActionRow` primitive (same visuals/icons, parent still controls selection state).
+- Migrated flight flow subset to primitives:
+  - options/payment rows -> `renderSelectionList` (flight variant)
+  - confirm summary cards -> `renderInfoCard` (flight-confirm variant)
+  - done summary -> `renderInfoCard`
+- Preserved existing class-based styling and transition behavior; no visual token redesign introduced.
+
+## Files changed
+- `src/flows/ui-primitives.js` (new)
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-render.js`
+
+## Validation performed
+- Module import/parse validation:
+  - `node -e "import('./src/flows/message-send-render.js'); import('./src/flows/message-send.js'); import('./src/flows/flight-render.js'); import('./src/flows/ui-primitives.js'); console.log('ok')"`
+- No browser runtime smoke run executed in this pass.
+
+## Remaining issues / caveats
+- `flow.showCheck` remains parent-driven but is currently never set to `true` by existing runtime logic; compose paused-check visual path is implemented at primitive level but not newly activated in flow logic.
+- Full visual parity should be confirmed interactively in `ai.html` for edge transitions.
+
+## Recommended next step
+1. Manual smoke in `ai.html`:
+   - send-message full path (disambiguate -> compose -> confirm -> sending -> sent)
+   - flight options/payment selection highlighting and confirm/done cards
+2. If needed, wire the compose pause-check timing to set `showCheck=true` when required by product behavior.
+
+---
+
+## Task title
+Flight full primitive migration + message-style list unification
+
+## Completion status
+- Completed
+
+## Summary
+- Migrated flight flow rendering to primitive-only output for all step content:
+  - destination -> `renderInfoCard`
+  - dates -> `renderInfoCard`
+  - options -> `renderSelectionList` (message-style rows)
+  - thinking -> `renderCompactStatus(loading)`
+  - confirm -> `renderInfoCard` stacked sections + footer
+  - payment -> `renderSelectionList` (message-style rows)
+  - done -> `renderInfoCard`
+- Removed remaining flight-specific list renderer usage (`rich-flight-row` path) from flight render logic.
+- Extended shared primitives:
+  - `renderSelectionList` now supports canonical message-style rows with `title/subtitle/detail`, icon/avatar/initials mapping, and configurable row data attribute.
+  - `renderInfoCard` now supports section stacks and optional footer summary.
+- Added minimal CSS for new primitive data slots (`g-contact-body`, `g-contact-subtitle`, `g-contact-detail`, `g-info-*`) while preserving existing visual language.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/flight-render.js`
+- `src/styles/ai.css`
+
+## Validation performed
+- Module parse/import check:
+  - `node -e "import('./src/flows/ui-primitives.js'); import('./src/flows/flight-render.js'); import('./src/flows/flight-booking.js'); import('./src/flows/message-send-render.js'); console.log('ok')"`
+
+## Remaining issues / caveats
+- Flight-specific legacy CSS selectors (`.rich-flight-row`, destination/date legacy blocks) remain in stylesheet but are no longer used by the updated flight renderer output.
+- No browser runtime smoke test executed in this pass.
+
+## Recommended next step
+1. Manual `ai.html` flight run-through to verify:
+   - list rows now match message-style selection visuals
+   - destination/date/confirm/done screens render correctly with primitive cards
+   - keyboard focus and selection transitions remain stable.

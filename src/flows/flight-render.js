@@ -1,3 +1,10 @@
+import {
+  renderCompactStatus,
+  renderFlightRouteStep,
+  renderInfoCard,
+  renderSelectionList,
+} from "./ui-primitives.js";
+
 export function createFlightRender({
   SHAPES,
   morphTo,
@@ -14,21 +21,62 @@ export function createFlightRender({
   buildRouteRowHtml,
 }) {
   const THINKING_HOLD_MS = 3000;
+  const TOP = 10;
+  const BOTTOM = 10;
+  const MIN_H = 100;
+  const MAX_H = 400;
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  let measureLayer = null;
+
+  function ensureMeasureLayer() {
+    if (measureLayer) return measureLayer;
+    measureLayer = document.getElementById("flight-measure-layer");
+    if (measureLayer) return measureLayer;
+    const layer = document.createElement("div");
+    layer.id = "flight-measure-layer";
+    layer.setAttribute("aria-hidden", "true");
+    layer.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;";
+    document.body.appendChild(layer);
+    measureLayer = layer;
+    return layer;
+  }
+
+  function contentHeightPx(html) {
+    const layer = ensureMeasureLayer();
+    if (!layer) return 180;
+    layer.innerHTML = `<div data-flight-measure-body>${html}</div>`;
+    const body = layer.querySelector("[data-flight-measure-body]");
+    const raw = body ? Math.ceil(Math.max(body.getBoundingClientRect().height || 0, body.offsetHeight || 0, body.scrollHeight || 0)) : 0;
+    return raw > 0 ? clamp(raw, 60, MAX_H - TOP - BOTTOM) : 180;
+  }
+
+  function dynamicGeo(shape, html) {
+    const base = SHAPES[shape] || SHAPES.card;
+    const h = clamp(Math.round(contentHeightPx(html) + TOP + BOTTOM), MIN_H, MAX_H);
+    return { ...base, main: { ...base.main, h, ty: -(h / 2) } };
+  }
+
+  function toastGeo(labelText = "Trip booked") {
+    const base = SHAPES.pill || SHAPES.card;
+    const text = String(labelText || "").trim();
+    const estW = clamp(Math.round(text.length * 11 + 96), 160, 360);
+    const h = 52;
+    return { ...base, main: { ...base.main, w: estW, h, tx: -(estW / 2), ty: -(h / 2) - 18 } };
+  }
 
   function optionRows(options) {
     const flow = getFlow();
-    const step = flow.step();
-    return options.map((opt, index) => `
-      <div class="rich-flight-row ${index === flow.focused ? "selected" : ""}" data-flight-opt="${index}">
-        <div class="rich-flight-left">
-          <div class="rich-flight-airline">${opt.icon || ""} ${opt.name}</div>
-          <div class="rich-flight-times">${opt.sub || ""}</div>
-        </div>
-        <div class="rich-flight-right">${step.type === "options" && step.key === "flight" ? `<div class="rich-flight-price">${((String(opt.sub || "").match(/\$\d[\d,]*/) || [""])[0])}</div>` : ""}</div>
-      </div>
-      ${index < options.length - 1 ? '<div class="rich-divider"></div>' : ""}
-    `).join("");
+    return renderSelectionList({
+      selectedIndex: flow.focused,
+      rowDataAttr: "data-flight-opt",
+      items: options.map((opt) => ({
+        icon: opt.icon || "✈️",
+        title: opt.name || "",
+        subtitle: String(opt.sub || "").replace(/\s*·\s*\$\d[\d,]*/g, "").trim(),
+        detail: ((String(opt.sub || "").match(/\$\d[\d,]*/) || [""])[0]) || "",
+      })),
+    });
   }
 
   function buildConfirmRows() {
@@ -39,13 +87,29 @@ export function createFlightRender({
     const toCode = flow.cityToAirport(flow.data.destination || "");
     const outTime = flow.data.flight || "7:10 AM - 10:30 AM";
     const backTime = flow.data.returnFlight || "2:10 PM - 11:30 PM";
-    return `<div class="flight-confirm-card"><div class="flight-confirm-head">Departing flight • ${departDate}</div><div class="flight-confirm-time">${outTime}</div><div class="flight-confirm-route">${fromCode} - ${toCode}</div></div><div style="height:14px;"></div><div class="flight-confirm-card"><div class="flight-confirm-head">Returning flight • ${returnDate}</div><div class="flight-confirm-time">${backTime}</div><div class="flight-confirm-route">${toCode} - ${fromCode}</div></div><div class="flight-total-row"><div class="flight-total-lbl">Total</div><div class="flight-total-val">$395</div></div>`;
+    return renderInfoCard({
+      sections: [
+        { eyebrow: `Departing flight • ${departDate}`, title: outTime, subtitle: `${fromCode} - ${toCode}` },
+        { eyebrow: `Returning flight • ${returnDate}`, title: backTime, subtitle: `${toCode} - ${fromCode}` },
+      ],
+      footerLabel: "Total",
+      footerValue: "$395",
+    });
   }
 
   function buildPaymentRows() {
     const flow = getFlow();
     const options = flow.step().options || [];
-    return options.map((opt, index) => `<div class="rich-flight-row ${index === flow.focused ? "selected" : ""}" data-flight-opt="${index}"><div class="rich-flight-left"><div class="rich-flight-airline">${opt.icon || ""} ${opt.name}</div><div class="rich-flight-times">${opt.sub || ""}</div></div><div class="rich-flight-right"><div class="rich-flight-meta">Space</div></div></div>${index < options.length - 1 ? '<div class="rich-divider"></div>' : ""}`).join("");
+    return renderSelectionList({
+      selectedIndex: flow.focused,
+      rowDataAttr: "data-flight-opt",
+      items: options.map((opt) => ({
+        icon: opt.icon || "💳",
+        title: opt.name || "",
+        subtitle: opt.sub || "",
+        detail: "Space",
+      })),
+    });
   }
 
   function renderStep(skipGreet = false) {
@@ -69,37 +133,65 @@ export function createFlightRender({
       positionIntentHeaderAboveMain?.();
       trackIntentHeaderForTransition?.();
     };
-    if (isDestinationStep) {
-      showHeader("Where to?");
-    } else if (isDatesStep) {
-      showHeader("When?");
-    } else {
-      hideIntentHeader?.();
-    }
-    if (step.shape === "pill") morphTo("pill", step.type === "destination" ? { icon: "", primary: "", secondary: "" } : { icon: "✈", primary: "", secondary: "" });
-    else if (step.shape === "card-form") morphTo("card-form", { icon: "", primary: "", secondary: "" }, step.type === "dates" ? DATE_SELECTION_STEP_GEO : null);
-    else if (step.shape === "card-list") morphTo("card-list", { icon: "", primary: "", secondary: "" });
-    else if (step.shape === "card") morphTo("card", { icon: "", primary: "", secondary: "" });
-    else if (step.shape === "magic") morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
-
+    let headerLabel = "";
+    if (isDestinationStep) headerLabel = "Where to?";
+    else if (isDatesStep) headerLabel = "When?";
+    else if (step.type === "options") headerLabel = step.label || "";
+    else if (step.type === "confirm") headerLabel = "Confirm flight";
+    else if (step.type === "payment") headerLabel = "Payment";
+    if (headerLabel) showHeader(headerLabel);
+    else hideIntentHeader?.();
     let html = "";
     if (step.type === "destination") {
       const dest = String(flow.data.destination || "").trim();
-      html = `<div class="flight-destination-step">${buildRouteRowHtml(flow.data.origin || "SFO", dest ? flow.cityToAirport(dest) : "Destination", { originReady: true, destinationReady: !!dest })}</div>`;
+      html = renderFlightRouteStep({
+        mode: "destination",
+        routeRowHtml: buildRouteRowHtml(
+          flow.data.origin || "SFO",
+          dest ? flow.cityToAirport(dest) : "Destination",
+          { originReady: true, destinationReady: !!dest }
+        ),
+      });
     } else if (step.type === "dates") {
-      const ready = !!String(flow.data.destination || "").trim();
-      html = `<div class="flight-date-step"><div class="flight-date-route-shared">${buildRouteRowHtml(flow.data.origin, ready ? flow.cityToAirport(flow.data.destination || "") : "Where to?", { originReady: true, destinationReady: ready })}</div><div class="flight-date-panel"><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Depart</div><div class="flight-date-panel-val ${flow.data.depart ? "" : "placeholder"}">${flow.data.depart || ""}</div></div><div class="flight-date-panel-divider"></div><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Return</div><div class="flight-date-panel-val ${flow.data.return ? "" : "placeholder"}">${flow.data.return || ""}</div></div></div></div>`;
+      const destination = String(flow.data.destination || "").trim();
+      html = renderFlightRouteStep({
+        mode: "dates",
+        routeRowHtml: buildRouteRowHtml(
+          flow.data.origin,
+          destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?",
+          { originReady: true, destinationReady: !!destination }
+        ),
+        depart: flow.data.depart || "",
+        ret: flow.data.return || "",
+      });
     } else if (step.type === "options") {
-      html = `<div class="rich-list-header">${step.label}</div><div class="rich-divider"></div><div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${optionRows(step.options || [])}</div>`;
+      html = `<div class="g-flight-content-pad">${optionRows(step.options || [])}</div>`;
     } else if (step.type === "thinking") {
       addChatBubble("ai", "Searching flights...");
+      html = renderCompactStatus({ type: "loading", label: "Searching flights...", dotsId: "g-thinking-dots" });
       flow.setThinkingTimer(setTimeout(() => { flow.setThinkingTimer(null); flow.nextStep(true); }, THINKING_HOLD_MS));
     } else if (step.type === "confirm") {
-      html = `<div class="rich-list-header">Confirm flight</div><div style="flex:1;overflow-y:auto;margin:0 -4px;padding:0 4px;">${buildConfirmRows()}</div>`;
+      html = `<div class="g-flight-content-pad">${buildConfirmRows()}</div>`;
     } else if (step.type === "payment") {
-      html = `<div class="rich-list-header">Payment</div><div class="rich-divider"></div><div style="flex:1;overflow-y:auto;margin:0 -20px;padding:0 20px;">${buildPaymentRows()}</div>`;
+      html = `<div class="g-flight-content-pad">${buildPaymentRows()}</div>`;
     } else if (step.type === "done") {
-      html = `<div class="rich-list-header">Trip booked</div><div class="rich-divider"></div><div class="rich-route-sub" style="padding-top:10px;">${flow.data.flight || "Flight"} to ${flow.data.destination}</div><div class="rich-route-sub">${flow.data.depart || "—"} → ${flow.data.return || "—"} · ${flow.data.paymentMethod || "Paid"}</div>`;
+      html = renderCompactStatus({ type: "success", label: "Trip booked", icon: "✅" });
+    }
+
+    if (step.type === "destination") {
+      morphTo("pill", { icon: "", primary: "", secondary: "" });
+    } else if (step.type === "dates") {
+      morphTo("card-form", { icon: "", primary: "", secondary: "" }, DATE_SELECTION_STEP_GEO);
+    } else if (step.type === "options") {
+      morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
+    } else if (step.type === "confirm") {
+      morphTo("card-form", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-form", html));
+    } else if (step.type === "payment") {
+      morphTo("card-form", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-form", html));
+    } else if (step.type === "done") {
+      morphTo("pill", { icon: "", primary: "", secondary: "" }, toastGeo("Trip booked"));
+    } else if (step.shape === "magic") {
+      morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
     }
     if (html) setTimeout(() => showRich(html), 180);
     if (!skipGreet && step.aiGreet) addChatBubble("ai", step.aiGreet);
