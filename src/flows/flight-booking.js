@@ -57,7 +57,6 @@ const FLIGHT_RECOMMENDATIONS = [
 const FLOW_STEPS = [
   { type: "destination", shape: "pill", aiGreet: "Where would you like to go?" },
   { type: "dates", shape: "card-form", aiGreet: "When are you departing, and when do you return?" },
-  { type: "options", shape: "card-list", label: "Passengers", key: "passengers", aiGreet: "How many passengers?", options: [{ icon: "🧑", name: "1 adult", sub: "Just me" }, { icon: "👫", name: "2 adults", sub: "Pair" }, { icon: "👨‍👩‍👧", name: "Family · 2+", sub: "Adults with children" }] },
   { type: "thinking", shape: "magic", aiGreet: null },
   { type: "recommendation", shape: "card", label: "Recommended flight", key: "flight", aiGreet: "I found a flight I recommend. Want to book it or see alternatives?", options: FLIGHT_RECOMMENDATIONS },
   { type: "payment", shape: "card-list", label: "Payment", key: "payment", aiGreet: "How would you like to pay?", options: PAYMENT_METHODS },
@@ -69,6 +68,8 @@ export function createFlightBookingFlow(ctx) {
   // Flight remains a bespoke runtime flow in this revision.
   // It is not yet migrated onto the generic engine the way coffee is.
   const FLOW_START_THINK_MS = 1600;
+  const CONFIRM_CONTAINER_INDEX = 2;
+  const CONFIRM_SCROLL_STEP = 72;
   const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, recommendationMode: "recommend", showConfirmDetails: false, selectedFlightOption: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", returnFlight: "", paymentMethod: "" }, thinkingTimer: null, startupTimer: null, C: ctx.C };
   const apiUrl = (path) => `${location.protocol === "file:" ? "http://localhost:5180" : ""}${path}`;
   let flowEpoch = 0;
@@ -98,6 +99,11 @@ export function createFlightBookingFlow(ctx) {
   }
   function normalizeCity(input) { return String(input || "").trim().split(/\s+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" "); }
   function cityToAirport(city) { const key = String(city || "").toLowerCase(); const map = { tokyo: "NRT", paris: "CDG", london: "LHR", "new york": "JFK", ny: "JFK", nyc: "JFK", manhattan: "JFK", sydney: "SYD", dubai: "DXB", seoul: "ICN", amsterdam: "AMS", singapore: "SIN", berlin: "BER" }; const found = Object.keys(map).find((entry) => key.includes(entry)); return found ? map[found] : (city ? city.toUpperCase().slice(0, 3) : "---"); }
+  function resetConfirmState() {
+    flow.showConfirmDetails = false;
+    flow.focused = 0;
+    render.resetConfirmScroll?.();
+  }
   function buildRouteRowHtml(originText, destinationText, options = {}) {
     const originReady = options?.originReady !== false;
     const destinationReady = options?.destinationReady === true;
@@ -162,9 +168,9 @@ export function createFlightBookingFlow(ctx) {
       let nextIndex = flow.stepIndex + 1;
       while (nextIndex < FLOW_STEPS.length && FLOW_STEPS[nextIndex]?.type === "payment" && flow.data.paymentMethod) nextIndex += 1;
       if (nextIndex >= FLOW_STEPS.length) return;
-      if (FLOW_STEPS[nextIndex]?.type === "confirm") flow.showConfirmDetails = false;
+      if (FLOW_STEPS[nextIndex]?.type === "confirm") resetConfirmState();
       flow.stepIndex = nextIndex;
-      flow.focused = 0;
+      if (FLOW_STEPS[nextIndex]?.type !== "confirm") flow.focused = 0;
       render.renderStep(skipGreet);
     },
     backStep() { if (!flow.active) return; if (flow.stepIndex > 0) { flow.stepIndex -= 1; flow.focused = 0; render.renderStep(true); } else api.resetToHome(); },
@@ -176,7 +182,7 @@ export function createFlightBookingFlow(ctx) {
       while (nextIndex < FLOW_STEPS.length && FLOW_STEPS[nextIndex]?.type === "payment" && flow.data.paymentMethod) nextIndex += 1;
       return FLOW_STEPS[nextIndex] || null;
     },
-    jumpToStep(target) { const idx = api.stepIndexBy(target.type, target.key || null); if (idx < 0) return false; if (FLOW_STEPS[idx]?.type === "confirm") flow.showConfirmDetails = false; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); return true; },
+    jumpToStep(target) { const idx = api.stepIndexBy(target.type, target.key || null); if (idx < 0) return false; if (FLOW_STEPS[idx]?.type === "confirm") resetConfirmState(); flow.stepIndex = idx; if (FLOW_STEPS[idx]?.type !== "confirm") flow.focused = 0; render.renderStep(true); return true; },
     normalizeCity,
     cityToAirport,
     advanceAfterDatesConfirm() { if (flow.editReturnStepIndex != null) { const idx = flow.editReturnStepIndex; flow.editReturnStepIndex = null; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); } else api.nextStep(true); },
@@ -222,8 +228,18 @@ export function createFlightBookingFlow(ctx) {
       return;
     }
     if (current.type === "confirm") {
-      flow.focused = Math.max(0, Math.min(1, flow.focused + dir));
-      ctx.C.glassControlsLayer?.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.focused));
+      if (flow.showConfirmDetails) {
+        render.scrollConfirmDetails?.(dir * CONFIRM_SCROLL_STEP);
+        return;
+      }
+      if (dir < 0) {
+        flow.focused = CONFIRM_CONTAINER_INDEX;
+      } else if (flow.focused === CONFIRM_CONTAINER_INDEX) {
+        flow.focused = 0;
+      } else {
+        flow.focused = Math.max(0, Math.min(1, flow.focused + dir));
+      }
+      render.syncConfirmFocusUi?.(flow.focused);
     }
   }
 
@@ -258,6 +274,16 @@ export function createFlightBookingFlow(ctx) {
       return api.resetToHome();
     }
     if (current.type === "confirm") {
+      if (flow.showConfirmDetails) {
+        flow.showConfirmDetails = false;
+        render.renderStep(true);
+        return;
+      }
+      if (flow.focused === CONFIRM_CONTAINER_INDEX) {
+        flow.showConfirmDetails = true;
+        render.renderStep(true);
+        return;
+      }
       if (flow.focused === 0) return api.nextStep(true);
       return api.resetToHome();
     }

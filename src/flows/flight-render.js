@@ -39,6 +39,7 @@ export function createFlightRender({
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   let measureLayer = null;
   let controlsTrack = null;
+  let confirmHeaderTrack = null;
 
   function ensureMeasureLayer() {
     if (measureLayer) return measureLayer;
@@ -62,11 +63,55 @@ export function createFlightRender({
     return raw > 0 ? clamp(raw, 60, MAX_H - TOP - BOTTOM) : 180;
   }
 
-  function dynamicGeo(shape, html) {
+  function dynamicGeo(shape, html, options = {}) {
     const base = SHAPES[shape] || SHAPES.card;
-    const controlsLift = shape === "card" ? 78 : 0;
-    const h = clamp(Math.round(contentHeightPx(html) + TOP + BOTTOM), MIN_H, MAX_H);
+    const controlsLift = options.controlsLift ?? (shape === "card" ? 78 : 0);
+    const maxHeight = options.maxHeight ?? MAX_H;
+    const h = clamp(Math.round(contentHeightPx(html) + TOP + BOTTOM), MIN_H, maxHeight);
     return { ...base, main: { ...base.main, h, ty: -(h / 2) - controlsLift } };
+  }
+
+  function confirmSafeMaxHeight() {
+    const stage = document.getElementById("stage");
+    const stageHeight = stage?.clientHeight || 420;
+    return Math.max(180, stageHeight - 64);
+  }
+
+  function positionConfirmIntentHeader() {
+    const hdr = document.getElementById("intent-header");
+    const stage = document.getElementById("stage");
+    const shell = document.querySelector("[data-confirm-shell]");
+    if (!hdr || !stage || !shell) return;
+    const stageRect = stage.getBoundingClientRect();
+    const shellRect = shell.getBoundingClientRect();
+    const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
+    const headerW = Math.ceil(hdr.getBoundingClientRect().width || hdr.offsetWidth || 0);
+    const centerX = Math.round((shellRect.left + (shellRect.width / 2)) - stageRect.left);
+    const top = Math.max(8, Math.round(shellRect.top - stageRect.top - headerH - 12));
+    hdr.style.left = `${Math.round(centerX - (headerW / 2))}px`;
+    hdr.style.top = `${top}px`;
+  }
+
+  function trackConfirmIntentHeader(ms = 360) {
+    if (confirmHeaderTrack) cancelAnimationFrame(confirmHeaderTrack);
+    const end = performance.now() + ms;
+    const tick = () => {
+      positionConfirmIntentHeader();
+      if (performance.now() < end) confirmHeaderTrack = requestAnimationFrame(tick);
+      else confirmHeaderTrack = null;
+    };
+    confirmHeaderTrack = requestAnimationFrame(tick);
+  }
+
+  function applyConfirmExpandMetrics(richRoot) {
+    const shell = richRoot?.querySelector?.("[data-confirm-shell]");
+    const summary = richRoot?.querySelector?.(".g-info-summary-head");
+    const region = richRoot?.querySelector?.("[data-confirm-scroll]");
+    if (!shell || !summary || !region) return;
+    const safeCardHeight = confirmSafeMaxHeight();
+    const summaryHeight = Math.ceil(summary.getBoundingClientRect().height || summary.offsetHeight || 0);
+    const available = Math.max(96, safeCardHeight - summaryHeight - 36);
+    shell.style.setProperty("--g-info-expand-max-h", `${available}px`);
   }
 
   function toastGeo(labelText = "Trip booked") {
@@ -161,6 +206,8 @@ export function createFlightRender({
       detail: `${flow.data.paymentMethod || flow.defaultPaymentMethod || "Apple Pay ···· 9421"}`,
       expandable: true,
       expanded: !!flow.showConfirmDetails,
+      focused: flow.showConfirmDetails || flow.focused === 2,
+      scrollableExpand: true,
       sections: [
         {
           avatar: selected?.avatar || "",
@@ -220,17 +267,6 @@ export function createFlightRender({
         },
       };
     }
-    if (step.type === "options") {
-      return {
-        intentHeader: step.label || "",
-        layout: ["selection_list"],
-        wrapBody: true,
-        bodyClass: "g-flight-content-pad",
-        props: {
-          selection_list: optionRows(step.options || []),
-        },
-      };
-    }
     if (step.type === "payment") {
       return {
         intentHeader: "Payment",
@@ -287,7 +323,7 @@ export function createFlightRender({
         props: {
           info_card: buildConfirmRows(),
         },
-        actions: [
+        actions: flow.showConfirmDetails ? [] : [
           { id: "book", emoji: "✅" },
           { id: "cancel", emoji: "❌" },
         ],
@@ -331,14 +367,14 @@ export function createFlightRender({
       morphTo("pill", { icon: "", primary: "", secondary: "" });
     } else if (step.type === "dates") {
       morphTo("card-form", { icon: "", primary: "", secondary: "" }, DATE_SELECTION_STEP_GEO);
-    } else if (step.type === "options" || step.type === "payment") {
+    } else if (step.type === "payment") {
       morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
     } else if (step.type === "recommendation" && flow.recommendationMode === "alternatives") {
       morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
     } else if (step.type === "recommendation") {
       morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html));
     } else if (step.type === "confirm") {
-      morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html));
+      morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html, { controlsLift: flow.showConfirmDetails ? 0 : 78, maxHeight: confirmSafeMaxHeight() }));
     } else if (step.type === "done") {
       morphTo("pill", { icon: "", primary: "", secondary: "" }, toastGeo("Trip booked"));
     } else if (step.shape === "magic") {
@@ -362,6 +398,12 @@ export function createFlightRender({
         richRoot.classList.add("visible");
         richRoot.classList.toggle("glass-sent", step.type === "done");
         richRoot.style.transform = step.type === "done" ? "translateY(-18px)" : "";
+        if (step.type === "confirm") {
+          applyConfirmExpandMetrics(richRoot);
+          positionConfirmIntentHeader();
+          trackConfirmIntentHeader();
+          syncConfirmFocusUi(flow.focused);
+        }
         applyFlowChromeVisibility({
           C: getFlow()?.C,
           active: true,
@@ -409,6 +451,7 @@ export function createFlightRender({
             toggle.onclick = () => {
               const flowState = getFlow();
               flowState.showConfirmDetails = !flowState.showConfirmDetails;
+              flowState.focused = 2;
               renderStep(true);
             };
           }
@@ -421,5 +464,26 @@ export function createFlightRender({
     if (step.type === "done") setTimeout(() => flow.resetToHome(), 2800);
   }
 
-  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildScreenSpec, renderStep };
+  function syncConfirmFocusUi(focused) {
+    const shell = document.querySelector("[data-confirm-shell]");
+    if (shell) shell.classList.toggle("focused", getFlow().showConfirmDetails || focused === 2);
+    document.querySelectorAll("#glass-controls-layer .g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === focused));
+  }
+
+  function getConfirmScrollContainer() {
+    return document.querySelector("[data-confirm-scroll]");
+  }
+
+  function scrollConfirmDetails(delta) {
+    const node = getConfirmScrollContainer();
+    if (!node) return;
+    node.scrollTop += delta;
+  }
+
+  function resetConfirmScroll() {
+    const node = getConfirmScrollContainer();
+    if (node) node.scrollTop = 0;
+  }
+
+  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildScreenSpec, renderStep, syncConfirmFocusUi, getConfirmScrollContainer, scrollConfirmDetails, resetConfirmScroll };
 }

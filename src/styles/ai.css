@@ -1034,6 +1034,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   flex-direction: column;
   width: 100%;
 }
+.g-info-shell.focused {
+  border-radius: 28px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.28),
+    0 0 0 1px rgba(255,255,255,0.10);
+}
 .g-info-summary-head {
   position: relative;
   display: flex;
@@ -1055,9 +1061,16 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   transition: max-height 240ms ease, opacity 240ms ease, margin-top 240ms ease;
 }
 .g-info-shell.expanded .g-info-expand-region {
-  max-height: 320px;
+  max-height: var(--g-info-expand-max-h, 320px);
   opacity: 1;
   margin-top: 18px;
+}
+.g-info-expand-region.scrollable {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.g-info-expand-region.scrollable::-webkit-scrollbar {
+  display: none;
 }
 .g-info-gap {
   height: 14px;

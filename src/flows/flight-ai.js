@@ -48,7 +48,6 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
   function detectEditTarget(text) {
     const t = String(text || "").toLowerCase();
     if (/\b(date|dates|depart|departure|return)\b/.test(t)) return { type: "dates" };
-    if (/\b(passenger|passengers|adult|adults|people|traveler|travellers)\b/.test(t)) return { type: "options", key: "passengers" };
     if (/\b(flight|airline|time|times)\b/.test(t)) return { type: "recommendation", key: "flight" };
     if (/\b(payment|pay|card|apple pay|visa|bank)\b/.test(t)) return { type: "payment" };
     return null;
@@ -86,7 +85,6 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
   function nextQuestion(step) {
     if (!step) return "What would you like to do next?";
     if (step.type === "dates") return "When are you departing and returning?";
-    if (step.type === "options" && step.key === "passengers") return "How many passengers?";
     if (step.type === "thinking") return "Want me to find flights now?";
     if (step.type === "recommendation") return "Would you like this flight or see alternatives?";
     if (step.type === "payment") return "How would you like to pay?";

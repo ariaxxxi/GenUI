@@ -1,6 +1,72 @@
 # Handoff
 
 ## Task title
+Flight Flow Confirm Interaction Rewrite
+
+## Completion status
+- Partially completed
+
+## Summary
+- Removed the `Passengers` step from the live flight path in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js). The active flow is now:
+  - `destination`
+  - `dates`
+  - `thinking`
+  - `recommendation`
+  - `payment` only when needed
+  - `confirm`
+  - `done`
+- Reworked flight confirm interaction in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js):
+  - collapsed confirm now has tri-state focus:
+    - `0 = ✅`
+    - `1 = ❌`
+    - `2 = container`
+  - `ArrowUp` moves focus from the action row to the container
+  - `ArrowDown` moves from the container back into the action row
+  - `Space` on the container expands the card
+  - `Space` while expanded collapses the card
+  - `ArrowUp` / `ArrowDown` while expanded scroll the internal confirm detail region by `72px`
+- Updated confirm rendering in [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js):
+  - action row is hidden whenever confirm is expanded
+  - expanded confirm uses one outer shell only
+  - confirm shell height is capped to safe space inside the 420×420 stage
+  - overflow is handled by the internal `[data-confirm-scroll]` region, not by page/stage/frame overflow
+  - intent header is repositioned from the expanded confirm shell so it stays above the card with a `12px` gap
+  - confirm focus UI is synced after render and when keyboard focus changes
+- Removed the passengers-specific AI routing in [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js).
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/ui-primitives.js`
+
+## Remaining issues / caveats
+- Live browser validation was not run in `ai.html`, so the following are still unverified:
+  - container focus affordance in collapsed confirm
+  - expanded confirm scroll behavior inside the 420×420 frame
+  - intent-header positioning during expand/collapse motion
+  - no-default-payment re-entry back into collapsed confirm
+- The implementation keeps stage/frame overflow hidden and relies on the internal confirm scroll region, but this still needs visual verification.
+
+## Recommended next step
+1. Run the flight flow manually in `ai.html`.
+2. Verify:
+   - no `Passengers` step appears
+   - `ArrowUp` focuses the confirm container
+   - `Space` expands/collapses the same confirm card
+   - action buttons are hidden in expanded mode
+   - only the internal detail region scrolls
+   - the header stays above the card and does not overlap it
+3. If those pass, the next safe follow-up is cleanup of any residual confirm-only layout constants that are no longer needed.
+
+## Task title
 Flight Confirm Card: Collapsible Rich Confirmation + Step 3 Readiness Validation
 
 ## Completion status

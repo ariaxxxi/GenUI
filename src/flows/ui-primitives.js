@@ -67,12 +67,16 @@ export function renderInfoCard({
   expandable = false,
   expanded = false,
   chevron = true,
+  focused = false,
+  scrollableExpand = false,
+  expandMaxHeight = "",
   sections = [],
   footerLabel = "",
   footerValue = "",
 } = {}) {
   const normalizedSections = Array.isArray(sections) ? sections.filter(Boolean) : [];
   const shouldShowDetails = normalizedSections.length > 0 || footerLabel || footerValue;
+  const shellStyle = expandMaxHeight ? ` style="--g-info-expand-max-h:${esc(expandMaxHeight)};"` : "";
   const chevronHtml = expandable && chevron && shouldShowDetails
     ? `<button type="button" class="g-info-chevron ${expanded ? "expanded" : ""}" aria-label="${expanded ? "Collapse details" : "Expand details"}" aria-expanded="${expanded ? "true" : "false"}"><span class="g-info-chevron-icon"></span></button>`
     : "";
@@ -85,14 +89,14 @@ export function renderInfoCard({
       return `<div class="g-listen-field g-info-card">${sectionMedia ? `<div class="g-info-card-row">${sectionMedia}<div class="g-info-card-body">${bodyHtml}</div></div>` : bodyHtml}</div>`;
     }).join('<div class="g-info-gap"></div>');
     const footerHtml = footerLabel || footerValue ? `<div class="g-info-footer"><div class="g-info-footer-label">${esc(footerLabel || "")}</div><div class="g-info-footer-value">${esc(footerValue || "")}</div></div>` : "";
-    return `<div class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""}"><div class="g-info-summary-head">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}${chevronHtml}</div><div class="g-info-expand-region">${sectionHtml}${footerHtml}</div></div>`;
+    return `<div data-confirm-shell class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""} ${focused ? "focused" : ""}"${shellStyle}><div class="g-info-summary-head">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}${chevronHtml}</div><div data-confirm-scroll class="g-info-expand-region ${scrollableExpand ? "scrollable" : ""}">${sectionHtml}${footerHtml}</div></div>`;
   }
   const mediaText = avatar ? "" : (initials || avatarText || icon || "");
   const hasMedia = !!(String(avatar || "").trim() || String(mediaText || "").trim());
   if (hasMedia) {
-    return `<div class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""}"><div class="g-info-summary-head g-info-summary-head--inline">${renderAvatar({ avatar, initials: mediaText, name: title, kind: "logo" })}<div class="g-contact-body">${renderTextLine("g-info-title", title)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div>${chevronHtml}</div></div>`;
+    return `<div data-confirm-shell class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""} ${focused ? "focused" : ""}"${shellStyle}><div class="g-info-summary-head g-info-summary-head--inline">${renderAvatar({ avatar, initials: mediaText, name: title, kind: "logo" })}<div class="g-contact-body">${renderTextLine("g-info-title", title)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div>${chevronHtml}</div></div>`;
   }
-  return `<div class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""}"><div class="g-info-summary-head">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}${chevronHtml}</div></div>`;
+  return `<div data-confirm-shell class="g-info-shell ${expandable ? "expandable" : ""} ${expanded ? "expanded" : ""} ${focused ? "focused" : ""}"${shellStyle}><div class="g-info-summary-head">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}${chevronHtml}</div></div>`;
 }
 
 export function renderFlightRouteStep({
