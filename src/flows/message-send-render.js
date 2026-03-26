@@ -178,7 +178,6 @@ export function createMessageSendRender({
         },
         actions: [
           { id: "send", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>` },
-          { id: "edit", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>` },
           { id: "cancel", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>` },
         ],
         actionSelectedIndex: flow.sel,

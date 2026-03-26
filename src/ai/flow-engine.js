@@ -1,3 +1,18 @@
+export function getPaymentDefaultSources({
+  storageKey = "genui.primaryPaymentMethod",
+  fallback = null,
+} = {}) {
+  let primaryPaymentMethod = fallback;
+  try {
+    if (typeof globalThis?.localStorage?.getItem === "function") {
+      const stored = globalThis.localStorage.getItem(storageKey);
+      if (stored === "__none__" || stored === "") primaryPaymentMethod = null;
+      else if (typeof stored === "string" && stored.trim()) primaryPaymentMethod = stored.trim();
+    }
+  } catch {}
+  return { user: { primaryPaymentMethod } };
+}
+
 export function createFlowEngine({ definition, initialFilledSlots = {}, onChange = null } = {}) {
   const slots = Array.isArray(definition?.slots) ? definition.slots : [];
   const state = {
@@ -22,6 +37,52 @@ export function createFlowEngine({ definition, initialFilledSlots = {}, onChange
     return slots[state.currentSlotIndex] || null;
   }
 
+  function getValueByPath(source, path) {
+    const raw = String(path || "").trim();
+    if (!raw) return undefined;
+    return raw.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), source);
+  }
+
+  function resolveAutoDefault(slot, sources = {}) {
+    if (!slot?.autoDefault) return undefined;
+    return getValueByPath(sources, slot.defaultSource);
+  }
+
+  function applyAutoDefaults(sources = {}) {
+    let changed = false;
+    slots.forEach((slot) => {
+      if (!slot?.autoDefault) return;
+      const existing = state.filledSlots[slot.id];
+      if (existing != null && existing !== "") return;
+      const resolved = resolveAutoDefault(slot, sources);
+      if (resolved == null || resolved === "") return;
+      state.filledSlots[slot.id] = resolved;
+      changed = true;
+    });
+    if (changed) emitChange("auto-default");
+    return changed;
+  }
+
+  function resolveTemplateString(template, values = {}) {
+    return String(template || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => String(values[key] ?? ""));
+  }
+
+  function resolveConfirmTemplate(values = {}) {
+    const tpl = definition?.confirmTemplate || {};
+    return {
+      title: resolveTemplateString(tpl.title, values),
+      subtitle: resolveTemplateString(tpl.subtitle, values),
+      detail: resolveTemplateString(tpl.detail, values),
+      body: resolveTemplateString(tpl.body, values),
+    };
+  }
+
+  function matchVoiceEditTarget(utterance = "") {
+    const lower = String(utterance || "").toLowerCase().trim();
+    if (!lower) return null;
+    return slots.find((slot) => Array.isArray(slot?.editPhrases) && slot.editPhrases.some((phrase) => lower.includes(String(phrase).toLowerCase()))) || null;
+  }
+
   function resolveIndex(index) {
     let nextIndex = Math.max(0, Number(index) || 0);
     while (nextIndex < slots.length) {
@@ -34,12 +95,13 @@ export function createFlowEngine({ definition, initialFilledSlots = {}, onChange
     return nextIndex;
   }
 
-  function start(prefill = {}) {
+  function start(prefill = {}, sources = {}) {
     state.active = true;
     state.status = "collecting";
     state.epoch += 1;
     state.selectionIndex = 0;
     state.filledSlots = { ...prefill };
+    applyAutoDefaults(sources);
     state.currentSlotIndex = resolveIndex(0);
     if (state.currentSlotIndex >= slots.length) state.status = "executing";
     emitChange("start");
@@ -59,7 +121,7 @@ export function createFlowEngine({ definition, initialFilledSlots = {}, onChange
   function goToSlot(idOrIndex) {
     const index = typeof idOrIndex === "number" ? idOrIndex : slotIndexById(idOrIndex);
     if (index < 0 || index >= slots.length) return false;
-    state.currentSlotIndex = resolveIndex(index);
+    state.currentSlotIndex = index;
     state.selectionIndex = 0;
     state.status = "collecting";
     emitChange("goto");
@@ -134,6 +196,10 @@ export function createFlowEngine({ definition, initialFilledSlots = {}, onChange
     state,
     slots,
     currentSlot,
+    applyAutoDefaults,
+    resolveAutoDefault,
+    resolveConfirmTemplate,
+    matchVoiceEditTarget,
     start,
     reset,
     next,

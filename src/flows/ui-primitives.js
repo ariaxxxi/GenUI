@@ -13,10 +13,11 @@ function renderTextLine(cls, value) {
   return `<div class="${cls}">${esc(text)}</div>`;
 }
 
-function renderAvatar({ avatar = "", initials = "", name = "", cls = "g-ava" } = {}) {
+function renderAvatar({ avatar = "", initials = "", name = "", cls = "g-ava", kind = "default" } = {}) {
   const trimmedAvatar = String(avatar || "").trim();
-  if (trimmedAvatar) return `<div class="${cls}"><img src="${esc(trimmedAvatar)}" alt="${esc(name)}" class="g-ava-img"/></div>`;
-  return `<div class="${cls}">${esc(initials)}</div>`;
+  const finalCls = `${cls}${kind === "logo" ? ` ${cls}--logo` : ""}`;
+  if (trimmedAvatar) return `<div class="${finalCls}"><img src="${esc(trimmedAvatar)}" alt="${esc(name)}" class="g-ava-img"/></div>`;
+  return `<div class="${finalCls}">${esc(initials)}</div>`;
 }
 
 export function renderContactHeader({ avatar = "", initials = "", name = "", prefix = "To:", subtitle = "" } = {}) {
@@ -32,7 +33,7 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
     const detail = String(item?.detail || "").trim();
     const hasMeta = !!(subtitle || detail);
     const iconText = item?.avatar ? "" : (item?.initials || item?.avatarText || item?.icon || "");
-    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: iconText, name: title });
+    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: iconText, name: title, kind: item?.avatarKind || "default" });
     return `<div class="g-contact-row ${index === selectedIndex ? "selected" : ""} ${hasMeta ? "has-meta" : ""}" ${attrName}="${index}">${avatar}<div class="g-contact-body">${renderTextLine("g-contact-name", title)}${renderTextLine("g-contact-subtitle", subtitle)}${renderTextLine("g-contact-detail", detail)}</div></div>${index < items.length - 1 ? '<div class="rich-divider"></div>' : ""}`;
   }).join("")}</div>`;
 }
@@ -55,6 +56,9 @@ export function renderInputField({ text = "", placeholder = "Listening...", hasT
 }
 
 export function renderInfoCard({
+  avatar = "",
+  initials = "",
+  avatarText = "",
   icon = "",
   title = "",
   subtitle = "",
@@ -70,7 +74,12 @@ export function renderInfoCard({
     const footerHtml = footerLabel || footerValue ? `<div class="g-info-footer"><div class="g-info-footer-label">${esc(footerLabel || "")}</div><div class="g-info-footer-value">${esc(footerValue || "")}</div></div>` : "";
     return `<div class="g-info-stack">${sectionHtml}${footerHtml}</div>`;
   }
-  return `<div class="g-listen-field g-info-card">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div>`;
+  const mediaText = avatar ? "" : (initials || avatarText || icon || "");
+  const hasMedia = !!(String(avatar || "").trim() || String(mediaText || "").trim());
+  if (hasMedia) {
+    return `<div class="g-info-inline">${renderAvatar({ avatar, initials: mediaText, name: title, kind: "logo" })}<div class="g-contact-body">${renderTextLine("g-info-title", title)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div></div>`;
+  }
+  return `<div class="g-info-plain">${renderTextLine("g-info-title", `${icon ? `${icon} ` : ""}${title}`)}${renderTextLine("g-info-subtitle", subtitle)}${renderTextLine("g-info-detail", body || detail)}</div>`;
 }
 
 export function renderFlightRouteStep({

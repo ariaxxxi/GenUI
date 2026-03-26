@@ -1,10 +1,17 @@
-import { createFlowEngine } from "../ai/flow-engine.js";
+import { createFlowEngine, getPaymentDefaultSources } from "../ai/flow-engine.js";
 import { ORDER_COFFEE_FLOW_DEFINITION } from "./flow-definitions.js";
 import { composeScreen } from "../shared/screen-composer.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
 
 const DRINKS = ["Latte", "Cappuccino", "Americano"];
 const SIZES = ["Small", "Medium", "Large"];
+const PAYMENT_METHODS = ["Apple Pay ···· 9421", "Visa ···· 9421"];
+const DEFAULT_PAYMENT_METHOD = PAYMENT_METHODS[0];
+const PRICES = {
+  Latte: { Small: "$4.50", Medium: "$5.50", Large: "$6.50" },
+  Cappuccino: { Small: "$4.00", Medium: "$5.00", Large: "$6.00" },
+  Americano: { Small: "$3.50", Medium: "$4.50", Large: "$5.50" },
+};
 
 function coffeeIntent(text) {
   return /\b(coffee|latte|cappuccino|americano)\b/i.test(String(text || ""));
@@ -17,6 +24,8 @@ function titleCase(text) {
 }
 
 export function createCoffeeOrderFlow(ctx) {
+  // Coffee is the current engine-driven reference flow in this revision.
+  // Message and flight still run on bespoke runtime state machines.
   const engine = createFlowEngine({ definition: ORDER_COFFEE_FLOW_DEFINITION });
   const state = { active: false, thinkingTimer: null, successTimer: null, controlsTrack: null, epoch: 0 };
   const TOP = 10;
@@ -112,24 +121,43 @@ export function createCoffeeOrderFlow(ctx) {
     return engine.currentSlot()?.id || "";
   }
 
+  function currentPrice() {
+    const drink = engine.getSlotValue("drink") || "Latte";
+    const size = engine.getSlotValue("size") || "Medium";
+    return PRICES[drink]?.[size] || "$5.50";
+  }
+
+  function currentPaymentMethod() {
+    return engine.getSlotValue("payment_method") || DEFAULT_PAYMENT_METHOD;
+  }
+
+  function cyclePaymentMethod() {
+    const current = currentPaymentMethod();
+    const index = PAYMENT_METHODS.indexOf(current);
+    const next = PAYMENT_METHODS[(index + 1) % PAYMENT_METHODS.length] || DEFAULT_PAYMENT_METHOD;
+    engine.setSlotValue("payment_method", next);
+    return next;
+  }
+
   function summarySpec() {
     const drink = engine.getSlotValue("drink") || "Coffee";
     const size = engine.getSlotValue("size") || "Medium";
+    const summary = engine.resolveConfirmTemplate({
+      drink,
+      size,
+      price: currentPrice(),
+      payment_method: currentPaymentMethod(),
+    });
     return {
       intentHeader: "Confirm order",
       layout: ["info_card"],
       wrapBody: true,
       bodyClass: "g-flight-content-pad",
       props: {
-        info_card: {
-          title: `${size} ${drink}`,
-          subtitle: "Pickup in 6 min",
-          detail: "Tap to order or change",
-        },
+        info_card: summary,
       },
       actions: [
         { id: "order", emoji: "✅" },
-        { id: "change", emoji: "✊" },
         { id: "cancel", emoji: "❌" },
       ],
       actionSelectedIndex: engine.state.selectionIndex,
@@ -173,6 +201,24 @@ export function createCoffeeOrderFlow(ctx) {
             selectedIndex: engine.state.selectionIndex,
             navigable: true,
             collapsed: false,
+          },
+        },
+      };
+    }
+    if (slotId === "payment_method") {
+      return {
+        intentHeader: "Payment",
+        layout: ["selection_list"],
+        wrapBody: true,
+        bodyClass: "g-flight-content-pad",
+        props: {
+          selection_list: {
+            selectedIndex: engine.state.selectionIndex,
+            rowDataAttr: "data-coffee-payment",
+            items: PAYMENT_METHODS.map((label) => ({
+              title: label,
+              subtitle: label.includes("Apple Pay") ? "Default wallet" : "Primary card",
+            })),
           },
         },
       };
@@ -244,7 +290,13 @@ export function createCoffeeOrderFlow(ctx) {
 
   function syncSelectionBounds() {
     const slotId = activeSlot();
-    const max = slotId === "drink" ? DRINKS.length - 1 : slotId === "size" ? SIZES.length - 1 : 2;
+    const max = slotId === "drink"
+      ? DRINKS.length - 1
+      : slotId === "size"
+        ? SIZES.length - 1
+        : slotId === "payment_method"
+          ? PAYMENT_METHODS.length - 1
+          : 1;
     engine.setSelectionIndex(Math.max(0, Math.min(max, engine.state.selectionIndex)));
   }
 
@@ -258,13 +310,9 @@ export function createCoffeeOrderFlow(ctx) {
     const slotId = activeSlot();
     if (slotId === "drink") return advanceFromSelection(DRINKS[engine.state.selectionIndex]);
     if (slotId === "size") return advanceFromSelection(SIZES[engine.state.selectionIndex]);
+    if (slotId === "payment_method") return advanceFromSelection(PAYMENT_METHODS[engine.state.selectionIndex]);
     if (slotId === "confirm") {
       if (engine.state.selectionIndex === 0) return executeOrder();
-      if (engine.state.selectionIndex === 1) {
-        engine.goToSlot("drink");
-        render(true);
-        return;
-      }
       reset();
     }
   }
@@ -294,7 +342,7 @@ export function createCoffeeOrderFlow(ctx) {
     state.active = true;
     document.getElementById("stage")?.classList.add("flow-active");
     document.getElementById("stage-wrap")?.classList.add("flow-active");
-    engine.start({});
+    engine.start({}, getPaymentDefaultSources({ fallback: DEFAULT_PAYMENT_METHOD }));
     const lower = String(seedText || "").toLowerCase();
     const matchedDrink = DRINKS.find((item) => lower.includes(item.toLowerCase()));
     if (matchedDrink) {
@@ -328,17 +376,58 @@ export function createCoffeeOrderFlow(ctx) {
         return confirm();
       }
     }
+    if (slotId === "payment_method") {
+      if (/\bapple pay\b/.test(lower)) {
+        engine.setSelectionIndex(0);
+        return confirm();
+      }
+      if (/\bvisa\b/.test(lower)) {
+        engine.setSelectionIndex(1);
+        return confirm();
+      }
+    }
     if (slotId === "confirm") {
+      if (/\b(change drink|different drink|edit drink)\b/.test(lower)) {
+        engine.goToSlot("drink");
+        render(true);
+        return;
+      }
+      if (/\b(change size|different size|edit size)\b/.test(lower)) {
+        engine.goToSlot("size");
+        render(true);
+        return;
+      }
+      if (/\b(large|medium|small)\b/.test(lower)) {
+        const size = SIZES.find((item) => lower.includes(item.toLowerCase()));
+        if (size) {
+          engine.setSlotValue("size", size);
+          engine.setSelectionIndex(0);
+          render(true);
+          return;
+        }
+      }
+      if (/\b(latte|cappuccino|americano)\b/.test(lower)) {
+        const drink = DRINKS.find((item) => lower.includes(item.toLowerCase()));
+        if (drink) {
+          engine.setSlotValue("drink", drink);
+          engine.setSelectionIndex(0);
+          render(true);
+          return;
+        }
+      }
+      if (/\b(visa|apple pay|different card|payment)\b/.test(lower)) {
+        engine.goToSlot("payment_method");
+        if (lower.includes("visa")) engine.setSelectionIndex(1);
+        else engine.setSelectionIndex(0);
+        render(true);
+        return;
+      }
       if (/\b(order|confirm|yes)\b/.test(lower)) {
         engine.setSelectionIndex(0);
         return confirm();
       }
-      if (/\b(change|edit)\b/.test(lower)) {
-        engine.setSelectionIndex(1);
-        return confirm();
-      }
       if (/\b(cancel|never mind|nevermind)\b/.test(lower)) {
-        engine.setSelectionIndex(2);
+        engine.setSelectionIndex(1);
         return confirm();
       }
     }

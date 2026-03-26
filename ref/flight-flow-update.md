@@ -156,7 +156,6 @@ When a flow has a `confirm` slot (type: `action_select` with an `execute` action
   }
   ```
 - The engine resolves the template by substituting filled slot values
-- Actions are always ✅ (execute) and ❌ (cancel) — no edit button
 - Voice output is the template read conversationally
 
 ### Auto-default slots
@@ -223,11 +222,7 @@ This means the engine needs a lightweight matcher: for each filled slot, registe
 - Update `confirmTemplate` for the summary format
 - Flight selection steps should use the `recommendation` slot pattern (one best flight, alternatives on request) — this is a larger change to the existing step rendering, implement when ready
 
-### Send Message
 
-Already close to correct. The confirm shows recipient + message + 3 action buttons. Adjustments:
-- Remove the edit (✊) button from the action row. Keep ✅ (send) and ❌ (cancel) only.
-- Edit by voice: "change the message" re-opens the compose slot.
 
 ### Order Coffee
 

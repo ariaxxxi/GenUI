@@ -17,6 +17,8 @@ const CONTACTS = [
 ];
 
 export function createMessageSendFlow(ctx) {
+  // Message remains a bespoke runtime flow in this revision.
+  // Coffee is the current engine-driven reference flow.
   const FLOW_START_THINK_MS = 1600;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
@@ -185,7 +187,7 @@ export function createMessageSendFlow(ctx) {
   function maxSel() {
     if (flow.state === GS.DISAMBIGUATE) return Math.max(0, flow.disambiguateContacts.length - 1);
     if (flow.state === GS.COMPOSE && flow.showChips && !flow.composeText) return Math.max(0, (flow.contact?.chips || []).length - 1);
-    if (flow.state === GS.CONFIRM) return 2;
+    if (flow.state === GS.CONFIRM) return 1;
     return 0;
   }
 
@@ -450,17 +452,26 @@ export function createMessageSendFlow(ctx) {
       }, 900);
       return;
     }
-    if (index === 1) {
-      flow.showChips = false;
-      flow.showCheck = false;
-      flow.composeText = flow.msg || flow.composeText;
-      flow.replaceComposeOnNextDictation = true;
-      transitionTo(GS.COMPOSE, phrase("edit_message"));
-      scheduleComposeIdleReturn(3500);
-      setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
-      return;
-    }
     reset();
+  }
+
+  function reopenComposeFromConfirm() {
+    const epoch = flowEpoch;
+    flow.showChips = false;
+    flow.showCheck = false;
+    flow.composeText = flow.msg || flow.composeText;
+    flow.replaceComposeOnNextDictation = true;
+    flow.dictationInterimActive = false;
+    flow.dictationBaseText = "";
+    transitionTo(GS.COMPOSE, phrase("edit_message"));
+    scheduleComposeIdleReturn(3500);
+    setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
+  }
+
+  function reopenRecipientSelection() {
+    flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
+    flow._pendingMsg = flow.msg || flow.composeText || "";
+    transitionTo(GS.DISAMBIGUATE, phrase("disambiguate_found_two"));
   }
 
   function confirm() {
@@ -495,17 +506,8 @@ export function createMessageSendFlow(ctx) {
   }
 
   function dismiss() {
-    const epoch = flowEpoch;
     if (flow.state === GS.CONFIRM) {
-      flow.showChips = false;
-      flow.showCheck = false;
-      flow.composeText = flow.msg || flow.composeText;
-      flow.replaceComposeOnNextDictation = true;
-      flow.dictationInterimActive = false;
-      flow.dictationBaseText = "";
-      transitionTo(GS.COMPOSE, phrase("edit_message"));
-      scheduleComposeIdleReturn(3500);
-      setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
+      reopenComposeFromConfirm();
       return;
     }
     if (flow.state === GS.COMPOSE || flow.state === GS.DISAMBIGUATE) reset();
@@ -635,6 +637,8 @@ export function createMessageSendFlow(ctx) {
     const voiceAction = voice.parseComposeVoice(value, { ...flow, GS });
     if (voiceAction) {
       if (voiceAction.type === "action") doAction(voiceAction.index);
+      if (voiceAction.type === "edit") reopenComposeFromConfirm();
+      if (voiceAction.type === "change-recipient") reopenRecipientSelection();
       if (voiceAction.type === "select-contact") { flow.sel = voiceAction.index; confirm(); }
       if (voiceAction.type === "select-chip") { flow.sel = voiceAction.index; confirm(); }
       return;
@@ -716,6 +720,8 @@ export function createMessageSendFlow(ctx) {
     if (flow.state === GS.CONFIRM && isFinal && text) {
       const action = voice.parseComposeVoice(text, { ...flow, GS });
       if (action?.type === "action") doAction(action.index);
+      if (action?.type === "edit") reopenComposeFromConfirm();
+      if (action?.type === "change-recipient") reopenRecipientSelection();
     }
   }
 

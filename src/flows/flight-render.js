@@ -16,6 +16,20 @@ export function createFlightRender({
   getFlow,
   buildRouteRowHtml,
 }) {
+  const MONTHS = {
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    may: 4,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11,
+  };
   const THINKING_HOLD_MS = 3000;
   const TOP = 10;
   const BOTTOM = 10;
@@ -24,6 +38,7 @@ export function createFlightRender({
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   let measureLayer = null;
+  let controlsTrack = null;
 
   function ensureMeasureLayer() {
     if (measureLayer) return measureLayer;
@@ -49,8 +64,9 @@ export function createFlightRender({
 
   function dynamicGeo(shape, html) {
     const base = SHAPES[shape] || SHAPES.card;
+    const controlsLift = shape === "card" ? 78 : 0;
     const h = clamp(Math.round(contentHeightPx(html) + TOP + BOTTOM), MIN_H, MAX_H);
-    return { ...base, main: { ...base.main, h, ty: -(h / 2) } };
+    return { ...base, main: { ...base.main, h, ty: -(h / 2) - controlsLift } };
   }
 
   function toastGeo(labelText = "Trip booked") {
@@ -62,13 +78,37 @@ export function createFlightRender({
     });
   }
 
+  function formatDisplayDate(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    if (/^[A-Z][a-z]{2},\s+[A-Z][a-z]{2}\s+\d{1,2}$/.test(raw)) return raw;
+    const match = raw.match(/\b(?:[A-Z][a-z]{2},\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b[\s,]+(\d{1,2})\b/i);
+    if (!match) return raw;
+    const monthIndex = MONTHS[match[1].slice(0, 3).toLowerCase()];
+    const day = Number(match[2]);
+    if (!Number.isInteger(monthIndex) || !Number.isFinite(day)) return raw;
+    const now = new Date();
+    let year = now.getFullYear();
+    let date = new Date(year, monthIndex, day);
+    if (Number.isNaN(date.getTime())) return raw;
+    if (date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      year += 1;
+      date = new Date(year, monthIndex, day);
+    }
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    return `${weekday}, ${month} ${date.getDate()}`;
+  }
+
   function optionRows(options) {
     const flow = getFlow();
     return {
       selectedIndex: flow.focused,
       rowDataAttr: "data-flight-opt",
       items: options.map((opt) => ({
-        icon: opt.icon || "✈️",
+        avatar: opt.avatar || "",
+        avatarKind: opt.avatarKind || "",
+        icon: opt.avatar ? "" : (opt.icon || "✈️"),
         title: opt.name || "",
         subtitle: String(opt.sub || "").replace(/\s*·\s*\$\d[\d,]*/g, "").trim(),
         detail: ((String(opt.sub || "").match(/\$\d[\d,]*/) || [""])[0]) || "",
@@ -76,36 +116,48 @@ export function createFlightRender({
     };
   }
 
-  function buildConfirmRows() {
+  function recommendationReason(option) {
+    const text = String(option?.sub || "").toLowerCase();
+    if (/\$\d/.test(text)) {
+      if (text.includes("$631")) return "Best price for this trip.";
+      if (text.includes("non-stop")) return "Fastest nonstop option.";
+    }
+    return "Good balance of time and price.";
+  }
+
+  function buildRecommendationAlternatives() {
+    const options = getFlow().currentFlightOptions?.() || [];
+    const cheapest = options.find((opt) => String(opt.sub || "").includes("$631"));
+    const nonstop = options.find((opt) => String(opt.sub || "").toLowerCase().includes("non-stop") && opt !== cheapest);
+    return [cheapest, nonstop].filter(Boolean);
+  }
+
+  function buildRecommendationCard() {
     const flow = getFlow();
-    const departDate = flow.data.depart || "—";
-    const returnDate = flow.data.return || "—";
-    const fromCode = flow.data.origin || "SFO";
-    const toCode = flow.cityToAirport(flow.data.destination || "");
-    const outTime = flow.data.flight || "7:10 AM - 10:30 AM";
-    const backTime = flow.data.returnFlight || "2:10 PM - 11:30 PM";
+    const option = flow.currentRecommendedFlight?.();
     return {
-      sections: [
-        { eyebrow: `Departing flight • ${departDate}`, title: outTime, subtitle: `${fromCode} - ${toCode}` },
-        { eyebrow: `Returning flight • ${returnDate}`, title: backTime, subtitle: `${toCode} - ${fromCode}` },
-      ],
-      footerLabel: "Total",
-      footerValue: "$395",
+      avatar: option?.avatar || "",
+      initials: option?.avatar ? "" : (option?.icon || "✈️"),
+      title: option?.name || "Recommended flight",
+      subtitle: option?.sub || "",
+      detail: recommendationReason(option),
     };
   }
 
-  function buildPaymentRows() {
+  function buildConfirmRows() {
     const flow = getFlow();
-    const options = flow.step().options || [];
+    const selected = flow.selectedFlightOption || flow.currentRecommendedFlight?.() || null;
+    const departDate = formatDisplayDate(flow.data.depart) || "—";
+    const returnDate = formatDisplayDate(flow.data.return) || "—";
+    const fromCode = flow.data.origin || "SFO";
+    const toCode = flow.cityToAirport(flow.data.destination || "");
+    const priceMatch = String(selected?.sub || "").match(/\$\d[\d,]*/);
+    const price = priceMatch?.[0] || "$395";
+    const detailExtra = flow.showConfirmDetails ? ` · ${selected?.sub || flow.data.flight || "10:15 → 15:40"}` : "";
     return {
-      selectedIndex: flow.focused,
-      rowDataAttr: "data-flight-opt",
-      items: options.map((opt) => ({
-        icon: opt.icon || "💳",
-        title: opt.name || "",
-        subtitle: opt.sub || "",
-        detail: "",
-      })),
+      title: `${fromCode} → ${toCode}`,
+      subtitle: `${departDate}–${returnDate} · ${price}`,
+      detail: `${flow.data.paymentMethod || flow.defaultPaymentMethod || "Apple Pay ···· 9421"}${detailExtra}`,
     };
   }
 
@@ -141,8 +193,8 @@ export function createFlightRender({
               destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?",
               { originReady: true, destinationReady: !!destination }
             ),
-            depart: flow.data.depart || "",
-            ret: flow.data.return || "",
+            depart: formatDisplayDate(flow.data.depart) || "",
+            ret: formatDisplayDate(flow.data.return) || "",
           },
         },
       };
@@ -156,6 +208,45 @@ export function createFlightRender({
         props: {
           selection_list: optionRows(step.options || []),
         },
+      };
+    }
+    if (step.type === "payment") {
+      return {
+        intentHeader: "Payment",
+        layout: ["selection_list"],
+        wrapBody: true,
+        bodyClass: "g-flight-content-pad",
+        props: {
+          selection_list: optionRows(step.options || []),
+        },
+      };
+    }
+    if (step.type === "recommendation") {
+      if (flow.recommendationMode === "alternatives") {
+        return {
+          intentHeader: "Alternatives",
+          layout: ["selection_list"],
+          wrapBody: true,
+          bodyClass: "g-flight-content-pad",
+          props: {
+            selection_list: optionRows(buildRecommendationAlternatives()),
+          },
+        };
+      }
+      return {
+        intentHeader: "Recommended flight",
+        layout: ["info_card"],
+        wrapBody: true,
+        bodyClass: "g-flight-content-pad",
+        props: {
+          info_card: buildRecommendationCard(),
+        },
+        actions: [
+          { id: "confirm", emoji: "✅" },
+          { id: "alternatives", emoji: "🔄" },
+          { id: "cancel", emoji: "❌" },
+        ],
+        actionSelectedIndex: flow.focused,
       };
     }
     if (step.type === "thinking") {
@@ -175,17 +266,11 @@ export function createFlightRender({
         props: {
           info_card: buildConfirmRows(),
         },
-      };
-    }
-    if (step.type === "payment") {
-      return {
-        intentHeader: "Payment",
-        layout: ["selection_list"],
-        wrapBody: true,
-        bodyClass: "g-flight-content-pad",
-        props: {
-          selection_list: buildPaymentRows(),
-        },
+        actions: [
+          { id: "book", emoji: "✅" },
+          { id: "cancel", emoji: "❌" },
+        ],
+        actionSelectedIndex: flow.focused,
       };
     }
     if (step.type === "done") {
@@ -225,12 +310,14 @@ export function createFlightRender({
       morphTo("pill", { icon: "", primary: "", secondary: "" });
     } else if (step.type === "dates") {
       morphTo("card-form", { icon: "", primary: "", secondary: "" }, DATE_SELECTION_STEP_GEO);
-    } else if (step.type === "options") {
+    } else if (step.type === "options" || step.type === "payment") {
       morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
+    } else if (step.type === "recommendation" && flow.recommendationMode === "alternatives") {
+      morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
+    } else if (step.type === "recommendation") {
+      morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html));
     } else if (step.type === "confirm") {
-      morphTo("card-form", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-form", html));
-    } else if (step.type === "payment") {
-      morphTo("card-form", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-form", html));
+      morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html));
     } else if (step.type === "done") {
       morphTo("pill", { icon: "", primary: "", secondary: "" }, toastGeo("Trip booked"));
     } else if (step.shape === "magic") {
@@ -244,6 +331,7 @@ export function createFlightRender({
         composeScreen({
           documentRef: document,
           richRoot,
+          controlsRoot: document.getElementById("glass-controls-layer"),
           setIntentHeader,
           hideIntentHeader,
           positionIntentHeaderAboveMain,
@@ -252,15 +340,46 @@ export function createFlightRender({
         });
         richRoot.classList.add("visible");
         richRoot.classList.toggle("glass-sent", step.type === "done");
+        richRoot.style.transform = step.type === "done" ? "translateY(-18px)" : "";
         applyFlowChromeVisibility({
           C: getFlow()?.C,
           active: true,
           richSent: step.type === "done",
         });
         requestAnimationFrame(() => requestAnimationFrame(() => { richRoot.style.opacity = "1"; }));
+        const controlsRoot = document.getElementById("glass-controls-layer");
+        const controls = controlsRoot?.querySelector(".g-glass-controls");
+        if (controls) {
+          const stage = document.getElementById("stage");
+          const main = document.getElementById("drop-main");
+          const positionControls = () => {
+            if (!stage || !main || !controls || !controlsRoot?.classList.contains("visible")) return;
+            const stageRect = stage.getBoundingClientRect();
+            const mainRect = main.getBoundingClientRect();
+            const controlsRect = controls.getBoundingClientRect();
+            controls.style.left = `${Math.round((mainRect.left + mainRect.width / 2) - stageRect.left)}px`;
+            controls.style.top = `${Math.round(Math.min((mainRect.bottom - stageRect.top) + 14, stageRect.height - controlsRect.height - 8))}px`;
+          };
+          positionControls();
+          if (controlsTrack) cancelAnimationFrame(controlsTrack);
+          const end = performance.now() + 600;
+          const tick = () => {
+            positionControls();
+            if (performance.now() < end) controlsTrack = requestAnimationFrame(tick);
+            else controlsTrack = null;
+          };
+          controlsTrack = requestAnimationFrame(tick);
+        }
         if (step.type === "done") {
           requestAnimationFrame(() => {
             morphTo("pill", { icon: "", primary: "", secondary: "", detail: "" }, toastGeo("Trip booked"));
+            requestAnimationFrame(() => {
+              applyFlowChromeVisibility({
+                C: getFlow()?.C,
+                active: true,
+                richSent: true,
+              });
+            });
           });
         }
       }, 180);
@@ -271,5 +390,5 @@ export function createFlightRender({
     if (step.type === "done") setTimeout(() => flow.resetToHome(), 2800);
   }
 
-  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildPaymentRows, buildScreenSpec, renderStep };
+  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildScreenSpec, renderStep };
 }

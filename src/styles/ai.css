@@ -743,6 +743,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   overflow: hidden;
   transition: opacity 200ms ease;
 }
+.g-ava--logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+}
 .g-ava-img {
   width: 100%;
   height: 100%;
@@ -1030,6 +1036,29 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   flex-direction: column;
   gap: 4px;
 }
+.g-info-plain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.g-info-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+.g-info-inline .g-ava {
+  width: 48px;
+  height: 48px;
+}
+.g-info-inline .g-ava--logo {
+  width: 40px;
+  height: 40px;
+}
+.g-info-inline .g-contact-body {
+  gap: 6px;
+}
 .g-info-eyebrow {
   font-family: 'DM Sans', sans-serif;
   font-size: 16px;
@@ -1075,7 +1104,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   color: rgba(255,255,255,0.90);
 }
 .g-flight-content-pad {
-  padding-top: 10px;
+  padding-top: 0;
   padding-bottom: 16px;
 }
 .g-glass-controls {

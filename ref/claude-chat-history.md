@@ -1180,3 +1180,621 @@ Want to be notified when Claude responds?
 Claude is AI and can make mistakes. Please double-check responses.
 
 
+
+
+ai-native-build-spec.md
+can you become a project thinking and collaborator, rather than a coder? claude-chat-history.md is the convo i had with claude in webpage, i want you to behave the same so we can discuss ux question and write spec for coder. ai-native-build-spec.md is the spec webpage claude wrote.
+Failed to authenticate. API Error: 401 {"type":"error","error":{"type":"authentication_error","message":"OAuth token has expired. Please obtain a new token or refresh your existing token."},"request_id":"req_011CZRyUdd4q7tZzJUR5iqNJ"}
+
+can you become a project thinking and collaborator, rather than a coder? claude-chat-history.md is the convo i had with claude in webpage, i want you to behave the same so we can discuss ux question and write spec for coder. ai-native-build-spec.md is the spec webpage claude wrote.
+Let me read both files to get up to speed on the conversation and the spec.
+
+Read claude-chat-history.md
+Read ai-native-build-spec.md
+Read claude-chat-history.md
+Read claude-chat-history.md (lines 201-400)
+Read claude-chat-history.md (from line 400)
+Read claude-chat-history.md (lines 400-599)
+Read claude-chat-history.md (from line 599)
+Now let me also save a memory about this collaboration mode and check the current project state.
+
+Read glass-os-agentic-patterns-spec.md
+Globpattern: "ref/*.md"
+Found 3 files
+Got it. I've read through the full conversation history and the build spec. I understand the project deeply now. Let me save a memory about this collaboration mode.
+
+Write user_role.md
+Write failed
+---
+name: User role and collaboration style
+description: User is a designer/product thinker building GlassOS — prefers strategic discussion over code output
+type: user
+---
+
+User is a designer building GlassOS, an AI-native OS for monocular smart glasses (420x420 canvas). They think at the product/UX level and hand off implementation specs to coding agents. They want Claude Code to act as a product thinking collaborator — discussing UX questions, debating design decisions, and writing specs — NOT writing code directly. They previously had an extended conversation with Claude on the web about this system's architecture and design.
+Write project_glassos.md
+Write failed
+---
+name: GlassOS build status and architecture
+description: Current state of the 4-step AI-native build plan — Step 1 done, Step 2 next
+type: project
+---
+
+GlassOS AI-Native System build plan (4 steps):
+- Step 1: Screen Composer — DONE (commit 0017222, 2026-03-26)
+- Step 2: Slot-Based Flow Engine — NEXT. Should include agentic patterns spec (autoDefault, confirmTemplate, recommendation). Agent gets both engine spec + agentic patterns spec together.
+- Step 3: Generalize Intent Routing — pending
+- Step 4: AI-Driven Dynamic Flows — pending
+
+Key architecture: 8 UI primitives → Screen Composer (JSON spec → rendered screen) → Flow Engine (slot definitions, not state machines) → AI Intent Routing → AI Dynamic Flow Generation.
+
+Existing flows: Send Message, Book Flight (both have hardcoded state machines to replace). Order Coffee will be the zero-new-UI proof flow.
+
+Key design principles: AI recommends (not lists), one focus at a time, confirm = yes/no not a form, use defaults, voice-first with glanceable UI.
+
+**Why:** Building toward a system where the AI composes UI dynamically from primitives — designer designs 8 components once, AI assembles them for any request.
+**How to apply:** When discussing next steps, reference this build sequence. Step 2 is the critical next piece.
+Write MEMORY.md
+Write failed
+# Memory Index
+
+- [user_role.md](memory/user_role.md) — Designer/product thinker, wants strategic collaboration not code
+- [project_glassos.md](memory/project_glassos.md) — GlassOS 4-step build plan status, Step 1 done, Step 2 next
+can you become a project thinking and collaborator, rather than a coder? claude-chat-history.md is the convo i had with claude in webpage, i want you to behave the same so we can discuss ux question and write spec for coder. ai-native-build-spec.md is the spec webpage claude wrote.
+I've read everything — the full conversation history and the build spec. I'm up to speed on:
+
+The GlassOS vision — AI-native OS on monocular glasses, 420x420, voice-first + PUI gestures
+The design system — DM Sans, glass cards with gradient outlines, morphing container, bottom-anchored, one focus at a time
+The 8 primitives, the composition grammar, the slot-based flow model
+The 4-step build plan — Step 1 (Screen Composer) is done, Step 2 (Slot Engine) is next
+The agentic design philosophy — AI recommends not lists, confirm = yes/no, use defaults, never scroll
+The flight confirm redesign discussion — collapsing confirm + payment into one minimal card
+I'm here as your product thinking partner. No code — just UX discussion, design decisions, and writing specs for the coding agent.
+
+Where do you want to pick up? Some threads I see open:
+
+Step 2 handoff — the slot engine spec + agentic patterns spec need to be given together to the coding agent. The agentic patterns spec (autoDefault, confirmTemplate, recommendation) from your web Claude conversation doesn't seem to exist as a file yet — it was created in the artifact but I don't see it in ref/. Do you need me to write that?
+
+Flight confirm redesign — you landed on the one-card approach (SFO → LAX / Feb 12–14 · $395 / Apple Pay ···· 9421). Want to refine that further or is it settled?
+
+New UX questions — anything else you're thinking through?
+
+What's on your mind?
+
+glass-os-agentic-patterns-spec.md
+coder has finished step 2, review current code before we move to implement glass-os-agentic-patterns-spec.md and step3&4. write a md for the coder to revise anything if needed
+Let me review the current codebase state and the agentic patterns spec first.
+
+Read glass-os-agentic-patterns-spec.md
+Agent:Explore current codebase state
+IN
+I need a thorough exploration of this GlassOS project to understand the current state of the codebase after Step 1 (Screen Composer) and Step 2 (Slot-Based Flow Engine) have been completed.
+
+Please find and read:
+
+1. The flow engine: src/ai/flow-engine.js
+2. The screen composer: look for screen-composer.js or similar
+3. Flow definitions: src/flows/flow-definitions.js, src/flows/coffee-order.js, and any other flow definition files
+4. The UI primitives: src/flows/ui-primitives.js
+5. The input/binding system: src/ai/ai-bindings.js and src/ai/input-actions.js
+6. The morph system: find all morph-*.js files in src/shared/
+7. Any existing message-send, flight-booking, flight-render files
+8. The project structure doc: AI_PAGE_PROJECT_STRUCTURE.md
+9. The HANDOFF.md or any context docs
+
+For each file, I need to understand:
+- What it does
+- How it connects to other files
+- Whether it follows the architecture described in the build spec (JSON layout specs → Screen Composer → primitives)
+- Any issues, inconsistencies, or things that seem incomplete
+
+Be very thorough - read full file contents where possible.
+Globpattern: "**/*flight*.js"
+Found 4 files
+Read screen-composer.js
+Read ui-primitives.js
+Read HANDOFF.md
+Read message-send.js
+Read message-send-render.js
+Read README.md
+This is very revealing. The codebase exploration found significant gaps. Let me verify a couple of critical details before writing the review.
+
+Read flow-engine.js
+Read flow-definitions.js
+Read coffee-order.js
+Read message-send.js
+Read flight-booking.js
+Now let me read the rest of flight-booking and check input-actions for the full routing picture.
+
+Read input-actions.js
+Read ai-bindings.js
+Now I have the full picture. Let me write the review spec.
+
+Read HANDOFF.md
+Read HANDOFF.md
+Good. Now I have the complete picture. Here's my assessment — let me write the review spec.
+
+Write step2-review-and-revisions.md
+150 lines
+# Step 2 Review: What Needs Fixing Before Moving Forward
+
+## Status
+
+Step 2 (Slot-Based Flow Engine) is **partially done**. The generic engine exists, flow definitions are written, and the coffee order flow is fully engine-driven. But message send and flight booking still run on their old hand-authored state machines. The flow definitions for those two exist in `flow-definitions.js` but nothing uses them.
+
+This means Step 2's core promise — "one engine, one renderer, N flow definitions" — is **not yet proven for the hard cases**. Coffee is the simplest flow (two chip selects + confirm). The real test is whether the engine can replace the message and flight state machines without losing any UX behavior.
+
+**This must be finished before moving to Step 3 (Intent Routing) or the agentic patterns spec.** Everything downstream assumes the engine runs all flows.
+
+---
+
+## Part 1: Complete the Migration (Finish Step 2)
+
+### 1a. Migrate Send Message to the Generic Engine
+
+`message-send.js` still has its own state enum (`GS.IDLE`, `GS.THINKING`, `GS.DISAMBIGUATE`, etc.) and manually manages transitions. It needs to be rewritten to use `createFlowEngine()` with `SEND_MESSAGE_FLOW_DEFINITION`, following the same pattern as `coffee-order.js`.
+
+**What to preserve exactly** (the coder should test each of these):
+- Disambiguation: 1 contact match → skip to compose. 2+ matches → selection list with arrow nav.
+- Compose: contact header + chips + input field. Selecting a chip fills message with a full sentence. Choosing "dictate" switches to dictation mode. Chips disappear when user starts talking.
+- 3-second pause → checkmark fades in. Resume talking → checkmark fades out.
+- Checkmark tap → confirm screen (no blue glow, 3 action buttons).
+- Edit action → back to compose with existing message pre-filled, chips hidden.
+- Voice shortcuts at every step ("send", "edit", "cancel", contact names during disambiguate).
+- Epoch guards for stale async callbacks — the engine-driven version needs these too.
+- Controls positioning (the custom `positionControlsOverlay` + tracking logic).
+
+**What to delete after migration:**
+- The `GS` enum and all `flow.state === GS.XXX` branching in `message-send.js`
+- The manual state transition logic — engine's `next()`, `back()`, `goToSlot()` replace it
+- Do NOT delete `message-send-render.js` or `message-send-voice.js` yet — they can become thin helpers that the engine-driven flow calls
+
+**Flow definition update needed:**
+The current `SEND_MESSAGE_FLOW_DEFINITION` is too thin. It only lists slot IDs and primitive names — it doesn't carry the contact data, chip definitions, or any of the compose behavior. Compare it to how `coffee-order.js` hardcodes `DRINKS` and `SIZES` and builds the full spec in `slotSpec()`. The message flow needs the same approach: the flow file owns the data and builds full layout specs per slot, the engine just tracks which slot is active.
+
+### 1b. Migrate Flight Booking to the Generic Engine
+
+`flight-booking.js` has `FLOW_STEPS` (8 steps), a custom `setStep()`/`nextStep()`/`backStep()` system, and a bunch of flight-specific logic (city→airport mapping, route row HTML, Gemini AI calls via `flight-ai.js`).
+
+**What to preserve exactly:**
+- Destination step: pill shape, route row with origin pre-filled (SFO), voice/text input for city name.
+- Dates step: card-form shape, depart/return input (currently text, later voice).
+- Passengers step: selection list (1 adult, 2 adults, family).
+- Thinking state: magic shape with animated dots while searching flights.
+- Flight options step: selection list with 3 flight options.
+- Confirm step: flight summary card.
+- Payment step: selection list with payment methods.
+- Done step: success state.
+- Edit-return behavior: from confirm, user can go back to change dates/destination and return to confirm after.
+- `flight-ai.js` Gemini integration for NLU — keep this as a resolver plugin the engine-driven flow calls.
+
+**Flow definition update needed:**
+The current `BOOK_FLIGHT_FLOW_DEFINITION` lists 6 slots but the actual flow has 8 steps (it's missing the `thinking` step between passengers and flight_option, and the `done` step). The definition also doesn't capture the step-specific shapes, the edit-return logic, or the Gemini integration points.
+
+### 1c. Flow Engine Gaps
+
+The engine in `flow-engine.js` is minimal — 104 lines. It tracks slot index, filled values, and selection index. That's a good foundation, but it's missing behaviors that the existing flows need:
+
+1. **Auto-resolve / skip logic**: If a slot is pre-filled (e.g., only 1 contact match), the engine should automatically advance past it. Currently each flow file would need to implement this manually after calling `start()`. The engine should handle it in a `start()` or `advance()` method.
+
+2. **Slot-specific voice mode**: The engine doesn't tell the voice system whether to use "command" or "dictation" mode. Each flow handles this manually. The engine should expose `currentSlot().voiceMode` or similar.
+
+3. **Execution phase management**: The engine sets `status = "executing"` when you call `next()` past the last slot, but there's no `loading → success → done` lifecycle. Coffee flow manages this with manual timers. This should be engine-level.
+
+4. **No event/callback system**: When the engine transitions between slots, nothing fires. Each flow polls `engine.currentSlot()` and renders manually. Consider adding an `onSlotChange` callback so flows don't need to manually sync.
+
+These aren't blockers for migration — coffee flow works fine without them — but they'll become pain points when you have 5+ flows all implementing the same boilerplate.
+
+---
+
+## Part 2: Flow Definition Quality
+
+The definitions in `flow-definitions.js` need to be richer to actually drive the flows. Right now they're skeletal:
+
+```js
+// Current — too thin
+{ id: "recipient", type: "entity_select", required: true, voice: "Which Hiro?", ui: ["selection_list"] }
+```
+
+They need to carry enough information that the flow file's `slotSpec()` function can generate a complete layout spec. Compare to how `coffee-order.js` builds full specs with `intentHeader`, `wrapBody`, `bodyClass`, `props` with real data. The definitions should either:
+
+**Option A**: Keep definitions thin, flow files own the spec generation (current coffee pattern). This is fine — just acknowledge that definitions are metadata, not the full spec.
+
+**Option B**: Make definitions richer so they carry all the data needed to generate specs. This would allow a truly generic "run any definition" flow runner without per-flow spec code.
+
+For now, **Option A is pragmatic** — each flow file has enough custom behavior (contacts data, city mapping, Gemini calls) that a generic runner would need lots of plugin hooks anyway. But be explicit about this: the flow definition is a structural skeleton, the flow file is where the real spec generation lives.
+
+---
+
+## Part 3: Input Routing Cleanup
+
+`input-actions.js` has an ad-hoc priority chain:
+
+```
+1. flight active? → flight handles it
+2. coffee active? → coffee handles it
+3. message intent detected? → start message flow
+4. chip quick actions (weather, timer, call)
+5. flight processRequest
+6. coffee processRequest
+7. fallback to AI/manual mode
+```
+
+**Problems:**
+- Message flow is checked by intent regex but doesn't have a `processRequest()` method like flight and coffee do. Inconsistent interface.
+- Message flow doesn't have an `isActive()` check at the top like flight and coffee. If message flow is active and user types something, it falls through to step 3 again instead of routing to the active message flow.
+- The `handleChipQuickAction` function creates one-off scenarios inline instead of going through any flow system. These should eventually become flows or direct responses, but for now they work.
+
+**Fix for this pass:**
+- Add `messageFlow.isActive()` check at the top of `processRequest()`, before the flight/coffee checks. Route to message flow's input handler if active.
+- Give message flow a `processRequest(text)` method for consistency.
+- Keep chip quick actions as-is — they'll be replaced by Gemini intent routing in Step 3.
+
+---
+
+## Part 4: Minor Issues
+
+1. **No epoch guards on coffee/flight flows**: `message-send.js` has `flowEpoch` to prevent stale callbacks from rendering into a reset flow. Coffee and flight flows don't have this. If the user rapidly starts/cancels flows, stale timers could fire into the wrong state. Add epoch guards to both.
+
+2. **Coffee flow confirm still has 3 buttons (order/change/cancel)**: Per the agentic patterns spec, confirm should be ✅ and ❌ only — no edit button. But don't change this yet. The agentic patterns will be applied as a separate pass after the engine migration is complete.
+
+3. **Flight definition has `confirm` typed as `display` but it's actually an action step**: In `flow-definitions.js`, the flight confirm slot is `type: "display"` but it should be `type: "action_select"` since the user needs to confirm/cancel. The `display` type is for non-interactive content (like step-by-step guides).
+
+4. **Flight definition is missing `thinking` and `done` pseudo-slots**: The current flow has 8 steps but the definition only has 6 slots. The `thinking` step (loading while searching flights) and `done` step (success confirmation) should either be slots or handled by the engine's execution phase. The engine already has `executing` and `success` status — use those instead of making them slots.
+
+---
+
+## Recommended Execution Order
+
+1. **Fix the flow engine** — add auto-advance for pre-filled slots, add epoch guard support.
+2. **Migrate message-send.js** — rewrite to use engine. Validate every UX behavior listed in 1a. Keep render and voice files as helpers.
+3. **Migrate flight-booking.js** — rewrite to use engine. Keep flight-ai.js as plugin. Validate every step listed in 1b.
+4. **Fix input routing** — add `messageFlow.isActive()` check, add `processRequest()` to message flow.
+5. **Fix flow definitions** — correct the flight confirm slot type, remove thinking/done as slots (use engine execution states).
+6. **Add epoch guards** to coffee and flight flows.
+7. **Validate all three flows** end-to-end: coffee, message, flight. Each should look and behave identically to their pre-migration versions.
+
+After this, Step 2 is truly complete. Then we can apply the agentic patterns spec (Part 2 of that doc: confirm redesign, auto-defaults, recommendation slots) and move to Step 3 (intent routing).
+
+---
+
+## Do NOT
+
+- Apply the agentic patterns spec yet (confirm redesign, auto-defaults, recommendation slots). That's a separate pass.
+- Touch `ui-primitives.js` or `screen-composer.js`. Step 1 is done and working.
+- Change visual styling or morph behavior.
+- Delete the old flow files until migration is validated and all UX behavior is confirmed identical.
+- Build intent routing (Step 3) or dynamic flows (Step 4). Those depend on a fully working engine.
+Done. The review is at step2-review-and-revisions.md.
+
+Here's the headline: Step 2 isn't actually done. The coder built the engine and proved it works with coffee (the easy case), but message send and flight booking still run on their old state machines. The flow definitions exist but nothing uses them.
+
+Key findings:
+
+Migration incomplete — Message and flight flows need to be rewritten to use the generic engine. The definitions in flow-definitions.js are too thin to drive the actual UX — they're missing data, shapes, and behavior.
+
+Engine is minimal — No auto-advance for pre-filled slots, no voice mode switching, no execution lifecycle (loading→success→done). Each flow reimplements this boilerplate.
+
+Input routing has gaps — Message flow doesn't have isActive() routing at the top of the chain, so if the message flow is active and user types something, it could misroute.
+
+Flight definition has bugs — confirm slot typed as display (should be action_select), missing thinking/done steps.
+
+My recommendation: finish Step 2 properly before touching anything else. The agentic patterns spec and Steps 3-4 all assume the engine runs every flow. If we layer on top of a half-migrated system, we'll be debugging two architectures at once.
+
+Want to discuss any of these points, or is the spec clear enough to hand off?
+
+
+image.png
+1078×940
+
+image.png
+862×852
+step2-review-and-revisions.md
+the ui it build for coffee also bad, the container is too tall, confirm page (img2) is crazily wrong
+Yeah, those screenshots are rough. Let me call out the specific problems:
+
+Image 1 (Drink selection):
+
+The card is full-height — massive empty space above the chips. The container should tightly wrap the content (just the chip bar), anchored to the bottom. The morph system should be sizing to content, not stretching to fill.
+Image 2 (Confirm):
+
+Action buttons are at the top left instead of below the card. They should be centered beneath the info card, same placement pattern as the message flow's send/edit/cancel.
+The info card content ("Confirm Order" / "Tap to order or change") is crammed at the very bottom with text getting clipped. The card is again way too tall with dead space.
+The whole layout is inverted — content at bottom, controls at top. It should be: info card (content-fitted) → action row below it, both anchored to bottom.
+These are all symptoms of the same root issue: the coffee flow's render function isn't producing the right spec for the Screen Composer, and isn't using the same layout patterns that the message flow already established. The message flow's confirm screen works (card + actions below, properly sized) — the coffee flow should follow the exact same pattern but it's clearly not.
+
+I'll add this to the review spec as a visual bug section so the coder knows what to fix.
+
+Edit step2-review-and-revisions.md
+Added 32 lines
+Updated the spec. The coffee flow visual bugs are now in Part 4 with specific diagnoses and the fix approach (reference the message flow's confirm screen pattern). The coder should fix this before migrating the other flows — if the simplest flow can't render correctly, migrating the complex ones will just compound the problems.
+
+Want me to also look at exactly which lines in coffee-order.js are producing the wrong specs, so the coder has more precise pointers?
+
+coffee order flow is just okay but ehre is alot can be improved in flow and visual, should i do it now or finish patterns and step3 first? how to make the system smarter that i dont manually fix every flow
+Good question. Let me think through the tradeoffs.
+
+Don't fix coffee's visual details now. Here's why:
+
+The coffee flow is going to change twice more regardless:
+
+Agentic patterns spec will reshape its confirm screen (2 buttons not 3, single-line summary card, auto-default payment). That's a structural change to the flow definition and spec output.
+
+Step 4 (AI-driven dynamic flows) means eventually the AI generates coffee-like flows on the fly. If you hand-polish coffee now, that polish lives in coffee-order.js — a file that might not even exist once the AI handles it dynamically.
+
+So polishing it now = doing work that gets overwritten.
+
+What you should fix now is only what's broken (the container sizing, the inverted action layout) — because those are bugs in how the flow talks to the Screen Composer, and if that's wrong, every future flow will inherit the same bugs.
+
+To your real question — how to make the system smarter so you don't manually fix every flow:
+
+This is exactly what Step 3 + 4 solve, but specifically, the leverage point is the Screen Composer + composition rules, not the individual flows.
+
+Right now, each flow's slotSpec() function manually decides layout, spacing, body classes, card sizing. That's where coffee went wrong — it's making its own layout decisions instead of following a shared pattern.
+
+The fix is architectural, not per-flow:
+
+The Screen Composer should enforce layout rules automatically. When a spec says layout: ["info_card"], actions: [...], the composer should always produce: content-fitted card, actions below, bottom-anchored, correct spacing. The flow shouldn't need to think about bodyClass, wrapBody, controls positioning, or morph shape — the composer should derive those from the spec content.
+
+Think of it as: right now each flow is a layout designer and a content provider. You want flows to be content-only — "here's an info card with these fields and these actions" — and the composer handles all the how.
+
+This means the next step should be:
+
+Fix the coffee bugs (broken layout, not polish) — 30 min task
+Finish Step 2 migration (message + flight on the engine) — so all flows go through the same path
+Apply agentic patterns — this reshapes confirm screens, adds auto-defaults, and establishes the composition rules that the composer enforces
+Step 3 intent routing — Gemini classifies, engine runs, composer renders
+After step 3, the composer's rules mean: any new flow definition (hand-written or AI-generated) automatically gets correct layout. You only touch individual flows when you want to override the default pattern — and even then, you're tuning content, not layout.
+
+The short answer: fix the bugs, finish the migration, then invest in making the composer smarter — not in polishing individual flows. That's where your leverage is.
+
+Want me to update the review spec to make this sequencing explicit for the coder?
+
+coder has finished Step 2 migration based on your md. review it
+Agent:Review Step 2 migration completion
+IN
+I need a very thorough review of the GlassOS project after the coder claims to have completed the Step 2 migration. The key question: did message-send and flight-booking actually get migrated to use the generic flow engine?
+
+Read these files IN FULL:
+
+1. src/ai/flow-engine.js — check if it was enhanced (auto-advance, epoch guards, voice mode, execution lifecycle)
+2. src/flows/flow-definitions.js — check if definitions were enriched
+3. src/flows/message-send.js — is it now using createFlowEngine()? Or still has the old GS enum state machine?
+4. src/flows/message-send-render.js — how does it generate specs now?
+5. src/flows/message-send-voice.js — still exists?
+6. src/flows/flight-booking.js — is it now using createFlowEngine()? Or still has FLOW_STEPS?
+7. src/flows/flight-render.js — how does it generate specs now?
+8. src/flows/flight-ai.js — still a resolver plugin?
+9. src/flows/coffee-order.js — did the visual bugs get fixed (container sizing, action layout)?
+10. src/ai/input-actions.js — does messageFlow now have isActive() check and processRequest()?
+11. src/ai/ai-bindings.js — how are flows wired now?
+12. context/HANDOFF.md — what does the coder say they did?
+
+For each file, report:
+- What changed vs previous state
+- Whether the migration is actually complete
+- Any issues, inconsistencies, or missing behaviors
+- Whether the review spec's requirements were addressed
+
+Be very thorough. Read complete file contents.
+Read HANDOFF.md
+Globpattern: "src/flows/*.js"
+Found 9 files
+Read coffee-order.js
+Read message-send-voice.js
+Bash
+IN
+git diff --no-index /dev/null src/flows/message-send.js 2>/dev/null | head -100 || grep -n "processRequest" src/flows/message-send.js | head -5
+
+OUT
+diff --git a/src/flows/message-send.js b/src/flows/message-send.js
+new file mode 100644
+index 0000000..03043b7
+--- /dev/null
++++ b/src/flows/message-send.js
+@@ -0,0 +1,778 @@
++import { createMessageSendRender } from "./message-send-render.js";
++import { createMessageSendVoice } from "./message-send-voice.js";
++import { composeScreen } from "../shared/screen-composer.js";
++import { phrase } from "../ai/phrases.js";
++
++const CONTACTS = [
++  { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", avatar: "src/assets/avatar1.png", chips: [
++    { label: "Design review", message: "Hey, do you have time for a design review sometime?" },
++    { label: "Share a file", message: "I have a file to share with you — when's a good time?" },
++    { label: "Schedule a sync", message: "Want to schedule a quick sync this week?" },
++  ]},
++  { id: 2, name: "Hiro Horii", initials: "HH", relation: "Friend", avatar: "src/assets/avatar2.png", chips: [
++    { label: "What's up?", message: "Hey! What's up? Haven't caught up in a while." },
++    { label: "Lunch this week?", message: "Hey, want to grab lunch sometime this week?" },
++    { label: "Check this out", message: "Hey, I found something cool I wanted to share with you!" },
++  ]},
++];
++
++export function createMessageSendFlow(ctx) {
++  const FLOW_START_THINK_MS = 1600;
++  const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
++  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
++  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null };
++  let controlsMode = "";
++  const voice = createMessageSendVoice({ contacts: CONTACTS });
++  const controlsGap = 14;
++  let flowEpoch = 0;
++
++  function isEpochAlive(epoch) {
++    return epoch === flowEpoch && flow.active;
++  }
++
++  function clearTimers() {
++    Object.keys(timers).forEach((key) => {
++      if (!timers[key]) return;
++      if (key === "controlsTrack") cancelAnimationFrame(timers[key]);
++      else clearTimeout(timers[key]);
++      timers[key] = null;
++    });
++  }
++
++  function speakOutput(text) {
++    flow.aiVoice = text;
++    ctx.setSimVoice(text);
++    ctx.shell.updateOrbLabel();
++  }
++
++  function cancelControlsTracking() {
++    if (!timers.controlsTrack) return;
++    cancelAnimationFrame(timers.controlsTrack);
++    timers.controlsTrack = null;
++  }
++
++  function positionControlsOverlay() {
++    const layer = ctx.C.glassControlsLayer;
++    const stage = document.getElementById("stage");
++    const main = document.getElementById("drop-main");
++    const controls = layer?.querySelector(".g-glass-controls");
++    if (!layer || !stage || !main || !controls) return false;
++    const stageRect = stage.getBoundingClientRect();
++    const mainRect = main.getBoundingClientRect();
++    const controlsRect = controls.getBoundingClientRect();
++    const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
++    const unclampedTop = (mainRect.bottom - stageRect.top) + controlsGap;
++    const maxTop = Math.max(8, stageRect.height - controlsRect.height - 8);
++    const topY = Math.min(unclampedTop, maxTop);
++    controls.style.left = `${Math.round(centerX)}px`;
++    controls.style.top = `${Math.round(topY)}px`;
++    return true;
++  }
++
++  function trackControlsForTransition(ms) {
++    cancelControlsTracking();
++    const root = getComputedStyle(document.documentElement);
++    const fallbackMs = Number.isFinite(ms) ? ms : (parseFloat(root.getPropertyValue("--anim-t")) || 450) + 120;
++    const end = performance.now() + Math.max(120, fallbackMs);
++    const tick = () => {
++      if (!flow.active || !ctx.C.glassControlsLayer?.classList.contains("visible")) return;
++      positionControlsOverlay();
++      if (performance.now() < end) timers.controlsTrack = requestAnimationFrame(tick);
++      else timers.controlsTrack = null;
++    };
++    timers.controlsTrack = requestAnimationFrame(tick);
++  }
++
++  function renderControls(screenSpec = null) {
++    const layer = ctx.C.glassControlsLayer;
++    if (!layer) return;
++    const nextActions = Array.isArray(screenSpec?.actions) ? screenSpec.actions : [];
++    const nextSelectedIndex = Number.isFinite(screenSpec?.actionSelectedIndex) ? screenSpec.actionSelectedIndex : 0;
++    const nextMode = nextActions.length ? nextActions.map((action) => action.id || "").join("|") : "";
++    if (timers.controlsExit) {
++      if (nextMode) {
++        clearTimeout(timers.controlsExit);
+Bash
+IN
+grep -n "createFlowEngine\|createMessageSendFlow\|createFlightBookingFlow\|createCoffeeOrderFlow" /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js | head -20
+
+OUT
+10:import { createMessageSendFlow } from "../flows/message-send.js";
+11:import { createFlightBookingFlow } from "../flows/flight-booking.js";
+12:import { createCoffeeOrderFlow } from "../flows/coffee-order.js";
+420:const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, voice, input, addChatBubble, hideTypingBubble, returnToHomeContext });
+421:const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, playEarcon: playSimEarcon, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive, returnToHomeContext });
+422:const coffeeFlow = createCoffeeOrderFlow({ SHAPES, C, morph, shell, voice, input, returnToHomeContext });
+Bash
+IN
+grep -n "processRequest" /Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js
+
+OUT
+131:  return { isActive: () => flow.active, start, cancel, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
+Bash
+IN
+grep -A 10 "processRequest(text)" /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js | tail -15
+
+OUT
+    processRequest(text) {
+      if (!flow.active) {
+        if (!voice.isMessageIntent(text)) return false;
+        start(String(text || "").trim());
+        return true;
+      }
+      void handleInputSubmit(text);
+      return true;
+    },
+  };
+}
+Bash
+IN
+grep -n "MIN_H\|MAX_H\|TOP\|BOTTOM\|contentHeightPx\|dynamicGeo" /Users/ariax/Documents/GitHub/GenUI/src/flows/coffee-order.js
+
+OUT
+22:  const TOP = 10;
+23:  const BOTTOM = 10;
+24:  const MIN_H = 100;
+25:  const MAX_H = 400;
+56:  function contentHeightPx() {
+63:    return Math.max(60, Math.min(MAX_H - TOP - BOTTOM, raw || 120));
+66:  function dynamicGeo(shape) {
+68:    const h = Math.max(MIN_H, Math.min(MAX_H, Math.round(contentHeightPx() + TOP + BOTTOM)));
+218:        ctx.morph.morphTo("card", { icon: "", primary: "", secondary: "", detail: "" }, dynamicGeo("card"));
+220:        ctx.morph.morphTo("card-form", { icon: "", primary: "", secondary: "", detail: "" }, dynamicGeo("card-form"));
+Bash
+IN
+grep -n "chip_bar\|action_select\|info_card" /Users/ariax/Documents/GitHub/GenUI/src/flows/coffee-order.js
+
+OUT
+120:      layout: ["info_card"],
+124:        info_card: {
+151:        layout: ["chip_bar"],
+155:          chip_bar: {
+167:        layout: ["chip_bar"],
+171:          chip_bar: {
+Bash
+IN
+grep -c "GS\\.IDLE\|GS\\.THINKING\|GS\\.DISAMBIGUATE\|GS\\.COMPOSE\|GS\\.CONFIRM\|GS\\.SENDING\|GS\\.SENT" /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js
+
+OUT
+46
+The review is clear. Let me check if the coffee visual bugs were at least fixed.
+
+Read coffee-order.js
+Now let me check what changed in the engine and the key files quickly.
+
+Read flow-engine.js
+Read HANDOFF.md
+Read HANDOFF.md (lines 51-80)
+Here's my assessment:
+
+Message send and flight booking were NOT migrated. The HANDOFF.md is honest about it — line 57 says exactly that. The coder applied the review's secondary fixes (epoch guards on flight, processRequest() on message, isActive() routing, flight definition type correction, coffee visual sizing) but did not do the main ask: rewriting message-send and flight-booking to use the generic engine.
+
+Both flows still have their legacy state machines:
+
+message-send.js still has the GS enum (IDLE, THINKING, DISAMBIGUATE, COMPOSE, CONFIRM, SENDING, SENT) and all its manual state transitions
+flight-booking.js still has FLOW_STEPS (8 steps) and custom setStep()/nextStep()/backStep()
+What DID get done (the peripheral fixes from the review):
+
+Flow engine enhanced with auto-advance (resolveIndex), epoch guards, onChange callback, currentVoiceMode(), setStatus()
+Coffee flow has proper content-fitted morph sizing (dynamicGeo, contentHeightPx) and message-style controls positioning
+messageFlow.isActive() check added to input routing
+messageFlow.processRequest() added
+Flight definition confirm slot corrected to action_select
+Epoch guards added to flight-booking
+What's still missing (the actual migration):
+
+Message-send.js → rewrite to use createFlowEngine() with SEND_MESSAGE_FLOW_DEFINITION
+Flight-booking.js → rewrite to use createFlowEngine() with BOOK_FLIGHT_FLOW_DEFINITION
+Deletion of old state machine code after validation
+Here's the question for you: the message and flight flows currently work on their legacy state machines. The migration to the generic engine is the architecturally correct thing to do, but it's also the riskiest part — lots of subtle UX behavior to preserve (3s pause, chip-to-sentence expansion, edit-return routing, Gemini integration, controls positioning during morphs).
+
+Two paths forward:
+
+Path A: Force the migration now. Correct approach per the original plan. Every flow on one engine before moving to Step 3. But this is where the coder keeps stalling — it's the hardest refactor.
+
+Path B: Move forward with Step 3 (intent routing) and agentic patterns anyway. The engine works (coffee proves it). Message and flight work on their legacy machines. Step 3 only needs to route intents to flow.processRequest() — it doesn't care whether the flow internally uses the engine or a state machine. The migration becomes cleanup debt.
+
+My recommendation: Path B, with a caveat. The migration matters for Step 4 (dynamic flows), where the AI generates flow definitions the engine must run. But Step 3 doesn't need it. If you push the migration now, you'll be stuck debugging two complex rewrites before making any forward progress. If you move to Step 3 + agentic patterns, you build visible new capability while the legacy flows still work fine.
+
+The caveat: message and flight MUST be migrated before Step 4. No exceptions — the AI can't generate dynamic flows if the engine hasn't proven it can run complex ones.
+
+What do you want to do?
+
+also this 'confirm screen (2 buttons not 3' rule i dont want to make it universal, maybe yes for flight but i wan tto keep that 3 buttons in my msg flow. so there is no 'no 3 buttons' rule there, it depends. only rule is 'max 3' then im going to let coder to patterns spec first before step 3
+You've hit your limit · resets 1pm (America/Los_Angeles)
+

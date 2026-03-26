@@ -1,6 +1,138 @@
 # Handoff
 
 ## Task title
+Revision Pass: Fix slot reopening, flight confirm accuracy, and payment default fallback
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed explicit slot reopening semantics in [flow-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/flow-engine.js):
+  - `next()` still skips already-filled required slots
+  - `goToSlot()` now reopens the exact requested slot instead of skipping past filled values
+  - added shared payment-default seam via `getPaymentDefaultSources()`
+- Updated coffee flow in [coffee-order.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/coffee-order.js):
+  - confirm-time `change drink` / `change size` now reopen the exact slot
+  - payment selection UI now appears when no default exists
+  - default payment still auto-fills and skips payment UI when available
+- Updated flight flow in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js), [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js), and [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js):
+  - restored a real payment-selection exception path before confirm
+  - added a single source of truth for the chosen flight (`selectedFlightOption`)
+  - confirm summary and detail-on-demand now read from the actual chosen flight, not the default recommendation helper
+  - recommendation refinement updates the visible recommendation correctly
+- Added concise runtime-boundary comments:
+  - coffee is the engine-driven reference flow
+  - message and flight remain bespoke in this revision
+
+## Files changed
+- `src/ai/flow-engine.js`
+- `src/flows/coffee-order.js`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/ai/flow-engine.js`
+  - `node --check src/flows/coffee-order.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send-voice.js`
+  - `node --check src/ai/input-actions.js`
+- Module import sanity check passed:
+  - `node -e "import('./src/ai/flow-engine.js'); import('./src/flows/coffee-order.js'); import('./src/flows/flight-booking.js'); import('./src/flows/flight-render.js'); import('./src/flows/flight-ai.js'); import('./src/flows/message-send.js'); console.log('ok')"`
+
+## Remaining issues / caveats
+- No live browser validation was run for the manual scenarios listed in `context/TASK.md`.
+- `context/TASK.md` referenced `ref/revision-spec.md`, but that file is not present in the repo. The implementation followed `context/TASK.md` directly.
+- Flight still uses a bespoke runtime state machine; this pass only fixed the correctness seams requested by the task.
+
+## Recommended next step
+1. Run the manual validation matrix from `context/TASK.md` in `ai.html`, especially:
+   - coffee with default payment
+   - coffee with no default payment
+   - flight recommendation -> alternative -> confirm
+   - flight no-default payment path
+2. If those pass, the next safe step is migrating flight onto the generic engine without changing the visual primitives.
+
+## Payment default simulation
+- Default available:
+  - ensure `localStorage.getItem('genui.primaryPaymentMethod')` is unset, or set it to a valid payment label such as `Apple Pay ···· 9421`
+- No default available:
+  - set `localStorage.setItem('genui.primaryPaymentMethod', '__none__')`
+- Both coffee and flight now read from the same helper in `src/ai/flow-engine.js`
+
+## Task title
+GlassOS agentic patterns pass
+
+## Completion status
+- Partially completed
+
+## Summary
+- Updated the AI flow engine in `src/ai/flow-engine.js` with the reusable behaviors required by the agentic spec:
+  - slot auto-default resolution via `autoDefault` + `defaultSource`
+  - `confirmTemplate` resolution for summary cards
+  - lightweight voice-edit phrase matching
+- Updated flow definitions in `src/flows/flow-definitions.js`:
+  - message confirm now uses send/cancel only
+  - flight now models recommendation selection and auto-default payment metadata
+  - coffee now models auto-default payment and summary-first confirm metadata
+- Updated message flow to remove the confirm edit button and route edits by voice:
+  - confirm actions reduced to send/cancel
+  - voice phrases can reopen compose or recipient disambiguation
+- Updated flight flow to the agentic pattern:
+  - replaced list-first flight choice with recommendation mode
+  - added alternatives mode with two tradeoff options
+  - collapsed payment + confirm into one summary card
+  - payment defaults to the primary method and can be swapped by voice from confirm
+  - confirm supports detail-on-demand voice behavior
+- Updated coffee flow to follow the same pattern:
+  - payment auto-defaults on start
+  - confirm uses summary card from template with drink, price, and payment
+  - removed the explicit change button
+  - spoken edits can reopen drink/size or swap payment directly
+
+## Files changed
+- `src/ai/flow-engine.js`
+- `src/flows/flow-definitions.js`
+- `src/flows/message-send-voice.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-ai.js`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/coffee-order.js`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/ai/flow-engine.js`
+  - `node --check src/flows/flow-definitions.js`
+  - `node --check src/flows/message-send-voice.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/coffee-order.js`
+
+## Remaining issues / caveats
+- This pass was validated by syntax and targeted code inspection only. No live browser pass was run for:
+  - message confirm voice edit/cancel behavior
+  - flight recommendation -> alternatives -> confirm transitions
+  - coffee confirm summary sizing and controls positioning
+- `flight-booking.js` still uses its custom state machine instead of the generic engine. The new engine behaviors are present, but flight is not fully migrated onto them yet.
+- `ref/glass-os-agentic-patterns-spec.md` is user-edited and intentionally left untouched.
+
+## Recommended next step
+1. Run a live parity pass in `ai.html` for message, flight, and coffee flows.
+2. If motion/layout is stable, migrate flight onto the generic flow engine so recommendation/default/edit behavior is owned in one place instead of split across `flight-booking.js` and `flight-ai.js`.
+
+## Task title
 Step 2: Slot-Based Flow Engine
 
 ## Completion status
