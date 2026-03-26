@@ -1,4 +1,5 @@
 import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
 
 export function createFlightRender({
   SHAPES,
@@ -53,24 +54,12 @@ export function createFlightRender({
   }
 
   function toastGeo(labelText = "Trip booked") {
-    const base = SHAPES.pill || SHAPES.card;
-    const textEl = document.getElementById("c-rich")?.querySelector("[data-glass-sent]");
-    let w = 200;
-    let h = 52;
-    if (textEl) {
-      const rect = textEl.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        w = clamp(Math.round(rect.width + 48), 140, 360);
-        h = clamp(Math.round(rect.height + 32), 52, 140);
-      } else {
-        const text = String(labelText || "").trim();
-        w = clamp(Math.round(text.length * 11 + 96), 160, 360);
-      }
-    } else {
-      const text = String(labelText || "").trim();
-      w = clamp(Math.round(text.length * 11 + 96), 160, 360);
-    }
-    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) - 18 } };
+    return measureSuccessToastGeometry({
+      richRoot: document.getElementById("c-rich"),
+      pillShape: SHAPES.pill || SHAPES.card,
+      fallbackLabel: labelText,
+      clamp,
+    });
   }
 
   function optionRows(options) {
@@ -262,6 +251,12 @@ export function createFlightRender({
           spec: screenSpec,
         });
         richRoot.classList.add("visible");
+        richRoot.classList.toggle("glass-sent", step.type === "done");
+        applyFlowChromeVisibility({
+          C: getFlow()?.C,
+          active: true,
+          richSent: step.type === "done",
+        });
         requestAnimationFrame(() => requestAnimationFrame(() => { richRoot.style.opacity = "1"; }));
         if (step.type === "done") {
           requestAnimationFrame(() => {

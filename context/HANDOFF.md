@@ -1,6 +1,69 @@
 # Handoff
 
 ## Task title
+Step 2: Slot-Based Flow Engine
+
+## Completion status
+- Partially completed
+
+## Summary
+- Added generic flow engine foundation in `src/ai/flow-engine.js`.
+- Expanded the engine with:
+  - prefilled-slot auto-advance
+  - change callback support
+  - epoch tracking helpers
+  - slot-derived voice mode helper
+  - status setter
+- Added slot-based flow definition registry in `src/flows/flow-definitions.js` for:
+  - `send_message`
+  - `book_flight`
+  - `order_coffee`
+- Added new engine-driven coffee flow in `src/flows/coffee-order.js`:
+  - drink chip selection
+  - size chip selection
+  - confirm action row
+  - loading and success states via existing primitives/composer
+- Wired coffee flow into AI runtime:
+  - `src/ai/ai-bindings.js`
+  - `src/ai/input-actions.js`
+- Added generic active-flow routing for transcript/input/key handling so coffee flow can coexist with existing message/flight flows.
+- Applied review revisions:
+  - `messageFlow.processRequest(...)` added for interface parity
+  - active message flow now consumes text input before new intent routing
+  - `BOOK_FLIGHT_FLOW_DEFINITION.confirm` corrected to `action_select`
+  - epoch guards added to `flight-booking.js`
+  - coffee flow now uses content-fitted morph sizing and message-style controls overlay positioning instead of free-floating composer output
+
+## Files changed
+- `src/ai/flow-engine.js` (new)
+- `src/flows/flow-definitions.js` (new)
+- `src/flows/coffee-order.js` (new)
+- `src/ai/input-actions.js`
+- `src/ai/ai-bindings.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-booking.js`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/ai/flow-engine.js`
+  - `node --check src/flows/flow-definitions.js`
+  - `node --check src/flows/coffee-order.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/ai/input-actions.js`
+  - `node --check src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- Message and flight flows are not yet fully migrated onto the new generic engine in this packet.
+- Existing `message-send.js` / `flight-booking.js` adapters still own their current behavior/state machines.
+- Step 2 is therefore only partially complete: engine + definitions + third flow + runtime routing are in place, but the full migration/deletion of legacy message/flight state modules is still pending.
+
+## Recommended next step
+1. Migrate `message-send.js` to the generic engine using `SEND_MESSAGE_FLOW_DEFINITION`.
+2. Migrate `flight-booking.js` to the generic engine using `BOOK_FLIGHT_FLOW_DEFINITION`, keeping `flight-ai.js` as the resolver plugin.
+3. After parity validation, remove obsolete per-flow state-machine code.
+
+## Task title
 Step 1: Screen Composer For AI Page
 
 ## Completion status

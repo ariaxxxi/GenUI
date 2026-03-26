@@ -765,5 +765,14 @@ export function createMessageSendFlow(ctx) {
     handleInputChange,
     handleInputSubmit,
     onTranscriptUpdate,
+    processRequest(text) {
+      if (!flow.active) {
+        if (!voice.isMessageIntent(text)) return false;
+        start(String(text || "").trim());
+        return true;
+      }
+      void handleInputSubmit(text);
+      return true;
+    },
   };
 }

@@ -13,6 +13,7 @@ export function initInputActions({
   previewScenario,
   messageFlow,
   flightFlow,
+  coffeeFlow,
   voice,
   morph,
 }) {
@@ -21,6 +22,7 @@ export function initInputActions({
   function clearActiveFlows() {
     if (messageFlow.isActive()) messageFlow.reset();
     if (flightFlow.isActive()) flightFlow.reset();
+    if (coffeeFlow?.isActive?.()) coffeeFlow.reset();
   }
 
   function startMessageFlowWithText(text) {
@@ -74,11 +76,14 @@ export function initInputActions({
 
   async function processRequest(userText) {
     if (typeof canProcessRequest === "function" && !canProcessRequest()) return false;
+    if (messageFlow.isActive()) return messageFlow.processRequest?.(userText);
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
+    if (coffeeFlow?.isActive?.()) return coffeeFlow.handleInputSubmit?.(userText);
     if (isMessageIntent(userText)) return startMessageFlowWithText(userText);
     morph.hideRich();
     if (handleChipQuickAction(userText)) return;
     if (flightFlow.processRequest(userText)) return;
+    if (coffeeFlow?.processRequest?.(userText)) return;
     if (responseMode() === RESPONSE_MODE.AI) return handleAiRequest(userText);
     return handleManualRequest(userText);
   }

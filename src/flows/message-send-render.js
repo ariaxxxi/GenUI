@@ -1,4 +1,5 @@
 import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
 
 export function createMessageSendRender({
   document,
@@ -54,18 +55,12 @@ export function createMessageSendRender({
   }
 
   function sentGeo() {
-    const base = SHAPES.pill || SHAPES.card;
-    const textEl = C.rich.querySelector("[data-glass-sent]");
-    let w = 200;
-    let h = 52;
-    if (textEl) {
-      const rect = textEl.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        w = clampFn(Math.round(rect.width + 48), 140, 360);
-        h = clampFn(Math.round(rect.height + 32), 52, 140);
-      }
-    }
-    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) - 18 } };
+    return measureSuccessToastGeometry({
+      richRoot: C.rich,
+      pillShape: SHAPES.pill || SHAPES.card,
+      fallbackLabel: "Message sent",
+      clamp: clampFn,
+    });
   }
 
   function cancelMeasure() {
@@ -285,11 +280,7 @@ export function createMessageSendRender({
       renderControls(screenSpec);
     }
 
-    C.prim.style.opacity = flow.active ? "0" : "";
-    C.sec.style.opacity = flow.active ? "0" : "";
-    C.det.style.opacity = flow.active ? "0" : "";
-    C.div.style.opacity = flow.active ? "0" : "";
-    C.div.style.display = (flow.active && flow.state === GS.SENT) ? "none" : "";
+    applyFlowChromeVisibility({ C, active: flow.active, richSent: flow.state === GS.SENT });
     const glow = document.getElementById("home-glow-layer");
     if (glow) glow.style.opacity = "";
     updateOrbLabel();

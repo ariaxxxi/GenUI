@@ -16,6 +16,11 @@ export function createFlightBookingFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
   const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", paymentMethod: "" }, thinkingTimer: null, startupTimer: null, C: ctx.C };
   const apiUrl = (path) => `${location.protocol === "file:" ? "http://localhost:5180" : ""}${path}`;
+  let flowEpoch = 0;
+
+  function isEpochAlive(epoch) {
+    return epoch === flowEpoch && flow.active;
+  }
 
   function step() { return FLOW_STEPS[flow.stepIndex] || FLOW_STEPS[0]; }
   function setStep(nextStep, highlight = 0) { flow.stepIndex = typeof nextStep === "number" ? Math.max(0, Math.min(FLOW_STEPS.length - 1, nextStep)) : Math.max(0, FLOW_STEPS.findIndex((entry) => entry.type === nextStep)); flow.focused = Math.max(0, Number(highlight) || 0); }
@@ -68,7 +73,7 @@ export function createFlightBookingFlow(ctx) {
     cityToAirport,
     advanceAfterDatesConfirm() { if (flow.editReturnStepIndex != null) { const idx = flow.editReturnStepIndex; flow.editReturnStepIndex = null; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); } else api.nextStep(true); },
     selectByIndex(index) { const current = step(); const selected = current.options?.[Math.max(0, Math.min((current.options || []).length - 1, index))]; if (!selected) return; flow.focused = index; ctx.addChatBubble("user", selected.name); if (current.type === "payment") flow.data.paymentMethod = selected.name; else { flow.data[current.key] = selected.name; if (current.key === "flight") flow.data.returnFlight = selected.sub?.split("·")?.[0]?.trim() || "2:10 PM - 11:30 PM"; } api.nextStep(); },
-    resetToHome() { if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer); if (flow.startupTimer) clearTimeout(flow.startupTimer); flow.thinkingTimer = null; flow.startupTimer = null; flow.active = false; flow.stepIndex = 0; flow.focused = 0; flow.editReturnStepIndex = null; ctx.hideTypingBubble(); document.body.classList.remove("glass-flow-active"); ctx.morph.hideRich(); ctx.shell.stopSiriOrb(); ctx.shell.clearOrbLabel?.(); ctx.shell.hideIntentHeader?.(); if (typeof ctx.returnToHomeContext === "function") ctx.returnToHomeContext(); else ctx.morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); const stageEl = document.getElementById("stage"); stageEl?.classList.remove("flow-active", "flight-destination-active", "flight-voice-viz"); document.getElementById("stage-wrap")?.classList.remove("flow-active"); },
+    resetToHome() { flowEpoch += 1; if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer); if (flow.startupTimer) clearTimeout(flow.startupTimer); flow.thinkingTimer = null; flow.startupTimer = null; flow.active = false; flow.stepIndex = 0; flow.focused = 0; flow.editReturnStepIndex = null; ctx.hideTypingBubble(); document.body.classList.remove("glass-flow-active"); ctx.morph.hideRich(); ctx.shell.stopSiriOrb(); ctx.shell.clearOrbLabel?.(); ctx.shell.hideIntentHeader?.(); if (typeof ctx.returnToHomeContext === "function") ctx.returnToHomeContext(); else ctx.morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); const stageEl = document.getElementById("stage"); stageEl?.classList.remove("flow-active", "flight-destination-active", "flight-voice-viz"); document.getElementById("stage-wrap")?.classList.remove("flow-active"); },
     syncDestinationFromText(userText) { const match = String(userText || "").match(/to\s+([a-zA-Z\s]+)/i); if (match) flow.data.destination = normalizeCity(match[1].trim()); },
     isFlightIntent(userText) { return /(?:\bflight\b|\bfly\b|book\s+(?:a\s+)?flight|\bticket\b)/i.test(String(userText || "")); },
   };
@@ -89,6 +94,8 @@ export function createFlightBookingFlow(ctx) {
 
   async function handleUserInput(userText) { if (!flow.active) return; await ai.handleUserInput(userText); }
   function start(seedText = "") {
+    flowEpoch += 1;
+    const epoch = flowEpoch;
     resetData();
     if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer);
     if (flow.startupTimer) clearTimeout(flow.startupTimer);
@@ -107,7 +114,7 @@ export function createFlightBookingFlow(ctx) {
     ctx.morph.morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
     flow.startupTimer = setTimeout(() => {
       flow.startupTimer = null;
-      if (!flow.active) return;
+      if (!isEpochAlive(epoch)) return;
       ctx.shell.clearOrbLabel?.();
       flow.stepIndex = 0;
       flow.focused = 0;
