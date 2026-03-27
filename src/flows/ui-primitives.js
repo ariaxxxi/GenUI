@@ -37,6 +37,26 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
   }).join("")}</div>`;
 }
 
+export function renderBubbleCluster({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-bubble", clusterClass = "g-bubble-cluster", showOrigin = true, originX = 0, originY = 0 } = {}) {
+  const attrName = String(rowDataAttr || "data-g-bubble").trim();
+  const coords = items.map((item) => ({ x: Number(item?.x) || 0, y: Number(item?.y) || 0 }));
+  if (showOrigin) coords.push({ x: Number(originX) || 0, y: Number(originY) || 0 });
+  const width = Math.max(1, ...coords.map((item) => item.x)) - Math.min(0, ...coords.map((item) => item.x)) + 120;
+  const height = Math.max(1, ...coords.map((item) => item.y)) - Math.min(0, ...coords.map((item) => item.y)) + 120;
+  const originHtml = showOrigin
+    ? `<div class="g-disambiguation-origin ${phase === "entering" ? "entering" : "settled"}" aria-hidden="true" style="--origin-x:${Math.round(Number(originX) || 0)}px;--origin-y:${Math.round(Number(originY) || 0)}px;"></div>`
+    : "";
+  return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}" style="--bubble-cluster-w:${Math.round(width)}px;--bubble-cluster-h:${Math.round(height)}px;">${originHtml}${items.map((item, index) => {
+    const selected = index === selectedIndex;
+    const title = String(item?.name || item?.title || "").trim();
+    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-media" });
+    const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -24 : 24);
+    const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
+    const finalScale = selected ? 1 : 0.7;
+    return `<div class="g-disambiguation-bubble ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="--bubble-x:${Math.round(Number(item?.x) || 0)}px;--bubble-y:${Math.round(Number(item?.y) || 0)}px;--bubble-rot-start:${rotStart}deg;--bubble-delay:${delay}ms;--bubble-scale-final:${finalScale};">${avatar}</div>`;
+  }).join("")}</div>`;
+}
+
 export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true, collapsed = false } = {}) {
   return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
 }

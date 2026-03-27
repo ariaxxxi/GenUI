@@ -272,6 +272,7 @@ export function createMessageSendFlow(ctx) {
   function reset() {
     flowEpoch += 1;
     clearTimers();
+    render.clearDisambiguationMotion?.();
     ctx.voice.voiceEngine.stop();
     flow.active = false;
     flow.state = GS.IDLE;
@@ -313,16 +314,20 @@ export function createMessageSendFlow(ctx) {
 
   function animateToCompose(contact, voiceText) {
     const epoch = flowEpoch;
+    render.clearDisambiguationMotion?.();
     const intentHeader = document.getElementById("intent-header");
     if (intentHeader) {
       intentHeader.classList.remove("visible");
       intentHeader.classList.add("exiting");
     }
 
-    const rows = ctx.C.rich.querySelectorAll(".g-contact-row");
-    rows.forEach((el, i) => {
+    document.getElementById("drop-main")?.classList.remove("disambiguation-surface", "listening-orb");
+    document.getElementById("siri-orb")?.classList.remove("visible");
+
+    const bubbles = ctx.C.rich.querySelectorAll(".g-disambiguation-bubble");
+    bubbles.forEach((el, i) => {
       el.style.animationDelay = `${i * 25}ms`;
-      el.classList.add("g-row-exit");
+      el.classList.add("g-bubble-exit");
     });
 
     flow.contact = contact;

@@ -1,6 +1,65 @@
 # Handoff
 
 ## Task title
+Message Disambiguation Bubble Cluster
+
+## Completion status
+- Partially completed
+
+## Summary
+- Replaced list-based message disambiguation with a bubble-cluster primitive:
+  - added [renderBubbleCluster](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js)
+  - disambiguation no longer uses `renderSelectionList(...)`
+- Reworked [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - `GS.DISAMBIGUATE` now renders a centered contact-bubble cluster instead of `card-list`
+  - disambiguation now uses a transient `entering -> settled` motion phase
+  - removed the external `Which Hiro?` header for this stage
+  - disambiguation morph now uses compact custom geometry on the `listening` shape rather than a card shell
+  - added layout rules for `2`, `3`, and `4+` contacts
+- Patched the disambiguation surface/origin seam:
+  - cluster geometry is now anchored to the origin orb position instead of the cluster midpoint
+  - [ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css) makes the disambiguation surface and rich layer overflow-visible so the bubbles are not clipped
+  - the origin orb is now intentionally part of the disambiguation cluster instead of being removed during settle
+- Updated compose handoff in [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - disambiguation bubbles now animate out on compose entry
+  - old `.g-contact-row` exit assumptions were removed from that path
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/flows/ui-primitives.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser validation was run in `ai.html`, so these are still unverified:
+  - exact motion feel versus the reference video
+  - final bubble positioning in the 420×420 stage
+  - whether the transient origin artifact feels correct or needs darker styling/timing tuning
+  - whether command-voice visualization around disambiguation needs further suppression
+- The cluster generalizes to `4+` contacts with a radial layout, but that layout has not been visually tuned in browser yet.
+
+## Recommended next step
+1. Trigger ambiguous Hiro disambiguation in `ai.html`.
+2. Verify:
+   - no list card appears
+   - no external header appears
+   - only bubbles remain after settle
+   - no listening orb lingers behind the cluster
+   - keyboard and spoken-name selection still work
+3. If the motion still feels off, tune only:
+   - bubble offsets
+   - stagger timing
+   - origin artifact styling
+   without reintroducing a card shell.
+
+## Task title
 Add stage capture utilities (AI + prototype): Copy PNG + Export SVG
 
 ## Completion status

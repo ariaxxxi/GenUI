@@ -1,10 +1,10 @@
 import {
   renderActionRow,
+  renderBubbleCluster,
   renderChipBar,
   renderCompactStatus,
   renderContactHeader,
   renderInputField,
-  renderSelectionList,
   renderTextBubble,
 } from "./ui-primitives.js";
 
@@ -32,17 +32,23 @@ export function createMessageSendRender({
   const MIN_H = 100;
   const MAX_H = 400;
   let lastContentHeight = 180;
-  const heightByState = { [GS.DISAMBIGUATE]: 160, [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
+  const DISAMBIGUATION_ENTER_MS = 520;
+  const DISAMBIGUATION_BUBBLE_SIZE = 80;
+  const DISAMBIGUATION_Y_OFFSET = -160;
+  const DISAMBIGUATION_ORB_SCALE = 0.7;
+  const heightByState = { [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
   let measureRaf = null;
   let settleTimer = null;
+  let disambiguationTimer = null;
   let renderToken = 0;
   let prevState = GS.IDLE;
   let manualComposeEntry = false;
+  let disambiguationPhase = "settled";
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
     if (state === GS.THINKING || state === GS.SENDING) return "magic";
-    if (state === GS.DISAMBIGUATE) return "card-list";
+    if (state === GS.DISAMBIGUATE) return "listening";
     if (state === GS.COMPOSE) return "card-form";
     if (state === GS.CONFIRM) return "card";
     if (state === GS.SENT) return "pill";
@@ -50,7 +56,7 @@ export function createMessageSendRender({
   }
 
   function isCardState(state = getFlow().state) {
-    return state === GS.DISAMBIGUATE || state === GS.COMPOSE || state === GS.CONFIRM;
+    return state === GS.COMPOSE || state === GS.CONFIRM;
   }
 
   function dynamicGeo(shape, contentHeightPx) {
@@ -86,6 +92,65 @@ export function createMessageSendRender({
     settleTimer = null;
   }
 
+  function cancelDisambiguationTimer() {
+    if (disambiguationTimer) clearTimeout(disambiguationTimer);
+    disambiguationTimer = null;
+  }
+
+  function layoutDisambiguationContacts(contacts) {
+    const count = Math.max(0, Number(contacts?.length) || 0);
+    if (count <= 0) return { items: [], width: DISAMBIGUATION_BUBBLE_SIZE, height: DISAMBIGUATION_BUBBLE_SIZE };
+    let positions;
+    if (count === 1) {
+      positions = [{ x: 0, y: 0 }];
+    } else if (count === 2) {
+      positions = [{ x: -20, y: -58 }, { x: 34, y: 20 }];
+    } else if (count === 3) {
+      positions = [{ x: 0, y: -66 }, { x: -52, y: 18 }, { x: 52, y: 18 }];
+    } else {
+      const radius = Math.min(92, 62 + Math.max(0, count - 4) * 6);
+      positions = Array.from({ length: count }, (_, index) => {
+        const angle = (-90 + (360 / count) * index) * (Math.PI / 180);
+        return {
+          x: Math.round(Math.cos(angle) * radius),
+          y: Math.round(Math.sin(angle) * radius),
+        };
+      });
+    }
+    const items = positions.map((pos, index) => ({
+      ...contacts[index],
+      x: pos.x,
+      y: pos.y + DISAMBIGUATION_Y_OFFSET,
+      rotStart: pos.x >= 0 ? 24 : -24,
+      delay: Math.max(0, (index * 42) - (index === getFlow().sel ? 28 : 0)),
+    }));
+    return { items, width: DISAMBIGUATION_BUBBLE_SIZE, height: DISAMBIGUATION_BUBBLE_SIZE };
+  }
+
+  function disambiguationGeo() {
+    const base = SHAPES.listening?.main || SHAPES.circle?.main;
+    const nextW = Math.round((Number(base?.w) || 80) * DISAMBIGUATION_ORB_SCALE);
+    const nextH = Math.round((Number(base?.h) || 80) * DISAMBIGUATION_ORB_SCALE);
+    const baseTx = Number(base?.tx) || -40;
+    const baseTy = Number(base?.ty) || -60;
+    const baseW = Number(base?.w) || 80;
+    const baseH = Number(base?.h) || 80;
+    return {
+      ...SHAPES.listening,
+      main: {
+        ...(SHAPES.listening?.main || {}),
+        w: nextW,
+        h: nextH,
+        br: `${Math.round(nextW / 2)}px`,
+        tx: Math.round(baseTx + ((baseW - nextW) / 2)),
+        ty: Math.round(baseTy + ((baseH - nextH) / 2)),
+        op: 1,
+      },
+      left: { ...(SHAPES.listening?.left || {}), op: 0 },
+      right: { ...(SHAPES.listening?.right || {}), op: 0 },
+    };
+  }
+
   function contentHeightPx() {
     const measure = (node) => node ? Math.ceil(Math.max(node.getBoundingClientRect().height || 0, node.offsetHeight || 0, node.scrollHeight || 0)) : 0;
     let layer = document.getElementById("glass-measure-layer");
@@ -115,7 +180,22 @@ export function createMessageSendRender({
     if (flow.state === GS.IDLE) return "";
     if (flow.state === GS.THINKING || flow.state === GS.SENDING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
     if (flow.state === GS.DISAMBIGUATE) {
-      return `<div data-glass-body>${renderSelectionList({ selectedIndex: flow.sel, items: flow.disambiguateContacts.map((contact) => ({ title: contact.name, initials: contact.initials, avatar: contact.avatar })) })}</div>`;
+      const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
+      return renderBubbleCluster({
+        phase: disambiguationPhase,
+        selectedIndex: flow.sel,
+        showOrigin: false,
+        items: layout.items.map((contact) => ({
+          avatar: contact.avatar,
+          initials: contact.initials,
+          name: contact.name,
+          x: contact.x,
+          y: contact.y,
+          rotStart: contact.rotStart,
+          delay: contact.delay,
+        })),
+        rowDataAttr: "data-g-contact",
+      });
     }
     if (flow.state === GS.COMPOSE) {
       const contact = flow.contact;
@@ -143,10 +223,26 @@ export function createMessageSendRender({
     renderToken += 1;
     const token = renderToken;
     const shape = glassStateShape(flow.state);
+    const dropMain = document.getElementById("drop-main");
+    const enteringDisambiguation = flow.state === GS.DISAMBIGUATE && prevState !== GS.DISAMBIGUATE;
     document.body.classList.toggle("glass-flow-active", flow.active);
+    if (enteringDisambiguation) {
+      disambiguationPhase = "entering";
+      cancelDisambiguationTimer();
+      disambiguationTimer = setTimeout(() => {
+        disambiguationTimer = null;
+        if (!getFlow().active || getFlow().state !== GS.DISAMBIGUATE) return;
+        disambiguationPhase = "settled";
+        render(false);
+      }, DISAMBIGUATION_ENTER_MS);
+    } else if (flow.state !== GS.DISAMBIGUATE) {
+      disambiguationPhase = "settled";
+      cancelDisambiguationTimer();
+    }
     C.rich.innerHTML = buildContent();
     const enteringCompose = flow.state === GS.COMPOSE && prevState !== GS.COMPOSE && !manualComposeEntry;
     prevState = flow.state;
+    dropMain?.classList.toggle("disambiguation-surface", flow.active && flow.state === GS.DISAMBIGUATE);
     if (enteringCompose) {
       const field = C.rich.querySelector(".g-listen-field");
       if (field) {
@@ -158,6 +254,7 @@ export function createMessageSendRender({
     C.rich.classList.toggle("visible", flow.active);
     C.rich.classList.toggle("glass-active", flow.active);
     C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT);
+    C.rich.classList.toggle("glass-disambiguation", flow.active && flow.state === GS.DISAMBIGUATE);
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
     C.rich.style.opacity = flow.active ? "1" : "";
     C.rich.style.transform = (flow.active && flow.state === GS.SENT) ? "translateY(-18px)" : "";
@@ -189,6 +286,10 @@ export function createMessageSendRender({
           apply(false);
         }, 80);
       }
+    } else if (flow.active && flow.state === GS.DISAMBIGUATE) {
+      if (shouldMorph || enteringDisambiguation) {
+        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, disambiguationGeo());
+      }
     } else if (flow.active) {
       if (flow.state === GS.SENT) {
         const geo = sentGeo();
@@ -219,15 +320,7 @@ export function createMessageSendRender({
     if (glow) glow.style.opacity = "";
     updateOrbLabel();
 
-    if (flow.active && flow.state === GS.DISAMBIGUATE) {
-      setIntentHeader("Which Hiro?", null);
-      const hdr = document.getElementById("intent-header");
-      if (hdr) hdr.classList.add("glass-intent");
-      positionIntentHeaderAboveMain();
-      trackIntentHeaderForTransition();
-    } else {
-      hideIntentHeader();
-    }
+    hideIntentHeader();
 
     if (!flow.active || flow.state === GS.IDLE) {
       setSimInputState({ label: "Voice Command", placeholder: "Send a message to Hiro…", hint: "", dictating: false });
@@ -256,13 +349,17 @@ export function createMessageSendRender({
     markStateCommitted() {
       prevState = getFlow().state;
     },
+    clearDisambiguationMotion() {
+      disambiguationPhase = "settled";
+      cancelDisambiguationTimer();
+    },
     updateSelectionUiOnly() {
       const flow = getFlow();
       if (!flow.active) return false;
       if (flow.state === GS.DISAMBIGUATE) {
-        const rows = C.rich.querySelectorAll(".g-contact-row");
-        rows.forEach((row, idx) => row.classList.toggle("selected", idx === flow.sel));
-        return rows.length > 0;
+        const bubbles = C.rich.querySelectorAll(".g-disambiguation-bubble");
+        bubbles.forEach((bubble, idx) => bubble.classList.toggle("selected", idx === flow.sel));
+        return bubbles.length > 0;
       }
       if (flow.state === GS.COMPOSE && flow.showChips && !String(flow.composeText || "").trim()) {
         const chips = C.rich.querySelectorAll(".g-chip");
