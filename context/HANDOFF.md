@@ -1,6 +1,343 @@
 # Handoff
 
 ## Task title
+Compose Field Snap-to-Width Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated the compose/disambiguation jump where the compose field appeared to snap instead of morphing.
+- Root cause: the inner compose wrapper (`.g-compose-field-wrap`) was still using fixed widths (`307px` / `420px`) independent of the morphing outer shell. That let the visible field content snap to its final size immediately while `#drop-main` was still animating.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css` by making `.g-compose-field-wrap` follow the shell directly:
+  - `left: 0`
+  - `transform: none`
+  - `width: 100%`
+- Removed the `420px` hardcoded width override in `.g-compose-stage.has-text .g-compose-field-wrap` as well.
+- Result: the visible compose field now inherits the morphing shell width/height instead of jumping to a separate fixed-size layout during disambiguation -> compose and empty -> active-text transitions.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only geometry alignment change.
+
+## Remaining issues / caveats
+- No live browser pass was run after this fix.
+
+## Recommended next step
+1. Verify disambiguation -> compose now morphs instead of snapping.
+2. Start dictation and verify compose expansion tracks the shell transition instead of jumping.
+3. If there is still residual snap, inspect the timing of `render.render(false)` on dictation interim updates next.
+
+
+## Task title
+Compose Surface Voice Viz Priority Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Implemented the live voice visualization directly on the real visible compose field: `#drop-main.compose-surface`.
+- Root cause: the compose shell CSS already set `box-shadow` with `!important`, so the voice engine’s normal inline `field.style.boxShadow = ...` writes could not win. That made the outer compose surface look static even though the voice engine was trying to update it.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js` by changing the compose-shell dictation path to use `style.setProperty('box-shadow', shadow(level), 'important')`.
+- Updated cleanup paths to use `removeProperty('box-shadow')`, so when dictation stops the shell falls back to its normal CSS-defined resting state.
+- This keeps the single real compose shell and makes it react live like the old temporary compatibility field did.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after this priority fix.
+
+## Recommended next step
+1. Enter compose and start dictating.
+2. Verify `#drop-main.compose-surface` now visibly reacts to live voice level.
+3. Verify confirm still stays static.
+
+
+## Task title
+Compose Duplicate Field Removal + Voice Viz Target Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the duplicated compose field caused by the temporary compatibility patch.
+- Root cause: the real visible compose field is the outer `#drop-main.compose-surface`, but the previous fix reintroduced an inner `.g-listen-field.compose-input` field purely to satisfy the old voice engine selector. That created two visual compose surfaces: one real shell and one inner field.
+- Fixed by restoring a single source of truth:
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`: `renderComposeField()` now renders only the inner compose content wrapper again (`.g-compose-field`), without the old `g-listen-field compose-input` styling classes.
+  - `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`: the live voice visualization path now targets `#drop-main.compose-surface:not(.confirm-surface)` first, with `[data-compose-field]` only as a fallback. This makes the actual compose shell react to voice instead of requiring a duplicate inner field.
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`: compose exit transition now keys off `[data-compose-field]` instead of the removed old selector.
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`: removed the obsolete compose-input re-toggle block that belonged to the old inner-field path.
+- Result: only one compose field remains visually, and the active voice viz is now applied to the real outer compose shell.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/ai/voice-engine.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/ai/voice-engine.js`
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after removing the duplicate field path.
+
+## Recommended next step
+1. Enter compose and confirm only one field is visible.
+2. Start dictating and verify the outer compose shell reacts to voice.
+3. Verify confirm still remains visually static with no duplicate field.
+
+
+## Task title
+Compose Voice Viz Main-Path Compatibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated why compose no longer reacted to live voice input like the old `main` implementation.
+- Root cause: the old voice engine still targets `.g-listen-field.compose-input` for live box-shadow updates, pulse locking, and cleanup. The redesigned compose field had been rendered only as `.g-compose-field`, so it no longer matched the selector the voice engine drives.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js` by rendering the compose field with the old compatibility classes again: `.g-listen-field.compose-input`, plus `.has-text` when populated.
+- Also mapped the inner text/placeholder nodes onto `.g-listen-text` / `.g-listen-empty` so the compose field follows the same legacy voice-reactive styling path.
+- This restores the old main-branch integration path without undoing the newer compose layout structure.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after restoring the old selector contract.
+
+## Recommended next step
+1. Enter compose and start dictating.
+2. Verify the compose field now reacts to live voice input again.
+3. Verify confirm still remains visually static.
+
+
+## Task title
+Compose Header Return + Voice Viz Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the compose header so it returns when the chip stack is disappearing.
+- Root cause: chip close uses the DOM-only compose menu update path, but that path was only toggling stack classes and never updating the header visibility class. As a result, the header stayed hidden until a later full rerender.
+- Updated `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` so compose header visibility is driven by `composeMenuOpen && !composeMenuClosing` in both the full render path and `updateComposeMenuUiOnly()`. This makes the header come back as soon as the chips begin closing.
+- Restored the compose voice-viz shell styling to the old `main` compose-input glow values in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css`.
+- Tightened the `compose-text-active` trigger so it only applies in compose while text is present and the chip menu is not open.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Compared `compose-text-active` shadow values against `main:src/styles/ai.css` old `g-listen-field.compose-input` styling.
+
+## Remaining issues / caveats
+- No live browser pass was run for this change.
+
+## Recommended next step
+1. Hold `L`, then release and verify the header returns during chip close.
+2. Start speaking in compose and verify the field glow reacts like the older compose-input state.
+3. Verify confirm still has no active voice glow.
+
+
+## Task title
+Compose Chip Second-Wave Jump Regression Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated the regression where the first three compose chips started jumping upward after the gap fix when the second two chips appeared.
+- Root cause: the visible movement comes from the stack container growing upward from its bottom anchor, not from individual chip rows changing their own transforms. The earlier FLIP pass was applied to chip items, so it did not correctly animate the actual layout shift.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` by moving the FLIP animation to `.g-compose-chip-stack` itself. The update path now measures the stack rect before and after the visibility change, applies a temporary inverse translate to the stack, then lets it transition back to its resting transform.
+- This preserves the new correct gap behavior while restoring a smooth upward push for the first three chips when the extra two appear.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- Live browser verification is still needed to confirm the second-wave push now matches the earlier feel.
+
+## Recommended next step
+1. Hold `L` until the second wave appears.
+2. Verify the first three chips now transition upward instead of snapping.
+3. If motion still needs tuning, adjust only the stack transform transition timing in `src/styles/ai.css`.
+
+
+## Task title
+Compose Chip Release Timing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the compose chip release animation timing.
+- Changed the chip disappear / absorb-back animation from `240ms` to `400ms` in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css`.
+- This affects the release path for visible compose chips while the stack is closing.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only timing change; verified the updated animation rule in `src/styles/ai.css`.
+
+## Remaining issues / caveats
+- No live browser pass was run for this timing-only tweak.
+
+## Recommended next step
+1. Hold `L`, then release it.
+2. Verify the chips now absorb back over `400ms`.
+3. If the feel is still off, tune only the `compose-chip-out` duration/easing.
+
+
+## Task title
+Compose Chip Second-Wave Push Animation Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated the second-wave compose chip reveal where the first three chips jumped upward instead of transitioning.
+- Root cause: when visible count changed from 3 to 5, the stack reflow moved the first three chips to their new flex positions immediately. There was no layout-transition logic for already-visible chips, so only the new chips animated while the existing ones snapped upward.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` by adding a DOM-only FLIP pass in `updateComposeMenuUiOnly()`: capture previous chip rects, apply the new visibility state, measure the new rects, then animate the existing visible chips from their old positions to the new ones.
+- Updated `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css` so `.g-compose-chip` includes a transform transition. This gives the first three chips a smooth upward push when the second two appear.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- Live browser verification is still needed to tune the exact feel of the upward push against the reference motion.
+
+## Recommended next step
+1. Hold `L` until the second wave appears.
+2. Verify the first three chips now glide upward instead of snapping.
+3. If the push still feels too stiff or too loose, tune only the transform transition timing in `src/styles/ai.css`.
+
+
+## Task title
+Compose Chip Stack Gap Root-Cause Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Performed a direct spacing audit of the expanded compose chip stack.
+- Root cause: hidden chips were still rendered as flex items inside `.g-compose-chip-stack`, so they continued reserving vertical space even before they were visible. That made the stack height larger than the visible chip count implied, which pushed the visible chips too far above the compose field.
+- Secondary confirmation: the stack anchor itself is correct now. It is bottom-anchored from inside `.g-compose-field-wrap` using `bottom: calc(100% + 4px)`, so the bad distance was not from wrapper placement anymore.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css` by making non-visible compose chips `display: none` and only visible chips `display: inline-flex`. This makes the stack height match the currently visible chip count, so the bottom visible chip tracks the compose field top edge correctly in both 3-chip and 5-chip states.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; root cause verified by inspecting the current compose chip stack DOM/CSS rules.
+
+## Remaining issues / caveats
+- Live browser verification is still needed to confirm the 3-chip and 5-chip bottom gap now matches visually.
+
+## Recommended next step
+1. Verify the gap with 3 visible chips.
+2. Verify the gap again after the second-wave reveal to 5 chips.
+3. If any residual offset remains, tune only the `bottom: calc(100% + 4px)` anchor, not the stack transform.
+
+
+## Task title
+Compose Chip Long-Press Interaction + Style Update
+
+## Completion status
+- Completed
+
+## Summary
+- Follow-up compose stack gap fix: removed the extra upward offset from `.g-compose-chip-stack.expanded`. Once the stack was correctly bottom-anchored to the field wrapper, the expanded transform was double-shifting the 5-chip state upward and creating the large gap.
+- Follow-up compose wrapper fix: set `g-compose-field-wrap` to `height: 100%` so the chip stack anchor resolves against the compose shell height instead of an auto-expanded wrapper containing both chips and field. This keeps the chip stack bottom aligned to the field top edge.
+- Follow-up compose anchoring fix: the chip stack is now rendered inside `g-compose-field-wrap` instead of as a stage-level sibling. Its `bottom: calc(100% + 4px)` anchor now resolves against the compose field wrapper, so the lowest chip tracks the field's top edge consistently.
+- Follow-up compose chip anchoring fix: changed the chip stack from a fixed top offset to `bottom: calc(100% + 4px)`, so the lowest visible chip keeps a consistent gap above the compose field whether 3 or 5 chips are present.
+- Follow-up compose chip position tweak: moved the chip stack anchor down (`top: -137px`) so the bottom chip sits much closer to the compose field, targeting roughly a `4px` gap.
+- Follow-up compose chip spacing tweak: reduced chip top/bottom padding to `6px` and stack gap to `4px`, with chip minimum height adjusted accordingly.
+- Follow-up release-motion fix: the compose chip stack now stays visible during `closing`, and release uses the DOM-only menu update path before teardown. This prevents the stack from disappearing immediately and lets the chip exit animation play as they are absorbed back into the field.
+- Follow-up timing change: increased both the disambiguation pill entrance and compose chip entrance durations from `500ms` to `800ms`.
+- Follow-up second-wave behavior fix: the extra two compose chips now appear via in-place DOM updates instead of a full re-render. The existing three chips are pushed upward by an `expanded` stack transform while only the newly visible chips animate in.
+- Follow-up timing sync: set both the disambiguation pill entrance and compose chip entrance animations to `500ms` so the two reveal systems share the same duration.
+- Follow-up compose motion fix: chip enter/exit keyframes now use large per-chip travel offsets so the chips visibly travel from the compose field up into their stack positions, instead of only rotating/fading near the destination.
+- Follow-up chip style rollback: compose chips now use the previous `g-chip` state treatment again (unselected muted text + flat glass fill, selected white text + inset glow, no explicit white border), with text size reduced to `18px`.
+- Follow-up motion fix: compose chips now use explicit `compose-chip-in` / `compose-chip-out` keyframe animations instead of relying on insertion-time transitions, fixing the jump-cut behavior where chips appeared with no visible entrance motion.
+- Updated compose chip styling in [/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css):
+  - chip text `24px -> 20px`
+  - restored gradient outline treatment on chip shells
+  - adjusted chip motion to use a softer rotational spread from the compose field instead of the old straight fade-up
+- Reworked compose chip rendering in [/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) and [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - chip stack now supports `visibleCount` and `closing`
+  - first wave shows 3 chips
+  - second wave can reveal 2 additional chips
+- Reworked message compose state in [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - added long-press state for compose chips
+  - `L` hold starts a delayed reveal (`280ms`)
+  - after another `3000ms` of holding, 2 more chips appear if available
+  - releasing `L` smoothly closes the chip stack back toward the compose field
+  - while the key is being held, compose chips do not confirm into the next state
+  - compose menu state now tracks `composeMenuHolding`, `composeMenuClosing`, and `composeMenuVisibleCount`
+- Updated keyboard wiring in [/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js):
+  - `keydown` on `L` in compose starts the hold interaction
+  - `keyup` on `L` ends it and triggers the smooth close
+  - old tap-to-toggle behavior was removed
+- Extended contact chip data to 5 chips per contact so the second-wave reveal has real content instead of placeholder duplicates.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai.css`
+- `src/ai/ai-bindings.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/flows/message-send-voice.js`
+
+## Remaining issues / caveats
+- Motion was tuned from the provided screen recording reference at a thumbnail level only; no frame-by-frame live browser validation was run.
+- The new extra two chips are data additions in the local contact dataset; if product copy changes later, update the chip arrays in `message-send.js`.
+
+## Recommended next step
+1. Hold `L` in compose and verify first-wave 3-chip reveal timing.
+2. Keep holding for 3 more seconds and verify 2 more chips appear with the same spread motion.
+3. Release `L` and verify the chips absorb smoothly back toward the compose field.
+4. If motion still needs tuning, only adjust the compose-chip transform/transition block in [/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css).
+
+## Task title
 Compose Surface Placement Fix
 
 ## Completion status

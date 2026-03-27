@@ -58,8 +58,9 @@ export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true,
   return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
 }
 
-export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false } = {}) {
-  return `<div class="g-compose-chip-stack ${open ? "open" : ""}">${chips.map((chip, index) => `<div class="g-compose-chip ${index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div>`;
+export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
+  const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
+  return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => `<div class="g-compose-chip ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div>`;
 }
 
 export function renderTextBubble({ text = "", placeholder = "", mode = "static", hasText = false } = {}) {
@@ -77,10 +78,11 @@ export function renderInputField({ text = "", placeholder = "Listening...", hasT
 
 export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false } = {}) {
   const value = String(text || "").trim();
+  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}`;
   if (value) {
-    return `<div class="g-compose-field ${active ? "active" : ""}" data-compose-field><div class="g-compose-field-text" data-compose-field-text>${esc(text)}</div></div>`;
+    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text" data-compose-field-text>${esc(text)}</div></div>`;
   }
-  return `<div class="g-compose-field" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
+  return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
 }
 
 export function renderInfoCard({

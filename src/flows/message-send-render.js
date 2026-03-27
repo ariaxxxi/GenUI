@@ -42,7 +42,7 @@ export function createMessageSendRender({
   const COMPOSE_FIELD_MAX_H = 220;
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
-  const DISAMBIGUATION_ENTER_MS = 520;
+  const DISAMBIGUATION_ENTER_MS = 800;
   const DISAMBIGUATION_ORB_SCALE = 0.8;
   const heightByState = { [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
   let measureRaf = null;
@@ -253,10 +253,12 @@ export function createMessageSendRender({
         chips: (flow.composeVisualChips || []).map((chip, idx) => ({ id: String(chip.originalIndex ?? idx), label: chip.label })),
         selectedIndex: flow.sel,
         open: !!flow.composeMenuOpen,
+        closing: !!flow.composeMenuClosing,
+        visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
       });
       const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText });
       const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
-      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !flow.composeMenuOpen })}${chipsHtml}<div class="g-compose-field-wrap">${inputHtml}</div>${maybeCheckRow}</div>`;
+      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
     }
     if (flow.state === GS.CONFIRM) {
       const contact = flow.contact;
@@ -273,7 +275,7 @@ export function createMessageSendRender({
     const shape = glassStateShape(flow.state);
     const dropMain = document.getElementById("drop-main");
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
-    const composeVoiceVizActive = flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim();
+    const composeVoiceVizActive = flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim() && !flow.composeMenuOpen;
     const enteringDisambiguation = flow.state === GS.DISAMBIGUATE && prevState !== GS.DISAMBIGUATE;
     document.body.classList.toggle("glass-flow-active", flow.active);
     if (enteringDisambiguation) {
@@ -290,20 +292,11 @@ export function createMessageSendRender({
       cancelDisambiguationTimer();
     }
     C.rich.innerHTML = buildContent();
-    const enteringCompose = flow.state === GS.COMPOSE && prevState !== GS.COMPOSE && !manualComposeEntry;
     prevState = flow.state;
     dropMain?.classList.toggle("disambiguation-surface", flow.active && flow.state === GS.DISAMBIGUATE);
     dropMain?.classList.toggle("compose-surface", flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM));
     dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM);
     dropMain?.classList.toggle("compose-text-active", flow.active && composeVoiceVizActive);
-    if (enteringCompose) {
-      const field = C.rich.querySelector(".g-listen-field");
-      if (field) {
-        field.classList.remove("compose-input");
-        void field.offsetHeight;
-        requestAnimationFrame(() => field.classList.add("compose-input"));
-      }
-    }
     C.rich.classList.toggle("visible", flow.active);
     const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);
@@ -432,6 +425,35 @@ export function createMessageSendRender({
         return true;
       }
       return false;
+    },
+    updateComposeMenuUiOnly() {
+      const flow = getFlow();
+      if (!flow.active || flow.state !== GS.COMPOSE) return false;
+      const stack = C.rich.querySelector(".g-compose-chip-stack");
+      if (!stack) return false;
+      const previousStackRect = stack.getBoundingClientRect();
+      const chips = Array.from(stack.querySelectorAll(".g-compose-chip"));
+      const visibleCount = Math.max(0, Math.min(Number(flow.composeMenuVisibleCount) || 0, (flow.composeVisualChips || []).length));
+      stack.classList.toggle("open", !!flow.composeMenuOpen);
+      stack.classList.toggle("closing", !!flow.composeMenuClosing);
+      stack.classList.toggle("expanded", visibleCount > 3);
+      stack.dataset.visibleCount = String(visibleCount);
+      const header = C.rich.querySelector(".g-compose-header");
+      if (header) header.classList.toggle("hidden", !!flow.composeMenuOpen && !flow.composeMenuClosing);
+      chips.forEach((chip, idx) => {
+        chip.classList.toggle("is-visible", idx < visibleCount);
+        chip.classList.toggle("selected", idx === flow.sel);
+      });
+      const nextStackRect = stack.getBoundingClientRect();
+      const deltaY = previousStackRect.top - nextStackRect.top;
+      if (Math.abs(deltaY) >= 1) {
+        stack.style.transition = "none";
+        stack.style.transform = `translate(-50%, ${deltaY}px)`;
+        stack.getBoundingClientRect();
+        stack.style.transition = "";
+        stack.style.transform = "";
+      }
+      return chips.length > 0;
     },
   };
 }

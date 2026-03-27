@@ -8,19 +8,27 @@ const CONTACTS = [
     { label: "Design review", message: "Hey, do you have time for a design review sometime?" },
     { label: "Share a file", message: "I have a file to share with you — when's a good time?" },
     { label: "Schedule a sync", message: "Want to schedule a quick sync this week?" },
+    { label: "Need your input", message: "I need your input on something when you have a moment." },
+    { label: "Check in tomorrow", message: "Can we check in tomorrow for a few minutes?" },
   ]},
   { id: 2, name: "Hiro Horii", initials: "HH", relation: "Friend", avatar: "src/assets/avatar2.png", chips: [
     { label: "What's up?", message: "Hey! What's up? Haven't caught up in a while." },
     { label: "Lunch this week?", message: "Hey, want to grab lunch sometime this week?" },
     { label: "Check this out", message: "Hey, I found something cool I wanted to share with you!" },
+    { label: "Call tonight?", message: "Want to do a quick call tonight?" },
+    { label: "See you soon?", message: "Are you around soon? Would be good to see you." },
   ]},
 ];
 
 export function createMessageSendFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
+  const COMPOSE_MENU_HOLD_MS = 280;
+  const COMPOSE_MENU_EXPAND_MS = 3000;
+  const COMPOSE_MENU_CLOSE_MS = 260;
+  const COMPOSE_MENU_BASE_COUNT = 3;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
-  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: false, composeMenuOpen: false, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
-  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null };
+  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
+  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   const controlsGap = 14;
@@ -186,6 +194,90 @@ export function createMessageSendFlow(ctx) {
     flow.showChips = !!flow.composeMenuOpen;
   }
 
+  function clearComposeMenuTimers() {
+    ["composeMenuHold", "composeMenuExpand", "composeMenuClose"].forEach((key) => {
+      if (!timers[key]) return;
+      clearTimeout(timers[key]);
+      timers[key] = null;
+    });
+  }
+
+  function getComposeMenuVisibleCount() {
+    const chips = ensureComposeVisualChips();
+    return Math.max(0, Math.min(flow.composeMenuVisibleCount || 0, chips.length));
+  }
+
+  function cancelComposeMenu(options = {}) {
+    clearComposeMenuTimers();
+    flow.composeMenuHolding = false;
+    flow.composeMenuOpen = false;
+    syncComposeChipState();
+    if (options.immediate) {
+      flow.composeMenuClosing = false;
+      flow.composeMenuVisibleCount = 0;
+      return;
+    }
+    if (flow.composeMenuVisibleCount > 0) {
+      flow.composeMenuClosing = true;
+      if (flow.active && flow.state === GS.COMPOSE) render.updateComposeMenuUiOnly?.();
+      timers.composeMenuClose = setTimeout(() => {
+        timers.composeMenuClose = null;
+        flow.composeMenuClosing = false;
+        flow.composeMenuVisibleCount = 0;
+        if (flow.active && flow.state === GS.COMPOSE) render.updateComposeMenuUiOnly?.() || render.render(false);
+      }, COMPOSE_MENU_CLOSE_MS);
+      return;
+    }
+    flow.composeMenuClosing = false;
+    flow.composeMenuVisibleCount = 0;
+  }
+
+  function startComposeMenuHold() {
+    if (!flow.active || flow.state !== GS.COMPOSE) return false;
+    ensureComposeVisualChips();
+    clearComposeMenuTimers();
+    flow.composeMenuHolding = true;
+    flow.composeMenuClosing = false;
+    if (timers.autoConfirm) {
+      clearTimeout(timers.autoConfirm);
+      timers.autoConfirm = null;
+    }
+    timers.composeMenuHold = setTimeout(() => {
+      timers.composeMenuHold = null;
+      if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding) return;
+      flow.composeMenuOpen = true;
+      syncComposeChipState();
+      flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
+      flow.sel = Math.min(flow.sel, Math.max(0, flow.composeMenuVisibleCount - 1));
+      render.render(false);
+      timers.composeMenuExpand = setTimeout(() => {
+        timers.composeMenuExpand = null;
+        if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding || !flow.composeMenuOpen) return;
+        flow.composeMenuVisibleCount = Math.min(ensureComposeVisualChips().length, COMPOSE_MENU_BASE_COUNT + 2);
+        flow.sel = Math.min(flow.sel, Math.max(0, flow.composeMenuVisibleCount - 1));
+        if (!render.updateComposeMenuUiOnly?.()) render.render(false);
+      }, COMPOSE_MENU_EXPAND_MS);
+    }, COMPOSE_MENU_HOLD_MS);
+    return true;
+  }
+
+  function endComposeMenuHold() {
+    if (!flow.active || flow.state !== GS.COMPOSE) return false;
+    if (timers.composeMenuHold) {
+      clearTimeout(timers.composeMenuHold);
+      timers.composeMenuHold = null;
+      flow.composeMenuHolding = false;
+      return true;
+    }
+    if (flow.composeMenuOpen || flow.composeMenuClosing) {
+      cancelComposeMenu();
+      render.updateComposeMenuUiOnly?.() || render.render(false);
+      return true;
+    }
+    flow.composeMenuHolding = false;
+    return true;
+  }
+
   function getSelectedVisualChip() {
     const chips = ensureComposeVisualChips();
     return chips[flow.sel] || null;
@@ -215,7 +307,7 @@ export function createMessageSendFlow(ctx) {
 
   function maxSel() {
     if (flow.state === GS.DISAMBIGUATE) return Math.max(0, flow.disambiguateContacts.length - 1);
-    if (flow.state === GS.COMPOSE && flow.composeMenuOpen) return Math.max(0, ensureComposeVisualChips().length - 1);
+    if (flow.state === GS.COMPOSE && flow.composeMenuOpen) return Math.max(0, getComposeMenuVisibleCount() - 1);
     return 0;
   }
 
@@ -245,9 +337,8 @@ export function createMessageSendFlow(ctx) {
     if (timers.dots) clearInterval(timers.dots);
     timers.dots = null;
     if (flow.state === GS.COMPOSE && state !== GS.COMPOSE) {
-      const field = ctx.C.rich?.querySelector(".g-listen-field.compose-input");
+      const field = ctx.C.rich?.querySelector("[data-compose-field]");
       if (field) {
-        field.classList.remove("compose-input");
         setTimeout(() => {
           flow.state = state;
           flow.sel = 0;
@@ -310,6 +401,9 @@ export function createMessageSendFlow(ctx) {
     flow.composeText = "";
     flow.showChips = false;
     flow.composeMenuOpen = false;
+    flow.composeMenuClosing = false;
+    flow.composeMenuHolding = false;
+    flow.composeMenuVisibleCount = 0;
     flow.composeVisualChips = [];
     flow.showCheck = false;
     flow.aiVoice = "";
@@ -365,6 +459,9 @@ export function createMessageSendFlow(ctx) {
     flow.msg = "";
     flow.showChips = false;
     flow.composeMenuOpen = false;
+    flow.composeMenuClosing = false;
+    flow.composeMenuHolding = false;
+    flow.composeMenuVisibleCount = 0;
     flow.showCheck = false;
     ensureComposeVisualChips(contact);
     syncComposeChipState();
@@ -395,6 +492,9 @@ export function createMessageSendFlow(ctx) {
     flow.msg = chip.message;
     flow.showChips = false;
     flow.composeMenuOpen = false;
+    flow.composeMenuClosing = false;
+    flow.composeMenuHolding = false;
+    flow.composeMenuVisibleCount = 0;
     syncComposeChipState();
     flow.showCheck = false;
 
@@ -420,6 +520,9 @@ export function createMessageSendFlow(ctx) {
     if (index === 1) {
       flow.showChips = false;
       flow.composeMenuOpen = false;
+      flow.composeMenuClosing = false;
+      flow.composeMenuHolding = false;
+      flow.composeMenuVisibleCount = 0;
       syncComposeChipState();
       flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
@@ -460,6 +563,9 @@ export function createMessageSendFlow(ctx) {
         flow.composeText = pending;
         flow.showChips = false;
         flow.composeMenuOpen = false;
+        flow.composeMenuClosing = false;
+        flow.composeMenuHolding = false;
+        flow.composeMenuVisibleCount = 0;
         ensureComposeVisualChips(contact);
         syncComposeChipState();
         flow.showCheck = false;
@@ -470,6 +576,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (flow.state === GS.COMPOSE && flow.composeMenuOpen) {
+      if (flow.composeMenuHolding) return;
       const chip = getSelectedVisualChip();
       if (!chip) return;
       selectChipWithAnimation(chip.originalIndex);
@@ -489,6 +596,9 @@ export function createMessageSendFlow(ctx) {
     if (flow.state === GS.CONFIRM) {
       flow.showChips = false;
       flow.composeMenuOpen = false;
+      flow.composeMenuClosing = false;
+      flow.composeMenuHolding = false;
+      flow.composeMenuVisibleCount = 0;
       syncComposeChipState();
       flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
@@ -577,8 +687,7 @@ export function createMessageSendFlow(ctx) {
     const fromDictation = options?.fromDictation === true;
     if (!fromDictation && text.trim()) flow.replaceComposeOnNextDictation = false;
     flow.composeText = text;
-    flow.composeMenuOpen = false;
-    syncComposeChipState();
+    cancelComposeMenu({ immediate: true });
 
     if (timers.autoConfirm) {
       clearTimeout(timers.autoConfirm);
@@ -653,6 +762,9 @@ export function createMessageSendFlow(ctx) {
             flow.composeText = msg;
             flow.showChips = false;
             flow.composeMenuOpen = false;
+            flow.composeMenuClosing = false;
+            flow.composeMenuHolding = false;
+            flow.composeMenuVisibleCount = 0;
             ensureComposeVisualChips(fallback[0]);
             syncComposeChipState();
             flow.showCheck = false;
@@ -735,6 +847,9 @@ export function createMessageSendFlow(ctx) {
     flow.interimText = "";
     flow.showChips = false;
     flow.composeMenuOpen = false;
+    flow.composeMenuClosing = false;
+    flow.composeMenuHolding = false;
+    flow.composeMenuVisibleCount = 0;
     flow.composeVisualChips = [];
     flow.showCheck = false;
     flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
@@ -754,16 +869,6 @@ export function createMessageSendFlow(ctx) {
     }, FLOW_START_THINK_MS);
   }
 
-  function toggleComposeMenu() {
-    if (!flow.active || flow.state !== GS.COMPOSE) return false;
-    ensureComposeVisualChips();
-    flow.composeMenuOpen = !flow.composeMenuOpen;
-    syncComposeChipState();
-    flow.sel = Math.min(flow.sel, Math.max(0, ensureComposeVisualChips().length - 1));
-    render.render(false);
-    return true;
-  }
-
   return {
     GS,
     contacts: CONTACTS,
@@ -777,7 +882,8 @@ export function createMessageSendFlow(ctx) {
     maxSel,
     render: (shouldMorph = true) => render.render(shouldMorph),
     updateSelectionUiOnly: () => render.updateSelectionUiOnly(),
-    toggleComposeMenu,
+    startComposeMenuHold,
+    endComposeMenuHold,
     handleInputChange,
     handleInputSubmit,
     onTranscriptUpdate,

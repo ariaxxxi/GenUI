@@ -894,7 +894,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 .g-disambiguation-pills.entering .g-disambiguation-pill {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.32) rotate(var(--pill-rot-start, 0deg));
-  animation: disambiguation-pill-in 520ms cubic-bezier(0.22,1,0.36,1) both;
+  animation: disambiguation-pill-in 800ms cubic-bezier(0.22,1,0.36,1) both;
   animation-delay: var(--pill-delay, 0ms);
 }
 .g-disambiguation-pill.g-disambiguation-pill-exit {
@@ -999,13 +999,14 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 .g-compose-chip-stack {
   position: absolute;
   left: 50%;
-  top: -197px;
-  width: 221px;
+  bottom: calc(100% + 4px);
+  width: 320px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 13px;
+  gap: 4px;
   transform: translateX(-50%);
+  transition: transform 500ms cubic-bezier(0.22,1,0.36,1), opacity 180ms ease;
   opacity: 0;
   pointer-events: none;
 }
@@ -1013,25 +1014,39 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   opacity: 1;
   pointer-events: auto;
 }
+.g-compose-chip-stack.closing {
+  opacity: 1;
+  pointer-events: none;
+}
+.g-compose-chip-stack.expanded {
+  transform: translateX(-50%);
+}
 .g-compose-chip {
+  display: none;
   position: relative;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 51px;
-  padding: 10px 20px;
+  min-height: 43px;
+  padding: 6px 20px;
   border-radius: 30px;
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.50);
   font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 400;
   line-height: 1;
   white-space: nowrap;
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.1);
-  transform: translateY(18px) scale(0.82);
+  border: none;
+  box-shadow: none;
+  transform: translateY(var(--chip-travel-start, 120px)) scale(0.82) rotate(var(--chip-rot-start, 0deg));
   opacity: 0;
-  transition: transform 180ms cubic-bezier(0.22,1,0.36,1), background 180ms ease, opacity 180ms ease;
+  transition:
+    transform 800ms cubic-bezier(0.22,1,0.36,1),
+    color 200ms ease,
+    background 180ms ease,
+    box-shadow 200ms ease,
+    font-weight 200ms ease,
+    opacity 220ms cubic-bezier(0.22,1,0.36,1);
 }
 .g-compose-chip::before {
   content: '';
@@ -1051,37 +1066,70 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   mask-composite: exclude;
   opacity: 0.24;
 }
-.g-compose-chip-stack.open .g-compose-chip {
-  animation: g-compose-chip-in 420ms cubic-bezier(0.22,1,0.36,1) both;
+.g-compose-chip.selected {
+  color: rgba(255,255,255,1);
+  background: rgba(255,255,255,0.10);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.15);
+  font-weight: 500;
+}
+.g-compose-chip.selected::before { opacity: 1; }
+.g-compose-chip.is-visible {
+  display: inline-flex;
+
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(0deg);
+  animation: compose-chip-in 800ms cubic-bezier(0.22,1,0.36,1) both;
   animation-delay: calc(var(--chip-order, 0) * 42ms);
 }
-.g-compose-chip.selected {
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,1);
-}
-.g-compose-chip.selected::before {
-  opacity: 0;
-}
-.g-compose-chip-stack:not(.open) .g-compose-chip {
-  animation: g-compose-chip-out 220ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+.g-compose-chip-stack.closing .g-compose-chip.is-visible,
+.g-compose-chip-stack:not(.open):not(.closing) .g-compose-chip.is-visible {
+  animation: compose-chip-out 400ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+  animation-delay: calc(var(--chip-order, 0) * 22ms);
 }
 .g-compose-chip-stack .g-compose-chip:nth-child(1) { --chip-order: 0; }
 .g-compose-chip-stack .g-compose-chip:nth-child(2) { --chip-order: 1; }
 .g-compose-chip-stack .g-compose-chip:nth-child(3) { --chip-order: 2; }
-.g-compose-chip-stack .g-compose-chip[data-chip-id="1"] {
-  width: 161px;
+.g-compose-chip-stack .g-compose-chip:nth-child(4) { --chip-order: 3; }
+.g-compose-chip-stack .g-compose-chip:nth-child(5) { --chip-order: 4; }
+.g-compose-chip-stack .g-compose-chip:nth-child(1) { --chip-rot-start: -12deg; --chip-rot-end: -8deg; --chip-travel-start: 138px; --chip-travel-end: 108px; }
+.g-compose-chip-stack .g-compose-chip:nth-child(2) { --chip-rot-start: 8deg; --chip-rot-end: 6deg; --chip-travel-start: 118px; --chip-travel-end: 92px; }
+.g-compose-chip-stack .g-compose-chip:nth-child(3) { --chip-rot-start: -6deg; --chip-rot-end: -5deg; --chip-travel-start: 98px; --chip-travel-end: 78px; }
+.g-compose-chip-stack .g-compose-chip:nth-child(4) { --chip-rot-start: 10deg; --chip-rot-end: 7deg; --chip-travel-start: 156px; --chip-travel-end: 122px; }
+.g-compose-chip-stack .g-compose-chip:nth-child(5) { --chip-rot-start: -10deg; --chip-rot-end: -7deg; --chip-travel-start: 174px; --chip-travel-end: 136px; }
+@keyframes compose-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--chip-travel-start, 120px)) scale(0.82) rotate(var(--chip-rot-start, 0deg));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+@keyframes compose-chip-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--chip-travel-end, 92px)) scale(0.86) rotate(var(--chip-rot-end, 0deg));
+  }
 }
 .g-compose-field-wrap {
   position: absolute;
-  left: 50%;
+  left: 0;
   top: 0;
-  transform: translateX(-50%);
-  width: 307px;
+  transform: none;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
+  overflow: visible;
 }
 .g-compose-stage.has-text .g-compose-field-wrap {
   top: 0;
-  width: 420px;
+  width: 100%;
+  height: 100%;
 }
 .g-compose-field {
   width: 100%;
@@ -2504,12 +2552,12 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
     inset 0 -3px 60px -30px #134BC0 !important;
 }
 #drop-main.compose-surface.compose-text-active {
-  background: rgba(255,255,255,0.05) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.02) 100%) !important;
   box-shadow:
-    inset 0 6px 6px -2px rgba(34,105,245,0.15),
-    inset 0 -11px 20px -6px rgba(255,255,255,0.40),
-    inset 0 -20px 30px -8px rgba(172,188,247,0.50),
-    inset 0 -56px 60px -30px #134BC0 !important;
+    inset 0 4px 29.8px -2px rgba(192,213,255,0.15),
+    inset 0 -7px 20px -6px rgba(225,231,255,0.60),
+    inset 0 6px 18.4px -10px rgba(255,255,255,0.20),
+    inset 0 -3px 60px -30px #134BC0 !important;
 }
 #drop-main.compose-surface.confirm-surface {
   background: #000 !important;
