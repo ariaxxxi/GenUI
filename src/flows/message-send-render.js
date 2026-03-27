@@ -34,9 +34,9 @@ export function createMessageSendRender({
   const CONTROLS_LIFT = 78;
   const MIN_H = 100;
   const MAX_H = 400;
-  const COMPOSE_FIELD_BOTTOM = 380;
+  const COMPOSE_FIELD_BOTTOM = 408;
   const COMPOSE_FIELD_W = 307;
-  const COMPOSE_FIELD_H = 83;
+  const COMPOSE_FIELD_H = 96;
   const COMPOSE_FIELD_ACTIVE_W = 420;
   const COMPOSE_FIELD_ACTIVE_H = 94;
   const COMPOSE_FIELD_MAX_H = 220;
@@ -50,8 +50,11 @@ export function createMessageSendRender({
   let disambiguationTimer = null;
   let renderToken = 0;
   let prevState = GS.IDLE;
+  let prevComposeHasText = false;
   let manualComposeEntry = false;
   let disambiguationPhase = "settled";
+  let composeRevealTimer = null;
+  let composePlaceholderDelayActive = false;
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
@@ -142,6 +145,11 @@ export function createMessageSendRender({
   function cancelDisambiguationTimer() {
     if (disambiguationTimer) clearTimeout(disambiguationTimer);
     disambiguationTimer = null;
+  }
+
+  function cancelComposeRevealTimer() {
+    if (composeRevealTimer) clearTimeout(composeRevealTimer);
+    composeRevealTimer = null;
   }
 
   function layoutDisambiguationContacts(contacts) {
@@ -258,7 +266,7 @@ export function createMessageSendRender({
       });
       const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText });
       const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
-      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
+      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
     }
     if (flow.state === GS.CONFIRM) {
       const contact = flow.contact;
@@ -277,6 +285,9 @@ export function createMessageSendRender({
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
     const composeVoiceVizActive = flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim() && !flow.composeMenuOpen;
     const enteringDisambiguation = flow.state === GS.DISAMBIGUATE && prevState !== GS.DISAMBIGUATE;
+    const enteringComposeFromDisambiguation = flow.state === GS.COMPOSE && prevState === GS.DISAMBIGUATE;
+    const enteringComposeText = flow.state === GS.COMPOSE && composeHasText && !prevComposeHasText;
+    composePlaceholderDelayActive = enteringComposeFromDisambiguation && !composeHasText;
     document.body.classList.toggle("glass-flow-active", flow.active);
     if (enteringDisambiguation) {
       disambiguationPhase = "entering";
@@ -293,6 +304,7 @@ export function createMessageSendRender({
     }
     C.rich.innerHTML = buildContent();
     prevState = flow.state;
+    prevComposeHasText = composeHasText;
     dropMain?.classList.toggle("disambiguation-surface", flow.active && flow.state === GS.DISAMBIGUATE);
     dropMain?.classList.toggle("compose-surface", flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM));
     dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM);
@@ -303,8 +315,20 @@ export function createMessageSendRender({
     C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT);
     C.rich.classList.toggle("glass-disambiguation", flow.active && flow.state === GS.DISAMBIGUATE);
     C.rich.classList.toggle("glass-compose", isComposeSurface);
+    C.rich.classList.toggle("compose-entering", enteringComposeFromDisambiguation);
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
-    C.rich.style.opacity = flow.active ? "1" : "";
+    cancelComposeRevealTimer();
+    if (enteringComposeFromDisambiguation || enteringComposeText) {
+      C.rich.style.opacity = "0";
+      composeRevealTimer = setTimeout(() => {
+        composeRevealTimer = null;
+        const nextFlow = getFlow();
+        if (!nextFlow.active || nextFlow.state !== GS.COMPOSE) return;
+        C.rich.style.opacity = "1";
+      }, enteringComposeFromDisambiguation ? 120 : 90);
+    } else {
+      C.rich.style.opacity = flow.active ? "1" : "";
+    }
     C.rich.style.transform = (flow.active && flow.state === GS.SENT) ? "translateY(-18px)" : "";
     renderControls();
     cancelMeasure();
@@ -395,6 +419,7 @@ export function createMessageSendRender({
     dynamicGeo,
     sentGeo,
     contentHeightPx,
+    composeGeo,
     buildContent,
     render,
     setManualComposeEntry(flag) {

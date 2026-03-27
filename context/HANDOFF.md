@@ -1,6 +1,299 @@
 # Handoff
 
 ## Task title
+Compose Header Transition Root-Cause Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Found the actual reason the compose contact header still had no fade transition on `L` open: opening the chip menu was doing a full compose rerender.
+- That replaced the header DOM node in its final hidden state, so the CSS transition never had a stable before/after frame to animate.
+- Fixed in `src/flows/message-send.js` by switching the compose-menu open path to the existing DOM-only update seam:
+  - `render.updateComposeMenuUiOnly?.() || render.render(false)`
+- Result: the header should now transition on the same DOM node during both open and close instead of popping due to rerender replacement.
+
+## Files changed
+- `src/flows/message-send.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this open-path fix.
+
+## Recommended next step
+1. Hold `L` to open chips and verify the header now fades/slides out instead of popping.
+2. Release `L` and verify the header fades/slides back in on the same node during close.
+
+# Handoff
+
+## Task title
+Compose Chip Close Fade 200ms
+
+## Completion status
+- Completed
+
+## Summary
+- Shortened the compose chip close fade timing from `300ms` to `200ms` while keeping the overall close movement at `800ms`.
+- Implemented by moving the close keyframe opacity cutoff from `37.5%` to `25%` of the `800ms` animation.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this timing update.
+
+## Recommended next step
+1. Hold and release `L` and verify chips are visually gone by about `200ms` while the absorb-back movement continues.
+
+## Task title
+Compose Chip Close Timing Split
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the compose chip close movement duration to `800ms`.
+- Kept fade-out faster by moving opacity to `0` at the `300ms` point inside the same close keyframe.
+- Result: chips still travel back with the longer absorb motion, but visually disappear much earlier instead of staying fully visible through the whole `800ms` path.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this timing split adjustment.
+
+## Recommended next step
+1. Hold and release `L` and verify chip movement still lasts `800ms`.
+2. Verify chip opacity is effectively gone by about `300ms` into the close animation.
+
+## Task title
+Compose Header Smooth Toggle + Faster Chip Close
+
+## Completion status
+- Completed
+
+## Summary
+- Smoothed the compose contact-header show/hide behavior during the `L`-menu lifecycle by updating the header opacity/translate transition to a `220ms` cubic-bezier motion on the existing class-toggle path.
+- Shortened the compose chip dismiss animation from `400ms` to `200ms` so chips fade/absorb back faster when released.
+- Also reduced per-chip close staggering so the whole dismiss reads as one tighter close gesture instead of a slow cascade.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this motion timing adjustment.
+
+## Recommended next step
+1. Hold and release `L` in compose and verify the header now fades/slides smoothly instead of popping.
+2. Verify chip dismiss now completes in roughly `200ms` and still reads as absorption back into the compose field.
+
+## Task title
+Compose Empty Height 96px + Bottom Anchor 12px
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the empty compose placeholder-state shell height to `96px` on both the geometry path and the live compose-field CSS.
+- Reduced the compose/confirm field bottom margin to `12px` at all compose-layout states by moving the bottom anchor from `380` to `408` inside the `420px` stage.
+- This affects the real shell position, so compose and confirm now sit lower with a consistent `12px` bottom gap.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this sizing/anchor adjustment.
+
+## Recommended next step
+1. Verify empty compose now renders at `96px` tall.
+2. Verify compose and confirm both sit `12px` above the frame bottom.
+
+## Task title
+Compose Placeholder Wrap-Glitch Guard
+
+## Completion status
+- Completed
+
+## Summary
+- Identified the remaining visual glitch source in empty compose: the placeholder text was still allowed to wrap while the compose shell was animating wider from the orb.
+- Updated the live empty placeholder styling so it stays on a single line during the morph:
+  - fixed content width inside the field
+  - `white-space: nowrap`
+  - overflow clipped instead of wrapping to two lines
+- This works with the existing `400ms` delayed reveal so the empty compose entry no longer shows the two-line -> one-line placeholder glitch during shell expansion.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this placeholder wrap guard.
+
+## Recommended next step
+1. Verify disambiguation -> compose no longer shows the placeholder wrapping to two lines before settling.
+2. If any residual visual glitch remains, inspect only the shell-width timing versus the `400ms` reveal delay next.
+
+## Task title
+Compose Empty-State Height + Placeholder Delay
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the empty compose field to a one-line-tall shell on the actual compose geometry path.
+- Updated the live compose-field CSS so the empty state now matches that shorter shell instead of keeping the older tall empty-field styling.
+- Added a placeholder-only delayed reveal on the disambiguation -> compose transition:
+  - `Speak your message...` stays hidden for `400ms`
+  - then fades/slides in over `220ms`
+- This delay applies only when entering empty compose from disambiguation. It does not affect active text compose or confirm.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this empty-state adjustment.
+
+## Recommended next step
+1. Verify disambiguation -> compose now shows the shell first, then the placeholder after `400ms`.
+2. Verify the empty compose shell is visually one line tall and still expands upward correctly once dictation text appears.
+
+## Task title
+Compose Morph Regression Root-Cause Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Performed a deeper runtime inspection of the actual compose morph path.
+- Root cause found in `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`:
+  - once compose voice viz was retargeted to the real visible field (`#drop-main.compose-surface`), the dictation path still did `field.style.transition = 'min-height ... box-shadow ...'`
+  - when `field` is `#drop-main`, that overwrites the shell’s normal transition property
+  - which removes width / height / transform / border-radius transitions from the real morphing shell
+  - result: subsequent compose shell geometry changes read as jumps instead of morphs
+- Fixed by making the voice engine preserve shell transitions on the real field:
+  - if the target is `#drop-main`, do not write `style.transition`
+  - still apply live voice viz through `box-shadow`
+  - cleanup paths no longer clear `transition` on `#drop-main`
+- This preserves the compose shell’s morph animation while keeping the live voice visualization on the real visible field.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this root-cause fix.
+
+## Recommended next step
+1. Verify disambiguation -> compose now morphs on the real shell.
+2. Start dictation and verify compose growth still morphs while voice viz remains active.
+3. If any residual non-morph remains after this, inspect only the compose-entry sequencing path next; the voice-engine transition override bug is now removed.
+
+
+## Task title
+Compose Entry Morph Sequencing Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Performed a deeper inspection of the compose morph path and found the key sequencing difference from `main`.
+- Root cause: current compose entry was rendering the final compose UI immediately, then trying to morph the shell. That visually overrode the orb->field transition, so it read as a jump even though shell geometry was changing.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js` by restoring a shell-first compose entry path:
+  - set compose state/data
+  - compute compose geometry
+  - call the shell morph first
+  - only render the compose content after a short delay (`120ms`) once the shell has started morphing
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` by:
+  - exposing `composeGeo()` for the compose-entry path
+  - tracking the first empty->text boundary (`prevComposeHasText`)
+  - briefly delaying rich-content reveal on that boundary as well, so the shell expansion is visible instead of being visually flattened by immediate final content
+- Result: both disambiguation -> compose and the first compose growth into active dictation now use a shell-first sequence instead of immediate final-layout replacement.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this sequencing change.
+
+## Recommended next step
+1. Verify disambiguation -> compose now visibly morphs from orb to field.
+2. Start dictation from empty compose and verify the first expansion now reads as a morph instead of a snap.
+3. If any residual snap remains after this, inspect repeated interim transcript updates during active dictation next.
+
+
+## Task title
+Compose Morph Visibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Addressed the compose-shell jump in two places.
+- First fix: `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+  - `handleInputChange()` now detects the empty <-> non-empty text transition and calls `render.render(true)` for that boundary.
+  - This makes the first compose-field expansion use the explicit morph path instead of the lighter update path.
+- Second fix: `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+  - entering compose from disambiguation now delays the rich-content reveal briefly (`120ms`) while the shell begins morphing.
+  - Root cause here was perceptual: the compose content was being swapped to its final layout immediately, which visually overrode the shell morph and made the orb->field change read like a jump.
+  - The shell still morphs through the normal geometry path, but the content now fades in after the morph begins so the transition is visible.
+- Result: disambiguation -> compose should read as an orb morph into the compose field, and the first voice/text expansion should use the morph path rather than snapping.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after this fix.
+
+## Recommended next step
+1. Verify disambiguation -> compose now visibly morphs before the content fully appears.
+2. Start dictation from empty compose and verify the first field expansion uses the morph path.
+3. If there is still residual snap after this, the next seam to inspect is repeated interim transcript renders while dictation is active.
+
+
+## Task title
 Compose Field Snap-to-Width Fix
 
 ## Completion status

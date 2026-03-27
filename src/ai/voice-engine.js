@@ -89,7 +89,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
       const field = document.querySelector('#drop-main.compose-surface:not(.confirm-surface)') || document.querySelector('[data-compose-field]');
       if (field && field.dataset.pulseLock !== '1') {
-        field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
+        if (field.id !== 'drop-main') {
+          field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
+        }
         field.style.setProperty('box-shadow', shadow(level), 'important');
       }
     }
@@ -116,7 +118,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
     const field = document.querySelector('#drop-main.compose-surface:not(.confirm-surface)') || document.querySelector('[data-compose-field]');
-    if (field) { field.style.transition = ''; field.style.removeProperty('box-shadow'); }
+    if (field) {
+      if (field.id !== 'drop-main') field.style.transition = '';
+      field.style.removeProperty('box-shadow');
+    }
     if (getGlassUi()?.state !== getGlassState().DISAMBIGUATE) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
@@ -124,7 +129,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   function clearVoiceVizStyles() {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
     const field = document.querySelector('#drop-main.compose-surface:not(.confirm-surface)') || document.querySelector('[data-compose-field]');
-    if (field) { field.style.transition = ''; field.style.removeProperty('box-shadow'); }
+    if (field) {
+      if (field.id !== 'drop-main') field.style.transition = '';
+      field.style.removeProperty('box-shadow');
+    }
     document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }

@@ -249,7 +249,7 @@ export function createMessageSendFlow(ctx) {
       syncComposeChipState();
       flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
       flow.sel = Math.min(flow.sel, Math.max(0, flow.composeMenuVisibleCount - 1));
-      render.render(false);
+      render.updateComposeMenuUiOnly?.() || render.render(false);
       timers.composeMenuExpand = setTimeout(() => {
         timers.composeMenuExpand = null;
         if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding || !flow.composeMenuOpen) return;
@@ -470,8 +470,17 @@ export function createMessageSendFlow(ctx) {
     const dropMain = document.getElementById("drop-main");
     if (dropMain) dropMain.style.boxShadow = "";
     ctx.voice.voiceEngine.start("dictation");
-    render.setManualComposeEntry(false);
-    render.render(true);
+    dropMain?.classList.remove("disambiguation-surface", "confirm-surface");
+    dropMain?.classList.add("compose-surface");
+    render.setManualComposeEntry(true);
+    const geo = render.composeGeo();
+    ctx.morph.morphTo(render.glassStateShape(GS.COMPOSE), { icon: "", primary: "", secondary: "", detail: "" }, geo);
+    ctx.updateActive?.(render.glassStateShape(GS.COMPOSE));
+    setTimeout(() => {
+      if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
+      render.setManualComposeEntry(false);
+      render.render(false);
+    }, 120);
     render.markStateCommitted();
 
     speakOutput(voiceText || "");
@@ -685,6 +694,8 @@ export function createMessageSendFlow(ctx) {
     const text = String(value || "");
     const allowChipMatch = options?.allowChipMatch === true;
     const fromDictation = options?.fromDictation === true;
+    const hadText = !!String(flow.composeText || "").trim();
+    const willHaveText = !!text.trim();
     if (!fromDictation && text.trim()) flow.replaceComposeOnNextDictation = false;
     flow.composeText = text;
     cancelComposeMenu({ immediate: true });
@@ -725,7 +736,7 @@ export function createMessageSendFlow(ctx) {
       flow.showCheck = false;
       flow.msg = "";
     }
-    render.render(false);
+    render.render(hadText !== willHaveText);
   }
 
   async function handleInputSubmit(text, options = {}) {

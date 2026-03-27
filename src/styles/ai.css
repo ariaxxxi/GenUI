@@ -976,7 +976,8 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   padding: 10px 12px;
   border-radius: 66px;
   opacity: 1;
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: opacity 220ms cubic-bezier(0.22,1,0.36,1), transform 220ms cubic-bezier(0.22,1,0.36,1);
+  will-change: opacity, transform;
 }
 .g-compose-header.hidden {
   opacity: 0;
@@ -1083,8 +1084,8 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 }
 .g-compose-chip-stack.closing .g-compose-chip.is-visible,
 .g-compose-chip-stack:not(.open):not(.closing) .g-compose-chip.is-visible {
-  animation: compose-chip-out 400ms cubic-bezier(0.35,0.23,0.13,0.98) both;
-  animation-delay: calc(var(--chip-order, 0) * 22ms);
+  animation: compose-chip-out 800ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+  animation-delay: calc(var(--chip-order, 0) * 14ms);
 }
 .g-compose-chip-stack .g-compose-chip:nth-child(1) { --chip-order: 0; }
 .g-compose-chip-stack .g-compose-chip:nth-child(2) { --chip-order: 1; }
@@ -1111,6 +1112,9 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
     opacity: 1;
     transform: translateY(0) scale(1) rotate(0deg);
   }
+  25% {
+    opacity: 0;
+  }
   to {
     opacity: 0;
     transform: translateY(var(--chip-travel-end, 92px)) scale(0.86) rotate(var(--chip-rot-end, 0deg));
@@ -1133,7 +1137,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 }
 .g-compose-field {
   width: 100%;
-  min-height: 83px;
+  min-height: 96px;
   height: auto;
   border-radius: 30px;
   border: none;
@@ -1143,7 +1147,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 18px 14px;
+  padding: 10px 14px;
 }
 .g-compose-field.active {
   min-height: 94px;
@@ -1153,11 +1157,23 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   padding: 24px 14px;
 }
 .g-compose-field-empty {
+  width: calc(100% - 28px);
+  max-width: calc(100% - 28px);
   font-family: 'DM Sans', sans-serif;
   font-size: 24px;
   font-weight: 500;
   font-style: italic;
   color: rgba(255,255,255,0.40);
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.g-compose-stage.placeholder-delayed .g-compose-field-empty {
+  opacity: 0;
+  transform: translateY(4px);
+  animation: g-compose-placeholder-in 220ms ease 400ms forwards;
 }
 .g-compose-field-text {
   width: calc(100% - 28px);
@@ -1339,6 +1355,11 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 .g-listen-field.compose-input.has-text {
   min-height: 96px;
 }
+@keyframes g-compose-placeholder-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes g-compose-chip-in {
   from { opacity: 0; transform: translateY(18px) scale(0.82); }
   to { opacity: 1; transform: translateY(0) scale(1); }
