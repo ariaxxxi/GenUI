@@ -1,6 +1,170 @@
 # Handoff
 
 ## Task title
+Compose Surface Placement Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Follow-up compose sizing fix: increased the active compose/confirm field max width from `351px` to `420px` and updated inner text width to fill that shell width correctly.
+- Follow-up confirmation visual fix: added `confirm-surface` on `#drop-main` and removed the compose-shell shadow in confirmation, so the confirm field has no blue glow or shell shadow effect.
+- Follow-up disambiguation visual tweak: changed pill border radius from `24px` to `28px` so the `56px`-tall pills read as true capsules instead of rounded rectangles.
+- Follow-up disambiguation tweak: changed unselected pill scale from `0.92` to `0.98` in both the primitive output and CSS animation/settled-state rules.
+- Follow-up disambiguation tweak: made the unselected pill scale explicit at `0.92` in CSS (`.g-disambiguation-pill:not(.selected)`) so selection updates and animation settle states cannot drift.
+- Follow-up state fix: confirmation no longer reuses the compose dictation glow. `compose-text-active` now applies only while in `GS.COMPOSE` with text, so entering `GS.CONFIRM` removes the blue voice-viz from the field shell.
+- Follow-up visual fix: restored the old compose voice-viz color stack on `#drop-main.compose-surface.compose-text-active` by removing the pink lower glow and matching the previous blue/white compose-field lighting.
+- Follow-up layout rule: compose/confirm shell is now bottom-anchored. Height growth no longer pushes the field downward; the bottom edge stays fixed and multiline growth expands upward.
+- Follow-up behavior change: compose/confirm field height now expands with text length. The inner compose field uses auto height with minimum empty/active heights, and the shell in `message-send-render.js` re-measures the rendered compose field and remorphs to match content height.
+- Fixed the compose/confirm shell placement bug in [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+- Root cause: `composeGeo()` targeted an absolute top-edge position, but the shared morph renderer also applies a bottom-align `yOffset` in AI mode. The compose shell was therefore pushed down twice and rendered below the visible frame.
+- Updated compose geometry to compensate for the renderer's bottom-align offset: `ty = top + h - 420`.
+- Updated rich-layer class routing so both `GS.COMPOSE` and `GS.CONFIRM` use `glass-compose` and neither inherits the generic bottom-aligned `glass-active` layout. This keeps the compose/confirm header and field on the compose surface instead of a separate card-layout path.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser validation was run after this patch. If vertical position is still slightly off, only the compose top constants (`COMPOSE_FIELD_TOP`, `COMPOSE_FIELD_TOP_ACTIVE`) should need tuning now.
+- Follow-up tuning: moved `COMPOSE_FIELD_TOP` and `COMPOSE_FIELD_TOP_ACTIVE` up by `20px` to bring the compose/confirm shell fully inside the visible frame.
+
+## Recommended next step
+1. Reload `ai.html`.
+2. Verify `drop-main.compose-surface` and `drop-main.compose-surface.compose-text-active` both sit inside the frame.
+3. If needed, tune only `COMPOSE_FIELD_TOP` / `COMPOSE_FIELD_TOP_ACTIVE` in [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+
+## Task title
+Message Compose Redesign: Header + Compose Field + Expandable Suggestion Chips
+
+## Completion status
+- Completed
+
+## Summary
+- Reworked message `COMPOSE` to the field-first Figma layout instead of the old large compose card.
+- Added a field-sized compose morph in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - default compose morphs to `307x83`
+  - active text morphs to `351x94`
+  - the visible `drop-main` shell is now the source of truth for the compose-field morph
+- Added new shared compose primitives in [src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js):
+  - `renderComposeHeader(...)`
+  - `renderComposeChipStack(...)`
+  - `renderComposeField(...)`
+- Reworked message compose state in [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - added `composeMenuOpen`
+  - added `composeVisualChips` for Figma-aligned visual chip order without mutating underlying chip data
+  - entering compose now defaults to header + field only
+  - dictation/input force-close the chip menu
+  - `toggleComposeMenu()` added for compose-owned `L` behavior
+- Updated [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js):
+  - `L` now toggles the compose chip menu when message flow is active in `GS.COMPOSE`
+  - non-compose `L` behavior remains unchanged
+- Added compose-specific CSS in [src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css):
+- Follow-up fix: compose header/chip/field positioning now uses offsets relative to the compose field shell inside `#c-rich`/`#drop-main`, fixing the initial render bug where the field dropped below the frame and the header/chips were off-surface.
+- Follow-up fix: compose field chrome now lives on `#drop-main.compose-surface` and the inner compose field is content-only, so the morphing shell and visible field can no longer drift apart. Compose also no longer inherits generic `glass-active` bottom-alignment.
+- Follow-up fix: compose shell `ty` now converts Figma top-edge coordinates to stage-center translate coordinates (`top + h/2 - 210`), fixing the incorrect compose surface placement.
+  - compact `To:` header row
+  - bottom-anchored compose field
+  - stacked suggestion chip menu
+  - compose-only rich-layer positioning via `#c-rich.glass-compose`
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-voice.js`
+- `src/ai/ai-bindings.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma nodes referenced for implementation:
+  - `224:80`
+  - `224:121`
+  - `224:133`
+- Syntax checks passed:
+  - `node --check src/flows/ui-primitives.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/message-send-voice.js`
+  - `node --check src/ai/ai-bindings.js`
+
+- Follow-up change: message `CONFIRM` now reuses the compose-style header + field layout and no longer renders the 3-button controls overlay. Confirm actions are voice-only: send, edit, cancel.
+
+## Remaining issues / caveats
+- No live browser validation was run in `ai.html`, so exact vertical placement and motion feel still need visual verification.
+- The visual chip order is intentionally Figma-driven for the current 3-chip set; non-matching contact chip labels fall back to original order.
+- The old compose helper classes remain in CSS for confirm/static field reuse, but the compose stage no longer uses the old `g-compose-card` layout.
+
+## Recommended next step
+1. Run the message flow in `ai.html` through disambiguation -> compose.
+2. Verify:
+   - compose enters as header + field only
+   - `L` opens/closes the stacked chip menu
+   - speaking with the menu open auto-dismisses chips and restores the header
+   - chip selection and dictation still route to confirm correctly
+3. If needed, tune only the absolute `top` values for `.g-compose-header`, `.g-compose-chip-stack`, and `.g-compose-field-wrap` in [src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css).
+
+
+## Task title
+Disambiguation Pills Around Listening Orb
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the message disambiguation bubble cluster with a shared pill-based primitive in [src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js):
+  - added `renderDisambiguationPills(...)`
+  - removed bubble-specific rendering from the active message-flow path
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+- Follow-up tweak: 2-contact disambiguation pills now share the same center line (`x: 0` for both items) so the pair is vertically center-aligned above the orb.
+- Follow-up tweak: disambiguation now scales the visible listening orb shell to `0.8` via `drop-main` geometry while preserving the original orb center.
+  - disambiguation now stays on the normal `listening` shape with no custom orb shrink/recenter geometry
+  - removed bubble size / Y-offset / orb-scale hacks
+  - added pill-position layouts for `1`, `2`, `3`, and `4+` contacts relative to the listening-orb center
+  - disambiguation still uses the `entering -> settled` phase, but now spreads pill chips from the orb instead of circles
+- Updated [src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css):
+  - removed bubble/origin styling
+  - added pill-shell, pill-avatar, and pill-text styles based on the Figma node `224:100`
+  - retained the disambiguation-specific rich-layer ownership so this state is not bottom-aligned or clipped
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - compose handoff now animates `.g-disambiguation-pill` out instead of the old bubble class
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma node inspected via MCP:
+  - file `LTNbsRqNkyLeo81OSL1X7J`
+  - node `224:100`
+- Syntax checks passed:
+  - `node --check src/flows/ui-primitives.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+- Searched for stale bubble-path references in active flow files; none remain
+
+## Remaining issues / caveats
+- No live browser validation was run in `ai.html`, so the exact final pill offsets and motion feel versus the Figma screenshot/video still need on-screen verification.
+- The `4+` contact fan layout is data-driven but not visually tuned beyond keeping pills above the orb.
+
+## Recommended next step
+1. Trigger ambiguous Hiro disambiguation in `ai.html`.
+2. Verify:
+   - the listening orb stays in the normal listening position and size
+   - pills fan out above the orb without clipping
+   - selected/unselected states read clearly
+   - keyboard selection and spoken-name selection still work
+3. If needed, tune only the disambiguation pill `x/y` offsets in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) without reintroducing orb-geometry hacks.
+
+
+## Task title
 Message Disambiguation Bubble Cluster
 
 ## Completion status

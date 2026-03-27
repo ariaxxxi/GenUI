@@ -57,7 +57,7 @@ export function createMessageSendVoice({ contacts }) {
       const idx = contacts.findIndex((contact) => String(contact.name || "").toLowerCase().includes(lower));
       if (idx >= 0) return { type: "select-contact", index: idx };
     }
-    if (flow.state === flow.GS.COMPOSE && flow.showChips && !flow.composeText) {
+    if (flow.state === flow.GS.COMPOSE && (flow.composeMenuOpen || (flow.showChips && !flow.composeText))) {
       const idx = (flow.contact?.chips || []).findIndex((chip) =>
         lower.includes(String(chip.label || "").toLowerCase())
       );

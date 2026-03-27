@@ -24,6 +24,10 @@ export function renderContactHeader({ avatar = "", initials = "", name = "", pre
   return `<div class="g-card-header">${renderAvatar({ avatar, initials, name })}<div class="g-to-text">${esc(prefix)} <span class="g-to-name">${esc(name)}</span>${subtitleText ? `<span class="g-contact-sub"> ${esc(subtitleText)}</span>` : ""}</div></div>`;
 }
 
+export function renderComposeHeader({ avatar = "", initials = "", name = "", visible = true } = {}) {
+  return `<div class="g-compose-header ${visible ? "" : "hidden"}">${renderAvatar({ avatar, initials, name, cls: "g-compose-header-avatar" })}<div class="g-compose-header-text">To: ${esc(name)}</div></div>`;
+}
+
 export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr = "data-g-contact", listClass = "g-card-list" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
   return `<div class="${esc(listClass || "g-card-list")}">${items.map((item, index) => {
@@ -37,28 +41,25 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
   }).join("")}</div>`;
 }
 
-export function renderBubbleCluster({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-bubble", clusterClass = "g-bubble-cluster", showOrigin = true, originX = 0, originY = 0 } = {}) {
-  const attrName = String(rowDataAttr || "data-g-bubble").trim();
-  const coords = items.map((item) => ({ x: Number(item?.x) || 0, y: Number(item?.y) || 0 }));
-  if (showOrigin) coords.push({ x: Number(originX) || 0, y: Number(originY) || 0 });
-  const width = Math.max(1, ...coords.map((item) => item.x)) - Math.min(0, ...coords.map((item) => item.x)) + 120;
-  const height = Math.max(1, ...coords.map((item) => item.y)) - Math.min(0, ...coords.map((item) => item.y)) + 120;
-  const originHtml = showOrigin
-    ? `<div class="g-disambiguation-origin ${phase === "entering" ? "entering" : "settled"}" aria-hidden="true" style="--origin-x:${Math.round(Number(originX) || 0)}px;--origin-y:${Math.round(Number(originY) || 0)}px;"></div>`
-    : "";
-  return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}" style="--bubble-cluster-w:${Math.round(width)}px;--bubble-cluster-h:${Math.round(height)}px;">${originHtml}${items.map((item, index) => {
+export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
+  const attrName = String(rowDataAttr || "data-g-contact").trim();
+  return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}">${items.map((item, index) => {
     const selected = index === selectedIndex;
     const title = String(item?.name || item?.title || "").trim();
-    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-media" });
-    const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -24 : 24);
+    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-pill-media" });
+    const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
     const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
-    const finalScale = selected ? 1 : 0.7;
-    return `<div class="g-disambiguation-bubble ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="--bubble-x:${Math.round(Number(item?.x) || 0)}px;--bubble-y:${Math.round(Number(item?.y) || 0)}px;--bubble-rot-start:${rotStart}deg;--bubble-delay:${delay}ms;--bubble-scale-final:${finalScale};">${avatar}</div>`;
+    const finalScale = selected ? 1 : 0.98;
+    return `<div class="g-disambiguation-pill ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="--pill-x:${Math.round(Number(item?.x) || 0)}px;--pill-y:${Math.round(Number(item?.y) || 0)}px;--pill-rot-start:${rotStart}deg;--pill-delay:${delay}ms;--pill-scale-final:${finalScale};">${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
   }).join("")}</div>`;
 }
 
 export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true, collapsed = false } = {}) {
   return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
+}
+
+export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false } = {}) {
+  return `<div class="g-compose-chip-stack ${open ? "open" : ""}">${chips.map((chip, index) => `<div class="g-compose-chip ${index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div>`;
 }
 
 export function renderTextBubble({ text = "", placeholder = "", mode = "static", hasText = false } = {}) {
@@ -72,6 +73,14 @@ export function renderTextBubble({ text = "", placeholder = "", mode = "static",
 
 export function renderInputField({ text = "", placeholder = "Listening...", hasText = false } = {}) {
   return renderTextBubble({ text, placeholder, mode: "listening", hasText });
+}
+
+export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false } = {}) {
+  const value = String(text || "").trim();
+  if (value) {
+    return `<div class="g-compose-field ${active ? "active" : ""}" data-compose-field><div class="g-compose-field-text" data-compose-field-text>${esc(text)}</div></div>`;
+  }
+  return `<div class="g-compose-field" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
 }
 
 export function renderInfoCard({
