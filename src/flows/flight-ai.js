@@ -1,9 +1,54 @@
 export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
+  function formatFlightDate(monthIndex, day) {
+    const now = new Date();
+    let year = now.getFullYear();
+    let date = new Date(year, monthIndex, day);
+    if (Number.isNaN(date.getTime())) return "";
+    if (date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      year += 1;
+      date = new Date(year, monthIndex, day);
+    }
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    return `${weekday}, ${month} ${date.getDate()}`;
+  }
+
+  function normalizeFlightDateValue(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const match = raw.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b[\s,]+(\d{1,2})\b/i);
+    if (!match) return raw;
+    const months = {
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
+    };
+    const monthIndex = months[match[1].slice(0, 3).toLowerCase()];
+    const day = Number(match[2]);
+    if (!Number.isInteger(monthIndex) || !Number.isFinite(day)) return raw;
+    return formatFlightDate(monthIndex, day) || raw;
+  }
+
+  function normalizeFlightDateData(data) {
+    const next = { ...(data || {}) };
+    if (next.depart) next.depart = normalizeFlightDateValue(next.depart);
+    if (next.return) next.return = normalizeFlightDateValue(next.return);
+    return next;
+  }
+
   function detectEditTarget(text) {
     const t = String(text || "").toLowerCase();
     if (/\b(date|dates|depart|departure|return)\b/.test(t)) return { type: "dates" };
-    if (/\b(passenger|passengers|adult|adults|people|traveler|travellers)\b/.test(t)) return { type: "options", key: "passengers" };
-    if (/\b(flight|airline|time|times)\b/.test(t)) return { type: "options", key: "flight" };
+    if (/\b(flight|airline|time|times)\b/.test(t)) return { type: "recommendation", key: "flight" };
     if (/\b(payment|pay|card|apple pay|visa|bank)\b/.test(t)) return { type: "payment" };
     return null;
   }
@@ -11,12 +56,11 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
   function parseFlightDatesLocally(text) {
     const t = String(text || "").toLowerCase();
     const matches = [...t.matchAll(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})\b/g)];
-    const fmt = (m, d) => `${m.slice(0, 1).toUpperCase()}${m.slice(1, 3)} ${d}`;
     const out = {};
-    if (matches[0]) out.depart = fmt(matches[0][1], matches[0][2]);
-    if (matches[1]) out.return = fmt(matches[1][1], matches[1][2]);
+    if (matches[0]) out.depart = normalizeFlightDateValue(`${matches[0][1]} ${matches[0][2]}`);
+    if (matches[1]) out.return = normalizeFlightDateValue(`${matches[1][1]} ${matches[1][2]}`);
     if (/\breturn|back\b/.test(t) && matches[0] && !out.return) {
-      out.return = fmt(matches[0][1], matches[0][2]);
+      out.return = normalizeFlightDateValue(`${matches[0][1]} ${matches[0][2]}`);
       delete out.depart;
     }
     return out;
@@ -41,13 +85,46 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
   function nextQuestion(step) {
     if (!step) return "What would you like to do next?";
     if (step.type === "dates") return "When are you departing and returning?";
-    if (step.type === "options" && step.key === "passengers") return "How many passengers?";
     if (step.type === "thinking") return "Want me to find flights now?";
-    if (step.type === "options" && step.key === "flight") return "Which flight do you want?";
-    if (step.type === "confirm") return "Would you like to confirm this flight?";
+    if (step.type === "recommendation") return "Would you like this flight or see alternatives?";
     if (step.type === "payment") return "How would you like to pay?";
+    if (step.type === "confirm") return "Would you like to confirm this flight?";
     if (step.type === "done") return "Ready to book this trip?";
     return "What should we do next?";
+  }
+
+  function resolvePaymentMethod(rawText, flow) {
+    const t = String(rawText || "").toLowerCase();
+    return (flow.paymentMethods || []).find((item) => {
+      const name = String(item.name || "").toLowerCase();
+      return (t.includes("apple pay") && name.includes("apple pay"))
+        || (t.includes("visa") && name.includes("visa"))
+        || (t.includes("bank") && name.includes("bank"));
+    }) || null;
+  }
+
+  function applyRecommendationRefinement(rawText, flow) {
+    const t = String(rawText || "").toLowerCase();
+    const options = flow.currentFlightOptions?.() || [];
+    if (!options.length) return false;
+    if (/\b(alternative|alternatives|other options|show more)\b/.test(t)) {
+      flow.recommendationMode = "alternatives";
+      flow.focused = 0;
+      return true;
+    }
+    if (/\b(cheaper|cheap|lowest price)\b/.test(t)) {
+      const cheapest = options.find((opt) => String(opt.sub || "").includes("$631")) || options[0];
+      flow.setSelectedFlightOption?.(cheapest);
+      flow.recommendationMode = "recommend";
+      return true;
+    }
+    if (/\b(nonstop|non stop|faster|fastest|convenient|earlier)\b/.test(t)) {
+      const nonstop = options.find((opt) => String(opt.sub || "").toLowerCase().includes("non-stop")) || options[0];
+      flow.setSelectedFlightOption?.(nonstop);
+      flow.recommendationMode = "recommend";
+      return true;
+    }
+    return false;
   }
 
   function enforceProgressReply(reply, action, currentStep, nextStep) {
@@ -95,7 +172,13 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
       const idx = (step.options || []).findIndex((opt) => text.toLowerCase().includes(opt.name.toLowerCase().split(" ")[0]));
       return idx >= 0 ? { reply: `Selected ${step.options[idx].name}.`, action: "select", data: { index: idx } } : { reply: "Use arrow keys or type the option.", action: "stay", data: {} };
     }
-    if (step.type === "confirm") return /\byes|ok|confirm|book\b/i.test(text) ? { reply: "Confirmed. How would you like to pay?", action: "next", data: {} } : { reply: "Tell me what to change.", action: "stay", data: {} };
+    if (step.type === "recommendation") {
+      if (/\b(yes|ok|confirm|book)\b/i.test(text)) return { reply: "Great, I’ll use that one.", action: "next", data: {} };
+      if (/\b(alternative|alternatives|other option|other flight)\b/i.test(text)) return { reply: "Here are two alternatives.", action: "alternatives", data: {} };
+      if (/\b(cancel|never mind)\b/i.test(text)) return { reply: "Canceled.", action: "cancel", data: {} };
+      return { reply: "Want this one or should I show alternatives?", action: "stay", data: {} };
+    }
+    if (step.type === "confirm") return /\byes|ok|confirm|book\b/i.test(text) ? { reply: "Booked.", action: "next", data: {} } : { reply: "Tell me what to change.", action: "stay", data: {} };
     return { reply: "Done.", action: "stay", data: {} };
   }
 
@@ -124,15 +207,46 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
     if (step.type === "confirm") {
       const editTarget = detectEditTarget(rawText);
       if (editTarget) {
+        if (editTarget.type === "payment") {
+          const payment = resolvePaymentMethod(rawText, flow);
+          if (payment) {
+            flow.data.paymentMethod = payment.name;
+            addChatBubble("ai", `Using ${payment.name}.`);
+            return flow.renderStep(true);
+          }
+        }
         flow.editReturnStepIndex = flow.stepIndexBy("confirm");
         if (flow.jumpToStep(editTarget)) return;
       }
+      if (/\b(show details|flight times|what are the flight times)\b/.test(rawText.toLowerCase())) {
+        flow.showConfirmDetails = true;
+        addChatBubble("ai", "Here are the flight details.");
+        return flow.renderStep(true);
+      }
+      if (/\b(hide details|collapse details|close details)\b/.test(rawText.toLowerCase())) {
+        flow.showConfirmDetails = false;
+        addChatBubble("ai", "Back to the summary.");
+        return flow.renderStep(true);
+      }
     }
-    if (result?.data && typeof result.data === "object") Object.assign(flow.data, step.type === "dates" ? inferSingleDateSlot(rawText, result.data, flow.data) : result.data);
+    if (step.type === "recommendation") {
+      if (applyRecommendationRefinement(rawText, flow)) {
+        addChatBubble("ai", flow.recommendationMode === "alternatives" ? "Here are two alternatives." : "I found a better match.");
+        return flow.renderStep(true);
+      }
+    }
+    if (result?.data && typeof result.data === "object") {
+      const nextData = step.type === "dates"
+        ? normalizeFlightDateData(inferSingleDateSlot(rawText, result.data, flow.data))
+        : result.data;
+      Object.assign(flow.data, nextData);
+    }
     const reply = enforceProgressReply(result?.reply, action, step, flow.nextStepFor(step));
     if (reply) addChatBubble("ai", reply);
     if (action === "back") return flow.backStep();
     if (action === "select") return flow.selectByIndex(Number(result?.data?.index) || 0);
+    if (action === "alternatives") { flow.recommendationMode = "alternatives"; flow.focused = 0; return flow.renderStep(true); }
+    if (action === "cancel") return flow.resetToHome();
     if (action === "next") return step.type === "dates" && !isDatesAdvanceIntent(rawText) ? flow.renderStep(true) : flow.nextStep(true);
     if (action === "update") return flow.renderStep(true);
   }
