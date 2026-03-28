@@ -25,6 +25,10 @@ export function renderContactHeader({ avatar = "", initials = "", name = "", pre
   return `<div class="g-card-header">${renderAvatar({ avatar, initials, name })}<div class="g-to-text">${esc(prefix)} <span class="g-to-name">${esc(name)}</span>${subtitleText ? `<span class="g-contact-sub"> ${esc(subtitleText)}</span>` : ""}</div></div>`;
 }
 
+export function renderComposeHeader({ avatar = "", initials = "", name = "", visible = true } = {}) {
+  return `<div class="g-compose-header ${visible ? "" : "is-hidden"}">${renderAvatar({ avatar, initials, name, cls: "g-compose-header-avatar" })}<div class="g-compose-header-text">To: ${esc(name)}</div></div>`;
+}
+
 export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr = "data-g-contact", listClass = "g-card-list" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
   return `<div class="${esc(listClass || "g-card-list")}">${items.map((item, index) => {
@@ -38,8 +42,26 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
   }).join("")}</div>`;
 }
 
+export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
+  const attrName = String(rowDataAttr || "data-g-contact").trim();
+  return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}">${items.map((item, index) => {
+    const selected = index === selectedIndex;
+    const title = String(item?.name || item?.title || "").trim();
+    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-pill-media" });
+    const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
+    const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
+    const finalScale = selected ? 1 : 0.98;
+    return `<div class="g-disambiguation-pill ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="--pill-x:${Math.round(Number(item?.x) || 0)}px;--pill-y:${Math.round(Number(item?.y) || 0)}px;--pill-rot-start:${rotStart}deg;--pill-delay:${delay}ms;--pill-scale-final:${finalScale};">${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
+  }).join("")}</div>`;
+}
+
 export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true, collapsed = false } = {}) {
   return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
+}
+
+export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
+  const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
+  return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => `<div class="g-compose-chip ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div>`;
 }
 
 export function renderTextBubble({ text = "", placeholder = "", mode = "static", hasText = false } = {}) {
@@ -53,6 +75,15 @@ export function renderTextBubble({ text = "", placeholder = "", mode = "static",
 
 export function renderInputField({ text = "", placeholder = "Listening...", hasText = false } = {}) {
   return renderTextBubble({ text, placeholder, mode: "listening", hasText });
+}
+
+export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false } = {}) {
+  const value = String(text || "").trim();
+  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}`;
+  if (value) {
+    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text" data-compose-field-text>${esc(text)}</div></div>`;
+  }
+  return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
 }
 
 export function renderInfoCard({

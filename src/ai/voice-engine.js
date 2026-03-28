@@ -28,7 +28,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   const shadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
     const lc = (r0,g0,b0,a0, r1,g1,b1,a1) => `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
-    return [`inset 0 ${lr(4,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`, `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`, `inset 0 ${lr(-3,-56)}px 60px -30px rgba(19,75,192,1)`].join(', ');
+    return [`inset 0 ${lr(-22,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`, `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`, `inset 0 ${lr(-3,-56)}px 60px -30px rgba(19,75,192,1)`].join(', ');
   };
   const buttonShadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
@@ -57,12 +57,14 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const state = glassUi?.state;
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
+    const actionBtns = document.querySelectorAll('.g-action-btn');
+    const clearActionBtns = () => actionBtns.forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
     if (voiceEngine.mode === 'command') {
       const allowCommandViz = shouldShowCommandViz?.() !== false;
       if (!allowCommandViz) {
         if (glowEl) glowEl.style.boxShadow = '';
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+        clearActionBtns();
         return;
       }
       const flightContainerViz = document.getElementById('stage')?.classList.contains('flight-voice-viz') === true;
@@ -73,24 +75,26 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
       }
       if (state === GS.CONFIRM) {
-        document.querySelectorAll('.g-action-btn').forEach((btn) => {
+        actionBtns.forEach((btn) => {
           btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)';
           btn.style.boxShadow = buttonShadow(level);
         });
       } else {
-        document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+        clearActionBtns();
       }
     }
     if (voiceEngine.mode === 'dictation') {
       if (glowEl) glowEl.style.boxShadow = '';
-      if (dropMain) dropMain.style.setProperty('box-shadow', '');
-      document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+      if (dropMain) dropMain.style.removeProperty('box-shadow');
+      clearActionBtns();
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
-      const field = document.querySelector('.g-listen-field.compose-input');
+      const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
       if (field && field.dataset.pulseLock !== '1') {
-        field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease';
-        field.style.boxShadow = shadow(level);
+        if (field.id !== 'drop-main') {
+          field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
+        }
+        field.style.setProperty('box-shadow', shadow(level), 'important');
       }
     }
   }
@@ -112,21 +116,24 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     voiceEngine.vizRaf = requestAnimationFrame(tick);
   }
 
-  function stopVoiceViz() {
-    if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
+  function resetVizStyles({ clearDropMain = true } = {}) {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
-    const field = document.querySelector('.g-listen-field.compose-input');
-    if (field) { field.style.transition = ''; field.style.boxShadow = ''; }
-    if (getGlassUi()?.state !== getGlassState().DISAMBIGUATE) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
+    const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
+    if (field) {
+      if (field.id !== 'drop-main') field.style.transition = '';
+      field.style.removeProperty('box-shadow');
+    }
+    if (clearDropMain) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
+  function stopVoiceViz() {
+    if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
+    resetVizStyles({ clearDropMain: getGlassUi()?.state !== getGlassState().DISAMBIGUATE });
+  }
+
   function clearVoiceVizStyles() {
-    document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
-    const field = document.querySelector('.g-listen-field.compose-input');
-    if (field) { field.style.transition = ''; field.style.boxShadow = ''; }
-    document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
-    document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+    resetVizStyles({ clearDropMain: true });
   }
 
   function updateMicIndicator() {

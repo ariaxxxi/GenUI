@@ -1,399 +1,1004 @@
 # Handoff
 
 ## Task title
-Flight Flow Confirm Interaction Rewrite
+Message Confirm Action Row Removal
 
 ## Completion status
-- Partially completed
+- Completed
 
 ## Summary
-- Removed the `Passengers` step from the live flight path in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js). The active flow is now:
-  - `destination`
-  - `dates`
-  - `thinking`
-  - `recommendation`
-  - `payment` only when needed
-  - `confirm`
-  - `done`
-- Reworked flight confirm interaction in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js):
-  - collapsed confirm now has tri-state focus:
-    - `0 = ✅`
-    - `1 = ❌`
-    - `2 = container`
-  - `ArrowUp` moves focus from the action row to the container
-  - `ArrowDown` moves from the container back into the action row
-  - `Space` on the container expands the card
-  - `Space` while expanded collapses the card
-  - `ArrowUp` / `ArrowDown` while expanded scroll the internal confirm detail region by `72px`
-- Updated confirm rendering in [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js):
-  - action row is hidden whenever confirm is expanded
-  - expanded confirm uses one outer shell only
-  - confirm shell height is capped to safe space inside the 420×420 stage
-  - overflow is handled by the internal `[data-confirm-scroll]` region, not by page/stage/frame overflow
-  - intent header is repositioned from the expanded confirm shell so it stays above the card with a `12px` gap
-  - confirm focus UI is synced after render and when keyboard focus changes
-- Removed the passengers-specific AI routing in [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js).
+- Removed the three-button confirm action row from the message flow confirm screen.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so `GS.CONFIRM` emits no control actions to the external controls layer.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so confirm no longer advertises a `0..2` keyboard selection range after the buttons were removed.
+- Voice-driven confirm behavior remains unchanged:
+  - `send`
+  - `edit`
+  - `cancel`
 
 ## Files changed
-- `src/flows/flight-booking.js`
-- `src/flows/flight-render.js`
-- `src/flows/flight-ai.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
 - `context/HANDOFF.md`
 
 ## Validation performed
-- Syntax checks passed:
-  - `node --check src/flows/flight-booking.js`
-  - `node --check src/flows/flight-render.js`
-  - `node --check src/flows/flight-ai.js`
-  - `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
 
 ## Remaining issues / caveats
-- Live browser validation was not run in `ai.html`, so the following are still unverified:
-  - container focus affordance in collapsed confirm
-  - expanded confirm scroll behavior inside the 420×420 frame
-  - intent-header positioning during expand/collapse motion
-  - no-default-payment re-entry back into collapsed confirm
-- The implementation keeps stage/frame overflow hidden and relies on the internal confirm scroll region, but this still needs visual verification.
+- No live browser verification was run after removing the confirm controls row.
 
 ## Recommended next step
-1. Run the flight flow manually in `ai.html`.
-2. Verify:
-   - no `Passengers` step appears
-   - `ArrowUp` focuses the confirm container
-   - `Space` expands/collapses the same confirm card
-   - action buttons are hidden in expanded mode
-   - only the internal detail region scrolls
-   - the header stays above the card and does not overlap it
-3. If those pass, the next safe follow-up is cleanup of any residual confirm-only layout constants that are no longer needed.
+1. Open the message flow confirm screen.
+2. Verify the three-button row is gone.
+3. Verify voice commands still handle `send`, `edit`, and `cancel`.
 
 ## Task title
-Flight Confirm Card: Collapsible Rich Confirmation + Step 3 Readiness Validation
+Flight Confirm Container Focus Parity
+
+## Completion status
+- Completed
+
+## Summary
+- Compared the current `new-msg-motion` flight confirm controller against `origin/main` instead of continuing with the simplified local confirm logic.
+- Restored the `main` branch confirm navigation contract in `src/flows/flight-booking.js`:
+  - `ArrowUp` from the confirm button row now jumps focus to the confirm container
+  - `ArrowDown` from the focused container now returns focus to the first action button
+  - `Space` on the focused container expands details
+  - `Space` while details are expanded collapses them again
+- Kept the previously fixed recommendation handling in sync with the same `main` branch interaction pattern so the confirm-stage behavior is no longer divergent.
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/flight-booking.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after restoring the `main` branch confirm navigation rules.
+
+## Recommended next step
+1. Run the flight flow to the confirm step.
+2. Press `ArrowUp` from the action row and verify the confirm container highlights.
+3. Press `Space` to expand, then `Space` again to collapse.
+
+# Handoff
+
+## Task title
+Compose Entry Animation Visibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Found the actual reason the compose contact header and `"Speak your message..."` placeholder still appeared abruptly after the prior timing changes.
+- Root cause: during disambiguation -> compose, the renderer was still forcing the entire compose overlay (`#c-rich`) to `opacity: 0`, which hid the child header/placeholder animations until the parent snapped visible.
+- Fixed in `src/flows/message-send-render.js` by removing that parent-level opacity gate for the disambiguation -> compose entry path.
+- Result: the header and placeholder now rely on their own CSS entry animations instead of being masked by the parent container.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this render-path fix.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path again.
+2. Verify the contact header now fades/floats in visibly over `300ms`.
+3. Verify `"Speak your message..."` now starts fading in before the compose shell fully settles.
+
+## Task title
+Compose Entry Header + Placeholder Timing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the disambiguation -> compose entry so the contact header now fades in and floats up from below over `300ms`.
+- Moved the compose overlay content reveal earlier on that same transition so entry content is no longer hidden for the full shell morph.
+- Updated the `"Speak your message..."` placeholder entry to start before the container reaches its final shape:
+  - delay `180ms`
+  - duration `300ms`
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this entry-timing adjustment.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path and verify the compose header now rises/fades in over `300ms`.
+2. Verify the placeholder begins appearing before the compose shell fully settles, rather than after the full morph completes.
+
+## Task title
+Send Message Flow Timing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the disambiguation -> compose handoff to `600ms` across the message-send flow so the compose surface waits on the longer transition instead of snapping in after the old short delay.
+- Updated the disambiguation pill exit animation to `600ms` to match that handoff timing.
+- Set compose chip appear and disappear motion to `1000ms` in both directions, including the stack container fade timing, so the chip open/close reads as one consistent duration.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after these timing adjustments.
+
+## Recommended next step
+1. Trigger the send-message flow, go through the Hiro disambiguation path, and verify the compose step now lands after a `600ms` handoff.
+2. Hold and release `L` in compose and verify chip open and close both read as `1000ms` motion.
+
+## Task title
+Compose Header Transition Root-Cause Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Found the actual reason the compose contact header still had no fade transition on `L` open: opening the chip menu was doing a full compose rerender.
+- That replaced the header DOM node in its final hidden state, so the CSS transition never had a stable before/after frame to animate.
+- Fixed in `src/flows/message-send.js` by switching the compose-menu open path to the existing DOM-only update seam:
+  - `render.updateComposeMenuUiOnly?.() || render.render(false)`
+- Result: the header should now transition on the same DOM node during both open and close instead of popping due to rerender replacement.
+
+## Files changed
+- `src/flows/message-send.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this open-path fix.
+
+## Recommended next step
+1. Hold `L` to open chips and verify the header now fades/slides out instead of popping.
+2. Release `L` and verify the header fades/slides back in on the same node during close.
+
+# Handoff
+
+## Task title
+Compose Chip Close Fade 200ms
+
+## Completion status
+- Completed
+
+## Summary
+- Shortened the compose chip close fade timing from `300ms` to `200ms` while keeping the overall close movement at `800ms`.
+- Implemented by moving the close keyframe opacity cutoff from `37.5%` to `25%` of the `800ms` animation.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this timing update.
+
+## Recommended next step
+1. Hold and release `L` and verify chips are visually gone by about `200ms` while the absorb-back movement continues.
+
+## Task title
+Compose Chip Close Timing Split
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the compose chip close movement duration to `800ms`.
+- Kept fade-out faster by moving opacity to `0` at the `300ms` point inside the same close keyframe.
+- Result: chips still travel back with the longer absorb motion, but visually disappear much earlier instead of staying fully visible through the whole `800ms` path.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this timing split adjustment.
+
+## Recommended next step
+1. Hold and release `L` and verify chip movement still lasts `800ms`.
+2. Verify chip opacity is effectively gone by about `300ms` into the close animation.
+
+## Task title
+Compose Header Smooth Toggle + Faster Chip Close
+
+## Completion status
+- Completed
+
+## Summary
+- Smoothed the compose contact-header show/hide behavior during the `L`-menu lifecycle by updating the header opacity/translate transition to a `220ms` cubic-bezier motion on the existing class-toggle path.
+- Shortened the compose chip dismiss animation from `400ms` to `200ms` so chips fade/absorb back faster when released.
+- Also reduced per-chip close staggering so the whole dismiss reads as one tighter close gesture instead of a slow cascade.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this motion timing adjustment.
+
+## Recommended next step
+1. Hold and release `L` in compose and verify the header now fades/slides smoothly instead of popping.
+2. Verify chip dismiss now completes in roughly `200ms` and still reads as absorption back into the compose field.
+
+## Task title
+Compose Empty Height 96px + Bottom Anchor 12px
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the empty compose placeholder-state shell height to `96px` on both the geometry path and the live compose-field CSS.
+- Reduced the compose/confirm field bottom margin to `12px` at all compose-layout states by moving the bottom anchor from `380` to `408` inside the `420px` stage.
+- This affects the real shell position, so compose and confirm now sit lower with a consistent `12px` bottom gap.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this sizing/anchor adjustment.
+
+## Recommended next step
+1. Verify empty compose now renders at `96px` tall.
+2. Verify compose and confirm both sit `12px` above the frame bottom.
+
+## Task title
+Compose Placeholder Wrap-Glitch Guard
+
+## Completion status
+- Completed
+
+## Summary
+- Identified the remaining visual glitch source in empty compose: the placeholder text was still allowed to wrap while the compose shell was animating wider from the orb.
+- Updated the live empty placeholder styling so it stays on a single line during the morph:
+  - fixed content width inside the field
+  - `white-space: nowrap`
+  - overflow clipped instead of wrapping to two lines
+- This works with the existing `400ms` delayed reveal so the empty compose entry no longer shows the two-line -> one-line placeholder glitch during shell expansion.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; no syntax validation needed
+
+## Remaining issues / caveats
+- No live browser verification was run after this placeholder wrap guard.
+
+## Recommended next step
+1. Verify disambiguation -> compose no longer shows the placeholder wrapping to two lines before settling.
+2. If any residual visual glitch remains, inspect only the shell-width timing versus the `400ms` reveal delay next.
+
+## Task title
+Compose Empty-State Height + Placeholder Delay
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the empty compose field to a one-line-tall shell on the actual compose geometry path.
+- Updated the live compose-field CSS so the empty state now matches that shorter shell instead of keeping the older tall empty-field styling.
+- Added a placeholder-only delayed reveal on the disambiguation -> compose transition:
+  - `Speak your message...` stays hidden for `400ms`
+  - then fades/slides in over `220ms`
+- This delay applies only when entering empty compose from disambiguation. It does not affect active text compose or confirm.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this empty-state adjustment.
+
+## Recommended next step
+1. Verify disambiguation -> compose now shows the shell first, then the placeholder after `400ms`.
+2. Verify the empty compose shell is visually one line tall and still expands upward correctly once dictation text appears.
+
+## Task title
+Compose Morph Regression Root-Cause Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Performed a deeper runtime inspection of the actual compose morph path.
+- Root cause found in `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`:
+  - once compose voice viz was retargeted to the real visible field (`#drop-main.compose-surface`), the dictation path still did `field.style.transition = 'min-height ... box-shadow ...'`
+  - when `field` is `#drop-main`, that overwrites the shell’s normal transition property
+  - which removes width / height / transform / border-radius transitions from the real morphing shell
+  - result: subsequent compose shell geometry changes read as jumps instead of morphs
+- Fixed by making the voice engine preserve shell transitions on the real field:
+  - if the target is `#drop-main`, do not write `style.transition`
+  - still apply live voice viz through `box-shadow`
+  - cleanup paths no longer clear `transition` on `#drop-main`
+- This preserves the compose shell’s morph animation while keeping the live voice visualization on the real visible field.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this root-cause fix.
+
+## Recommended next step
+1. Verify disambiguation -> compose now morphs on the real shell.
+2. Start dictation and verify compose growth still morphs while voice viz remains active.
+3. If any residual non-morph remains after this, inspect only the compose-entry sequencing path next; the voice-engine transition override bug is now removed.
+
+
+## Task title
+Compose Entry Morph Sequencing Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Performed a deeper inspection of the compose morph path and found the key sequencing difference from `main`.
+- Root cause: current compose entry was rendering the final compose UI immediately, then trying to morph the shell. That visually overrode the orb->field transition, so it read as a jump even though shell geometry was changing.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js` by restoring a shell-first compose entry path:
+  - set compose state/data
+  - compute compose geometry
+  - call the shell morph first
+  - only render the compose content after a short delay (`120ms`) once the shell has started morphing
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` by:
+  - exposing `composeGeo()` for the compose-entry path
+  - tracking the first empty->text boundary (`prevComposeHasText`)
+  - briefly delaying rich-content reveal on that boundary as well, so the shell expansion is visible instead of being visually flattened by immediate final content
+- Result: both disambiguation -> compose and the first compose growth into active dictation now use a shell-first sequence instead of immediate final-layout replacement.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this sequencing change.
+
+## Recommended next step
+1. Verify disambiguation -> compose now visibly morphs from orb to field.
+2. Start dictation from empty compose and verify the first expansion now reads as a morph instead of a snap.
+3. If any residual snap remains after this, inspect repeated interim transcript updates during active dictation next.
+
+
+## Task title
+Compose Morph Visibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Addressed the compose-shell jump in two places.
+- First fix: `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+  - `handleInputChange()` now detects the empty <-> non-empty text transition and calls `render.render(true)` for that boundary.
+  - This makes the first compose-field expansion use the explicit morph path instead of the lighter update path.
+- Second fix: `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+  - entering compose from disambiguation now delays the rich-content reveal briefly (`120ms`) while the shell begins morphing.
+  - Root cause here was perceptual: the compose content was being swapped to its final layout immediately, which visually overrode the shell morph and made the orb->field change read like a jump.
+  - The shell still morphs through the normal geometry path, but the content now fades in after the morph begins so the transition is visible.
+- Result: disambiguation -> compose should read as an orb morph into the compose field, and the first voice/text expansion should use the morph path rather than snapping.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after this fix.
+
+## Recommended next step
+1. Verify disambiguation -> compose now visibly morphs before the content fully appears.
+2. Start dictation from empty compose and verify the first field expansion uses the morph path.
+3. If there is still residual snap after this, the next seam to inspect is repeated interim transcript renders while dictation is active.
+
+
+## Task title
+Compose Field Snap-to-Width Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated the compose/disambiguation jump where the compose field appeared to snap instead of morphing.
+- Root cause: the inner compose wrapper (`.g-compose-field-wrap`) was still using fixed widths (`307px` / `420px`) independent of the morphing outer shell. That let the visible field content snap to its final size immediately while `#drop-main` was still animating.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css` by making `.g-compose-field-wrap` follow the shell directly:
+  - `left: 0`
+  - `transform: none`
+  - `width: 100%`
+- Removed the `420px` hardcoded width override in `.g-compose-stage.has-text .g-compose-field-wrap` as well.
+- Result: the visible compose field now inherits the morphing shell width/height instead of jumping to a separate fixed-size layout during disambiguation -> compose and empty -> active-text transitions.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only geometry alignment change.
+
+## Remaining issues / caveats
+- No live browser pass was run after this fix.
+
+## Recommended next step
+1. Verify disambiguation -> compose now morphs instead of snapping.
+2. Start dictation and verify compose expansion tracks the shell transition instead of jumping.
+3. If there is still residual snap, inspect the timing of `render.render(false)` on dictation interim updates next.
+
+
+## Task title
+Compose Surface Voice Viz Priority Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Implemented the live voice visualization directly on the real visible compose field: `#drop-main.compose-surface`.
+- Root cause: the compose shell CSS already set `box-shadow` with `!important`, so the voice engine’s normal inline `field.style.boxShadow = ...` writes could not win. That made the outer compose surface look static even though the voice engine was trying to update it.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js` by changing the compose-shell dictation path to use `style.setProperty('box-shadow', shadow(level), 'important')`.
+- Updated cleanup paths to use `removeProperty('box-shadow')`, so when dictation stops the shell falls back to its normal CSS-defined resting state.
+- This keeps the single real compose shell and makes it react live like the old temporary compatibility field did.
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after this priority fix.
+
+## Recommended next step
+1. Enter compose and start dictating.
+2. Verify `#drop-main.compose-surface` now visibly reacts to live voice level.
+3. Verify confirm still stays static.
+
+
+## Task title
+Compose Duplicate Field Removal + Voice Viz Target Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the duplicated compose field caused by the temporary compatibility patch.
+- Root cause: the real visible compose field is the outer `#drop-main.compose-surface`, but the previous fix reintroduced an inner `.g-listen-field.compose-input` field purely to satisfy the old voice engine selector. That created two visual compose surfaces: one real shell and one inner field.
+- Fixed by restoring a single source of truth:
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`: `renderComposeField()` now renders only the inner compose content wrapper again (`.g-compose-field`), without the old `g-listen-field compose-input` styling classes.
+  - `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`: the live voice visualization path now targets `#drop-main.compose-surface:not(.confirm-surface)` first, with `[data-compose-field]` only as a fallback. This makes the actual compose shell react to voice instead of requiring a duplicate inner field.
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`: compose exit transition now keys off `[data-compose-field]` instead of the removed old selector.
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`: removed the obsolete compose-input re-toggle block that belonged to the old inner-field path.
+- Result: only one compose field remains visually, and the active voice viz is now applied to the real outer compose shell.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/ai/voice-engine.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/ai/voice-engine.js`
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after removing the duplicate field path.
+
+## Recommended next step
+1. Enter compose and confirm only one field is visible.
+2. Start dictating and verify the outer compose shell reacts to voice.
+3. Verify confirm still remains visually static with no duplicate field.
+
+
+## Task title
+Compose Voice Viz Main-Path Compatibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated why compose no longer reacted to live voice input like the old `main` implementation.
+- Root cause: the old voice engine still targets `.g-listen-field.compose-input` for live box-shadow updates, pulse locking, and cleanup. The redesigned compose field had been rendered only as `.g-compose-field`, so it no longer matched the selector the voice engine drives.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js` by rendering the compose field with the old compatibility classes again: `.g-listen-field.compose-input`, plus `.has-text` when populated.
+- Also mapped the inner text/placeholder nodes onto `.g-listen-text` / `.g-listen-empty` so the compose field follows the same legacy voice-reactive styling path.
+- This restores the old main-branch integration path without undoing the newer compose layout structure.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+
+## Remaining issues / caveats
+- No live browser pass was run after restoring the old selector contract.
+
+## Recommended next step
+1. Enter compose and start dictating.
+2. Verify the compose field now reacts to live voice input again.
+3. Verify confirm still remains visually static.
+
+
+## Task title
+Compose Header Return + Voice Viz Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the compose header so it returns when the chip stack is disappearing.
+- Root cause: chip close uses the DOM-only compose menu update path, but that path was only toggling stack classes and never updating the header visibility class. As a result, the header stayed hidden until a later full rerender.
+- Updated `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` so compose header visibility is driven by `composeMenuOpen && !composeMenuClosing` in both the full render path and `updateComposeMenuUiOnly()`. This makes the header come back as soon as the chips begin closing.
+- Restored the compose voice-viz shell styling to the old `main` compose-input glow values in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css`.
+- Tightened the `compose-text-active` trigger so it only applies in compose while text is present and the chip menu is not open.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Compared `compose-text-active` shadow values against `main:src/styles/ai.css` old `g-listen-field.compose-input` styling.
+
+## Remaining issues / caveats
+- No live browser pass was run for this change.
+
+## Recommended next step
+1. Hold `L`, then release and verify the header returns during chip close.
+2. Start speaking in compose and verify the field glow reacts like the older compose-input state.
+3. Verify confirm still has no active voice glow.
+
+
+## Task title
+Compose Chip Second-Wave Jump Regression Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated the regression where the first three compose chips started jumping upward after the gap fix when the second two chips appeared.
+- Root cause: the visible movement comes from the stack container growing upward from its bottom anchor, not from individual chip rows changing their own transforms. The earlier FLIP pass was applied to chip items, so it did not correctly animate the actual layout shift.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` by moving the FLIP animation to `.g-compose-chip-stack` itself. The update path now measures the stack rect before and after the visibility change, applies a temporary inverse translate to the stack, then lets it transition back to its resting transform.
+- This preserves the new correct gap behavior while restoring a smooth upward push for the first three chips when the extra two appear.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- Live browser verification is still needed to confirm the second-wave push now matches the earlier feel.
+
+## Recommended next step
+1. Hold `L` until the second wave appears.
+2. Verify the first three chips now transition upward instead of snapping.
+3. If motion still needs tuning, adjust only the stack transform transition timing in `src/styles/ai.css`.
+
+
+## Task title
+Compose Chip Release Timing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the compose chip release animation timing.
+- Changed the chip disappear / absorb-back animation from `240ms` to `400ms` in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css`.
+- This affects the release path for visible compose chips while the stack is closing.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only timing change; verified the updated animation rule in `src/styles/ai.css`.
+
+## Remaining issues / caveats
+- No live browser pass was run for this timing-only tweak.
+
+## Recommended next step
+1. Hold `L`, then release it.
+2. Verify the chips now absorb back over `400ms`.
+3. If the feel is still off, tune only the `compose-chip-out` duration/easing.
+
+
+## Task title
+Compose Chip Second-Wave Push Animation Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Investigated the second-wave compose chip reveal where the first three chips jumped upward instead of transitioning.
+- Root cause: when visible count changed from 3 to 5, the stack reflow moved the first three chips to their new flex positions immediately. There was no layout-transition logic for already-visible chips, so only the new chips animated while the existing ones snapped upward.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js` by adding a DOM-only FLIP pass in `updateComposeMenuUiOnly()`: capture previous chip rects, apply the new visibility state, measure the new rects, then animate the existing visible chips from their old positions to the new ones.
+- Updated `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css` so `.g-compose-chip` includes a transform transition. This gives the first three chips a smooth upward push when the second two appear.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- Live browser verification is still needed to tune the exact feel of the upward push against the reference motion.
+
+## Recommended next step
+1. Hold `L` until the second wave appears.
+2. Verify the first three chips now glide upward instead of snapping.
+3. If the push still feels too stiff or too loose, tune only the transform transition timing in `src/styles/ai.css`.
+
+
+## Task title
+Compose Chip Stack Gap Root-Cause Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Performed a direct spacing audit of the expanded compose chip stack.
+- Root cause: hidden chips were still rendered as flex items inside `.g-compose-chip-stack`, so they continued reserving vertical space even before they were visible. That made the stack height larger than the visible chip count implied, which pushed the visible chips too far above the compose field.
+- Secondary confirmation: the stack anchor itself is correct now. It is bottom-anchored from inside `.g-compose-field-wrap` using `bottom: calc(100% + 4px)`, so the bad distance was not from wrapper placement anymore.
+- Fixed in `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css` by making non-visible compose chips `display: none` and only visible chips `display: inline-flex`. This makes the stack height match the currently visible chip count, so the bottom visible chip tracks the compose field top edge correctly in both 3-chip and 5-chip states.
+
+## Files changed
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- CSS-only change; root cause verified by inspecting the current compose chip stack DOM/CSS rules.
+
+## Remaining issues / caveats
+- Live browser verification is still needed to confirm the 3-chip and 5-chip bottom gap now matches visually.
+
+## Recommended next step
+1. Verify the gap with 3 visible chips.
+2. Verify the gap again after the second-wave reveal to 5 chips.
+3. If any residual offset remains, tune only the `bottom: calc(100% + 4px)` anchor, not the stack transform.
+
+
+## Task title
+Compose Chip Long-Press Interaction + Style Update
+
+## Completion status
+- Completed
+
+## Summary
+- Follow-up compose stack gap fix: removed the extra upward offset from `.g-compose-chip-stack.expanded`. Once the stack was correctly bottom-anchored to the field wrapper, the expanded transform was double-shifting the 5-chip state upward and creating the large gap.
+- Follow-up compose wrapper fix: set `g-compose-field-wrap` to `height: 100%` so the chip stack anchor resolves against the compose shell height instead of an auto-expanded wrapper containing both chips and field. This keeps the chip stack bottom aligned to the field top edge.
+- Follow-up compose anchoring fix: the chip stack is now rendered inside `g-compose-field-wrap` instead of as a stage-level sibling. Its `bottom: calc(100% + 4px)` anchor now resolves against the compose field wrapper, so the lowest chip tracks the field's top edge consistently.
+- Follow-up compose chip anchoring fix: changed the chip stack from a fixed top offset to `bottom: calc(100% + 4px)`, so the lowest visible chip keeps a consistent gap above the compose field whether 3 or 5 chips are present.
+- Follow-up compose chip position tweak: moved the chip stack anchor down (`top: -137px`) so the bottom chip sits much closer to the compose field, targeting roughly a `4px` gap.
+- Follow-up compose chip spacing tweak: reduced chip top/bottom padding to `6px` and stack gap to `4px`, with chip minimum height adjusted accordingly.
+- Follow-up release-motion fix: the compose chip stack now stays visible during `closing`, and release uses the DOM-only menu update path before teardown. This prevents the stack from disappearing immediately and lets the chip exit animation play as they are absorbed back into the field.
+- Follow-up timing change: increased both the disambiguation pill entrance and compose chip entrance durations from `500ms` to `800ms`.
+- Follow-up second-wave behavior fix: the extra two compose chips now appear via in-place DOM updates instead of a full re-render. The existing three chips are pushed upward by an `expanded` stack transform while only the newly visible chips animate in.
+- Follow-up timing sync: set both the disambiguation pill entrance and compose chip entrance animations to `500ms` so the two reveal systems share the same duration.
+- Follow-up compose motion fix: chip enter/exit keyframes now use large per-chip travel offsets so the chips visibly travel from the compose field up into their stack positions, instead of only rotating/fading near the destination.
+- Follow-up chip style rollback: compose chips now use the previous `g-chip` state treatment again (unselected muted text + flat glass fill, selected white text + inset glow, no explicit white border), with text size reduced to `18px`.
+- Follow-up motion fix: compose chips now use explicit `compose-chip-in` / `compose-chip-out` keyframe animations instead of relying on insertion-time transitions, fixing the jump-cut behavior where chips appeared with no visible entrance motion.
+- Updated compose chip styling in [/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css):
+  - chip text `24px -> 20px`
+  - restored gradient outline treatment on chip shells
+  - adjusted chip motion to use a softer rotational spread from the compose field instead of the old straight fade-up
+- Reworked compose chip rendering in [/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) and [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - chip stack now supports `visibleCount` and `closing`
+  - first wave shows 3 chips
+  - second wave can reveal 2 additional chips
+- Reworked message compose state in [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - added long-press state for compose chips
+  - `L` hold starts a delayed reveal (`280ms`)
+  - after another `3000ms` of holding, 2 more chips appear if available
+  - releasing `L` smoothly closes the chip stack back toward the compose field
+  - while the key is being held, compose chips do not confirm into the next state
+  - compose menu state now tracks `composeMenuHolding`, `composeMenuClosing`, and `composeMenuVisibleCount`
+- Updated keyboard wiring in [/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js):
+  - `keydown` on `L` in compose starts the hold interaction
+  - `keyup` on `L` ends it and triggers the smooth close
+  - old tap-to-toggle behavior was removed
+- Extended contact chip data to 5 chips per contact so the second-wave reveal has real content instead of placeholder duplicates.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai.css`
+- `src/ai/ai-bindings.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/flows/message-send-voice.js`
+
+## Remaining issues / caveats
+- Motion was tuned from the provided screen recording reference at a thumbnail level only; no frame-by-frame live browser validation was run.
+- The new extra two chips are data additions in the local contact dataset; if product copy changes later, update the chip arrays in `message-send.js`.
+
+## Recommended next step
+1. Hold `L` in compose and verify first-wave 3-chip reveal timing.
+2. Keep holding for 3 more seconds and verify 2 more chips appear with the same spread motion.
+3. Release `L` and verify the chips absorb smoothly back toward the compose field.
+4. If motion still needs tuning, only adjust the compose-chip transform/transition block in [/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css).
+
+## Task title
+Compose Surface Placement Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Follow-up compose sizing fix: increased the active compose/confirm field max width from `351px` to `420px` and updated inner text width to fill that shell width correctly.
+- Follow-up confirmation visual fix: added `confirm-surface` on `#drop-main` and removed the compose-shell shadow in confirmation, so the confirm field has no blue glow or shell shadow effect.
+- Follow-up disambiguation visual tweak: changed pill border radius from `24px` to `28px` so the `56px`-tall pills read as true capsules instead of rounded rectangles.
+- Follow-up disambiguation tweak: changed unselected pill scale from `0.92` to `0.98` in both the primitive output and CSS animation/settled-state rules.
+- Follow-up disambiguation tweak: made the unselected pill scale explicit at `0.92` in CSS (`.g-disambiguation-pill:not(.selected)`) so selection updates and animation settle states cannot drift.
+- Follow-up state fix: confirmation no longer reuses the compose dictation glow. `compose-text-active` now applies only while in `GS.COMPOSE` with text, so entering `GS.CONFIRM` removes the blue voice-viz from the field shell.
+- Follow-up visual fix: restored the old compose voice-viz color stack on `#drop-main.compose-surface.compose-text-active` by removing the pink lower glow and matching the previous blue/white compose-field lighting.
+- Follow-up layout rule: compose/confirm shell is now bottom-anchored. Height growth no longer pushes the field downward; the bottom edge stays fixed and multiline growth expands upward.
+- Follow-up behavior change: compose/confirm field height now expands with text length. The inner compose field uses auto height with minimum empty/active heights, and the shell in `message-send-render.js` re-measures the rendered compose field and remorphs to match content height.
+- Fixed the compose/confirm shell placement bug in [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+- Root cause: `composeGeo()` targeted an absolute top-edge position, but the shared morph renderer also applies a bottom-align `yOffset` in AI mode. The compose shell was therefore pushed down twice and rendered below the visible frame.
+- Updated compose geometry to compensate for the renderer's bottom-align offset: `ty = top + h - 420`.
+- Updated rich-layer class routing so both `GS.COMPOSE` and `GS.CONFIRM` use `glass-compose` and neither inherits the generic bottom-aligned `glass-active` layout. This keeps the compose/confirm header and field on the compose surface instead of a separate card-layout path.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser validation was run after this patch. If vertical position is still slightly off, only the compose top constants (`COMPOSE_FIELD_TOP`, `COMPOSE_FIELD_TOP_ACTIVE`) should need tuning now.
+- Follow-up tuning: moved `COMPOSE_FIELD_TOP` and `COMPOSE_FIELD_TOP_ACTIVE` up by `20px` to bring the compose/confirm shell fully inside the visible frame.
+
+## Recommended next step
+1. Reload `ai.html`.
+2. Verify `drop-main.compose-surface` and `drop-main.compose-surface.compose-text-active` both sit inside the frame.
+3. If needed, tune only `COMPOSE_FIELD_TOP` / `COMPOSE_FIELD_TOP_ACTIVE` in [/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+
+## Task title
+Message Compose Redesign: Header + Compose Field + Expandable Suggestion Chips
+
+## Completion status
+- Completed
+
+## Summary
+- Reworked message `COMPOSE` to the field-first Figma layout instead of the old large compose card.
+- Added a field-sized compose morph in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - default compose morphs to `307x83`
+  - active text morphs to `351x94`
+  - the visible `drop-main` shell is now the source of truth for the compose-field morph
+- Added new shared compose primitives in [src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js):
+  - `renderComposeHeader(...)`
+  - `renderComposeChipStack(...)`
+  - `renderComposeField(...)`
+- Reworked message compose state in [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - added `composeMenuOpen`
+  - added `composeVisualChips` for Figma-aligned visual chip order without mutating underlying chip data
+  - entering compose now defaults to header + field only
+  - dictation/input force-close the chip menu
+  - `toggleComposeMenu()` added for compose-owned `L` behavior
+- Updated [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js):
+  - `L` now toggles the compose chip menu when message flow is active in `GS.COMPOSE`
+  - non-compose `L` behavior remains unchanged
+- Added compose-specific CSS in [src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css):
+- Follow-up fix: compose header/chip/field positioning now uses offsets relative to the compose field shell inside `#c-rich`/`#drop-main`, fixing the initial render bug where the field dropped below the frame and the header/chips were off-surface.
+- Follow-up fix: compose field chrome now lives on `#drop-main.compose-surface` and the inner compose field is content-only, so the morphing shell and visible field can no longer drift apart. Compose also no longer inherits generic `glass-active` bottom-alignment.
+- Follow-up fix: compose shell `ty` now converts Figma top-edge coordinates to stage-center translate coordinates (`top + h/2 - 210`), fixing the incorrect compose surface placement.
+  - compact `To:` header row
+  - bottom-anchored compose field
+  - stacked suggestion chip menu
+  - compose-only rich-layer positioning via `#c-rich.glass-compose`
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-voice.js`
+- `src/ai/ai-bindings.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma nodes referenced for implementation:
+  - `224:80`
+  - `224:121`
+  - `224:133`
+- Syntax checks passed:
+  - `node --check src/flows/ui-primitives.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/message-send-voice.js`
+  - `node --check src/ai/ai-bindings.js`
+
+- Follow-up change: message `CONFIRM` now reuses the compose-style header + field layout and no longer renders the 3-button controls overlay. Confirm actions are voice-only: send, edit, cancel.
+
+## Remaining issues / caveats
+- No live browser validation was run in `ai.html`, so exact vertical placement and motion feel still need visual verification.
+- The visual chip order is intentionally Figma-driven for the current 3-chip set; non-matching contact chip labels fall back to original order.
+- The old compose helper classes remain in CSS for confirm/static field reuse, but the compose stage no longer uses the old `g-compose-card` layout.
+
+## Recommended next step
+1. Run the message flow in `ai.html` through disambiguation -> compose.
+2. Verify:
+   - compose enters as header + field only
+   - `L` opens/closes the stacked chip menu
+   - speaking with the menu open auto-dismisses chips and restores the header
+   - chip selection and dictation still route to confirm correctly
+3. If needed, tune only the absolute `top` values for `.g-compose-header`, `.g-compose-chip-stack`, and `.g-compose-field-wrap` in [src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css).
+
+
+## Task title
+Disambiguation Pills Around Listening Orb
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the message disambiguation bubble cluster with a shared pill-based primitive in [src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js):
+  - added `renderDisambiguationPills(...)`
+  - removed bubble-specific rendering from the active message-flow path
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+- Follow-up tweak: 2-contact disambiguation pills now share the same center line (`x: 0` for both items) so the pair is vertically center-aligned above the orb.
+- Follow-up tweak: disambiguation now scales the visible listening orb shell to `0.8` via `drop-main` geometry while preserving the original orb center.
+  - disambiguation now stays on the normal `listening` shape with no custom orb shrink/recenter geometry
+  - removed bubble size / Y-offset / orb-scale hacks
+  - added pill-position layouts for `1`, `2`, `3`, and `4+` contacts relative to the listening-orb center
+  - disambiguation still uses the `entering -> settled` phase, but now spreads pill chips from the orb instead of circles
+- Updated [src/styles/ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css):
+  - removed bubble/origin styling
+  - added pill-shell, pill-avatar, and pill-text styles based on the Figma node `224:100`
+  - retained the disambiguation-specific rich-layer ownership so this state is not bottom-aligned or clipped
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - compose handoff now animates `.g-disambiguation-pill` out instead of the old bubble class
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma node inspected via MCP:
+  - file `LTNbsRqNkyLeo81OSL1X7J`
+  - node `224:100`
+- Syntax checks passed:
+  - `node --check src/flows/ui-primitives.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+- Searched for stale bubble-path references in active flow files; none remain
+
+## Remaining issues / caveats
+- No live browser validation was run in `ai.html`, so the exact final pill offsets and motion feel versus the Figma screenshot/video still need on-screen verification.
+- The `4+` contact fan layout is data-driven but not visually tuned beyond keeping pills above the orb.
+
+## Recommended next step
+1. Trigger ambiguous Hiro disambiguation in `ai.html`.
+2. Verify:
+   - the listening orb stays in the normal listening position and size
+   - pills fan out above the orb without clipping
+   - selected/unselected states read clearly
+   - keyboard selection and spoken-name selection still work
+3. If needed, tune only the disambiguation pill `x/y` offsets in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) without reintroducing orb-geometry hacks.
+
+
+## Task title
+Message Disambiguation Bubble Cluster
 
 ## Completion status
 - Partially completed
 
 ## Summary
-- Implemented the flight confirm card as a reusable in-place expandable confirmation pattern:
-  - collapsed summary remains the default state
-  - a visible top-right chevron affordance is rendered inside the confirm card
-  - `show details` expands the same card in place
-  - chevron click also toggles the expanded state
-- Upgraded flight recommendation data in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js) so confirm details use actual structured selected-flight data instead of placeholder strings:
-  - airline logo
-  - price
-  - outbound times
-  - inbound times
-- Updated flight confirm rendering in [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js):
-  - collapsed summary shows route, dates + total price, payment
-  - expanded content shows departing section, returning section, total row
-  - confirm enters collapsed by default when returning from recommendation/payment paths
-- Extended the shared info-card primitive in [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) for future rich confirmations:
-  - expandable summary shell
-  - animated detail reveal via `max-height` / `opacity` / `margin-top`
-  - optional chevron affordance
-  - section cards with media/logo support
-- Added confirm voice collapse support in [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js):
-  - `hide details`
-  - `collapse details`
-  - `close details`
+- Replaced list-based message disambiguation with a bubble-cluster primitive:
+  - added [renderBubbleCluster](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js)
+  - disambiguation no longer uses `renderSelectionList(...)`
+- Reworked [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - `GS.DISAMBIGUATE` now renders a centered contact-bubble cluster instead of `card-list`
+  - disambiguation now uses a transient `entering -> settled` motion phase
+  - removed the external `Which Hiro?` header for this stage
+  - disambiguation morph now uses compact custom geometry on the `listening` shape rather than a card shell
+  - added layout rules for `2`, `3`, and `4+` contacts
+- Patched the disambiguation surface/origin seam:
+  - cluster geometry is now anchored to the origin orb position instead of the cluster midpoint
+  - [ai.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai.css) makes the disambiguation surface and rich layer overflow-visible so the bubbles are not clipped
+  - the origin orb is now intentionally part of the disambiguation cluster instead of being removed during settle
+- Updated compose handoff in [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - disambiguation bubbles now animate out on compose entry
+  - old `.g-contact-row` exit assumptions were removed from that path
 
 ## Files changed
-- `src/flows/flight-booking.js`
-- `src/flows/flight-render.js`
-- `src/flows/flight-ai.js`
 - `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
 - `src/styles/ai.css`
 - `context/HANDOFF.md`
 
 ## Validation performed
 - Syntax checks passed:
-  - `node --check src/flows/flight-booking.js`
-  - `node --check src/flows/flight-render.js`
-  - `node --check src/flows/flight-ai.js`
   - `node --check src/flows/ui-primitives.js`
-- Code-path verification performed for:
-  - collapsed confirm default on step entry
-  - structured selected-flight data feeding expanded sections
-  - render-side date normalization still applied in date + confirm screens
-
-## Remaining issues / caveats
-- The required live browser validation matrix from `context/task.md` was not completed in this pass.
-- Because the browser validation gate is still open, readiness for Step 3 is not proven.
-- Step 3 verdict: `Not safe to move to Step 3`
-- The blocker is process, not a known syntax/runtime parse failure: the task explicitly requires browser validation for flight, coffee, and message regressions before Step 3 can start.
-
-## Recommended next step
-1. Run the live `ai.html` validation matrix from `context/task.md`.
-2. Verify these flight-specific cases first:
-   - collapsed confirm shows chevron and summary only
-   - `show details` expands in place
-   - expanded confirm reflects the selected flight option for default, cheaper, and nonstop paths
-   - no-default-payment path still returns to collapsed confirm correctly
-3. If those pass along with coffee/message regression, then update the gate to `Safe to move to Step 3`.
-
-## Rich confirmation rule
-Use this pattern when a confirmation has supporting detail but the user decision is still binary and should remain lightweight in the 420×420 glasses frame.
-
-- Collapsed state must contain:
-  - the minimum summary needed to confirm confidently
-  - a visible chevron affordance whenever hidden detail exists
-- Expanded state must contain:
-  - only the supporting detail that increases confidence in the action
-  - the same card shell, expanded in place
-- Interaction rule:
-  - confirm actions stay minimal
-  - detail is revealed inside the same card, never via a separate review screen
-- Never do this:
-  - separate review page
-  - multi-card confirm stack as the default state
-  - scroll-heavy confirmation UI
-  - verbose repetition of already summarized choices
-
-
-# Handoff
-
-## Task title
-Revision Pass: Fix slot reopening, flight confirm accuracy, and payment default fallback
-
-## Completion status
-- Completed
-
-## Summary
-- Fixed explicit slot reopening semantics in [flow-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/flow-engine.js):
-  - `next()` still skips already-filled required slots
-  - `goToSlot()` now reopens the exact requested slot instead of skipping past filled values
-  - added shared payment-default seam via `getPaymentDefaultSources()`
-- Updated coffee flow in [coffee-order.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/coffee-order.js):
-  - confirm-time `change drink` / `change size` now reopen the exact slot
-  - payment selection UI now appears when no default exists
-  - default payment still auto-fills and skips payment UI when available
-- Updated flight flow in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js), [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js), and [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js):
-  - restored a real payment-selection exception path before confirm
-  - added a single source of truth for the chosen flight (`selectedFlightOption`)
-  - confirm summary and detail-on-demand now read from the actual chosen flight, not the default recommendation helper
-  - recommendation refinement updates the visible recommendation correctly
-- Added concise runtime-boundary comments:
-  - coffee is the engine-driven reference flow
-  - message and flight remain bespoke in this revision
-
-## Files changed
-- `src/ai/flow-engine.js`
-- `src/flows/coffee-order.js`
-- `src/flows/flight-booking.js`
-- `src/flows/flight-render.js`
-- `src/flows/flight-ai.js`
-- `src/flows/message-send.js`
-- `context/HANDOFF.md`
-
-## Validation performed
-- Syntax checks passed:
-  - `node --check src/ai/flow-engine.js`
-  - `node --check src/flows/coffee-order.js`
-  - `node --check src/flows/flight-booking.js`
-  - `node --check src/flows/flight-render.js`
-  - `node --check src/flows/flight-ai.js`
-  - `node --check src/flows/message-send.js`
-  - `node --check src/flows/message-send-render.js`
-  - `node --check src/flows/message-send-voice.js`
-  - `node --check src/ai/input-actions.js`
-- Module import sanity check passed:
-  - `node -e "import('./src/ai/flow-engine.js'); import('./src/flows/coffee-order.js'); import('./src/flows/flight-booking.js'); import('./src/flows/flight-render.js'); import('./src/flows/flight-ai.js'); import('./src/flows/message-send.js'); console.log('ok')"`
-
-## Remaining issues / caveats
-- No live browser validation was run for the manual scenarios listed in `context/TASK.md`.
-- `context/TASK.md` referenced `ref/revision-spec.md`, but that file is not present in the repo. The implementation followed `context/TASK.md` directly.
-- Flight still uses a bespoke runtime state machine; this pass only fixed the correctness seams requested by the task.
-
-## Recommended next step
-1. Run the manual validation matrix from `context/TASK.md` in `ai.html`, especially:
-   - coffee with default payment
-   - coffee with no default payment
-   - flight recommendation -> alternative -> confirm
-   - flight no-default payment path
-2. If those pass, the next safe step is migrating flight onto the generic engine without changing the visual primitives.
-
-## Payment default simulation
-- Default available:
-  - ensure `localStorage.getItem('genui.primaryPaymentMethod')` is unset, or set it to a valid payment label such as `Apple Pay ···· 9421`
-- No default available:
-  - set `localStorage.setItem('genui.primaryPaymentMethod', '__none__')`
-- Both coffee and flight now read from the same helper in `src/ai/flow-engine.js`
-
-## Task title
-GlassOS agentic patterns pass
-
-## Completion status
-- Partially completed
-
-## Summary
-- Updated the AI flow engine in `src/ai/flow-engine.js` with the reusable behaviors required by the agentic spec:
-  - slot auto-default resolution via `autoDefault` + `defaultSource`
-  - `confirmTemplate` resolution for summary cards
-  - lightweight voice-edit phrase matching
-- Updated flow definitions in `src/flows/flow-definitions.js`:
-  - message confirm now uses send/cancel only
-  - flight now models recommendation selection and auto-default payment metadata
-  - coffee now models auto-default payment and summary-first confirm metadata
-- Updated message flow to remove the confirm edit button and route edits by voice:
-  - confirm actions reduced to send/cancel
-  - voice phrases can reopen compose or recipient disambiguation
-- Updated flight flow to the agentic pattern:
-  - replaced list-first flight choice with recommendation mode
-  - added alternatives mode with two tradeoff options
-  - collapsed payment + confirm into one summary card
-  - payment defaults to the primary method and can be swapped by voice from confirm
-  - confirm supports detail-on-demand voice behavior
-- Updated coffee flow to follow the same pattern:
-  - payment auto-defaults on start
-  - confirm uses summary card from template with drink, price, and payment
-  - removed the explicit change button
-  - spoken edits can reopen drink/size or swap payment directly
-
-## Files changed
-- `src/ai/flow-engine.js`
-- `src/flows/flow-definitions.js`
-- `src/flows/message-send-voice.js`
-- `src/flows/message-send-render.js`
-- `src/flows/message-send.js`
-- `src/flows/flight-ai.js`
-- `src/flows/flight-booking.js`
-- `src/flows/flight-render.js`
-- `src/flows/coffee-order.js`
-
-## Validation performed
-- Syntax checks passed:
-  - `node --check src/ai/flow-engine.js`
-  - `node --check src/flows/flow-definitions.js`
-  - `node --check src/flows/message-send-voice.js`
   - `node --check src/flows/message-send-render.js`
   - `node --check src/flows/message-send.js`
-  - `node --check src/flows/flight-ai.js`
-  - `node --check src/flows/flight-render.js`
-  - `node --check src/flows/flight-booking.js`
-  - `node --check src/flows/coffee-order.js`
 
 ## Remaining issues / caveats
-- This pass was validated by syntax and targeted code inspection only. No live browser pass was run for:
-  - message confirm voice edit/cancel behavior
-  - flight recommendation -> alternatives -> confirm transitions
-  - coffee confirm summary sizing and controls positioning
-- `flight-booking.js` still uses its custom state machine instead of the generic engine. The new engine behaviors are present, but flight is not fully migrated onto them yet.
-- `ref/glass-os-agentic-patterns-spec.md` is user-edited and intentionally left untouched.
+- No live browser validation was run in `ai.html`, so these are still unverified:
+  - exact motion feel versus the reference video
+  - final bubble positioning in the 420×420 stage
+  - whether the transient origin artifact feels correct or needs darker styling/timing tuning
+  - whether command-voice visualization around disambiguation needs further suppression
+- The cluster generalizes to `4+` contacts with a radial layout, but that layout has not been visually tuned in browser yet.
 
 ## Recommended next step
-1. Run a live parity pass in `ai.html` for message, flight, and coffee flows.
-2. If motion/layout is stable, migrate flight onto the generic flow engine so recommendation/default/edit behavior is owned in one place instead of split across `flight-booking.js` and `flight-ai.js`.
-
-## Task title
-Step 2: Slot-Based Flow Engine
-
-## Completion status
-- Partially completed
-
-## Summary
-- Added generic flow engine foundation in `src/ai/flow-engine.js`.
-- Expanded the engine with:
-  - prefilled-slot auto-advance
-  - change callback support
-  - epoch tracking helpers
-  - slot-derived voice mode helper
-  - status setter
-- Added slot-based flow definition registry in `src/flows/flow-definitions.js` for:
-  - `send_message`
-  - `book_flight`
-  - `order_coffee`
-- Added new engine-driven coffee flow in `src/flows/coffee-order.js`:
-  - drink chip selection
-  - size chip selection
-  - confirm action row
-  - loading and success states via existing primitives/composer
-- Wired coffee flow into AI runtime:
-  - `src/ai/ai-bindings.js`
-  - `src/ai/input-actions.js`
-- Added generic active-flow routing for transcript/input/key handling so coffee flow can coexist with existing message/flight flows.
-- Applied review revisions:
-  - `messageFlow.processRequest(...)` added for interface parity
-  - active message flow now consumes text input before new intent routing
-  - `BOOK_FLIGHT_FLOW_DEFINITION.confirm` corrected to `action_select`
-  - epoch guards added to `flight-booking.js`
-  - coffee flow now uses content-fitted morph sizing and message-style controls overlay positioning instead of free-floating composer output
-
-## Files changed
-- `src/ai/flow-engine.js` (new)
-- `src/flows/flow-definitions.js` (new)
-- `src/flows/coffee-order.js` (new)
-- `src/ai/input-actions.js`
-- `src/ai/ai-bindings.js`
-- `src/flows/message-send.js`
-- `src/flows/flight-booking.js`
-
-## Validation performed
-- Syntax checks passed:
-  - `node --check src/ai/flow-engine.js`
-  - `node --check src/flows/flow-definitions.js`
-  - `node --check src/flows/coffee-order.js`
-  - `node --check src/flows/message-send.js`
-  - `node --check src/flows/flight-booking.js`
-  - `node --check src/ai/input-actions.js`
-  - `node --check src/ai/ai-bindings.js`
-
-## Remaining issues / caveats
-- Message and flight flows are not yet fully migrated onto the new generic engine in this packet.
-- Existing `message-send.js` / `flight-booking.js` adapters still own their current behavior/state machines.
-- Step 2 is therefore only partially complete: engine + definitions + third flow + runtime routing are in place, but the full migration/deletion of legacy message/flight state modules is still pending.
-
-## Recommended next step
-1. Migrate `message-send.js` to the generic engine using `SEND_MESSAGE_FLOW_DEFINITION`.
-2. Migrate `flight-booking.js` to the generic engine using `BOOK_FLIGHT_FLOW_DEFINITION`, keeping `flight-ai.js` as the resolver plugin.
-3. After parity validation, remove obsolete per-flow state-machine code.
-
-## Task title
-Step 1: Screen Composer For AI Page
-
-## Completion status
-- Completed
-
-## Summary
-- Added shared Screen Composer module at `src/shared/screen-composer.js`.
-- Implemented primitive mapping and spec-driven rendering:
-  - `contact_header`
-  - `selection_list`
-  - `chip_bar`
-  - `text_bubble`
-  - `input_field`
-  - `info_card`
-  - `compact_status`
-  - `flight_route_step`
-- Added `renderScreenMarkup(spec)` helper for spec-to-HTML generation and offscreen measurement use.
-- Refactored `src/flows/message-send-render.js`:
-  - replaced inline `buildContent()` assembly with `buildScreenSpec()`
-  - `render()` now composes `#c-rich` through Screen Composer
-  - preserved existing morph sizing logic, root class/dataset/style handling, and sim-input behavior
-- Refactored `src/flows/flight-render.js`:
-  - added `buildScreenSpec(step)`
-  - moved step content rendering to Screen Composer
-  - preserved existing morph shape selection, destination/date visuals via `renderFlightRouteStep`, and dynamic container sizing
-- Kept message controls overlay timing/position behavior in `src/flows/message-send.js`, but changed it to consume action specs emitted by the renderer instead of building action markup inline. This preserves confirm/edit/cancel overlay behavior and supports the compose check action in the external controls layer.
-
-## Files changed
-- `src/shared/screen-composer.js` (new)
-- `src/flows/message-send-render.js`
-- `src/flows/message-send.js`
-- `src/flows/flight-render.js`
-
-## Validation performed
-- Module parse/import validation:
-  - `node -e "import('./src/shared/screen-composer.js'); import('./src/flows/message-send-render.js'); import('./src/flows/message-send.js'); import('./src/flows/flight-render.js'); console.log('ok')"`
-
-## Remaining issues / caveats
-- No interactive browser smoke pass was run in this turn, so visual parity and transition timing still need live validation in `ai.html`.
-- Message controls are spec-driven now, but their exit animation/positioning lifecycle still lives in `message-send.js` by design to avoid motion regressions. This is an intentional compatibility seam for Step 1.
-
-## Recommended next step
-1. Run a manual AI-page parity pass for:
-   - message: disambiguate -> compose -> confirm -> sent
-   - flight: destination -> dates -> passengers -> choose flight -> confirm -> payment -> done
-2. If stable, Step 2 can move the remaining overlay-specific control lifecycle behind the shared composer boundary.
+1. Trigger ambiguous Hiro disambiguation in `ai.html`.
+2. Verify:
+   - no list card appears
+   - no external header appears
+   - only bubbles remain after settle
+   - no listening orb lingers behind the cluster
+   - keyboard and spoken-name selection still work
+3. If the motion still feels off, tune only:
+   - bubble offsets
+   - stagger timing
+   - origin artifact styling
+   without reintroducing a card shell.
 
 ## Task title
 Add stage capture utilities (AI + prototype): Copy PNG + Export SVG
@@ -1810,3 +2415,30 @@ Flight full primitive migration + message-style list unification
    - list rows now match message-style selection visuals
    - destination/date/confirm/done screens render correctly with primitive cards
    - keyboard focus and selection transitions remain stable.
+# Handoff
+
+## Task title
+Message Compose Timing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the disambiguation -> compose transition timing so the compose content reveal now waits `600ms`.
+- Updated compose chip open and close animation durations from `800ms` to `1000ms`.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Verified `compose-chip-in 1000ms` and `compose-chip-out 1000ms` are present in `src/styles/ai.css`
+
+## Remaining issues / caveats
+- No live browser verification was run after changing these timings.
+
+## Recommended next step
+1. Verify disambiguation -> compose now visually resolves over `600ms`.
+2. Verify both chip appear and dismiss motions now run for `1000ms`.

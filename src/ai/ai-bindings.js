@@ -47,6 +47,7 @@ let homeContextIndex = 0;
 let aiAwake = false;
 let sleepToListeningAnimTimer = null;
 let listeningPromptText = "";
+let coffeeFlow = null;
 const isWeatherIntent = (text) => /\b(weather|forecast|temperature|rain|sunny|cloudy|humidity)\b/i.test(String(text || ""));
 const stripWakeWord = (text) => String(text || "").replace(/\bhey\s+bixby\b/ig, " ").replace(/\s+/g, " ").trim();
 
@@ -60,12 +61,13 @@ function loadScenarioLibrary() {
   scenarios.forEach((scenario) => { scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || "none" }); });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
-function persistScenarios() { try { localStorage.setItem(STORAGE_KEYS.scenarios, JSON.stringify(scenarioLibrary)); } catch (err) { console.warn("Unable to persist scenarios", err); } }
-function persistCanvasSettings() { try { localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(canvasSettings)); } catch (err) { console.warn("Unable to persist canvas settings", err); } }
+function persistToStorage(key, value, label) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { console.warn(`Unable to persist ${label}`, err); } }
+function persistScenarios() { persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, "scenarios"); }
+function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, "canvas settings"); }
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) localStorage.setItem(STORAGE_KEYS.mode, JSON.stringify(responseMode)); }
-function persistAiStageOverride() { try { localStorage.setItem(STORAGE_KEYS.aiStage, JSON.stringify(aiStageOverride)); } catch (err) { console.warn("Unable to persist AI stage override", err); } }
-function persistAiVoiceEnabled(enabled) { try { localStorage.setItem(STORAGE_KEYS.aiVoiceEnabled, JSON.stringify(enabled !== false)); } catch (err) { console.warn("Unable to persist AI voice toggle", err); } }
-function persistStageLibrary() { try { localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(stageLibrary)); } catch (err) { console.warn("Unable to persist stage library", err); } }
+function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, "AI stage override"); }
+function persistAiVoiceEnabled(enabled) { persistToStorage(STORAGE_KEYS.aiVoiceEnabled, enabled !== false, "AI voice toggle"); }
+function persistStageLibrary() { persistToStorage(STORAGE_KEYS.stages, stageLibrary, "stage library"); }
 function selectedScenario() { return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null; }
 
 const shell = initAiShell({ document, C, input, clearListPills: () => demo?.clearListPills?.(), morphTo: (...args) => morph.morphTo(...args), getAnimDuration: anim.getAnimDuration, getGlassState: () => messageFlow?.GS, getGlassUi: () => messageFlow?.flow, getVoiceMode: () => voice?.voiceEngine?.mode });
@@ -146,13 +148,6 @@ function clearStageFlowFlags() {
   document.getElementById("stage-wrap")?.classList.remove("flow-active");
 }
 
-function activeFlow() {
-  if (messageFlow?.isActive?.()) return messageFlow;
-  if (flightFlow?.isActive?.()) return flightFlow;
-  if (coffeeFlow?.isActive?.()) return coffeeFlow;
-  return null;
-}
-
 function clearGlassFlowUiImmediate() {
   document.body.classList.remove("glass-flow-active");
   if (C.rich) {
@@ -179,13 +174,14 @@ function ensureHomeAwake() {
   enterHomeContext();
 }
 
-function enterSleep(options = {}) {
-  const source = options?.source || "";
-    if (source !== "flow-reset") {
-    if (messageFlow?.isActive?.()) { messageFlow.reset(); return; }
-    if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
-    if (coffeeFlow?.isActive?.()) { coffeeFlow.reset(); return; }
-  }
+function resetActiveFlows() {
+  if (messageFlow?.isActive?.()) { messageFlow.reset(); return true; }
+  if (flightFlow?.isActive?.()) { flightFlow.reset(); return true; }
+  if (coffeeFlow?.isActive?.()) { coffeeFlow.reset(); return true; }
+  return false;
+}
+
+function teardownAiMode() {
   aiAwake = false;
   listeningPromptText = "";
   voice?.clearVoiceVizStyles?.();
@@ -193,6 +189,11 @@ function enterSleep(options = {}) {
   clearGlassFlowUiImmediate();
   morph.hideRich();
   clearStageFlowFlags();
+}
+
+function enterSleep(options = {}) {
+  if (options?.source !== "flow-reset" && resetActiveFlows()) return;
+  teardownAiMode();
   setHomeStateData(HOME_STATES.SLEEP);
   morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" });
   updateActive("circle");
@@ -200,23 +201,12 @@ function enterSleep(options = {}) {
 }
 
 function enterHomeContext(options = {}) {
-  const source = options?.source || "";
-  if (source !== "flow-reset") {
-    if (messageFlow?.isActive?.()) { messageFlow.reset(); return; }
-    if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
-    if (coffeeFlow?.isActive?.()) { coffeeFlow.reset(); return; }
-  }
+  if (options?.source !== "flow-reset" && resetActiveFlows()) return;
   const cycle = options?.cycle === true;
   const previous = homeState;
   if (cycle) homeContextIndex = (homeContextIndex + 1) % HOME_CONTEXTS.length;
   const fromSleep = previous === HOME_STATES.SLEEP;
-  aiAwake = false;
-  listeningPromptText = "";
-  voice?.clearVoiceVizStyles?.();
-  shell.stopSiriOrb();
-  clearGlassFlowUiImmediate();
-  morph.hideRich();
-  clearStageFlowFlags();
+  teardownAiMode();
   setHomeStateData(HOME_STATES.CONTEXT);
   if (fromSleep && homeStateDotEl) {
     homeStateDotEl.classList.remove("to-context");
@@ -268,14 +258,10 @@ function armAiWakeListening(options = {}) {
   const fromSleep = homeState === HOME_STATES.SLEEP;
   const fromHome = homeState === HOME_STATES.CONTEXT && morph.getCurrentShape() === "circle";
   if (homeState === HOME_STATES.SLEEP) {
-    voice?.clearVoiceVizStyles?.();
-    shell.stopSiriOrb();
-    clearGlassFlowUiImmediate();
-    morph.hideRich();
-    clearStageFlowFlags();
+    teardownAiMode();
     setHomeStateData(HOME_STATES.CONTEXT);
   }
-  if (!messageFlow?.isActive() && !flightFlow?.isActive()) {
+  if (!messageFlow?.isActive() && !flightFlow?.isActive() && !coffeeFlow?.isActive?.()) {
     voice?.voiceEngine?.start?.("command");
     if (fromSleep || fromHome) {
       document.body.classList.remove("sleep-to-listening");
@@ -371,10 +357,9 @@ const voice = initVoiceEngine({
   getGlassUi: () => messageFlow?.flow,
   getGlassState: () => messageFlow?.GS,
   shouldKeepCommandListening: () => true,
-  shouldShowCommandViz: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.() || coffeeFlow?.isActive?.(),
+  shouldShowCommandViz: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.(),
   onTranscriptUpdate: (text, isFinal) => {
-    const currentFlow = activeFlow();
-    if (currentFlow?.onTranscriptUpdate) return currentFlow.onTranscriptUpdate(text, isFinal);
+    if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
     const transcript = String(text || "");
     listeningPromptText = transcript;
     if (input) {
@@ -419,7 +404,7 @@ const voice = initVoiceEngine({
 });
 const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, voice, input, addChatBubble, hideTypingBubble, returnToHomeContext });
 const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, playEarcon: playSimEarcon, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive, returnToHomeContext });
-const coffeeFlow = createCoffeeOrderFlow({ SHAPES, C, morph, shell, voice, input, returnToHomeContext });
+coffeeFlow = createCoffeeOrderFlow({ SHAPES, C, morph, shell, voice, input, returnToHomeContext });
 const demo = initDemoControls({ document, SHAPES, SCENARIO_SHAPES, createScenario, selectedScenario, previewScenario, morph, shell, voice, renderShapeForStageId, updateActive, getCurrentShape: morph.getCurrentShape, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, messageFlow, startGlassFlow: () => messageFlow.start() });
 actions = initInputActions({ input, ensureHomeAwake, canProcessRequest: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.() || coffeeFlow?.isActive?.(), responseMode: () => responseMode, RESPONSE_MODE, selectedScenario, scenarioLibrary: () => scenarioLibrary, createScenario, createIcon, renderScenarioUi: sidebar.renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, previewScenario, messageFlow, flightFlow, coffeeFlow, voice, morph });
 
@@ -434,8 +419,7 @@ initEditorBindings({ document, UI, PAGE_MODE_OVERRIDE, RESPONSE_MODE, AI_STAGE_O
 input?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
-    const currentFlow = activeFlow();
-    if (currentFlow?.handleInputSubmit) void currentFlow.handleInputSubmit(input.value);
+    if (messageFlow.isActive()) void messageFlow.handleInputSubmit(input.value);
     else actions.handleSend();
   }
   if (e.key === "Escape" && messageFlow.isActive()) {
@@ -446,16 +430,12 @@ input?.addEventListener("keydown", (e) => {
     e.preventDefault();
     flightFlow.reset();
     input.blur();
-  } else if (e.key === "Escape" && coffeeFlow?.isActive?.()) {
-    e.preventDefault();
-    coffeeFlow.reset();
-    input.blur();
   }
   e.stopPropagation();
 });
 input?.addEventListener("input", (e) => {
   if (messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) return void messageFlow.handleInputChange(e.target.value);
-  if (messageFlow.isActive() || flightFlow.isActive() || coffeeFlow?.isActive?.()) return;
+  if (messageFlow.isActive() || flightFlow.isActive()) return;
   if (homeState === HOME_STATES.SLEEP && !aiAwake) return;
   const hasText = String(e.target.value || "").trim().length > 0;
   const currentShape = morph.getCurrentShape();
@@ -469,7 +449,16 @@ input?.addEventListener("input", (e) => {
     updateActive("circle");
   }
 });
-document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; if (e.key === "L" || e.key === "l") { e.preventDefault(); const currentShape = morph.getCurrentShape(); if (currentShape === "listening" && aiAwake) { setHomeState("context"); aiAwake = false; return; } if (messageFlow.isActive()) { if (input) input.focus(); return; } armAiWakeListening({ source: "keyboard-l" }); return; } if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if (!focusedInTextInput && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && (e.code === "Space" || e.key === "1")) { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (coffeeFlow?.handleKeyDown?.(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") { e.preventDefault(); setHomeState("context"); return; } if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") armAiWakeListening(); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
+let restoreComposeInputFocus = false;
+document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; const composeMenuActive = messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE && (messageFlow.flow.composeMenuOpen || messageFlow.flow.composeMenuHolding || messageFlow.flow.composeMenuClosing); if (e.key === "L" || e.key === "l") { if (messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) { e.preventDefault(); restoreComposeInputFocus = focusedInTextInput; if (focusedInTextInput) input?.blur(); if (!e.repeat) messageFlow.startComposeMenuHold(); return; } e.preventDefault(); const currentShape = morph.getCurrentShape(); if (currentShape === "listening" && aiAwake) { setHomeState("context"); aiAwake = false; return; } if (messageFlow.isActive()) { if (input) input.focus(); return; } armAiWakeListening({ source: "keyboard-l" }); return; } if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.code === "Space" || e.key === "1")) { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (coffeeFlow?.handleKeyDown?.(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") { e.preventDefault(); setHomeState("context"); return; } if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") armAiWakeListening(); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
+document.addEventListener("keyup", (e) => {
+  if ((e.key === "L" || e.key === "l") && messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) {
+    e.preventDefault();
+    messageFlow.endComposeMenuHold();
+    if (restoreComposeInputFocus && !messageFlow.flow.composeMenuOpen && !messageFlow.flow.composeMenuClosing) input?.focus();
+    restoreComposeInputFocus = false;
+  }
+});
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
 
 const fullscreenToggle = document.getElementById("debug-fullscreen-toggle");

@@ -211,20 +211,14 @@ export function createFlightBookingFlow(ctx) {
   function moveHighlight(dir) {
     const current = step();
     if (!flow.active) return;
-    if (current.type === "options" || current.type === "payment") {
+    if (current.type === "payment" || (current.type === "recommendation" && flow.recommendationMode === "alternatives")) {
       flow.focused = Math.max(0, Math.min((current.options || []).length - 1, flow.focused + dir));
       document.querySelectorAll("[data-flight-opt]").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
       return;
     }
     if (current.type === "recommendation") {
-      if (flow.recommendationMode === "alternatives") {
-        const alternatives = render.buildRecommendationAlternatives();
-        flow.focused = Math.max(0, Math.min(alternatives.length - 1, flow.focused + dir));
-        document.querySelectorAll("[data-flight-opt]").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
-      } else {
-        flow.focused = Math.max(0, Math.min(2, flow.focused + dir));
-        ctx.C.glassControlsLayer?.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.focused));
-      }
+      flow.focused = Math.max(0, Math.min(2, flow.focused + dir));
+      document.querySelectorAll("#glass-controls-layer .g-action-btn").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
       return;
     }
     if (current.type === "confirm") {
@@ -245,8 +239,6 @@ export function createFlightBookingFlow(ctx) {
 
   function confirmStep() {
     const current = step();
-    if (current.type === "options" || current.type === "payment") return api.selectByIndex(flow.focused);
-    if (current.type === "dates") return api.advanceAfterDatesConfirm();
     if (current.type === "recommendation") {
       if (flow.recommendationMode === "alternatives") {
         const alternatives = render.buildRecommendationAlternatives();
@@ -273,6 +265,7 @@ export function createFlightBookingFlow(ctx) {
       }
       return api.resetToHome();
     }
+    if (current.type === "payment") return api.selectByIndex(flow.focused);
     if (current.type === "confirm") {
       if (flow.showConfirmDetails) {
         flow.showConfirmDetails = false;
@@ -287,6 +280,7 @@ export function createFlightBookingFlow(ctx) {
       if (flow.focused === 0) return api.nextStep(true);
       return api.resetToHome();
     }
+    if (current.type === "dates") return api.advanceAfterDatesConfirm();
     if (current.type === "done") return api.resetToHome();
   }
 
@@ -301,8 +295,7 @@ export function createFlightBookingFlow(ctx) {
     flow.startupTimer = null;
     if (seedText) api.syncDestinationFromText(seedText);
     flow.active = true;
-    flow.stepIndex = 0;
-    flow.focused = 0;
+    setStep(0, 0);
     document.getElementById("stage").classList.add("flow-active");
     document.getElementById("stage-wrap")?.classList.add("flow-active");
     ctx.shell.hideIntentHeader?.();
@@ -314,8 +307,7 @@ export function createFlightBookingFlow(ctx) {
       flow.startupTimer = null;
       if (!isEpochAlive(epoch)) return;
       ctx.shell.clearOrbLabel?.();
-      flow.stepIndex = 0;
-      flow.focused = 0;
+      setStep(0, 0);
       render.renderStep(false);
       if (seedText && /\bto\s+[a-zA-Z]/i.test(seedText)) {
         ctx.addChatBubble("user", seedText);
@@ -324,7 +316,6 @@ export function createFlightBookingFlow(ctx) {
       }
     }, FLOW_START_THINK_MS);
   }
-  function cancel() { if (flow.active) api.backStep(); }
 
-  return { isActive: () => flow.active, start, cancel, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
+  return { isActive: () => flow.active, start, cancel: api.resetToHome, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
 }

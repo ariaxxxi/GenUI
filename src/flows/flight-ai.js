@@ -1,4 +1,11 @@
 export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
+  function formatParsedDate(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    return `${weekday}, ${month} ${date.getDate()}`;
+  }
+
   function formatFlightDate(monthIndex, day) {
     const now = new Date();
     let year = now.getFullYear();
@@ -8,14 +15,15 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
       year += 1;
       date = new Date(year, monthIndex, day);
     }
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-    const month = date.toLocaleDateString("en-US", { month: "short" });
-    return `${weekday}, ${month} ${date.getDate()}`;
+    return formatParsedDate(date);
   }
 
   function normalizeFlightDateValue(value) {
     const raw = String(value || "").trim();
     if (!raw) return "";
+    if (/^[A-Z][a-z]{2},\s+[A-Z][a-z]{2}\s+\d{1,2}$/.test(raw)) return raw;
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return formatParsedDate(parsed);
     const match = raw.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b[\s,]+(\d{1,2})\b/i);
     if (!match) return raw;
     const months = {
