@@ -37,9 +37,10 @@ export function createMessageSendRender({
   const COMPOSE_FIELD_BOTTOM = 408;
   const COMPOSE_FIELD_W = 307;
   const COMPOSE_FIELD_H = 96;
-  const COMPOSE_FIELD_ACTIVE_W = 420;
+  const COMPOSE_FIELD_MAX_W = 420;
   const COMPOSE_FIELD_ACTIVE_H = 94;
   const COMPOSE_FIELD_MAX_H = 220;
+  const COMPOSE_FIELD_SIDE_PADDING = 28;
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
   const DISAMBIGUATION_ENTER_MS = 800;
@@ -83,7 +84,7 @@ export function createMessageSendRender({
     const hasText = flow.state === GS.CONFIRM
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
-    const w = hasText ? COMPOSE_FIELD_ACTIVE_W : COMPOSE_FIELD_W;
+    const w = measureComposeFieldWidth(hasText);
     const h = measureComposeFieldHeight(hasText);
     const bottom = COMPOSE_FIELD_BOTTOM;
     return {
@@ -102,6 +103,30 @@ export function createMessageSendRender({
       left: { ...(SHAPES["card-form"]?.left || {}), op: 0 },
       right: { ...(SHAPES["card-form"]?.right || {}), op: 0 },
     };
+  }
+
+  function measureComposeFieldWidth(hasText) {
+    const flow = getFlow();
+    const value = flow.state === GS.CONFIRM
+      ? String(flow.msg || "").trim()
+      : String(flow.composeText || "").trim();
+    if (!hasText) return COMPOSE_FIELD_W;
+
+    const sample = value || "Speak your message...";
+    const lines = sample.split(/\r?\n/).filter(Boolean);
+    const canvas = measureComposeFieldWidth._canvas || (measureComposeFieldWidth._canvas = document.createElement("canvas"));
+    const ctx2d = canvas.getContext("2d");
+    if (!ctx2d) return COMPOSE_FIELD_W;
+    ctx2d.font = "500 24px 'DM Sans'";
+    const widestLine = Math.max(
+      ...lines.map((line) => Math.ceil(ctx2d.measureText(line).width)),
+      0,
+    );
+    return clampFn(
+      Math.ceil(widestLine + COMPOSE_FIELD_SIDE_PADDING),
+      COMPOSE_FIELD_W,
+      COMPOSE_FIELD_MAX_W,
+    );
   }
 
   function measureComposeFieldHeight(hasText) {
@@ -486,7 +511,7 @@ export function createMessageSendRender({
       stack.classList.toggle("expanded", visibleCount > 3);
       stack.dataset.visibleCount = String(visibleCount);
       const header = C.rich.querySelector(".g-compose-header");
-      if (header) header.classList.toggle("hidden", !!flow.composeMenuOpen && !flow.composeMenuClosing);
+      if (header) header.classList.toggle("is-hidden", !!flow.composeMenuOpen && !flow.composeMenuClosing);
       chips.forEach((chip, idx) => {
         chip.classList.toggle("is-visible", idx < visibleCount);
         chip.classList.toggle("selected", idx === flow.sel);

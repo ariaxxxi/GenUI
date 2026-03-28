@@ -974,6 +974,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   position: absolute;
   left: 50%;
   top: -57px;
+  z-index: 4;
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
@@ -989,7 +990,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   transform: translate(-50%, 14px);
   animation: g-compose-header-enter 300ms cubic-bezier(0.22,1,0.36,1) 200ms forwards;
 }
-.g-compose-header.hidden {
+.g-compose-header.is-hidden {
   opacity: 0;
   transform: translate(-50%, 10px);
 }
@@ -1011,6 +1012,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 4px);
+  z-index: 1;
   width: 320px;
   display: flex;
   flex-direction: column;
@@ -1139,6 +1141,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   height: 100%;
   pointer-events: none;
   overflow: visible;
+  isolation: isolate;
 }
 .g-compose-stage.has-text .g-compose-field-wrap {
   top: 0;
@@ -1146,12 +1149,14 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   height: 100%;
 }
 .g-compose-field {
+  position: relative;
+  z-index: 3;
   width: 100%;
   min-height: 96px;
   height: auto;
   border-radius: 30px;
   border: none;
-  background: transparent;
+  background: #000;
   overflow: visible;
   display: flex;
   align-items: center;
@@ -1163,7 +1168,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   min-height: 94px;
   height: auto;
   border: none;
-  background: transparent;
+  background: #000;
   padding: 24px 14px;
 }
 .g-compose-field-empty {

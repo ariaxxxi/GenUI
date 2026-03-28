@@ -25,7 +25,7 @@ export function renderContactHeader({ avatar = "", initials = "", name = "", pre
 }
 
 export function renderComposeHeader({ avatar = "", initials = "", name = "", visible = true } = {}) {
-  return `<div class="g-compose-header ${visible ? "" : "hidden"}">${renderAvatar({ avatar, initials, name, cls: "g-compose-header-avatar" })}<div class="g-compose-header-text">To: ${esc(name)}</div></div>`;
+  return `<div class="g-compose-header ${visible ? "" : "is-hidden"}">${renderAvatar({ avatar, initials, name, cls: "g-compose-header-avatar" })}<div class="g-compose-header-text">To: ${esc(name)}</div></div>`;
 }
 
 export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr = "data-g-contact", listClass = "g-card-list" } = {}) {
