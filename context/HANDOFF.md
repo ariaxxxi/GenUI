@@ -1,6 +1,38 @@
 # Handoff
 
 ## Task title
+Flight Confirm Container Focus Parity
+
+## Completion status
+- Completed
+
+## Summary
+- Compared the current `new-msg-motion` flight confirm controller against `origin/main` instead of continuing with the simplified local confirm logic.
+- Restored the `main` branch confirm navigation contract in `src/flows/flight-booking.js`:
+  - `ArrowUp` from the confirm button row now jumps focus to the confirm container
+  - `ArrowDown` from the focused container now returns focus to the first action button
+  - `Space` on the focused container expands details
+  - `Space` while details are expanded collapses them again
+- Kept the previously fixed recommendation handling in sync with the same `main` branch interaction pattern so the confirm-stage behavior is no longer divergent.
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/flight-booking.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after restoring the `main` branch confirm navigation rules.
+
+## Recommended next step
+1. Run the flight flow to the confirm step.
+2. Press `ArrowUp` from the action row and verify the confirm container highlights.
+3. Press `Space` to expand, then `Space` again to collapse.
+
+# Handoff
+
+## Task title
 Compose Entry Animation Visibility Fix
 
 ## Completion status

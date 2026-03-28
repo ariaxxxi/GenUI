@@ -211,16 +211,76 @@ export function createFlightBookingFlow(ctx) {
   function moveHighlight(dir) {
     const current = step();
     if (!flow.active) return;
-    if (current.type === "options" || current.type === "payment") {
+    if (current.type === "payment" || (current.type === "recommendation" && flow.recommendationMode === "alternatives")) {
       flow.focused = Math.max(0, Math.min((current.options || []).length - 1, flow.focused + dir));
       document.querySelectorAll("[data-flight-opt]").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
+      return;
+    }
+    if (current.type === "recommendation") {
+      flow.focused = Math.max(0, Math.min(2, flow.focused + dir));
+      document.querySelectorAll("#glass-controls-layer .g-action-btn").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
+      return;
+    }
+    if (current.type === "confirm") {
+      if (flow.showConfirmDetails) {
+        render.scrollConfirmDetails?.(dir * CONFIRM_SCROLL_STEP);
+        return;
+      }
+      if (dir < 0) {
+        flow.focused = CONFIRM_CONTAINER_INDEX;
+      } else if (flow.focused === CONFIRM_CONTAINER_INDEX) {
+        flow.focused = 0;
+      } else {
+        flow.focused = Math.max(0, Math.min(1, flow.focused + dir));
+      }
+      render.syncConfirmFocusUi?.(flow.focused);
     }
   }
 
   function confirmStep() {
     const current = step();
-    if (current.type === "recommendation" || current.type === "payment") return api.selectByIndex(flow.focused);
-    if (current.type === "confirm" || current.type === "dates") return api.advanceAfterDatesConfirm();
+    if (current.type === "recommendation") {
+      if (flow.recommendationMode === "alternatives") {
+        const alternatives = render.buildRecommendationAlternatives();
+        const selected = alternatives[flow.focused];
+        if (!selected) return;
+        const allOptions = api.currentFlightOptions();
+        const selectedIndex = allOptions.findIndex((item) => item.name === selected.name);
+        if (selectedIndex >= 0) {
+          api.setSelectedFlightOption(allOptions[selectedIndex]);
+        }
+        flow.recommendationMode = "recommend";
+        flow.focused = 0;
+        return api.nextStep();
+      }
+      if (flow.focused === 0) {
+        const recommended = api.currentRecommendedFlight();
+        if (recommended) api.setSelectedFlightOption(recommended);
+        return api.nextStep();
+      }
+      if (flow.focused === 1) {
+        flow.recommendationMode = "alternatives";
+        flow.focused = 0;
+        return render.renderStep(true);
+      }
+      return api.resetToHome();
+    }
+    if (current.type === "payment") return api.selectByIndex(flow.focused);
+    if (current.type === "confirm") {
+      if (flow.showConfirmDetails) {
+        flow.showConfirmDetails = false;
+        render.renderStep(true);
+        return;
+      }
+      if (flow.focused === CONFIRM_CONTAINER_INDEX) {
+        flow.showConfirmDetails = true;
+        render.renderStep(true);
+        return;
+      }
+      if (flow.focused === 0) return api.nextStep(true);
+      return api.resetToHome();
+    }
+    if (current.type === "dates") return api.advanceAfterDatesConfirm();
     if (current.type === "done") return api.resetToHome();
   }
 
@@ -257,5 +317,5 @@ export function createFlightBookingFlow(ctx) {
     }, FLOW_START_THINK_MS);
   }
 
-  return { isActive: () => flow.active, start, cancel, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
+  return { isActive: () => flow.active, start, cancel: api.resetToHome, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
 }
