@@ -1,0 +1,172 @@
+/* ── Drop shell ── */
+.drop {
+  position: absolute; left: 50%; top: 50%;
+  background: transparent;
+  box-shadow: 0 0 40px rgba(255,255,255,0.02);
+  border: none; overflow: hidden;
+  transition:
+    width         var(--anim-w),
+    height        var(--anim-h),
+    border-radius var(--anim-br),
+    transform     var(--anim-tx),
+    opacity       300ms ease,
+    background    420ms ease,
+    box-shadow    520ms ease,
+    filter        520ms ease;
+  will-change: transform, width, height, border-radius, opacity;
+}
+.drop::before {
+  content: ''; position: absolute; inset: 0; z-index: 10;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(var(--glass-stroke-angle),
+    var(--glass-shell-stroke-stop-0) 0%,
+    var(--glass-shell-stroke-stop-50) 50%,
+    var(--glass-shell-stroke-stop-97) 97%,
+    var(--glass-shell-stroke-stop-97) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.drop::after {
+  content: ''; position: absolute; inset: 0; z-index: 9;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+.drop.metaball-prep {
+  will-change: transform, width, height, border-radius, opacity, filter;
+}
+#ui-frame.phone .drop {
+  background: transparent;
+}
+#ui-frame.phone #drop-main {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Generic content elements ── */
+#c-thumb {
+  position: absolute; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; line-height: 1;
+  color: rgba(255,255,255,0.90);
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: width var(--anim-w), height var(--anim-h), transform var(--anim-tx),
+              border-radius var(--anim-br), opacity var(--thumb-fade-ms, 280ms) ease;
+}
+#c-thumb.thumb-plain-icon {
+  background: transparent;
+  border: none;
+}
+#c-thumb.thumb-empty {
+  background: transparent;
+  border: none;
+}
+#c-thumb.thumb-image {
+  background: transparent;
+  border: none;
+}
+#c-thumb-img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}
+#c-thumb-label {
+  display: block;
+  line-height: 1;
+}
+#c-thumb.thumb-image #c-thumb-img {
+  display: block;
+}
+#home-glow-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9;
+  box-shadow:
+    inset 0 6px 6px -2px rgba(74,135,255,0.15),
+    inset 0 -20px 20px -8px rgba(172,188,247,0.50),
+    inset 0 -15px 20px -6px rgba(255,255,255,0.40),
+    inset 0 -70px 60px -30px #0042CB;
+  transition: opacity 500ms ease var(--home-glow-delay, 0ms);
+}
+#c-primary {
+  position: absolute; z-index: 3;
+  font-family: 'DM Sans', sans-serif; font-weight: 600;
+  color: rgba(255,255,255,0.90); white-space: nowrap; line-height: 1.1;
+  transition:
+    transform var(--content-move-t, var(--anim-t)),
+    opacity var(--content-fade-ms, 260ms) ease,
+    font-size var(--primary-size-anim-ms, var(--anim-t)),
+    color 220ms ease;
+}
+#c-secondary {
+  position: absolute; z-index: 3;
+  font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
+  color: rgba(255,255,255,0.48); white-space: nowrap; line-height: 1.2;
+  transition:
+    transform var(--content-move-t, var(--anim-t)),
+    opacity var(--content-fade-ms, 260ms) ease,
+    font-size var(--text-size-anim-ms, var(--anim-t)),
+    color 220ms ease;
+}
+#c-detail {
+  position: absolute; z-index: 3;
+  font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
+  color: rgba(255,255,255,0.26); white-space: nowrap; line-height: 1.2;
+  transition:
+    transform var(--content-move-t, var(--anim-t)),
+    opacity var(--detail-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    font-size var(--text-size-anim-ms, var(--anim-t)),
+    color 220ms ease;
+}
+#c-divider {
+  position: absolute; z-index: 3;
+  height: 1px; background: rgba(255,255,255,0.08);
+  transition: transform var(--anim-t), width var(--anim-t), opacity var(--content-fade-ms, 260ms) ease;
+}
+body[data-ai-home-state="context"][data-current-shape="pill"] #c-thumb {
+  border: none;
+  background: rgba(194,194,194,0.9);
+  box-shadow: none;
+}
+body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
+  height: 26px !important;
+  background: rgba(255,255,255,0.5);
+}
+#c-media {
+  position: absolute;
+  z-index: 3;
+  display: none;
+  object-fit: cover;
+  border-radius: 18px;
+  opacity: 0;
+  transition:
+    transform var(--anim-t),
+    opacity var(--media-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    width var(--anim-w),
+    height var(--anim-h);
+}
+#c-media,
+.c-media-extra {
+  position: absolute;
+  z-index: 3;
+  display: none;
+  object-fit: cover;
+  border-radius: 18px;
+  opacity: 0;
+  transition:
+    transform var(--anim-t),
+    opacity var(--media-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    width var(--anim-w),
+    height var(--anim-h);
+}
