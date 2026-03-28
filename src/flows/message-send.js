@@ -288,7 +288,6 @@ export function createMessageSendFlow(ctx) {
     renderControls,
     updateOrbLabel: ctx.shell.updateOrbLabel,
     setSimInputState: ctx.setSimInputState,
-    clamp: ctx.clamp,
   });
 
   function maxSel() {

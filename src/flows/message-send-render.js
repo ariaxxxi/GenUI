@@ -11,6 +11,7 @@ import {
   renderTextBubble,
 } from "./ui-primitives.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
+import { clamp } from "../utils.js";
 
 export function createMessageSendRender({
   document,
@@ -27,9 +28,7 @@ export function createMessageSendRender({
   renderControls,
   updateOrbLabel,
   setSimInputState,
-  clamp,
 }) {
-  const clampFn = typeof clamp === "function" ? clamp : (value, min, max) => Math.max(min, Math.min(max, value));
   const TOP = 10;
   const BOTTOM = 10;
   const CONTROLS_LIFT = 78;
@@ -75,7 +74,7 @@ export function createMessageSendRender({
   function dynamicGeo(shape, contentHeightPx) {
     const flow = getFlow();
     const base = SHAPES[shape] || SHAPES.card;
-    const shellHeight = clampFn(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
+    const shellHeight = clamp(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
     const controlsLift = shape === "card" ? CONTROLS_LIFT : 0;
     return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
   }
@@ -128,7 +127,7 @@ export function createMessageSendRender({
       ...lines.map((line) => Math.ceil(ctx2d.measureText(line).width)),
       0,
     );
-    return clampFn(
+    return clamp(
       Math.ceil(widestLine + COMPOSE_FIELD_SIDE_PADDING),
       COMPOSE_FIELD_W,
       COMPOSE_FIELD_MAX_W,
@@ -145,7 +144,7 @@ export function createMessageSendRender({
       field.scrollHeight || 0,
     ));
     if (!measured) return baseMin;
-    return clampFn(measured, baseMin, COMPOSE_FIELD_MAX_H);
+    return clamp(measured, baseMin, COMPOSE_FIELD_MAX_H);
   }
 
   function sentGeo() {
@@ -153,7 +152,6 @@ export function createMessageSendRender({
       richRoot: C.rich,
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: "Message sent",
-      clamp: clampFn,
     });
   }
 
@@ -242,13 +240,13 @@ export function createMessageSendRender({
     if (raw <= 0) raw = measure(C.rich.querySelector("[data-glass-body]"));
     const flow = getFlow();
     if (raw > 0) {
-      const resolved = clampFn(raw, 60, MAX_H - TOP - BOTTOM);
+      const resolved = clamp(raw, 60, MAX_H - TOP - BOTTOM);
       lastContentHeight = resolved;
       if (isCardState(flow.state)) heightByState[flow.state] = resolved;
       return resolved;
     }
-    if (isCardState(flow.state) && Number.isFinite(heightByState[flow.state])) return clampFn(heightByState[flow.state], 60, MAX_H - TOP - BOTTOM);
-    return clampFn(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
+    if (isCardState(flow.state) && Number.isFinite(heightByState[flow.state])) return clamp(heightByState[flow.state], 60, MAX_H - TOP - BOTTOM);
+    return clamp(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
   }
 
   const EMPTY_SCREEN_SPEC = { actions: [], actionSelectedIndex: 0 };

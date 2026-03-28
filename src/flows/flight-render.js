@@ -93,7 +93,6 @@ export function createFlightRender({
       richRoot: document.getElementById("c-rich"),
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: labelText,
-      clamp,
     });
   }
 

@@ -1,3 +1,5 @@
+import { clamp } from "../utils.js";
+
 export function ensureMeasureLayer(id) {
   let layer = document.getElementById(id);
   if (layer) return layer;
@@ -28,7 +30,6 @@ export function measureSuccessToastGeometry({
   richRoot,
   pillShape,
   fallbackLabel = "",
-  clamp = (value, min, max) => Math.max(min, Math.min(max, value)),
 }) {
   const base = pillShape || {};
   const textEl = richRoot?.querySelector?.("[data-glass-sent]");
