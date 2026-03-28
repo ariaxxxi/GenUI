@@ -181,20 +181,11 @@ export function initManualBindings({
     previewAiStageOverride();
   }));
 
-  UI.bgToggle.addEventListener('change', () => {
-    setCanvasSettings({ ...canvasSettings(), backgroundEnabled: UI.bgToggle.checked });
-    persistCanvasSettings();
-    applyCanvasSettings();
-  });
-  UI.floatToggle.addEventListener('change', () => {
-    setCanvasSettings({ ...canvasSettings(), floatingEnabled: UI.floatToggle.checked });
-    persistCanvasSettings();
-    applyCanvasSettings();
-  });
+  const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
+  UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));
+  UI.floatToggle.addEventListener('change', () => updateCanvas({ floatingEnabled: UI.floatToggle.checked }));
   UI.alignBottomToggle.addEventListener('change', () => {
-    setCanvasSettings({ ...canvasSettings(), bottomAlign: UI.alignBottomToggle.checked });
-    persistCanvasSettings();
-    applyCanvasSettings();
+    updateCanvas({ bottomAlign: UI.alignBottomToggle.checked });
     if (responseMode() === RESPONSE_MODE.AI) previewAiStageOverride();
     else previewScenario(selectedScenario());
   });
@@ -286,18 +277,13 @@ export function initManualBindings({
     scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
     scenario.content.iconByShape[scenario.shape] = value ? createIcon('emoji', value) : createIcon('none', '');
   }));
-  UI.scenarioPrimary.addEventListener('input', (e) => commitScenarioChange((scenario) => {
+  const commitTextField = (field, el) => el.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
-    scenario.content.textByShape[scenario.shape].primary = e.target.value;
+    scenario.content.textByShape[scenario.shape][field] = e.target.value;
   }));
-  UI.scenarioSecondary.addEventListener('input', (e) => commitScenarioChange((scenario) => {
-    scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
-    scenario.content.textByShape[scenario.shape].secondary = e.target.value;
-  }));
-  UI.scenarioDetail.addEventListener('input', (e) => commitScenarioChange((scenario) => {
-    scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
-    scenario.content.textByShape[scenario.shape].detail = e.target.value;
-  }));
+  commitTextField('primary', UI.scenarioPrimary);
+  commitTextField('secondary', UI.scenarioSecondary);
+  commitTextField('detail', UI.scenarioDetail);
   UI.scenarioShapeRow.addEventListener('click', (e) => {
     const button = e.target.closest('[data-scenario-shape]');
     if (!button) return;

@@ -18,7 +18,6 @@ export function createFlightBookingFlow(ctx) {
   const apiUrl = (path) => `${location.protocol === "file:" ? "http://localhost:5180" : ""}${path}`;
 
   function step() { return FLOW_STEPS[flow.stepIndex] || FLOW_STEPS[0]; }
-  function setStep(nextStep, highlight = 0) { flow.stepIndex = typeof nextStep === "number" ? Math.max(0, Math.min(FLOW_STEPS.length - 1, nextStep)) : Math.max(0, FLOW_STEPS.findIndex((entry) => entry.type === nextStep)); flow.focused = Math.max(0, Number(highlight) || 0); }
   function resetData() { flow.data = { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", paymentMethod: "" }; flow.editReturnStepIndex = null; }
   function normalizeCity(input) { return String(input || "").trim().split(/\s+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" "); }
   function cityToAirport(city) { const key = String(city || "").toLowerCase(); const map = { tokyo: "NRT", paris: "CDG", london: "LHR", "new york": "JFK", ny: "JFK", nyc: "JFK", manhattan: "JFK", sydney: "SYD", dubai: "DXB", seoul: "ICN", amsterdam: "AMS", singapore: "SIN", berlin: "BER" }; const found = Object.keys(map).find((entry) => key.includes(entry)); return found ? map[found] : (city ? city.toUpperCase().slice(0, 3) : "---"); }

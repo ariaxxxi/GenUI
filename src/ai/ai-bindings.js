@@ -59,12 +59,13 @@ function loadScenarioLibrary() {
   scenarios.forEach((scenario) => { scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || "none" }); });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
-function persistScenarios() { try { localStorage.setItem(STORAGE_KEYS.scenarios, JSON.stringify(scenarioLibrary)); } catch (err) { console.warn("Unable to persist scenarios", err); } }
-function persistCanvasSettings() { try { localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(canvasSettings)); } catch (err) { console.warn("Unable to persist canvas settings", err); } }
+function persistToStorage(key, value, label) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { console.warn(`Unable to persist ${label}`, err); } }
+function persistScenarios() { persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, "scenarios"); }
+function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, "canvas settings"); }
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) localStorage.setItem(STORAGE_KEYS.mode, JSON.stringify(responseMode)); }
-function persistAiStageOverride() { try { localStorage.setItem(STORAGE_KEYS.aiStage, JSON.stringify(aiStageOverride)); } catch (err) { console.warn("Unable to persist AI stage override", err); } }
-function persistAiVoiceEnabled(enabled) { try { localStorage.setItem(STORAGE_KEYS.aiVoiceEnabled, JSON.stringify(enabled !== false)); } catch (err) { console.warn("Unable to persist AI voice toggle", err); } }
-function persistStageLibrary() { try { localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(stageLibrary)); } catch (err) { console.warn("Unable to persist stage library", err); } }
+function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, "AI stage override"); }
+function persistAiVoiceEnabled(enabled) { persistToStorage(STORAGE_KEYS.aiVoiceEnabled, enabled !== false, "AI voice toggle"); }
+function persistStageLibrary() { persistToStorage(STORAGE_KEYS.stages, stageLibrary, "stage library"); }
 function selectedScenario() { return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null; }
 
 const shell = initAiShell({ document, C, input, clearListPills: () => demo?.clearListPills?.(), morphTo: (...args) => morph.morphTo(...args), getAnimDuration: anim.getAnimDuration, getGlassState: () => messageFlow?.GS, getGlassUi: () => messageFlow?.flow, getVoiceMode: () => voice?.voiceEngine?.mode });
@@ -171,12 +172,13 @@ function ensureHomeAwake() {
   enterHomeContext();
 }
 
-function enterSleep(options = {}) {
-  const source = options?.source || "";
-  if (source !== "flow-reset") {
-    if (messageFlow?.isActive?.()) { messageFlow.reset(); return; }
-    if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
-  }
+function resetActiveFlows() {
+  if (messageFlow?.isActive?.()) { messageFlow.reset(); return true; }
+  if (flightFlow?.isActive?.()) { flightFlow.reset(); return true; }
+  return false;
+}
+
+function teardownAiMode() {
   aiAwake = false;
   listeningPromptText = "";
   voice?.clearVoiceVizStyles?.();
@@ -184,6 +186,11 @@ function enterSleep(options = {}) {
   clearGlassFlowUiImmediate();
   morph.hideRich();
   clearStageFlowFlags();
+}
+
+function enterSleep(options = {}) {
+  if (options?.source !== "flow-reset" && resetActiveFlows()) return;
+  teardownAiMode();
   setHomeStateData(HOME_STATES.SLEEP);
   morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" });
   updateActive("circle");
@@ -191,22 +198,12 @@ function enterSleep(options = {}) {
 }
 
 function enterHomeContext(options = {}) {
-  const source = options?.source || "";
-  if (source !== "flow-reset") {
-    if (messageFlow?.isActive?.()) { messageFlow.reset(); return; }
-    if (flightFlow?.isActive?.()) { flightFlow.reset(); return; }
-  }
+  if (options?.source !== "flow-reset" && resetActiveFlows()) return;
   const cycle = options?.cycle === true;
   const previous = homeState;
   if (cycle) homeContextIndex = (homeContextIndex + 1) % HOME_CONTEXTS.length;
   const fromSleep = previous === HOME_STATES.SLEEP;
-  aiAwake = false;
-  listeningPromptText = "";
-  voice?.clearVoiceVizStyles?.();
-  shell.stopSiriOrb();
-  clearGlassFlowUiImmediate();
-  morph.hideRich();
-  clearStageFlowFlags();
+  teardownAiMode();
   setHomeStateData(HOME_STATES.CONTEXT);
   if (fromSleep && homeStateDotEl) {
     homeStateDotEl.classList.remove("to-context");
@@ -257,11 +254,7 @@ function armAiWakeListening(options = {}) {
   const fromSleep = homeState === HOME_STATES.SLEEP;
   const fromHome = homeState === HOME_STATES.CONTEXT && morph.getCurrentShape() === "circle";
   if (homeState === HOME_STATES.SLEEP) {
-    voice?.clearVoiceVizStyles?.();
-    shell.stopSiriOrb();
-    clearGlassFlowUiImmediate();
-    morph.hideRich();
-    clearStageFlowFlags();
+    teardownAiMode();
     setHomeStateData(HOME_STATES.CONTEXT);
   }
   if (!messageFlow?.isActive() && !flightFlow?.isActive()) {

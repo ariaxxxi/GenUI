@@ -374,14 +374,9 @@ export function createMessageSendFlow(ctx) {
     flow.contact = contact;
     flow.composeText = "";
     flow.msg = "";
-    flow.showChips = false;
-    flow.composeMenuOpen = false;
-    flow.composeMenuClosing = false;
-    flow.composeMenuHolding = false;
-    flow.composeMenuVisibleCount = 0;
     flow.showCheck = false;
+    cancelComposeMenu({ immediate: true });
     ensureComposeVisualChips(contact);
-    syncComposeChipState();
     flow.state = GS.COMPOSE;
     flow.sel = 0;
     const dropMain = document.getElementById("drop-main");
@@ -417,13 +412,8 @@ export function createMessageSendFlow(ctx) {
     ctx.addSimLog(`Chip: "${chip.label}"`, "action");
     flow.composeText = chip.message;
     flow.msg = chip.message;
-    flow.showChips = false;
-    flow.composeMenuOpen = false;
-    flow.composeMenuClosing = false;
-    flow.composeMenuHolding = false;
-    flow.composeMenuVisibleCount = 0;
-    syncComposeChipState();
     flow.showCheck = false;
+    cancelComposeMenu({ immediate: true });
 
     // Go directly to confirmation step when chip is selected
     flow.msg = String(flow.composeText || flow.msg || "").trim();
@@ -445,12 +435,7 @@ export function createMessageSendFlow(ctx) {
       return;
     }
     if (index === 1) {
-      flow.showChips = false;
-      flow.composeMenuOpen = false;
-      flow.composeMenuClosing = false;
-      flow.composeMenuHolding = false;
-      flow.composeMenuVisibleCount = 0;
-      syncComposeChipState();
+      cancelComposeMenu({ immediate: true });
       flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
       flow.replaceComposeOnNextDictation = true;
@@ -488,14 +473,9 @@ export function createMessageSendFlow(ctx) {
         flow.contact = contact;
         flow.msg = pending;
         flow.composeText = pending;
-        flow.showChips = false;
-        flow.composeMenuOpen = false;
-        flow.composeMenuClosing = false;
-        flow.composeMenuHolding = false;
-        flow.composeMenuVisibleCount = 0;
-        ensureComposeVisualChips(contact);
-        syncComposeChipState();
         flow.showCheck = false;
+        cancelComposeMenu({ immediate: true });
+        ensureComposeVisualChips(contact);
         transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: contact.name.split(" ")[0] }));
       } else {
         beginCompose(contact, phrase("compose_prompt"));
@@ -521,12 +501,7 @@ export function createMessageSendFlow(ctx) {
   function dismiss() {
     const epoch = flowEpoch;
     if (flow.state === GS.CONFIRM) {
-      flow.showChips = false;
-      flow.composeMenuOpen = false;
-      flow.composeMenuClosing = false;
-      flow.composeMenuHolding = false;
-      flow.composeMenuVisibleCount = 0;
-      syncComposeChipState();
+      cancelComposeMenu({ immediate: true });
       flow.showCheck = false;
       flow.composeText = flow.msg || flow.composeText;
       flow.replaceComposeOnNextDictation = true;
@@ -689,14 +664,9 @@ export function createMessageSendFlow(ctx) {
             flow.contact = fallback[0];
             flow.msg = msg;
             flow.composeText = msg;
-            flow.showChips = false;
-            flow.composeMenuOpen = false;
-            flow.composeMenuClosing = false;
-            flow.composeMenuHolding = false;
-            flow.composeMenuVisibleCount = 0;
-            ensureComposeVisualChips(fallback[0]);
-            syncComposeChipState();
             flow.showCheck = false;
+            cancelComposeMenu({ immediate: true });
+            ensureComposeVisualChips(fallback[0]);
             transitionTo(GS.CONFIRM, phrase("confirm_message_to", { name: fallback[0].name.split(" ")[0] }));
           } else {
             beginCompose(fallback[0], phrase("compose_prompt"));

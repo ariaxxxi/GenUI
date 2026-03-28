@@ -81,7 +81,7 @@ export function initManualDemo({
         <div class="list-pill-primary">${item.primary || ''}</div>
         <div class="list-pill-secondary">${item.secondary || ''}</div>
       </div>`;
-    el.addEventListener('click', () => selectListItem(el, idx, items));
+    el.addEventListener('click', () => selectListItem(el));
     return el;
   }
 

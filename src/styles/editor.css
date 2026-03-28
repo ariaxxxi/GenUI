@@ -286,19 +286,6 @@ body {
   height: 1px; background: rgba(255,255,255,0.08);
   transition: transform var(--anim-t), width var(--anim-t), opacity var(--content-fade-ms, 260ms) ease;
 }
-#c-media {
-  position: absolute;
-  z-index: 3;
-  display: none;
-  object-fit: cover;
-  border-radius: 18px;
-  opacity: 0;
-  transition:
-    transform var(--anim-t),
-    opacity var(--media-fade-ms, var(--content-fade-ms, 260ms)) ease,
-    width var(--anim-w),
-    height var(--anim-h);
-}
 #c-media,
 .c-media-extra {
   position: absolute;

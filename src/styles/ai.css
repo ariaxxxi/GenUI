@@ -2587,14 +2587,6 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   background: #000 !important;
   box-shadow: none !important;
 }
-#drop-main.compose-surface.compose-text-active {
-  background: #000 !important;
-  box-shadow: none !important;
-}
-#drop-main.compose-surface.confirm-surface {
-  background: #000 !important;
-  box-shadow: none !important;
-}
 #drop-main { z-index: 3; }
 #c-rich.glass-disambiguation {
   inset: 0;

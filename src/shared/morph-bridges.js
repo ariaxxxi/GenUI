@@ -1,5 +1,7 @@
 import { SHAPES } from '../shapes.js';
 
+const EMPTY_CONTENT = { icon:'', primary:'', secondary:'', detail:'' };
+
 export function createMorphBridges(ctx) {
   const { DROPS, C, callbacks, state, runtime } = ctx;
   const splitTimers = state.splitTimers;
@@ -78,7 +80,7 @@ export function createMorphBridges(ctx) {
   function bridgeToSplitViaDot() {
     clearSplitAnimationOverlays();
     clearSplitTimers();
-    runtime.morphCore('dot', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+    runtime.morphCore('dot', EMPTY_CONTENT, null, true, 0);
     state.splitBridgeTimer = setTimeout(() => {
       state.splitBridgeTimer = null;
       callbacks.animateSplitMetaball();
@@ -108,12 +110,12 @@ export function createMorphBridges(ctx) {
   function bridgeHomeToThinking(targetShape) {
     if (state.thinkingBridgeTimer) { clearTimeout(state.thinkingBridgeTimer); state.thinkingBridgeTimer = null; }
     callbacks.stopSiriOrb();
-    runtime.morphCore('circle', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+    runtime.morphCore('circle', EMPTY_CONTENT, null, true, 0);
     C.thumb.style.opacity = '0';
     callbacks.updateActive(targetShape);
     state.thinkingBridgeTimer = setTimeout(() => {
       state.thinkingBridgeTimer = null;
-      runtime.morphCore('ai', { icon:'', primary:'', secondary:'', detail:'' }, null, true, 0);
+      runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
       if (targetShape === 'idle') { callbacks.showAiIdle(); callbacks.updateActive('idle'); return; }
       callbacks.startSiriOrb(true);
       callbacks.updateActive('ai');
