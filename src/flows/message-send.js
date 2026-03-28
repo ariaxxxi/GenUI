@@ -1,6 +1,5 @@
 import { createMessageSendRender } from "./message-send-render.js";
 import { createMessageSendVoice } from "./message-send-voice.js";
-import { renderActionRow } from "./ui-primitives.js";
 import { phrase } from "../ai/phrases.js";
 
 const CONTACTS = [
@@ -32,7 +31,6 @@ export function createMessageSendFlow(ctx) {
   const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
-  const controlsGap = 14;
   let flowEpoch = 0;
 
   function isEpochAlive(epoch) {
@@ -60,38 +58,6 @@ export function createMessageSendFlow(ctx) {
     timers.controlsTrack = null;
   }
 
-  function positionControlsOverlay() {
-    const layer = ctx.C.glassControlsLayer;
-    const stage = document.getElementById("stage");
-    const main = document.getElementById("drop-main");
-    const controls = layer?.querySelector(".g-glass-controls");
-    if (!layer || !stage || !main || !controls) return false;
-    const stageRect = stage.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const controlsRect = controls.getBoundingClientRect();
-    const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
-    const unclampedTop = (mainRect.bottom - stageRect.top) + controlsGap;
-    const maxTop = Math.max(8, stageRect.height - controlsRect.height - 8);
-    const topY = Math.min(unclampedTop, maxTop);
-    controls.style.left = `${Math.round(centerX)}px`;
-    controls.style.top = `${Math.round(topY)}px`;
-    return true;
-  }
-
-  function trackControlsForTransition(ms) {
-    cancelControlsTracking();
-    const root = getComputedStyle(document.documentElement);
-    const fallbackMs = Number.isFinite(ms) ? ms : (parseFloat(root.getPropertyValue("--anim-t")) || 450) + 120;
-    const end = performance.now() + Math.max(120, fallbackMs);
-    const tick = () => {
-      if (!flow.active || !ctx.C.glassControlsLayer?.classList.contains("visible")) return;
-      positionControlsOverlay();
-      if (performance.now() < end) timers.controlsTrack = requestAnimationFrame(tick);
-      else timers.controlsTrack = null;
-    };
-    timers.controlsTrack = requestAnimationFrame(tick);
-  }
-
   function renderControls() {
     const layer = ctx.C.glassControlsLayer;
     if (!layer) return;
@@ -111,63 +77,22 @@ export function createMessageSendFlow(ctx) {
       cancelControlsTracking();
       return;
     }
-    let mode = "";
-    if (!mode) {
-      if (controlsMode === "confirm") {
-        const row = layer.querySelector(".g-action-row");
-        if (row && !row.classList.contains("exit")) {
-          row.classList.add("exit");
-          cancelControlsTracking();
-          timers.controlsExit = setTimeout(() => {
-            timers.controlsExit = null;
-            renderControls();
-          }, 220);
-          return;
-        }
-      }
-      layer.innerHTML = "";
-      layer.classList.remove("visible");
-      controlsMode = "";
-      cancelControlsTracking();
-      return;
-    }
-    if (controlsMode === "confirm" && mode !== "confirm") {
+    if (controlsMode === "confirm") {
       const row = layer.querySelector(".g-action-row");
       if (row && !row.classList.contains("exit")) {
         row.classList.add("exit");
         cancelControlsTracking();
         timers.controlsExit = setTimeout(() => {
           timers.controlsExit = null;
-          controlsMode = "";
           renderControls();
         }, 220);
         return;
       }
     }
-    if (controlsMode !== mode) {
-      layer.innerHTML = `<div class="g-glass-controls">${renderActionRow({
-        selectedIndex: flow.sel,
-        actions: [
-          { id: "send", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>` },
-          { id: "edit", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>` },
-          { id: "cancel", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>` },
-        ],
-      })}</div>`;
-      controlsMode = mode;
-    } else {
-      layer.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.sel));
-    }
-    layer.classList.add("visible");
-    if (!positionControlsOverlay()) {
-      layer.classList.remove("visible");
-      cancelControlsTracking();
-      return;
-    }
-    if (flow.state === GS.CONFIRM) {
-      trackControlsForTransition();
-    } else {
-      cancelControlsTracking();
-    }
+    layer.innerHTML = "";
+    layer.classList.remove("visible");
+    controlsMode = "";
+    cancelControlsTracking();
   }
 
   function forceControlsRebuild() {
@@ -187,12 +112,21 @@ export function createMessageSendFlow(ctx) {
   }
 
   function ensureComposeVisualChips(contact = flow.contact) {
+    if (contact === flow.contact && flow.composeVisualChips.length > 0) return flow.composeVisualChips;
     flow.composeVisualChips = buildComposeVisualChips(contact);
     return flow.composeVisualChips;
   }
 
   function syncComposeChipState() {
     flow.showChips = !!flow.composeMenuOpen;
+  }
+
+  function startDotsAnimation() {
+    let frame = 0;
+    timers.dots = setInterval(() => {
+      const dots = document.getElementById("g-thinking-dots");
+      if (dots) dots.textContent = ["·", "· ·", "· · ·"][frame++ % 3];
+    }, 400);
   }
 
   function clearComposeMenuTimers() {
@@ -314,18 +248,12 @@ export function createMessageSendFlow(ctx) {
 
   function applyVoiceMode() {
     const dropMain = document.getElementById("drop-main");
+    if (dropMain) dropMain.style.boxShadow = "";
     if (flow.state === GS.IDLE || flow.state === GS.DISAMBIGUATE || flow.state === GS.CONFIRM) {
       ctx.voice.voiceEngine.start("command");
-      if (flow.state === GS.DISAMBIGUATE) {
-        if (dropMain) dropMain.style.boxShadow = "";
-      } else {
-        if (dropMain) dropMain.style.boxShadow = "";
-      }
     } else if (flow.state === GS.COMPOSE) {
-      if (dropMain) dropMain.style.boxShadow = "";
       ctx.voice.voiceEngine.start("dictation");
     } else {
-      if (dropMain) dropMain.style.boxShadow = "";
       ctx.voice.voiceEngine.stop();
     }
   }
@@ -355,13 +283,7 @@ export function createMessageSendFlow(ctx) {
             const dropMain = document.getElementById("drop-main");
             if (dropMain) dropMain.style.boxShadow = "";
           }
-          if (state === GS.THINKING || state === GS.SENDING) {
-            let frame = 0;
-            timers.dots = setInterval(() => {
-              const dots = document.getElementById("g-thinking-dots");
-              if (dots) dots.textContent = ["·", "· ·", "· · ·"][frame++ % 3];
-            }, 400);
-          }
+          if (state === GS.THINKING || state === GS.SENDING) startDotsAnimation();
         }, 380);
         return;
       }
@@ -380,13 +302,7 @@ export function createMessageSendFlow(ctx) {
       const dropMain = document.getElementById("drop-main");
       if (dropMain) dropMain.style.boxShadow = "";
     }
-    if (state === GS.THINKING || state === GS.SENDING) {
-      let frame = 0;
-      timers.dots = setInterval(() => {
-        const dots = document.getElementById("g-thinking-dots");
-        if (dots) dots.textContent = ["·", "· ·", "· · ·"][frame++ % 3];
-      }, 400);
-    }
+    if (state === GS.THINKING || state === GS.SENDING) startDotsAnimation();
   }
 
   function reset() {

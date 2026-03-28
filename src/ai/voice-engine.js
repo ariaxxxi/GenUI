@@ -57,12 +57,14 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const state = glassUi?.state;
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
+    const actionBtns = document.querySelectorAll('.g-action-btn');
+    const clearActionBtns = () => actionBtns.forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
     if (voiceEngine.mode === 'command') {
       const allowCommandViz = shouldShowCommandViz?.() !== false;
       if (!allowCommandViz) {
         if (glowEl) glowEl.style.boxShadow = '';
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+        clearActionBtns();
         return;
       }
       const flightContainerViz = document.getElementById('stage')?.classList.contains('flight-voice-viz') === true;
@@ -73,18 +75,18 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
       }
       if (state === GS.CONFIRM) {
-        document.querySelectorAll('.g-action-btn').forEach((btn) => {
+        actionBtns.forEach((btn) => {
           btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)';
           btn.style.boxShadow = buttonShadow(level);
         });
       } else {
-        document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+        clearActionBtns();
       }
     }
     if (voiceEngine.mode === 'dictation') {
       if (glowEl) glowEl.style.boxShadow = '';
       if (dropMain) dropMain.style.removeProperty('box-shadow');
-      document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+      clearActionBtns();
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
       const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
@@ -114,27 +116,24 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     voiceEngine.vizRaf = requestAnimationFrame(tick);
   }
 
-  function stopVoiceViz() {
-    if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
+  function resetVizStyles({ clearDropMain = true } = {}) {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
     const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
     if (field) {
       if (field.id !== 'drop-main') field.style.transition = '';
       field.style.removeProperty('box-shadow');
     }
-    if (getGlassUi()?.state !== getGlassState().DISAMBIGUATE) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
+    if (clearDropMain) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
+  function stopVoiceViz() {
+    if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
+    resetVizStyles({ clearDropMain: getGlassUi()?.state !== getGlassState().DISAMBIGUATE });
+  }
+
   function clearVoiceVizStyles() {
-    document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
-    const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
-    if (field) {
-      if (field.id !== 'drop-main') field.style.transition = '';
-      field.style.removeProperty('box-shadow');
-    }
-    document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
-    document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+    resetVizStyles({ clearDropMain: true });
   }
 
   function updateMicIndicator() {
