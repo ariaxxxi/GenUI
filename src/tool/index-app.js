@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride } from '../app-state.js';
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage } from '../app-state.js';
+import { clamp } from '../utils.js';
 import { initMorph } from '../shared/morph.js';
 import { initScenarioData } from '../shared/scenario-data.js';
 import { buildUiRefs, initSidebar } from '../shared/sidebar.js';
@@ -14,19 +15,9 @@ const DROPS = { main: document.getElementById('drop-main'), left: document.getEl
 const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
 const UI = buildUiRefs(document);
 const detailMeasureEl = document.createElement('div');
-
-detailMeasureEl.style.position = 'fixed';
-detailMeasureEl.style.left = '-9999px';
-detailMeasureEl.style.top = '-9999px';
-detailMeasureEl.style.visibility = 'hidden';
-detailMeasureEl.style.pointerEvents = 'none';
-detailMeasureEl.style.whiteSpace = 'normal';
-detailMeasureEl.style.wordBreak = 'break-word';
-detailMeasureEl.style.fontFamily = "'DM Sans', sans-serif";
-detailMeasureEl.style.fontWeight = '300';
+detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";
 document.body.appendChild(detailMeasureEl);
 
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: '' });
 
 let canvasSettings = loadCanvasSettings();
@@ -53,38 +44,10 @@ function loadScenarioLibrary() {
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
 
-function persistScenarios() {
-  try {
-    localStorage.setItem(STORAGE_KEYS.scenarios, JSON.stringify(scenarioLibrary));
-  } catch (err) {
-    console.warn('Unable to persist scenarios', err);
-  }
-}
-
-function persistCanvasSettings() {
-  try {
-    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(canvasSettings));
-  } catch (err) {
-    console.warn('Unable to persist canvas settings', err);
-  }
-}
-
-function persistResponseMode() {
-  if (PAGE_MODE_OVERRIDE) return;
-  try {
-    localStorage.setItem(STORAGE_KEYS.mode, JSON.stringify(responseMode));
-  } catch (err) {
-    console.warn('Unable to persist response mode', err);
-  }
-}
-
-function persistAiStageOverride() {
-  try {
-    localStorage.setItem(STORAGE_KEYS.aiStage, JSON.stringify(aiStageOverride));
-  } catch (err) {
-    console.warn('Unable to persist AI stage override', err);
-  }
-}
+function persistScenarios() { persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, 'scenarios'); }
+function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, 'canvas settings'); }
+function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
+function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
 
 function selectedScenario() {
   return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null;

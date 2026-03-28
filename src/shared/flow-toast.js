@@ -1,3 +1,29 @@
+export function ensureMeasureLayer(id) {
+  let layer = document.getElementById(id);
+  if (layer) return layer;
+  layer = document.createElement("div");
+  layer.id = id;
+  layer.setAttribute("aria-hidden", "true");
+  layer.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;";
+  document.body.appendChild(layer);
+  return layer;
+}
+
+export function positionControlsOverlay(layer, controlsGap = 14) {
+  const stage = document.getElementById("stage");
+  const main = document.getElementById("drop-main");
+  const controls = layer?.querySelector(".g-glass-controls");
+  if (!layer || !stage || !main || !controls) return false;
+  const stageRect = stage.getBoundingClientRect();
+  const mainRect = main.getBoundingClientRect();
+  const controlsRect = controls.getBoundingClientRect();
+  const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
+  const topY = Math.min((mainRect.bottom - stageRect.top) + controlsGap, Math.max(8, stageRect.height - controlsRect.height - 8));
+  controls.style.left = `${Math.round(centerX)}px`;
+  controls.style.top = `${Math.round(topY)}px`;
+  return true;
+}
+
 export function measureSuccessToastGeometry({
   richRoot,
   pillShape,

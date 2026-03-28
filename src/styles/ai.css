@@ -2717,13 +2717,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   box-shadow: none !important;
 }
 #drop-main { z-index: 3; }
-#c-rich.glass-disambiguation {
-  inset: 0;
-  padding: 0;
-  overflow: visible;
-  display: block;
-  pointer-events: auto;
-}
+#c-rich.glass-disambiguation,
 #c-rich.glass-compose {
   inset: 0;
   padding: 0;

@@ -1,4 +1,5 @@
 import { apiUrl } from '../utils.js';
+import { phrase } from './phrases.js';
 
 let audioCtx = null;
 let currentSource = null;
@@ -32,14 +33,7 @@ function shouldMuteTtsForText(text) {
     .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  const normalizedToken = String(text || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '');
   if (!normalized) return true;
-  if (normalizedToken === 'edit_message') return true;
-  if (normalizedToken === 'confirm_message_to') return true;
   if (normalized === 'edit your message') return true;
   if (/^confirm message to\s+[a-z0-9]+\s*$/.test(normalized)) return true;
   return false;
@@ -72,23 +66,28 @@ function loadPersistentCache() {
   }
 }
 
+let _persistCacheTimer = null;
 function persistCache() {
-  try {
-    const entries = Array.from(ttsCache.entries())
-      .map(([key, value]) => ({
-        key,
-        audioBase64: String(value?.audioBase64 || ''),
-        mimeType: value?.mimeType || 'audio/pcm;rate=24000',
-        sampleRate: Number(value?.sampleRate) || 24000,
-        touchedAt: Number(value?.touchedAt) || Date.now(),
-      }))
-      .filter((entry) => entry.key && entry.audioBase64)
-      .sort((a, b) => b.touchedAt - a.touchedAt)
-      .slice(0, TTS_CACHE_MAX_ENTRIES);
-    localStorage.setItem(TTS_CACHE_STORAGE_KEY, JSON.stringify({ entries }));
-  } catch {
-    // best effort cache persistence
-  }
+  if (_persistCacheTimer) return;
+  _persistCacheTimer = setTimeout(() => {
+    _persistCacheTimer = null;
+    try {
+      const entries = Array.from(ttsCache.entries())
+        .map(([key, value]) => ({
+          key,
+          audioBase64: String(value?.audioBase64 || ''),
+          mimeType: value?.mimeType || 'audio/pcm;rate=24000',
+          sampleRate: Number(value?.sampleRate) || 24000,
+          touchedAt: Number(value?.touchedAt) || Date.now(),
+        }))
+        .filter((entry) => entry.key && entry.audioBase64)
+        .sort((a, b) => b.touchedAt - a.touchedAt)
+        .slice(0, TTS_CACHE_MAX_ENTRIES);
+      localStorage.setItem(TTS_CACHE_STORAGE_KEY, JSON.stringify({ entries }));
+    } catch {
+      // best effort cache persistence
+    }
+  }, 3000);
 }
 
 function pruneCache(maxEntries = TTS_CACHE_MAX_ENTRIES) {
@@ -255,40 +254,9 @@ function speakWithBrowserVoice(text) {
   window.speechSynthesis.speak(utterance);
 }
 
-async function speakWithGemini(text, seq) {
-  const key = cacheKey({ text });
-  const cached = getCacheEntry(key);
-  if (cached?.audioBase64) {
-    if (seq !== requestSeq) return;
-    const sampleRate = Number(cached.sampleRate) || 24000;
-    const buffer = pcm16MonoToAudioBuffer(cached.audioBase64, sampleRate);
-    const ctx = ensureAudioContext();
-    if (!buffer || !ctx) throw new Error('Unable to decode cached TTS audio');
-    if (ctx.state === 'suspended') {
-      try { await ctx.resume(); } catch {}
-    }
-    stopCurrentAudio();
-    stopSpeechSynthesis();
-    if (seq !== requestSeq) return;
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.playbackRate.value = playbackRateForText(text);
-    source.connect(ctx.destination);
-    source.start();
-    source.onended = () => {
-      if (currentSource === source) currentSource = null;
-      setTtsSpeaking(false);
-    };
-    currentSource = source;
-    setTtsSpeaking(true, text);
-    return;
-  }
-
-  const fetched = await fetchTtsData(text);
-  if (!fetched?.audioBase64) throw new Error('Unable to fetch TTS audio');
-  if (seq !== requestSeq) return;
-  const sampleRate = Number(fetched.sampleRate) || 24000;
-  const buffer = pcm16MonoToAudioBuffer(fetched.audioBase64, sampleRate);
+async function playAudioEntry(entry, text, seq) {
+  const sampleRate = Number(entry.sampleRate) || 24000;
+  const buffer = pcm16MonoToAudioBuffer(entry.audioBase64, sampleRate);
   const ctx = ensureAudioContext();
   if (!buffer || !ctx) throw new Error('Unable to decode TTS audio');
   if (ctx.state === 'suspended') {
@@ -308,6 +276,19 @@ async function speakWithGemini(text, seq) {
   };
   currentSource = source;
   setTtsSpeaking(true, text);
+}
+
+async function speakWithGemini(text, seq) {
+  const key = cacheKey({ text });
+  const cached = getCacheEntry(key);
+  if (cached?.audioBase64) {
+    if (seq !== requestSeq) return;
+    return playAudioEntry(cached, text, seq);
+  }
+  const fetched = await fetchTtsData(text);
+  if (!fetched?.audioBase64) throw new Error('Unable to fetch TTS audio');
+  if (seq !== requestSeq) return;
+  return playAudioEntry(fetched, text, seq);
 }
 
 async function regenerateOne(text) {
@@ -378,11 +359,7 @@ export function setAiVoiceEnabled(enabled) {
 }
 
 export function prewarmAiSpeechCache() {
-  const phrases = [
-    'I found 2 hiro in your contact list, which one do you mean?',
-    'What would you like to say?',
-  ];
-  phrases.forEach((phrase) => { void prefetchOne(phrase); });
+  [phrase('disambiguate_found_two'), phrase('compose_prompt')].forEach((p) => { void prefetchOne(p); });
 }
 
 export async function refreshAiVoice(text) {

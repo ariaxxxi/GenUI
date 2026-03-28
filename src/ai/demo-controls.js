@@ -1,3 +1,6 @@
+import { clamp } from '../utils.js';
+import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill, selectListItem } from '../shared/list-demo.js';
+
 export function initDemoControls({
   document,
   SHAPES,
@@ -17,51 +20,6 @@ export function initDemoControls({
   startGlassFlow,
 }) {
   const DEMO = { circle: { icon: "", primary: "", secondary: "", detail: "" }, split: { icon: "", primary: "", secondary: "", detail: "" }, ai: { icon: "", primary: "", secondary: "", detail: "" } };
-  const LIST_PILL_H = 120;
-  const LIST_GAP = 12;
-  const LIST_STEP = LIST_PILL_H + LIST_GAP;
-  const DEMO_LIST = [
-    { icon: "🌤", primary: "21°  Sunny", secondary: "San Francisco" },
-    { icon: "✉", primary: "New Message", secondary: "Alice · Want to meet?" },
-    { icon: "⏱", primary: "Timer", secondary: "10 minutes remaining" },
-  ];
-
-  function clearListPills() {
-    const wrap = document.getElementById("list-pills");
-    if (!wrap) return;
-    wrap.innerHTML = "";
-    wrap.style.pointerEvents = "none";
-    wrap.style.opacity = "";
-    wrap.style.transition = "";
-    wrap.dataset.collapsing = "";
-  }
-
-  function collapseListStack(ms = 220) {
-    const wrap = document.getElementById("list-pills");
-    if (!wrap) return;
-    if (!wrap.children.length) return void clearListPills();
-    if (wrap.dataset.collapsing === "1") return;
-    wrap.dataset.collapsing = "1";
-    wrap.style.pointerEvents = "none";
-    wrap.style.transition = `opacity ${ms}ms ease`;
-    wrap.style.opacity = "0";
-    setTimeout(clearListPills, ms + 30);
-  }
-
-  function selectListItem(el) {
-    document.querySelectorAll(".list-pill").forEach((pill) => pill.classList.remove("selected"));
-    el.classList.add("selected");
-  }
-
-  function buildListPill(item, idx, items) {
-    const el = document.createElement("div");
-    el.className = "list-pill";
-    el.style.zIndex = String(Math.max(1, items.length - idx));
-    el.innerHTML = `<div class="list-pill-thumb">${item.icon || "◉"}</div><div class="list-pill-text"><div class="list-pill-primary">${item.primary || ""}</div><div class="list-pill-secondary">${item.secondary || ""}</div></div>`;
-    el.addEventListener("click", () => selectListItem(el));
-    return el;
-  }
-
   function morphToList(items = DEMO_LIST) {
     shell.stopSiriOrb();
     morph.hideRich();
@@ -97,7 +55,6 @@ export function initDemoControls({
   }
 
   function applyCustomShape() {
-    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
     const w = clamp(parseInt(document.getElementById("sp-w")?.value, 10) || 280, 60, 420);
     const h = clamp(parseInt(document.getElementById("sp-h")?.value, 10) || 140, 60, 360);
     const r = clamp(parseInt(document.getElementById("sp-r")?.value, 10) || 0, 0, Math.floor(Math.min(w, h) / 2));

@@ -1,3 +1,5 @@
+import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill } from '../../shared/list-demo.js';
+
 export function initManualDemo({
   document,
   SHAPES,
@@ -36,55 +38,6 @@ export function initManualDemo({
     ai: { icon: '', primary: '', secondary: '', detail: '' },
   };
   const LIST_PILL_W = 420;
-  const LIST_PILL_H = 120;
-  const LIST_GAP = 12;
-  const LIST_STEP = LIST_PILL_H + LIST_GAP;
-  const DEMO_LIST = [
-    { icon: '🌤', primary: '21°  Sunny', secondary: 'San Francisco' },
-    { icon: '✉', primary: 'New Message', secondary: 'Alice · Want to meet?' },
-    { icon: '⏱', primary: 'Timer', secondary: '10 minutes remaining' },
-  ];
-
-  function clearListPills() {
-    const wrap = document.getElementById('list-pills');
-    wrap.innerHTML = '';
-    wrap.style.pointerEvents = 'none';
-    wrap.style.opacity = '';
-    wrap.style.transition = '';
-    wrap.dataset.collapsing = '';
-  }
-
-  function collapseListStack(ms = 220) {
-    const wrap = document.getElementById('list-pills');
-    if (!wrap) return;
-    if (!wrap.children.length) return void clearListPills();
-    if (wrap.dataset.collapsing === '1') return;
-    wrap.dataset.collapsing = '1';
-    wrap.style.pointerEvents = 'none';
-    wrap.style.transition = `opacity ${ms}ms ease`;
-    wrap.style.opacity = '0';
-    setTimeout(() => clearListPills(), ms + 30);
-  }
-
-  function selectListItem(el) {
-    document.querySelectorAll('.list-pill').forEach((p) => p.classList.remove('selected'));
-    el.classList.add('selected');
-  }
-
-  function buildListPill(item, idx, items) {
-    const el = document.createElement('div');
-    el.className = 'list-pill';
-    el.style.zIndex = String(Math.max(1, items.length - idx));
-    el.innerHTML = `
-      <div class="list-pill-thumb">${item.icon || '◉'}</div>
-      <div class="list-pill-text">
-        <div class="list-pill-primary">${item.primary || ''}</div>
-        <div class="list-pill-secondary">${item.secondary || ''}</div>
-      </div>`;
-    el.addEventListener('click', () => selectListItem(el));
-    return el;
-  }
-
   function resetSplitState() {
     clearSplitTimers();
     morphApi.setSplitBridgeTimer(null);

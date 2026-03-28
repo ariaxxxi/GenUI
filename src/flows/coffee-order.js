@@ -1,7 +1,7 @@
 import { createFlowEngine, getPaymentDefaultSources } from "../ai/flow-engine.js";
 import { ORDER_COFFEE_FLOW_DEFINITION } from "./flow-definitions.js";
 import { composeScreen } from "../shared/screen-composer.js";
-import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer, positionControlsOverlay } from "../shared/flow-toast.js";
 
 const DRINKS = ["Latte", "Cappuccino", "Americano"];
 const SIZES = ["Small", "Medium", "Large"];
@@ -24,8 +24,6 @@ function titleCase(text) {
 }
 
 export function createCoffeeOrderFlow(ctx) {
-  // Coffee is the current engine-driven reference flow in this revision.
-  // Message and flight still run on bespoke runtime state machines.
   const engine = createFlowEngine({ definition: ORDER_COFFEE_FLOW_DEFINITION });
   const state = { active: false, thinkingTimer: null, successTimer: null, controlsTrack: null, epoch: 0 };
   const TOP = 10;
@@ -33,8 +31,6 @@ export function createCoffeeOrderFlow(ctx) {
   const MIN_H = 100;
   const MAX_H = 400;
   const CONTROLS_LIFT = 78;
-  const controlsGap = 14;
-  let measureLayer = null;
 
   function clearTimers() {
     if (state.thinkingTimer) clearTimeout(state.thinkingTimer);
@@ -49,23 +45,10 @@ export function createCoffeeOrderFlow(ctx) {
     return epoch === state.epoch && state.active;
   }
 
-  function ensureMeasureLayer() {
-    if (measureLayer) return measureLayer;
-    measureLayer = document.getElementById("coffee-measure-layer");
-    if (measureLayer) return measureLayer;
-    const layer = document.createElement("div");
-    layer.id = "coffee-measure-layer";
-    layer.setAttribute("aria-hidden", "true");
-    layer.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;";
-    document.body.appendChild(layer);
-    measureLayer = layer;
-    return layer;
-  }
-
   function contentHeightPx() {
     const richRoot = ctx.C.rich;
     if (!richRoot) return 120;
-    const layer = ensureMeasureLayer();
+    const layer = ensureMeasureLayer("coffee-measure-layer");
     layer.innerHTML = richRoot.innerHTML;
     const body = layer.querySelector("[data-glass-body]") || layer.firstElementChild;
     const raw = body ? Math.ceil(Math.max(body.getBoundingClientRect().height || 0, body.scrollHeight || 0, body.offsetHeight || 0)) : 0;
@@ -87,30 +70,13 @@ export function createCoffeeOrderFlow(ctx) {
     });
   }
 
-  function positionControlsOverlay() {
-    const layer = ctx.C.glassControlsLayer;
-    const stage = document.getElementById("stage");
-    const main = document.getElementById("drop-main");
-    const controls = layer?.querySelector(".g-glass-controls");
-    if (!layer || !stage || !main || !controls) return false;
-    const stageRect = stage.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const controlsRect = controls.getBoundingClientRect();
-    const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
-    const unclampedTop = (mainRect.bottom - stageRect.top) + controlsGap;
-    const maxTop = Math.max(8, stageRect.height - controlsRect.height - 8);
-    const topY = Math.min(unclampedTop, maxTop);
-    controls.style.left = `${Math.round(centerX)}px`;
-    controls.style.top = `${Math.round(topY)}px`;
-    return true;
-  }
-
   function trackControlsForTransition(ms = 600) {
     if (state.controlsTrack) cancelAnimationFrame(state.controlsTrack);
+    const layer = ctx.C.glassControlsLayer;
     const end = performance.now() + Math.max(200, ms);
     const tick = () => {
-      if (!state.active || !ctx.C.glassControlsLayer?.classList.contains("visible")) return;
-      positionControlsOverlay();
+      if (!state.active || !layer?.classList.contains("visible")) return;
+      positionControlsOverlay(layer);
       if (performance.now() < end) state.controlsTrack = requestAnimationFrame(tick);
       else state.controlsTrack = null;
     };

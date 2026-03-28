@@ -10,7 +10,7 @@ import {
   renderInputField,
   renderTextBubble,
 } from "./ui-primitives.js";
-import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
 
 export function createMessageSendRender({
   document,
@@ -115,10 +115,15 @@ export function createMessageSendRender({
 
     const sample = value || "Speak your message...";
     const lines = sample.split(/\r?\n/).filter(Boolean);
-    const canvas = measureComposeFieldWidth._canvas || (measureComposeFieldWidth._canvas = document.createElement("canvas"));
-    const ctx2d = canvas.getContext("2d");
-    if (!ctx2d) return COMPOSE_FIELD_W;
-    ctx2d.font = "500 24px 'DM Sans'";
+    if (!measureComposeFieldWidth._ctx) {
+      const canvas = document.createElement("canvas");
+      const ctx2d = canvas.getContext("2d");
+      if (!ctx2d) return COMPOSE_FIELD_W;
+      ctx2d.font = "500 24px 'DM Sans'";
+      measureComposeFieldWidth._canvas = canvas;
+      measureComposeFieldWidth._ctx = ctx2d;
+    }
+    const ctx2d = measureComposeFieldWidth._ctx;
     const widestLine = Math.max(
       ...lines.map((line) => Math.ceil(ctx2d.measureText(line).width)),
       0,
@@ -231,14 +236,7 @@ export function createMessageSendRender({
 
   function contentHeightPx() {
     const measure = (node) => node ? Math.ceil(Math.max(node.getBoundingClientRect().height || 0, node.offsetHeight || 0, node.scrollHeight || 0)) : 0;
-    let layer = document.getElementById("glass-measure-layer");
-    if (!layer) {
-      layer = document.createElement("div");
-      layer.id = "glass-measure-layer";
-      layer.setAttribute("aria-hidden", "true");
-      layer.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;";
-      document.body.appendChild(layer);
-    }
+    const layer = ensureMeasureLayer("glass-measure-layer");
     layer.innerHTML = C.rich.innerHTML;
     let raw = measure(layer.querySelector("[data-glass-body]"));
     if (raw <= 0) raw = measure(C.rich.querySelector("[data-glass-body]"));
@@ -253,13 +251,8 @@ export function createMessageSendRender({
     return clampFn(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
   }
 
-  function buildScreenSpec() {
-    const flow = getFlow();
-    if (flow.state === GS.CONFIRM) {
-      return { actions: [], actionSelectedIndex: 0 };
-    }
-    return { actions: [], actionSelectedIndex: 0 };
-  }
+  const EMPTY_SCREEN_SPEC = { actions: [], actionSelectedIndex: 0 };
+  function buildScreenSpec() { return EMPTY_SCREEN_SPEC; }
 
   function buildContent() {
     const flow = getFlow();

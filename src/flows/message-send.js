@@ -2,6 +2,7 @@ import { createMessageSendRender } from "./message-send-render.js";
 import { createMessageSendVoice } from "./message-send-voice.js";
 import { composeScreen } from "../shared/screen-composer.js";
 import { phrase } from "../ai/phrases.js";
+import { positionControlsOverlay } from "../shared/flow-toast.js";
 
 const CONTACTS = [
   { id: 1, name: "Hiro Tanaka", initials: "HT", relation: "Colleague · Design", avatar: "src/assets/avatar1.png", chips: [
@@ -28,11 +29,10 @@ export function createMessageSendFlow(ctx) {
   const COMPOSE_MENU_CLOSE_MS = 260;
   const COMPOSE_MENU_BASE_COUNT = 3;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
-  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
+  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
   const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
-  const controlsGap = 14;
   let flowEpoch = 0;
 
   function isEpochAlive(epoch) {
@@ -60,32 +60,15 @@ export function createMessageSendFlow(ctx) {
     timers.controlsTrack = null;
   }
 
-  function positionControlsOverlay() {
-    const layer = ctx.C.glassControlsLayer;
-    const stage = document.getElementById("stage");
-    const main = document.getElementById("drop-main");
-    const controls = layer?.querySelector(".g-glass-controls");
-    if (!layer || !stage || !main || !controls) return false;
-    const stageRect = stage.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const controlsRect = controls.getBoundingClientRect();
-    const centerX = (mainRect.left + (mainRect.width / 2)) - stageRect.left;
-    const unclampedTop = (mainRect.bottom - stageRect.top) + controlsGap;
-    const maxTop = Math.max(8, stageRect.height - controlsRect.height - 8);
-    const topY = Math.min(unclampedTop, maxTop);
-    controls.style.left = `${Math.round(centerX)}px`;
-    controls.style.top = `${Math.round(topY)}px`;
-    return true;
-  }
-
   function trackControlsForTransition(ms) {
     cancelControlsTracking();
+    const layer = ctx.C.glassControlsLayer;
     const root = getComputedStyle(document.documentElement);
     const fallbackMs = Number.isFinite(ms) ? ms : (parseFloat(root.getPropertyValue("--anim-t")) || 450) + 120;
     const end = performance.now() + Math.max(120, fallbackMs);
     const tick = () => {
-      if (!flow.active || !ctx.C.glassControlsLayer?.classList.contains("visible")) return;
-      positionControlsOverlay();
+      if (!flow.active || !layer?.classList.contains("visible")) return;
+      positionControlsOverlay(layer);
       if (performance.now() < end) timers.controlsTrack = requestAnimationFrame(tick);
       else timers.controlsTrack = null;
     };
@@ -191,16 +174,12 @@ export function createMessageSendFlow(ctx) {
     return flow.composeVisualChips;
   }
 
-  function syncComposeChipState() {
-    flow.showChips = !!flow.composeMenuOpen;
-  }
 
   function startDotsAnimation() {
+    const dots = document.getElementById("g-thinking-dots");
+    if (!dots) return;
     let frame = 0;
-    timers.dots = setInterval(() => {
-      const dots = document.getElementById("g-thinking-dots");
-      if (dots) dots.textContent = ["·", "· ·", "· · ·"][frame++ % 3];
-    }, 400);
+    timers.dots = setInterval(() => { dots.textContent = ["·", "· ·", "· · ·"][frame++ % 3]; }, 400);
   }
 
   function clearComposeMenuTimers() {
@@ -220,7 +199,6 @@ export function createMessageSendFlow(ctx) {
     clearComposeMenuTimers();
     flow.composeMenuHolding = false;
     flow.composeMenuOpen = false;
-    syncComposeChipState();
     if (options.immediate) {
       flow.composeMenuClosing = false;
       flow.composeMenuVisibleCount = 0;
@@ -255,8 +233,7 @@ export function createMessageSendFlow(ctx) {
       timers.composeMenuHold = null;
       if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding) return;
       flow.composeMenuOpen = true;
-      syncComposeChipState();
-      flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
+        flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
       flow.sel = Math.min(flow.sel, Math.max(0, flow.composeMenuVisibleCount - 1));
       render.updateComposeMenuUiOnly?.() || render.render(false);
       timers.composeMenuExpand = setTimeout(() => {
@@ -390,7 +367,6 @@ export function createMessageSendFlow(ctx) {
     flow.contact = null;
     flow.msg = "";
     flow.composeText = "";
-    flow.showChips = false;
     flow.composeMenuOpen = false;
     flow.composeMenuClosing = false;
     flow.composeMenuHolding = false;
@@ -489,7 +465,6 @@ export function createMessageSendFlow(ctx) {
     flow.showCheck = false;
     cancelComposeMenu({ immediate: true });
 
-    // Go directly to confirmation step when chip is selected
     flow.msg = String(flow.composeText || flow.msg || "").trim();
     transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
     ctx.input.blur();
@@ -560,7 +535,7 @@ export function createMessageSendFlow(ctx) {
       selectChipWithAnimation(chip.originalIndex);
       return;
     }
-    if (flow.state === GS.COMPOSE && !flow.showChips && String(flow.composeText || "").trim()) {
+    if (flow.state === GS.COMPOSE && !flow.composeMenuOpen && String(flow.composeText || "").trim()) {
       flow.msg = String(flow.composeText || flow.msg || "").trim();
       transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
       ctx.input.blur();
@@ -675,8 +650,6 @@ export function createMessageSendFlow(ctx) {
           return;
         }
       }
-      flow.showChips = false;
-      syncComposeChipState();
       flow.showCheck = false;
       flow.msg = text.trim();
 
@@ -688,8 +661,6 @@ export function createMessageSendFlow(ctx) {
         }
       }, 2000);
     } else {
-      flow.showChips = false;
-      syncComposeChipState();
       flow.showCheck = false;
       flow.msg = "";
     }
@@ -812,7 +783,6 @@ export function createMessageSendFlow(ctx) {
     flow.msg = "";
     flow.composeText = "";
     flow.interimText = "";
-    flow.showChips = false;
     flow.composeMenuOpen = false;
     flow.composeMenuClosing = false;
     flow.composeMenuHolding = false;

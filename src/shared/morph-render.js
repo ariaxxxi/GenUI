@@ -1,11 +1,11 @@
 import { SHAPES, normalizeTypography, normalizeStageImages } from '../shapes.js';
+import { clamp } from '../utils.js';
 
 export function createMorphRender(ctx) {
   const { DROPS, C, constants, callbacks, state, layout, bridges } = ctx;
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
   function applyGeometry(shape, resolvedGeo, stageId = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;

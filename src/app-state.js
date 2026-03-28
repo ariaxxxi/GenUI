@@ -27,6 +27,10 @@ export const AI_STAGE_OVERRIDE = Object.freeze({
   CARD: 'card',
 });
 
+export function persistToStorage(key, value, label) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { console.warn(`Unable to persist ${label}`, err); }
+}
+
 export function readStoredJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
