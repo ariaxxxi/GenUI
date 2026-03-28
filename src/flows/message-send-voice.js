@@ -47,8 +47,9 @@ export function createMessageSendVoice({ contacts }) {
     if (!lower) return false;
     if (flow.state === flow.GS.CONFIRM) {
       if (/\b(send|yes|confirm)\b/.test(lower)) return { type: "action", index: 0 };
-      if (/\b(edit|change)\b/.test(lower)) return { type: "action", index: 1 };
-      if (/\b(cancel|nevermind|never mind)\b/.test(lower)) return { type: "action", index: 2 };
+      if (/\b(tanaka|horii|hiro)\b/.test(lower) && /\b(change|different|other)\b/.test(lower)) return { type: "change-recipient" };
+      if (/\b(edit|change|rewrite)\b/.test(lower)) return { type: "edit" };
+      if (/\b(cancel|nevermind|never mind)\b/.test(lower)) return { type: "action", index: 1 };
     }
     if (flow.state === flow.GS.COMPOSE && flow.showCheck && /\b(send|yes)\b/.test(lower)) {
       return { type: "action", index: 0 };

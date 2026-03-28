@@ -1,6 +1,6 @@
 import { createMessageSendRender } from "./message-send-render.js";
 import { createMessageSendVoice } from "./message-send-voice.js";
-import { renderActionRow } from "./ui-primitives.js";
+import { composeScreen } from "../shared/screen-composer.js";
 import { phrase } from "../ai/phrases.js";
 
 const CONTACTS = [
@@ -17,6 +17,8 @@ const CONTACTS = [
 ];
 
 export function createMessageSendFlow(ctx) {
+  // Message remains a bespoke runtime flow in this revision.
+  // Coffee is the current engine-driven reference flow.
   const FLOW_START_THINK_MS = 1600;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", showChips: true, showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
@@ -83,36 +85,30 @@ export function createMessageSendFlow(ctx) {
     timers.controlsTrack = requestAnimationFrame(tick);
   }
 
-  function renderControls() {
+  function renderControls(screenSpec = null) {
     const layer = ctx.C.glassControlsLayer;
     if (!layer) return;
+    const nextActions = Array.isArray(screenSpec?.actions) ? screenSpec.actions : [];
+    const nextSelectedIndex = Number.isFinite(screenSpec?.actionSelectedIndex) ? screenSpec.actionSelectedIndex : 0;
+    const nextMode = nextActions.length ? nextActions.map((action) => action.id || "").join("|") : "";
     if (timers.controlsExit) {
-      const pendingMode = flow.active ? (flow.state === GS.COMPOSE ? "compose" : flow.state === GS.CONFIRM ? "confirm" : "") : "";
-      if (pendingMode === "confirm") {
+      if (nextMode) {
         clearTimeout(timers.controlsExit);
         timers.controlsExit = null;
       } else {
         return;
       }
     }
-    if (!flow.active) {
-      layer.innerHTML = "";
-      layer.classList.remove("visible");
-      controlsMode = "";
-      cancelControlsTracking();
-      return;
-    }
-    let mode = "";
-    if (flow.state === GS.CONFIRM) mode = "confirm";
-    if (!mode) {
-      if (controlsMode === "confirm") {
+    if (!flow.active || !nextActions.length) {
+      if (controlsMode) {
         const row = layer.querySelector(".g-action-row");
         if (row && !row.classList.contains("exit")) {
           row.classList.add("exit");
           cancelControlsTracking();
           timers.controlsExit = setTimeout(() => {
             timers.controlsExit = null;
-            renderControls();
+            controlsMode = "";
+            renderControls(screenSpec);
           }, 220);
           return;
         }
@@ -123,7 +119,7 @@ export function createMessageSendFlow(ctx) {
       cancelControlsTracking();
       return;
     }
-    if (controlsMode === "confirm" && mode !== "confirm") {
+    if (controlsMode && controlsMode !== nextMode) {
       const row = layer.querySelector(".g-action-row");
       if (row && !row.classList.contains("exit")) {
         row.classList.add("exit");
@@ -131,23 +127,16 @@ export function createMessageSendFlow(ctx) {
         timers.controlsExit = setTimeout(() => {
           timers.controlsExit = null;
           controlsMode = "";
-          renderControls();
+          renderControls(screenSpec);
         }, 220);
         return;
       }
     }
-    if (controlsMode !== mode) {
-      layer.innerHTML = `<div class="g-glass-controls">${renderActionRow({
-        selectedIndex: flow.sel,
-        actions: [
-          { id: "send", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>` },
-          { id: "edit", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>` },
-          { id: "cancel", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>` },
-        ],
-      })}</div>`;
-      controlsMode = mode;
+    if (controlsMode !== nextMode) {
+      composeControls(nextActions, nextSelectedIndex);
+      controlsMode = nextMode;
     } else {
-      layer.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === flow.sel));
+      layer.querySelectorAll(".g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === nextSelectedIndex));
     }
     layer.classList.add("visible");
     if (!positionControlsOverlay()) {
@@ -155,11 +144,22 @@ export function createMessageSendFlow(ctx) {
       cancelControlsTracking();
       return;
     }
-    if (flow.state === GS.CONFIRM) {
-      trackControlsForTransition();
-    } else {
-      cancelControlsTracking();
-    }
+    trackControlsForTransition();
+  }
+
+  function composeControls(actions, selectedIndex) {
+    const layer = ctx.C.glassControlsLayer;
+    if (!layer) return;
+    layer.innerHTML = "";
+    composeScreen({
+      documentRef: document,
+      richRoot: document.createElement("div"),
+      controlsRoot: layer,
+      spec: {
+        actions,
+        actionSelectedIndex: selectedIndex,
+      },
+    });
   }
 
   function forceControlsRebuild() {
@@ -187,7 +187,7 @@ export function createMessageSendFlow(ctx) {
   function maxSel() {
     if (flow.state === GS.DISAMBIGUATE) return Math.max(0, flow.disambiguateContacts.length - 1);
     if (flow.state === GS.COMPOSE && flow.showChips && !flow.composeText) return Math.max(0, (flow.contact?.chips || []).length - 1);
-    if (flow.state === GS.CONFIRM) return 2;
+    if (flow.state === GS.CONFIRM) return 1;
     return 0;
   }
 
@@ -452,17 +452,26 @@ export function createMessageSendFlow(ctx) {
       }, 900);
       return;
     }
-    if (index === 1) {
-      flow.showChips = false;
-      flow.showCheck = false;
-      flow.composeText = flow.msg || flow.composeText;
-      flow.replaceComposeOnNextDictation = true;
-      transitionTo(GS.COMPOSE, phrase("edit_message"));
-      scheduleComposeIdleReturn(3500);
-      setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
-      return;
-    }
     reset();
+  }
+
+  function reopenComposeFromConfirm() {
+    const epoch = flowEpoch;
+    flow.showChips = false;
+    flow.showCheck = false;
+    flow.composeText = flow.msg || flow.composeText;
+    flow.replaceComposeOnNextDictation = true;
+    flow.dictationInterimActive = false;
+    flow.dictationBaseText = "";
+    transitionTo(GS.COMPOSE, phrase("edit_message"));
+    scheduleComposeIdleReturn(3500);
+    setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
+  }
+
+  function reopenRecipientSelection() {
+    flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
+    flow._pendingMsg = flow.msg || flow.composeText || "";
+    transitionTo(GS.DISAMBIGUATE, phrase("disambiguate_found_two"));
   }
 
   function confirm() {
@@ -497,17 +506,8 @@ export function createMessageSendFlow(ctx) {
   }
 
   function dismiss() {
-    const epoch = flowEpoch;
     if (flow.state === GS.CONFIRM) {
-      flow.showChips = false;
-      flow.showCheck = false;
-      flow.composeText = flow.msg || flow.composeText;
-      flow.replaceComposeOnNextDictation = true;
-      flow.dictationInterimActive = false;
-      flow.dictationBaseText = "";
-      transitionTo(GS.COMPOSE, phrase("edit_message"));
-      scheduleComposeIdleReturn(3500);
-      setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 120);
+      reopenComposeFromConfirm();
       return;
     }
     if (flow.state === GS.COMPOSE || flow.state === GS.DISAMBIGUATE) reset();
@@ -637,6 +637,8 @@ export function createMessageSendFlow(ctx) {
     const voiceAction = voice.parseComposeVoice(value, { ...flow, GS });
     if (voiceAction) {
       if (voiceAction.type === "action") doAction(voiceAction.index);
+      if (voiceAction.type === "edit") reopenComposeFromConfirm();
+      if (voiceAction.type === "change-recipient") reopenRecipientSelection();
       if (voiceAction.type === "select-contact") { flow.sel = voiceAction.index; confirm(); }
       if (voiceAction.type === "select-chip") { flow.sel = voiceAction.index; confirm(); }
       return;
@@ -718,6 +720,8 @@ export function createMessageSendFlow(ctx) {
     if (flow.state === GS.CONFIRM && isFinal && text) {
       const action = voice.parseComposeVoice(text, { ...flow, GS });
       if (action?.type === "action") doAction(action.index);
+      if (action?.type === "edit") reopenComposeFromConfirm();
+      if (action?.type === "change-recipient") reopenRecipientSelection();
     }
   }
 
@@ -767,5 +771,14 @@ export function createMessageSendFlow(ctx) {
     handleInputChange,
     handleInputSubmit,
     onTranscriptUpdate,
+    processRequest(text) {
+      if (!flow.active) {
+        if (!voice.isMessageIntent(text)) return false;
+        start(String(text || "").trim());
+        return true;
+      }
+      void handleInputSubmit(text);
+      return true;
+    },
   };
 }

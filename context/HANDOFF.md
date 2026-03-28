@@ -1,6 +1,401 @@
 # Handoff
 
 ## Task title
+Flight Flow Confirm Interaction Rewrite
+
+## Completion status
+- Partially completed
+
+## Summary
+- Removed the `Passengers` step from the live flight path in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js). The active flow is now:
+  - `destination`
+  - `dates`
+  - `thinking`
+  - `recommendation`
+  - `payment` only when needed
+  - `confirm`
+  - `done`
+- Reworked flight confirm interaction in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js):
+  - collapsed confirm now has tri-state focus:
+    - `0 = ✅`
+    - `1 = ❌`
+    - `2 = container`
+  - `ArrowUp` moves focus from the action row to the container
+  - `ArrowDown` moves from the container back into the action row
+  - `Space` on the container expands the card
+  - `Space` while expanded collapses the card
+  - `ArrowUp` / `ArrowDown` while expanded scroll the internal confirm detail region by `72px`
+- Updated confirm rendering in [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js):
+  - action row is hidden whenever confirm is expanded
+  - expanded confirm uses one outer shell only
+  - confirm shell height is capped to safe space inside the 420×420 stage
+  - overflow is handled by the internal `[data-confirm-scroll]` region, not by page/stage/frame overflow
+  - intent header is repositioned from the expanded confirm shell so it stays above the card with a `12px` gap
+  - confirm focus UI is synced after render and when keyboard focus changes
+- Removed the passengers-specific AI routing in [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js).
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/ui-primitives.js`
+
+## Remaining issues / caveats
+- Live browser validation was not run in `ai.html`, so the following are still unverified:
+  - container focus affordance in collapsed confirm
+  - expanded confirm scroll behavior inside the 420×420 frame
+  - intent-header positioning during expand/collapse motion
+  - no-default-payment re-entry back into collapsed confirm
+- The implementation keeps stage/frame overflow hidden and relies on the internal confirm scroll region, but this still needs visual verification.
+
+## Recommended next step
+1. Run the flight flow manually in `ai.html`.
+2. Verify:
+   - no `Passengers` step appears
+   - `ArrowUp` focuses the confirm container
+   - `Space` expands/collapses the same confirm card
+   - action buttons are hidden in expanded mode
+   - only the internal detail region scrolls
+   - the header stays above the card and does not overlap it
+3. If those pass, the next safe follow-up is cleanup of any residual confirm-only layout constants that are no longer needed.
+
+## Task title
+Flight Confirm Card: Collapsible Rich Confirmation + Step 3 Readiness Validation
+
+## Completion status
+- Partially completed
+
+## Summary
+- Implemented the flight confirm card as a reusable in-place expandable confirmation pattern:
+  - collapsed summary remains the default state
+  - a visible top-right chevron affordance is rendered inside the confirm card
+  - `show details` expands the same card in place
+  - chevron click also toggles the expanded state
+- Upgraded flight recommendation data in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js) so confirm details use actual structured selected-flight data instead of placeholder strings:
+  - airline logo
+  - price
+  - outbound times
+  - inbound times
+- Updated flight confirm rendering in [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js):
+  - collapsed summary shows route, dates + total price, payment
+  - expanded content shows departing section, returning section, total row
+  - confirm enters collapsed by default when returning from recommendation/payment paths
+- Extended the shared info-card primitive in [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) for future rich confirmations:
+  - expandable summary shell
+  - animated detail reveal via `max-height` / `opacity` / `margin-top`
+  - optional chevron affordance
+  - section cards with media/logo support
+- Added confirm voice collapse support in [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js):
+  - `hide details`
+  - `collapse details`
+  - `close details`
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/ui-primitives.js`
+- Code-path verification performed for:
+  - collapsed confirm default on step entry
+  - structured selected-flight data feeding expanded sections
+  - render-side date normalization still applied in date + confirm screens
+
+## Remaining issues / caveats
+- The required live browser validation matrix from `context/task.md` was not completed in this pass.
+- Because the browser validation gate is still open, readiness for Step 3 is not proven.
+- Step 3 verdict: `Not safe to move to Step 3`
+- The blocker is process, not a known syntax/runtime parse failure: the task explicitly requires browser validation for flight, coffee, and message regressions before Step 3 can start.
+
+## Recommended next step
+1. Run the live `ai.html` validation matrix from `context/task.md`.
+2. Verify these flight-specific cases first:
+   - collapsed confirm shows chevron and summary only
+   - `show details` expands in place
+   - expanded confirm reflects the selected flight option for default, cheaper, and nonstop paths
+   - no-default-payment path still returns to collapsed confirm correctly
+3. If those pass along with coffee/message regression, then update the gate to `Safe to move to Step 3`.
+
+## Rich confirmation rule
+Use this pattern when a confirmation has supporting detail but the user decision is still binary and should remain lightweight in the 420×420 glasses frame.
+
+- Collapsed state must contain:
+  - the minimum summary needed to confirm confidently
+  - a visible chevron affordance whenever hidden detail exists
+- Expanded state must contain:
+  - only the supporting detail that increases confidence in the action
+  - the same card shell, expanded in place
+- Interaction rule:
+  - confirm actions stay minimal
+  - detail is revealed inside the same card, never via a separate review screen
+- Never do this:
+  - separate review page
+  - multi-card confirm stack as the default state
+  - scroll-heavy confirmation UI
+  - verbose repetition of already summarized choices
+
+
+# Handoff
+
+## Task title
+Revision Pass: Fix slot reopening, flight confirm accuracy, and payment default fallback
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed explicit slot reopening semantics in [flow-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/flow-engine.js):
+  - `next()` still skips already-filled required slots
+  - `goToSlot()` now reopens the exact requested slot instead of skipping past filled values
+  - added shared payment-default seam via `getPaymentDefaultSources()`
+- Updated coffee flow in [coffee-order.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/coffee-order.js):
+  - confirm-time `change drink` / `change size` now reopen the exact slot
+  - payment selection UI now appears when no default exists
+  - default payment still auto-fills and skips payment UI when available
+- Updated flight flow in [flight-booking.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js), [flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js), and [flight-ai.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-ai.js):
+  - restored a real payment-selection exception path before confirm
+  - added a single source of truth for the chosen flight (`selectedFlightOption`)
+  - confirm summary and detail-on-demand now read from the actual chosen flight, not the default recommendation helper
+  - recommendation refinement updates the visible recommendation correctly
+- Added concise runtime-boundary comments:
+  - coffee is the engine-driven reference flow
+  - message and flight remain bespoke in this revision
+
+## Files changed
+- `src/ai/flow-engine.js`
+- `src/flows/coffee-order.js`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/ai/flow-engine.js`
+  - `node --check src/flows/coffee-order.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send-voice.js`
+  - `node --check src/ai/input-actions.js`
+- Module import sanity check passed:
+  - `node -e "import('./src/ai/flow-engine.js'); import('./src/flows/coffee-order.js'); import('./src/flows/flight-booking.js'); import('./src/flows/flight-render.js'); import('./src/flows/flight-ai.js'); import('./src/flows/message-send.js'); console.log('ok')"`
+
+## Remaining issues / caveats
+- No live browser validation was run for the manual scenarios listed in `context/TASK.md`.
+- `context/TASK.md` referenced `ref/revision-spec.md`, but that file is not present in the repo. The implementation followed `context/TASK.md` directly.
+- Flight still uses a bespoke runtime state machine; this pass only fixed the correctness seams requested by the task.
+
+## Recommended next step
+1. Run the manual validation matrix from `context/TASK.md` in `ai.html`, especially:
+   - coffee with default payment
+   - coffee with no default payment
+   - flight recommendation -> alternative -> confirm
+   - flight no-default payment path
+2. If those pass, the next safe step is migrating flight onto the generic engine without changing the visual primitives.
+
+## Payment default simulation
+- Default available:
+  - ensure `localStorage.getItem('genui.primaryPaymentMethod')` is unset, or set it to a valid payment label such as `Apple Pay ···· 9421`
+- No default available:
+  - set `localStorage.setItem('genui.primaryPaymentMethod', '__none__')`
+- Both coffee and flight now read from the same helper in `src/ai/flow-engine.js`
+
+## Task title
+GlassOS agentic patterns pass
+
+## Completion status
+- Partially completed
+
+## Summary
+- Updated the AI flow engine in `src/ai/flow-engine.js` with the reusable behaviors required by the agentic spec:
+  - slot auto-default resolution via `autoDefault` + `defaultSource`
+  - `confirmTemplate` resolution for summary cards
+  - lightweight voice-edit phrase matching
+- Updated flow definitions in `src/flows/flow-definitions.js`:
+  - message confirm now uses send/cancel only
+  - flight now models recommendation selection and auto-default payment metadata
+  - coffee now models auto-default payment and summary-first confirm metadata
+- Updated message flow to remove the confirm edit button and route edits by voice:
+  - confirm actions reduced to send/cancel
+  - voice phrases can reopen compose or recipient disambiguation
+- Updated flight flow to the agentic pattern:
+  - replaced list-first flight choice with recommendation mode
+  - added alternatives mode with two tradeoff options
+  - collapsed payment + confirm into one summary card
+  - payment defaults to the primary method and can be swapped by voice from confirm
+  - confirm supports detail-on-demand voice behavior
+- Updated coffee flow to follow the same pattern:
+  - payment auto-defaults on start
+  - confirm uses summary card from template with drink, price, and payment
+  - removed the explicit change button
+  - spoken edits can reopen drink/size or swap payment directly
+
+## Files changed
+- `src/ai/flow-engine.js`
+- `src/flows/flow-definitions.js`
+- `src/flows/message-send-voice.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-ai.js`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/coffee-order.js`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/ai/flow-engine.js`
+  - `node --check src/flows/flow-definitions.js`
+  - `node --check src/flows/message-send-voice.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/flight-ai.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/coffee-order.js`
+
+## Remaining issues / caveats
+- This pass was validated by syntax and targeted code inspection only. No live browser pass was run for:
+  - message confirm voice edit/cancel behavior
+  - flight recommendation -> alternatives -> confirm transitions
+  - coffee confirm summary sizing and controls positioning
+- `flight-booking.js` still uses its custom state machine instead of the generic engine. The new engine behaviors are present, but flight is not fully migrated onto them yet.
+- `ref/glass-os-agentic-patterns-spec.md` is user-edited and intentionally left untouched.
+
+## Recommended next step
+1. Run a live parity pass in `ai.html` for message, flight, and coffee flows.
+2. If motion/layout is stable, migrate flight onto the generic flow engine so recommendation/default/edit behavior is owned in one place instead of split across `flight-booking.js` and `flight-ai.js`.
+
+## Task title
+Step 2: Slot-Based Flow Engine
+
+## Completion status
+- Partially completed
+
+## Summary
+- Added generic flow engine foundation in `src/ai/flow-engine.js`.
+- Expanded the engine with:
+  - prefilled-slot auto-advance
+  - change callback support
+  - epoch tracking helpers
+  - slot-derived voice mode helper
+  - status setter
+- Added slot-based flow definition registry in `src/flows/flow-definitions.js` for:
+  - `send_message`
+  - `book_flight`
+  - `order_coffee`
+- Added new engine-driven coffee flow in `src/flows/coffee-order.js`:
+  - drink chip selection
+  - size chip selection
+  - confirm action row
+  - loading and success states via existing primitives/composer
+- Wired coffee flow into AI runtime:
+  - `src/ai/ai-bindings.js`
+  - `src/ai/input-actions.js`
+- Added generic active-flow routing for transcript/input/key handling so coffee flow can coexist with existing message/flight flows.
+- Applied review revisions:
+  - `messageFlow.processRequest(...)` added for interface parity
+  - active message flow now consumes text input before new intent routing
+  - `BOOK_FLIGHT_FLOW_DEFINITION.confirm` corrected to `action_select`
+  - epoch guards added to `flight-booking.js`
+  - coffee flow now uses content-fitted morph sizing and message-style controls overlay positioning instead of free-floating composer output
+
+## Files changed
+- `src/ai/flow-engine.js` (new)
+- `src/flows/flow-definitions.js` (new)
+- `src/flows/coffee-order.js` (new)
+- `src/ai/input-actions.js`
+- `src/ai/ai-bindings.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-booking.js`
+
+## Validation performed
+- Syntax checks passed:
+  - `node --check src/ai/flow-engine.js`
+  - `node --check src/flows/flow-definitions.js`
+  - `node --check src/flows/coffee-order.js`
+  - `node --check src/flows/message-send.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/ai/input-actions.js`
+  - `node --check src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- Message and flight flows are not yet fully migrated onto the new generic engine in this packet.
+- Existing `message-send.js` / `flight-booking.js` adapters still own their current behavior/state machines.
+- Step 2 is therefore only partially complete: engine + definitions + third flow + runtime routing are in place, but the full migration/deletion of legacy message/flight state modules is still pending.
+
+## Recommended next step
+1. Migrate `message-send.js` to the generic engine using `SEND_MESSAGE_FLOW_DEFINITION`.
+2. Migrate `flight-booking.js` to the generic engine using `BOOK_FLIGHT_FLOW_DEFINITION`, keeping `flight-ai.js` as the resolver plugin.
+3. After parity validation, remove obsolete per-flow state-machine code.
+
+## Task title
+Step 1: Screen Composer For AI Page
+
+## Completion status
+- Completed
+
+## Summary
+- Added shared Screen Composer module at `src/shared/screen-composer.js`.
+- Implemented primitive mapping and spec-driven rendering:
+  - `contact_header`
+  - `selection_list`
+  - `chip_bar`
+  - `text_bubble`
+  - `input_field`
+  - `info_card`
+  - `compact_status`
+  - `flight_route_step`
+- Added `renderScreenMarkup(spec)` helper for spec-to-HTML generation and offscreen measurement use.
+- Refactored `src/flows/message-send-render.js`:
+  - replaced inline `buildContent()` assembly with `buildScreenSpec()`
+  - `render()` now composes `#c-rich` through Screen Composer
+  - preserved existing morph sizing logic, root class/dataset/style handling, and sim-input behavior
+- Refactored `src/flows/flight-render.js`:
+  - added `buildScreenSpec(step)`
+  - moved step content rendering to Screen Composer
+  - preserved existing morph shape selection, destination/date visuals via `renderFlightRouteStep`, and dynamic container sizing
+- Kept message controls overlay timing/position behavior in `src/flows/message-send.js`, but changed it to consume action specs emitted by the renderer instead of building action markup inline. This preserves confirm/edit/cancel overlay behavior and supports the compose check action in the external controls layer.
+
+## Files changed
+- `src/shared/screen-composer.js` (new)
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `src/flows/flight-render.js`
+
+## Validation performed
+- Module parse/import validation:
+  - `node -e "import('./src/shared/screen-composer.js'); import('./src/flows/message-send-render.js'); import('./src/flows/message-send.js'); import('./src/flows/flight-render.js'); console.log('ok')"`
+
+## Remaining issues / caveats
+- No interactive browser smoke pass was run in this turn, so visual parity and transition timing still need live validation in `ai.html`.
+- Message controls are spec-driven now, but their exit animation/positioning lifecycle still lives in `message-send.js` by design to avoid motion regressions. This is an intentional compatibility seam for Step 1.
+
+## Recommended next step
+1. Run a manual AI-page parity pass for:
+   - message: disambiguate -> compose -> confirm -> sent
+   - flight: destination -> dates -> passengers -> choose flight -> confirm -> payment -> done
+2. If stable, Step 2 can move the remaining overlay-specific control lifecycle behind the shared composer boundary.
+
+## Task title
 Add stage capture utilities (AI + prototype): Copy PNG + Export SVG
 
 ## Completion status

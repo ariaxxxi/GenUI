@@ -1,511 +1,277 @@
 # Task
 
 ## Title
-Refactor: Extract flows, CSS, and shared modules from `ai.html` and `index.html`
+Flight Confirm Card: Collapsible Rich Confirmation + Step 3 Readiness Validation
 
 ## Status
 Ready for implementation
 
 ## Objective
-Both pages are monolithic files totaling ~15,000 lines. They duplicate CSS, rendering logic, and shape functions. This refactor creates a clean module structure so both pages are thin orchestrators, shared code lives in `src/`, and adding a new flow is one file.
-
-| File | Current lines | Target after refactor |
-|---|---|---|
-| `ai.html` | 9,227 | ≤ 1,200 |
-| `index.html` | 6,165 | ≤ 1,000 |
-
-**Behavior is 100% identical after every step. No new features, no visual changes.**
-
----
-
-## Constraints
-- No framework, no bundler — vanilla JS, ES modules only
-- Files served as-is by `server.mjs` (already handles static files)
-- `src/shapes.js` is the established pattern for shared ES modules
-- `morphTo()` and the core rendering system must not change behavior
-- `index.html` currently uses `<script>` (not module) — conversion to module requires explicit `window.*` exports for any function called from inline `onclick` attributes
-
----
-
-## Final file structure
-
-```
-src/
-  shapes.js                  (unchanged)
-  shapes.legacy.js           (unchanged)
-  morph.js                   (new) — morphTo, morphCore, applyGeometry, applyContent, bridges
-  sim-panel.js               (new) — addSimLog, setSimVoice, setSimInputState (ai.html only)
-  voice-engine.js            (new stub) — Web Speech API wrapper
-  sidebar.js                 (new) — scenario/stage editor logic (index.html only)
-  styles/
-    shared.css               (new) — CSS identical in both pages
-    ai.css                   (new) — ai.html-specific styles (sim panel, frame modes, etc.)
-    editor.css               (new) — index.html-specific styles (sidebar, input area)
-    message-flow.css         (new) — send message flow component styles
-    flight-flow.css          (new) — flight booking component styles
-  flows/
-    message-send.js          (new) — GlassOS send message state machine
-    flight-booking.js        (new) — flight booking state machine
-```
-
-`ai.html` after refactor: HTML + `<link>` tags + `<script type="module">` importing flows + core rendering + flow registry (~1,200 lines)
-
-`index.html` after refactor: HTML + `<link>` tags + `<script type="module">` importing sidebar + core rendering (~1,000 lines)
-
----
-
-## Part A — Shared CSS extraction (both pages)
-
-Both pages have identical CSS section headers. Before extracting JS, get the CSS under control. This is the safest first step — pure copy/paste, no logic changes.
-
-### Step A1 — Identify shared CSS blocks
-
-Diff the CSS sections between the two files. Sections with the same comment header that are **byte-for-byte identical or functionally equivalent** move to `src/styles/shared.css`. Sections that differ stay page-specific.
-
-Likely shared (verify before moving):
-- `/* ── Drop shell ── */` — `.drop`, `#drop-main`, `#drop-left`, `#drop-right`
-- `/* ── Generic content elements ── */` — `#c-primary`, `#c-secondary`, `#c-detail`, `#c-thumb`, `#c-media`, `#c-divider`, `#c-rich`
-- `/* ── Stage ── */` — `#stage`, `#stage-wrap`, `#drop-main` sizing
-- `/* ── Intent header ── */` — `#intent-header`, `#intent-label`, `#intent-step-dot`
-- `/* ── Metaball orb ── */` — `#siri-orb`, `#siri-canvas`
-- `/* ── List pills ── */` — `#list-pills`, `.list-pill`
-- `/* ── Stars ── */`, `/* ── Wordmark ── */`
-- `@keyframes` that exist in both files: `spin`, `pulse`, `float`, `fadeUp`
-- Sidebar + editor styles (`/* ── Sidebar ── */`, tab bars, layer rows) — shared if identical
-
-**Do not merge if the values differ** — keep the page-specific version in the page-specific file and note the divergence.
-
-### Step A2 — `src/styles/shared.css`
-
-Create this file with the verified-identical CSS blocks from Step A1.
-
-### Step A3 — `src/styles/ai.css`
-
-Everything in `ai.html`'s `<style>` block that is NOT in `shared.css`:
-- `#sim-panel`, `#sim-input`, `#sim-dot`, `#sim-voice-out`, `#sim-log`, `#sim-kbd`, `#sim-mic` (all sim panel)
-- `body.mode-ai` layout rules
-- `#home-glow-layer`
-- Any rules that ai.html modified vs the shared version
-
-### Step A4 — `src/styles/editor.css`
-
-Everything in `index.html`'s `<style>` block that is NOT in `shared.css`:
-- `/* ── Input area ── */` — `#input-area`, `#input-wrap`, `#user-input`, etc.
-- Any sidebar rules that differ from ai.html's sidebar
-- Any editor-specific rules
-
-### Step A5 — `src/styles/message-flow.css`
-
-All send message flow component styles from `ai.html`:
-- `.g-*` classes (`.g-contacts`, `.g-contact-row`, `.g-avatar`, `.g-chip`, `.g-chips`, `.g-listen-field`, `.g-compose-card`, `.g-action-row`, `.g-action-btn`, `.g-checkmark`, `.g-pill-content`, `.g-header-row`, `.g-pill-state`)
-- `.compose-input` and pseudo-elements
-- `#glass-controls-layer` and children
-- `@keyframes` specific to message flow
-
-### Step A6 — `src/styles/flight-flow.css`
-
-All flight booking component styles from `ai.html` (if any dedicated CSS exists). Can be empty if flight flow uses only generic component styles.
-
-### Replace `<style>` blocks
-
-**`ai.html`** — replace entire `<style>` block with:
-```html
-<link rel="stylesheet" href="src/styles/shared.css"/>
-<link rel="stylesheet" href="src/styles/ai.css"/>
-<link rel="stylesheet" href="src/styles/message-flow.css"/>
-<link rel="stylesheet" href="src/styles/flight-flow.css"/>
-```
-
-**`index.html`** — replace entire `<style>` block with:
-```html
-<link rel="stylesheet" href="src/styles/shared.css"/>
-<link rel="stylesheet" href="src/styles/editor.css"/>
-```
-
-### Validate Step A
-- Both pages load without visual regression
-- `node test/smoke.mjs` passes
-- Manual check: shapes morph, sidebar renders, send message flow styles intact
-
----
-
-## Part B — Shared JS: morph system + convert index.html to module
-
-### Step B1 — Extract `src/morph.js` (shared morphing system)
-
-Both pages contain `morphTo()` and the full bridge/transition system. This is the highest-value shared extraction. Move to `src/morph.js`.
-
-**Move from both pages to `src/morph.js`:**
-- `morphTo(shape, content, geo, stageId)`
-- `morphCore(geo, durationMs, easingFn)`
-- `applyGeometry(geo, els)`
-- `applyContent(content, els, shape)`
-- `applyContentPositions(shape, w, h)`
-- `resolveGeometryForContent(shape, content, stageId)`
-- `getCardLayoutMetrics(...)`, `getCardSLayoutMetrics(...)`
-- All bridge functions: `bridgeFromSplitToTarget`, `bridgeToSplitViaDot`, `bridgeFromListToTarget`, `bridgeHomeToThinking`, `bridgeThinkingToHome`, `bridgeFromThinkingToTarget`
-- `runMainDeformation()`, `deformationIntensity()`, `shouldUseStrongDeform()`
-- `applyGeometryWithDelay()`, `clearUiFadeTimers()`
-- `applyCardDetailLayout()`, `applyTypographyStyles()`
-- `applyCardMediaLayout()`, `applyOutgoingCardMediaLayout()`
-- `applyThumbVisualMode()`, `isIconOnlyThumb()`
-- `setOpacityWithDelay()`
-- `clearSplitTimers()`, `scheduleSplitTimer()`, `clearSplitAnimationOverlays()`
-- `ensureStageMediaEls()`, `hideAllStageMedia()`
-- Timer/easing helpers: `transitionAnimMs()`, `cardHeightForTransition()`, `cardDurationBonusMs()`, `splitBridgeMs()`, `listBridgeMs()`, `thinkingBridgeMs()`, `getActiveEasing()`
-
-`src/morph.js` imports from `src/shapes.js` (already an ES module). Both pages import from `src/morph.js`.
-
-**Export pattern:**
-```js
-// src/morph.js
-import { SHAPES, configureShapeHelpers } from './shapes.js';
-
-export function morphTo(shape, content, geo, stageId) { ... }
-export function morphCore(geo, durationMs, easingFn) { ... }
-// ... all bridge and geometry functions ...
-```
-
-**Risk:** `morphTo` and bridges reference DOM elements (`els` object, `#drop-main`, etc.) that are defined in the calling page. These must be passed in as parameters or injected via an `init(els)` call. Choose one approach and apply consistently:
-
-**Recommended approach — init injection:**
-```js
-// src/morph.js
-let _els = null;
-export function initMorph(els) { _els = els; }
-// All morph functions use _els instead of accessing DOM directly
-```
-
-Both pages call `initMorph(els)` once after DOM is ready.
-
-### Step B2 — Convert `index.html` to ES module
-
-Change `<script>` to `<script type="module">` and add imports:
-```html
-<script type="module">
-  import { SHAPES, normalizeTypography, defaultTypographyForShape, ... } from './src/shapes.js';
-  import { initMorph, morphTo, ... } from './src/morph.js';
-```
-
-**Remove all functions from `index.html` that are already in `src/shapes.js`:**
-- `normalizeTypography()`, `normalizeTypographyByShape()`, `defaultTypographyForShape()`
-- `normalizeStage()`, `normalizeIcon()`, `normalizeImagesByShape()`
-- `configureShapeHelpers()` and any other exports from `src/shapes.js`
-
-Verify the function signatures match before deleting — if `index.html` has a modified version, note the difference in `context/decisions.md` before merging.
-
-**Critical: inline `onclick` handlers.** Converting to `type="module"` removes functions from global scope. Any function called via `onclick="foo()"` must be explicitly exposed:
-```js
-// At the end of the module, expose all functions used in inline HTML handlers:
-Object.assign(window, {
-  addScenario, deleteScenario, duplicateScenario,
-  addStage, deleteCurrentStage, resetCurrentStageToDefault,
-  fireChip, handleSend, openCustom, applyCustomShape,
-  commitScenarioChange, selectListItem,
-  // ... audit every onclick in index.html HTML and add here
-});
-```
-
-Audit step: grep index.html HTML for `onclick=`, `onchange=`, `oninput=`, `onblur=` — every referenced function must be in the `window.*` block.
-
-### Step B3 — Extract `src/sim-panel.js` (ai.html only)
-
-Move from `ai.html` to `src/sim-panel.js`:
-- `addSimLog(text, type)`
-- `setSimVoice(text)`
-- `setSimInputState({ label, placeholder, hint, dictating })`
-- `updateMicIndicator(voiceEngine)`
-
-```js
-// src/sim-panel.js
-export function addSimLog(text, type = 'system') { ... }
-export function setSimVoice(text) { ... }
-export function setSimInputState(opts) { ... }
-export function updateMicIndicator(voiceEngine) { ... }
-```
-
-### Step B4 — Create `src/voice-engine.js` stub
-
-Stub module — wire-compatible interface for future voice input implementation.
-
-```js
-// src/voice-engine.js
-// Stub — no-op until voice input task is implemented. See context/todos.md.
-export const voiceEngine = {
-  recognition: null, supported: false, active: false, mode: 'off', restartOnEnd: false,
-  start(mode) { this.mode = mode; },
-  stop() { this.mode = 'off'; this.active = false; },
-};
-export function initVoiceEngine() { /* stub */ }
-```
-
-### Validate Part B
-- Both pages load and render correctly
-- `morphTo()` transitions work (smoke test + manual)
-- `index.html` scenario add/edit/delete still works
-- `node test/smoke.mjs` passes
-
----
-
-## Part C — `ai.html` flow extraction
-
-### Flow interface contract
-
-Every flow module exports a default object:
-
-```js
-export default {
-  id: 'message-send',
-  chipLabel: 'Send a message to Hiro',
-
-  start(context) {},   // begin flow; context = FlowContext (see below)
-  reset() {},          // stop flow, clean up timers, restore panel defaults
-  handleKey(e) { return false; },  // return true if key consumed
-  handleInput(text, isFinal) {},   // text input (typed or voice)
-};
-```
-
-**FlowContext** — what `ai.html` passes to every flow:
-```js
-{
-  morphTo,              // from src/morph.js
-  els,                  // DOM ref object
-  setIntentHeader,      // (text) → void
-  hideIntentHeader,     // () → void
-  hideRich,             // () → void
-  addSimLog,            // from src/sim-panel.js
-  setSimVoice,          // from src/sim-panel.js
-  setSimInputState,     // from src/sim-panel.js
-  voice: voiceEngine,   // from src/voice-engine.js
-  simInput,             // #sim-input DOM element
-}
-```
-
-Flows only use `context.*` — never global variables from `ai.html`.
-
-### Step C1 — Extract `src/flows/message-send.js`
-
-Move from `ai.html` into `src/flows/message-send.js`:
-
-**Data (module-private):**
-- `GLASS_CONTACTS` array
-- `GS` enum
-- `glassUi` state object
-- `glassPauseTimer`, `glassDotsTimer`
-- `GLASS_TOP_INSET`, `GLASS_BOTTOM_INSET`, `GLASS_CONTROLS_GAP`
-
-**All functions prefixed or related to glass/send message flow:**
-- `startGlassFlow` → `start(context)`
-- `glassReset` → `reset()`
-- `glassTransitionTo`, `glassRender`, `glassConfirm`, `glassDismiss`, `doGlassAction`
-- `parseGlassVoice`, `handleGlassInputSubmit`, `handleGlassInputChange`
-- `onTranscriptUpdate`, `parseIntent`, `parseDisambiguateVoice`, `speakOutput`
-- `findContacts`, `maxGlassSel`, `addGlassLog`, `clearGlassTimers`, `cancelGlassMeasure`
-- All `buildGlass*` content builder functions
-- `renderGlassControlsOverlay`, `glassContentHeightPx`, `updateGlassSelectionUiOnly`
-
-Global-to-context mapping (all references inside the module must use `_ctx`):
-
-| Current global | `_ctx` equivalent |
-|---|---|
-| `morphTo(...)` | `_ctx.morphTo(...)` |
-| `els.rich` | `_ctx.els.rich` |
-| `els.glowLayer` | `_ctx.els.glowLayer` |
-| `setIntentHeader(t)` | `_ctx.setIntentHeader(t)` |
-| `hideIntentHeader()` | `_ctx.hideIntentHeader()` |
-| `addSimLog(t, type)` | `_ctx.addSimLog(t, type)` |
-| `setSimVoice(t)` | `_ctx.setSimVoice(t)` |
-| `setSimInputState(o)` | `_ctx.setSimInputState(o)` |
-| `input` | `_ctx.simInput` |
-| `voiceEngine` | `_ctx.voice` |
-| `hideRich()` | `_ctx.hideRich()` |
-| `document.getElementById('glass-controls-layer')` | `_ctx.els.glassControlsLayer` |
-
-### Step C2 — Extract `src/flows/flight-booking.js`
-
-Move from `ai.html` into `src/flows/flight-booking.js`:
-
-**Data (module-private):**
-- `FLIGHT_FLOW_STEPS` array
-- `flightUi` state object
-- City/airport lookup tables
-
-**All functions:**
-- `startFlightFlow` → `start(context)`
-- `resetFlightFlowToHome` → `reset()`
-- `flightStep`, `setFlightStep`, `resetFlightData`
-- `renderFlightStep`, `flightNextStep`, `flightBackStep`, `confirmFlightStep`
-- `moveFlightHighlight`, `syncFlightDestinationFromText`
-- `callGeminiFlightAction`, `handleFlightUserInput`, `localFlightFallback`
-- `normalizeCity`, `cityToAirport`
-- All `buildFlight*` / `renderFlight*` content builder functions
-
-### Step C3 — Flow registry in `ai.html`
-
-```js
-import messageSend from './src/flows/message-send.js';
-import flightBooking from './src/flows/flight-booking.js';
-
-const FLOWS = [messageSend, flightBooking];
-let activeFlow = null;
-
-function flowContext() {
-  return { morphTo, els, setIntentHeader, hideIntentHeader, hideRich,
-           addSimLog, setSimVoice, setSimInputState,
-           voice: voiceEngine, simInput: input };
-}
-
-function activateFlow(flow) {
-  if (activeFlow && activeFlow !== flow) activeFlow.reset();
-  activeFlow = flow;
-  flow.start(flowContext());
-}
-```
-
-Replace `handleChipQuickAction` to use registry:
-```js
-function handleChipQuickAction(text) {
-  const t = text.trim().toLowerCase();
-  const flow = FLOWS.find(f => t.includes(f.chipLabel.toLowerCase()));
-  if (flow) { activateFlow(flow); return true; }
-  // weather / timer / call remain inline (no flow module needed)
-  ...
-}
-```
-
-Replace global keydown and `#sim-input` listeners to delegate to `activeFlow`.
-
-### Validate Part C
-- `send msg to hiro` chip → full message flow works
-- `book a flight` chip → full flight flow works
-- Esc resets active flow
-- `node test/smoke.mjs` passes
-
----
-
-## Part D — `index.html` editor extraction
-
-### Step D1 — Extract `src/sidebar.js`
-
-The sidebar is `index.html`'s equivalent of a flow — it is the primary interactive system unique to that page.
-
-Move from `index.html` to `src/sidebar.js`:
-- `renderScenarioList()`, `renderScenarioEditor()`, `renderScenarioUi()`
-- `renderScenarioStageChips()`, `renderScenarioMediaEditor()`
-- `commitScenarioChange()`, `commitStageChange()`
-- `addScenario()`, `duplicateScenario()`, `deleteScenario()`
-- `addStage()`, `deleteCurrentStage()`, `resetCurrentStageToDefault()`
-- `bindTypographyInputs()`, `updateLayerPreviews()`
-- `initSidebarTabs()`, `initLayerRowToggles()`, `initSidebarCollapsibleSections()`
-- `renderAiStageOverrideUi()`, `previewAiStageOverride()`
-- `isSupportedAssetFile()`
-- All `commitPhone*`, `commitStage*` event handlers
-
-```js
-// src/sidebar.js
-// Depends on: src/morph.js (for previewScenario), src/shapes.js
-export function initSidebar(context) { ... }
-// context: { previewScenario, scenarios, stages, persistScenarios, ... }
-```
-
-### Step D2 — What stays in `index.html`
-
-After extraction, `index.html`'s module contains:
-- `loadScenarioLibrary()`, `persistScenarios()` (storage layer)
-- `selectedScenario()`, `previewScenario()`
-- `handleSend()`, `fireChip()`, `handleManualRequest()`
-- `manualShape()`, `openCustom()`, `applyCustomShape()`
-- Canvas settings: `applyCanvasSettings()`, `loadCanvasSettings()`, `persistCanvasSettings()`
-- Orb/intent header: `showAiIdle()`, `startSiriOrb()`, `stopSiriOrb()`, `setIntentHeader()`, `hideIntentHeader()`
-- List pills: `morphToList()`, `buildListPill()`, `clearListPills()`, `selectListItem()`
-- Animation/easing controls: `parseBezierInput()`, `rebuildAnim()`, `setAnimDuration()`
-- Init code and event binding
-
-### Validate Part D
-- `index.html` loads and renders correctly
-- Scenario create/duplicate/delete works
-- Stage add/delete/reset works
-- Typography and style editing works
-- Shape morphs on scenario selection
-- No JS errors in console
-
----
-
-## Implementation order
-
-Do parts in order — each part is independently validatable:
-
-1. **Part A** (CSS) — zero logic risk, validate visually
-2. **Part B** (shared JS + index.html module conversion) — validate both pages
-3. **Part C** (ai.html flows) — validate ai.html flows
-4. **Part D** (index.html sidebar) — validate index.html editor
-
-Do NOT attempt multiple parts at once. Each part ends with a smoke test pass.
-
----
+Do not start Step 3 yet.
+
+This task replaces the prior revision task entirely.
+
+The implementer must complete two things in one pass:
+
+1. finish the current flight confirmation UX so it follows the new collapsible-card pattern
+2. verify the current Step 2/revision foundation is safe before any Step 3 work begins
+
+The core deliverable is a flight confirmation page that:
+
+- is collapsed by default
+- shows a visible expand/collapse affordance
+- expands in place when the user says `show details`
+- preserves the currently selected flight data accurately
+
+Then the implementer must run the required manual validation matrix and state clearly in `context/HANDOFF.md` whether the repo is safe to move to Step 3.
+
+This task must also summarize the confirmation pattern clearly enough that future flows can reuse it without re-deciding the interaction model.
+
+## In scope
+- Fix any remaining flight runtime state issues required for confirm rendering to be correct
+- Implement collapsible confirm-card behavior for flight
+- Add the visible arrow affordance on the confirm card
+- Keep collapsed summary as the default confirm state
+- Expand the same card in place for rich details
+- Ensure expanded details reflect the actual selected flight and payment state
+- Summarize the reusable rich-confirmation pattern so future flows can follow it
+- Run the manual validation matrix for flight, coffee, and message regression
+- Record Step 3 readiness in `context/HANDOFF.md`
+
+## Out of scope
+- Step 3 implementation
+- New intent routing work
+- Gemini classifier changes
+- Full migration of flight to the generic engine
+- Full migration of message to the generic engine
+- Visual redesign of unrelated screens
+- New primitives unless absolutely required for the confirm-card pattern
+- Broad architecture refactors
+
+## Relevant context
+- Flight still uses a bespoke runtime state machine.
+- Coffee is currently the engine-driven reference flow.
+- The user has defined a new universal UX rule:
+  - if a confirmation screen has rich supporting detail, the default state is a collapsed summary card
+  - the same card can expand to show richer detail
+  - the card should visibly communicate that it can expand
+- The previous pass fixed most of the Step 2 issues, but readiness for Step 3 is still gated by real browser validation.
+- Glasses mode is constrained to a 420×420 visual frame. The confirm experience must stay minimal and in-place. No separate review page should be introduced.
 
 ## Files to inspect
-
-**ai.html:**
-- Lines 8–2142 — CSS to split (Part A)
-- Lines 2619–9225 — JS module to split (Parts B, C)
-- Lines ~5542–5555 — `GS`, `glassUi`, `GLASS_CONTACTS`
-- Lines ~4993–5010 — `flightUi`, `FLIGHT_FLOW_STEPS`
-- Lines ~7725–7756 — `#sim-input` event listeners
-- Lines ~6222–6281 — `handleChipQuickAction`
-- Lines ~6296–6351 — global `keydown` listener
-
-**index.html:**
-- Lines 8–1311 — CSS to split (Part A)
-- Lines 1700–6163 — `<script>` block to convert (Parts B, D)
-- All `onclick=`, `onchange=`, `oninput=`, `onblur=` attributes in HTML — audit for `window.*` exposure
-
-**Both:**
-- `src/shapes.js` — reference for module pattern; functions here must not be duplicated in either page
+- `AGENTS.md`
+- `context/ARCHITECTURE.md`
+- `context/DECISIONS.md`
+- `context/HANDOFF.md`
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/coffee-order.js`
+- `src/flows/message-send.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai.css`
 
 ## Files allowed to change
-- `ai.html`
-- `index.html`
-- `src/` (new files created here)
-- `context/architecture.md` (update after completion)
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
 
-## Files must not change
-- `server.mjs`
-- `test/smoke.mjs`
-- `src/shapes.js`
-- `src/shapes.legacy.js`
+Only change other files if they are strictly required to complete this task safely, and explain why in `context/HANDOFF.md`.
 
----
+## Implementation steps
+1. Verify and fix the current flight state source if needed.
+   - Inspect how flight confirm render and flight AI read runtime state.
+   - Ensure confirm render, detail expansion, and voice handling all read current state, not stale aliased state.
+   - If there is still a stale-state bug between `flow.data` and exposed runtime accessors, fix it before implementing the UI behavior.
+
+2. Implement the collapsible confirm-card pattern for flight.
+   - Keep the current summary-first confirm content as the collapsed default.
+   - Add a top-right chevron/arrow affordance inside the card.
+   - Expanded detail must open inside the same card, not on a new screen.
+   - `show details` must expand the card.
+   - If a collapse voice command is easy to support, it may be added, but expansion is the required behavior.
+
+3. Keep the confirm interaction model minimal.
+   - Confirm action row remains `✅` and `❌`.
+   - Do not add a new action-row button for details in this pass unless strictly necessary.
+   - Default highlight on entering confirm remains `✅`.
+
+4. Implement the expanded rich detail layout.
+   - When expanded, the flight confirm card must show:
+     - departing flight section
+     - returning flight section
+     - total price row
+   - These details must reflect the actual selected flight option and the actual trip dates/payment state.
+   - Do not show generic placeholder detail that can drift from the selected option.
+
+5. Treat this as the reusable rule for future rich confirmations.
+   - Implement flight in a way that clearly establishes the pattern for future flows like order confirmations and bookings.
+   - Document the rule in `context/HANDOFF.md` as a reusable product rule, not as a flight-only hack.
+   - Include a short summary section that states:
+     - when to use this pattern
+     - what collapsed state must contain
+     - what expanded state must contain
+     - what interaction affordance must always be present
+     - what should never happen (for example: separate review screen, scroll-heavy confirm UI, multi-card confirm stack)
+
+6. Run the manual validation matrix in the browser.
+   - Use the actual `ai.html` flow.
+   - Do not rely on syntax checks alone.
+   - Record pass/fail for each item in `context/HANDOFF.md`.
+
+7. State Step 3 readiness explicitly in `context/HANDOFF.md`.
+   - If everything required passes: write `Safe to move to Step 3`
+   - If anything fails: write `Not safe to move to Step 3` and list the blocker(s)
 
 ## Acceptance criteria
+- Flight confirm is a collapsible card.
+- Flight confirm is collapsed by default.
+- Flight confirm shows a visible top-right expand/collapse affordance.
+- Saying `show details` expands the same card instead of navigating to a different screen.
+- Expanded confirm shows:
+  - departing flight detail block
+  - returning flight detail block
+  - total price row
+- Expanded details reflect the actual selected flight and current trip state.
+- Collapsed summary still shows:
+  - route
+  - dates + total price
+  - payment method
+- Confirm action row remains `✅` and `❌`.
+- Coffee flow still passes regression checks.
+- Message send flow still passes regression checks.
+- `context/HANDOFF.md` states clearly whether Step 3 is safe or blocked.
+- `context/HANDOFF.md` includes a short reusable summary of the rich-confirmation pattern for future flows.
 
-- [ ] `ai.html` is ≤ 1,200 lines
-- [ ] `index.html` is ≤ 1,000 lines
-- [ ] No CSS `<style>` blocks in either page — only `<link>` tags
-- [ ] `src/styles/shared.css` exists; no CSS duplicated between `ai.css` and `editor.css`
-- [ ] `src/morph.js` exists; `morphTo()` not defined in either HTML file
-- [ ] `src/flows/message-send.js` exists; no glass/send message functions in `ai.html`
-- [ ] `src/flows/flight-booking.js` exists; no flight functions in `ai.html`
-- [ ] `src/sidebar.js` exists; no scenario editor render functions in `index.html`
-- [ ] `src/sim-panel.js` exported and imported correctly in `ai.html`
-- [ ] `src/voice-engine.js` stub exists with correct interface
-- [ ] Flow modules use only `_ctx.*` — no direct global access
-- [ ] `index.html` uses `<script type="module">` with `window.*` exports for all inline handlers
-- [ ] Adding a new flow to `ai.html` requires: one new file in `src/flows/`, one line in `FLOWS` array
-- [ ] `index.html` full editor works: create/duplicate/delete scenario, edit stage, typography
-- [ ] `ai.html` full flight flow works end-to-end
-- [ ] `ai.html` full send message flow works end-to-end
-- [ ] `node test/smoke.mjs` passes
-- [ ] `context/architecture.md` updated to reflect new module structure
+## Validation checklist
+- Manual test: flight flow using default recommendation
+- Manual test: flight flow selecting cheaper alternative
+- Manual test: flight flow selecting nonstop alternative
+- Manual test: flight `show details`
+- Manual test: flight collapsed confirm loads with visible expand arrow
+- Manual test: flight expanded confirm stays in the same card/screen
+- Manual test: flight flow with no default payment available
+- Manual test: coffee flow with default payment available
+- Manual test: coffee flow with no default payment available
+- Manual test: coffee confirm voice edit for drink
+- Manual test: coffee confirm voice edit for size
+- Manual test: message send regression
 
----
+For payment-default simulation, use the existing localStorage seam documented in `context/HANDOFF.md`.
 
 ## Risks / notes
+- This task is intentionally a gate. Do not begin Step 3 work during this pass.
+- Do not convert the flight flow into a separate review screen.
+- Do not introduce scrolling long-form review UI for the glasses confirm experience.
+- Keep the change narrow: implement the collapsible detail pattern within the existing confirm experience.
+- If browser validation exposes additional bugs, do not silently broaden scope. Document them clearly in `context/HANDOFF.md`.
 
-- **CSS diff before merge** — do not assume shared CSS sections are identical. Open both files side by side and diff each section. If values differ by even one property, keep them separate.
-- **`index.html` inline handlers** — this is the highest-risk step. Missing one `window.*` export will silently break a UI interaction. Grep for every `onclick`, `onchange`, `oninput`, `onblur` before and after conversion.
-- **`morphTo` DOM dependency** — the morph system reads `els` (the DOM ref object). Use the `initMorph(els)` injection pattern so `src/morph.js` doesn't import from the page. Both pages call `initMorph(els)` once after DOM is ready.
-- **`src/shapes.legacy.js`** — not affected. It is the `file://` fallback for index.html before module conversion. After index.html is converted to a module, `file://` loading will no longer work anyway (ES modules require HTTP). Document this in `decisions.md`.
-- **Voice task ordering** — voice input implementation (in `context/todos.md`) must run AFTER this refactor. The voice engine should land in `src/voice-engine.js` (stub created in Step B4) and `onTranscriptUpdate` in `src/flows/message-send.js`. Do not implement voice into the current monolithic file.
-- **`flightUi.active` / `glassUi.active` references** — after extraction, `ai.html` cannot read these directly. The `activeFlow` variable replaces both: `activeFlow?.id === 'flight-booking'` instead of `flightUi.active`. Audit before deleting originals.
-- **`resetFlightFlowToHome()` called from glass flow** — `activateFlow(messageSend)` handles this automatically via `activeFlow.reset()` on the previous flow. No explicit cross-flow call needed.
+## Open questions
+- None. Complete the implementation and report readiness status in `context/HANDOFF.md`.
+
+## Rich Confirmation Rule
+This task establishes the reusable confirmation rule for future rich confirmations.
+
+### Default state
+- One confirmation card
+- Collapsed summary by default
+- Visible top-right chevron/arrow affordance whenever rich detail exists
+- This summary format is the default for future rich confirmations such as flights, food orders, shopping orders, reservations, and bookings
+
+### Expanded state
+- The same card expands internally
+- Rich detail appears below the summary content
+- No screen replacement
+- No separate review page
+
+### Pattern summary for future flows
+Use this pattern whenever a confirmation involves rich supporting detail but the user should make a simple yes/no decision.
+
+Future flows should follow this summary:
+
+- Start collapsed
+- Show one summary card only
+- Include a visible expand/collapse affordance
+- Keep confirm actions minimal
+- Expand within the same card when the user asks for details
+- Show only the detail that supports confidence in the action
+
+Future flows should not:
+
+- open a separate review screen
+- stack multiple review cards by default
+- require scrolling to confirm
+- repeat every prior choice in verbose form when the summary already covers the decision
+
+### Flight expanded layout
+Use this structure inside the expanded card:
+
+```text
+[summary header row .................................. chevron]
+SFO → JFK
+Feb 21–26 · $395
+Apple Pay ···· 9421
+
+[detail section 1]
+Departing flight · Feb 21
+7:10 AM - 10:30 AM
+SFO - JFK
+
+[detail section 2]
+Returning flight · Feb 26
+2:10 PM - 11:30 PM
+JFK - SFO
+
+[total row]
+Total                                         $395
+```
+
+### Visual spec
+- Card container:
+  - reuse the existing glass confirm card shell
+  - no new outer screen wrapper
+- Chevron affordance:
+  - position: top-right inside the card
+  - color: `rgba(255,255,255,0.72)`
+  - collapsed state: points toward expand direction
+  - expanded state: rotates upward
+- Summary text:
+  - primary text: `rgba(255,255,255,0.96)`
+  - secondary text: `rgba(255,255,255,0.72)`
+- Expanded section labels:
+  - `rgba(255,255,255,0.6)`
+- Expanded route/meta text:
+  - `rgba(255,255,255,0.56)`
+- Total row:
+  - label: `rgba(255,255,255,0.72)`
+  - value: preserve current positive/price emphasis if already present; otherwise `rgba(80,255,180,1)`
+
+### Animation spec
+- Expand/collapse happens in place within the same card.
+- Do not use `display: none` for the animated reveal.
+- Animate using:
+  - `max-height`
+  - `opacity`
+  - `margin-top`
+- Duration: `240ms`
+- Easing: `ease`
+- Collapsed detail state:
+  - `max-height: 0`
+  - `opacity: 0`
+  - `margin-top: 0`
+- Expanded detail state:
+  - `max-height`: large enough for full detail content
+  - `opacity: 1`
+  - `margin-top: 16px`
+
+### Interaction rule
+- On entering confirm: collapsed card, `✅` highlighted by default
+- Voice:
+  - `show details` expands the card
+  - optional: `hide details` collapses
+- Keyboard:
+  - keep existing confirm navigation behavior
+  - do not add a required new key path for details in this task unless strictly necessary

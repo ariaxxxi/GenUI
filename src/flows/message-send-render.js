@@ -1,12 +1,5 @@
-import {
-  renderActionRow,
-  renderChipBar,
-  renderCompactStatus,
-  renderContactHeader,
-  renderInputField,
-  renderSelectionList,
-  renderTextBubble,
-} from "./ui-primitives.js";
+import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
 
 export function createMessageSendRender({
   document,
@@ -62,18 +55,12 @@ export function createMessageSendRender({
   }
 
   function sentGeo() {
-    const base = SHAPES.pill || SHAPES.card;
-    const textEl = C.rich.querySelector("[data-glass-sent]");
-    let w = 200;
-    let h = 52;
-    if (textEl) {
-      const rect = textEl.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        w = clampFn(Math.round(rect.width + 48), 140, 360);
-        h = clampFn(Math.round(rect.height + 32), 52, 140);
-      }
-    }
-    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) - 18 } };
+    return measureSuccessToastGeometry({
+      richRoot: C.rich,
+      pillShape: SHAPES.pill || SHAPES.card,
+      fallbackLabel: "Message sent",
+      clamp: clampFn,
+    });
   }
 
   function cancelMeasure() {
@@ -110,32 +97,105 @@ export function createMessageSendRender({
     return clampFn(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
   }
 
-  function buildContent() {
+  function buildScreenSpec() {
     const flow = getFlow();
-    if (flow.state === GS.IDLE) return "";
-    if (flow.state === GS.THINKING || flow.state === GS.SENDING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
+    if (flow.state === GS.IDLE) return { layout: [] };
+    if (flow.state === GS.THINKING || flow.state === GS.SENDING) {
+      return {
+        layout: ["compact_status"],
+        props: {
+          compact_status: { type: "loading", label: "·", dotsId: "g-thinking-dots" },
+        },
+      };
+    }
     if (flow.state === GS.DISAMBIGUATE) {
-      return `<div data-glass-body>${renderSelectionList({ selectedIndex: flow.sel, items: flow.disambiguateContacts.map((contact) => ({ title: contact.name, initials: contact.initials, avatar: contact.avatar })) })}</div>`;
+      return {
+        intentHeader: "Which Hiro?",
+        layout: ["selection_list"],
+        wrapBody: true,
+        props: {
+          selection_list: {
+            selectedIndex: flow.sel,
+            items: flow.disambiguateContacts.map((contact) => ({
+              title: contact.name,
+              initials: contact.initials,
+              avatar: contact.avatar,
+            })),
+          },
+        },
+        actions: [],
+      };
     }
     if (flow.state === GS.COMPOSE) {
       const contact = flow.contact;
       const hasText = !!String(flow.composeText || "").trim();
-      const chipsHtml = renderChipBar({
-        chips: (contact?.chips || []).map((chip, idx) => ({ id: String(idx), label: chip.label })),
-        selectedIndex: flow.sel,
-        navigable: true,
-        collapsed: !(flow.showChips && !hasText),
-      });
-      const inputHtml = renderInputField({ text: flow.composeText, placeholder: "Listening...", hasText });
-      const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
-      return `<div data-glass-body><div class="g-compose-card">${renderContactHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "" })}${chipsHtml}${inputHtml}${maybeCheckRow}</div></div>`;
+      const layout = ["contact_header"];
+      if (flow.showChips && !hasText) layout.push("chip_bar");
+      layout.push("input_field");
+      return {
+        layout,
+        wrapBody: true,
+        bodyClass: "g-compose-card",
+        props: {
+          contact_header: {
+            avatar: contact?.avatar,
+            initials: contact?.initials,
+            name: contact?.name || "",
+          },
+          chip_bar: {
+            chips: (contact?.chips || []).map((chip, idx) => ({ id: String(idx), label: chip.label })),
+            selectedIndex: flow.sel,
+            navigable: true,
+            collapsed: false,
+          },
+          input_field: {
+            text: flow.composeText,
+            placeholder: "Listening...",
+            hasText,
+          },
+        },
+        actions: flow.showCheck ? [{ id: "confirm", emoji: "✅" }] : [],
+        actionSelectedIndex: 0,
+      };
     }
     if (flow.state === GS.CONFIRM) {
       const contact = flow.contact;
-      return `<div data-glass-body><div class="g-compose-card">${renderContactHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "" })}${renderTextBubble({ text: flow.msg || "", mode: "static", hasText: !!String(flow.msg || "").trim() })}</div></div>`;
+      return {
+        layout: ["contact_header", "text_bubble"],
+        wrapBody: true,
+        bodyClass: "g-compose-card",
+        props: {
+          contact_header: {
+            avatar: contact?.avatar,
+            initials: contact?.initials,
+            name: contact?.name || "",
+          },
+          text_bubble: {
+            text: flow.msg || "",
+            mode: "static",
+            hasText: !!String(flow.msg || "").trim(),
+          },
+        },
+        actions: [
+          { id: "send", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>` },
+          { id: "cancel", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>` },
+        ],
+        actionSelectedIndex: flow.sel,
+      };
     }
-    if (flow.state === GS.SENT) return renderCompactStatus({ type: "success", label: "Message sent" });
-    return "";
+    if (flow.state === GS.SENT) {
+      return {
+        layout: ["compact_status"],
+        props: {
+          compact_status: { type: "success", label: "Message sent" },
+        },
+      };
+    }
+    return { layout: [] };
+  }
+
+  function buildContent() {
+    return renderScreenMarkup(buildScreenSpec());
   }
 
   function render(shouldMorph = true) {
@@ -144,7 +204,16 @@ export function createMessageSendRender({
     const token = renderToken;
     const shape = glassStateShape(flow.state);
     document.body.classList.toggle("glass-flow-active", flow.active);
-    C.rich.innerHTML = buildContent();
+    const screenSpec = buildScreenSpec();
+    composeScreen({
+      documentRef: document,
+      richRoot: C.rich,
+      setIntentHeader,
+      hideIntentHeader,
+      positionIntentHeaderAboveMain,
+      trackIntentHeaderForTransition,
+      spec: screenSpec,
+    });
     const enteringCompose = flow.state === GS.COMPOSE && prevState !== GS.COMPOSE && !manualComposeEntry;
     prevState = flow.state;
     if (enteringCompose) {
@@ -161,7 +230,7 @@ export function createMessageSendRender({
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
     C.rich.style.opacity = flow.active ? "1" : "";
     C.rich.style.transform = (flow.active && flow.state === GS.SENT) ? "translateY(-18px)" : "";
-    renderControls();
+    renderControls(screenSpec);
     cancelMeasure();
     cancelSettle();
 
@@ -173,7 +242,7 @@ export function createMessageSendRender({
         if (force || Math.abs(geo.main.h - (Number(currentGeo.h) || 0)) > 1 || Math.abs(geo.main.ty - (Number(currentGeo.ty) || 0)) > 1) {
           morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
         }
-        renderControls();
+        renderControls(screenSpec);
         positionIntentHeaderAboveMain();
       };
       apply(shouldMorph);
@@ -204,30 +273,16 @@ export function createMessageSendRender({
       } else if (shouldMorph) {
         morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
       }
-      renderControls();
+      renderControls(screenSpec);
     } else if (shouldMorph) {
       morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
-      renderControls();
+      renderControls(screenSpec);
     }
 
-    C.prim.style.opacity = flow.active ? "0" : "";
-    C.sec.style.opacity = flow.active ? "0" : "";
-    C.det.style.opacity = flow.active ? "0" : "";
-    C.div.style.opacity = flow.active ? "0" : "";
-    C.div.style.display = (flow.active && flow.state === GS.SENT) ? "none" : "";
+    applyFlowChromeVisibility({ C, active: flow.active, richSent: flow.state === GS.SENT });
     const glow = document.getElementById("home-glow-layer");
     if (glow) glow.style.opacity = "";
     updateOrbLabel();
-
-    if (flow.active && flow.state === GS.DISAMBIGUATE) {
-      setIntentHeader("Which Hiro?", null);
-      const hdr = document.getElementById("intent-header");
-      if (hdr) hdr.classList.add("glass-intent");
-      positionIntentHeaderAboveMain();
-      trackIntentHeaderForTransition();
-    } else {
-      hideIntentHeader();
-    }
 
     if (!flow.active || flow.state === GS.IDLE) {
       setSimInputState({ label: "Voice Command", placeholder: "Send a message to Hiro…", hint: "", dictating: false });
@@ -248,6 +303,7 @@ export function createMessageSendRender({
     dynamicGeo,
     sentGeo,
     contentHeightPx,
+    buildScreenSpec,
     buildContent,
     render,
     setManualComposeEntry(flag) {
@@ -270,7 +326,7 @@ export function createMessageSendRender({
         return chips.length > 0;
       }
       if (flow.state === GS.CONFIRM) {
-        renderControls();
+        renderControls(buildScreenSpec());
         return true;
       }
       return false;
