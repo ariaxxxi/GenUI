@@ -1,6 +1,38 @@
 # Handoff
 
 ## Task title
+Message Confirm Action Row Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the three-button confirm action row from the message flow confirm screen.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so `GS.CONFIRM` emits no control actions to the external controls layer.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so confirm no longer advertises a `0..2` keyboard selection range after the buttons were removed.
+- Voice-driven confirm behavior remains unchanged:
+  - `send`
+  - `edit`
+  - `cancel`
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after removing the confirm controls row.
+
+## Recommended next step
+1. Open the message flow confirm screen.
+2. Verify the three-button row is gone.
+3. Verify voice commands still handle `send`, `edit`, and `cancel`.
+
+## Task title
 Flight Confirm Container Focus Parity
 
 ## Completion status

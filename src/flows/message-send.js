@@ -317,7 +317,6 @@ export function createMessageSendFlow(ctx) {
   function maxSel() {
     if (flow.state === GS.DISAMBIGUATE) return Math.max(0, flow.disambiguateContacts.length - 1);
     if (flow.state === GS.COMPOSE && flow.composeMenuOpen) return Math.max(0, getComposeMenuVisibleCount() - 1);
-    if (flow.state === GS.CONFIRM) return 2;
     return 0;
   }
 
