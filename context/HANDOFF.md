@@ -1,6 +1,89 @@
 # Handoff
 
 ## Task title
+Compose Entry Animation Visibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Found the actual reason the compose contact header and `"Speak your message..."` placeholder still appeared abruptly after the prior timing changes.
+- Root cause: during disambiguation -> compose, the renderer was still forcing the entire compose overlay (`#c-rich`) to `opacity: 0`, which hid the child header/placeholder animations until the parent snapped visible.
+- Fixed in `src/flows/message-send-render.js` by removing that parent-level opacity gate for the disambiguation -> compose entry path.
+- Result: the header and placeholder now rely on their own CSS entry animations instead of being masked by the parent container.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this render-path fix.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path again.
+2. Verify the contact header now fades/floats in visibly over `300ms`.
+3. Verify `"Speak your message..."` now starts fading in before the compose shell fully settles.
+
+## Task title
+Compose Entry Header + Placeholder Timing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the disambiguation -> compose entry so the contact header now fades in and floats up from below over `300ms`.
+- Moved the compose overlay content reveal earlier on that same transition so entry content is no longer hidden for the full shell morph.
+- Updated the `"Speak your message..."` placeholder entry to start before the container reaches its final shape:
+  - delay `180ms`
+  - duration `300ms`
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this entry-timing adjustment.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path and verify the compose header now rises/fades in over `300ms`.
+2. Verify the placeholder begins appearing before the compose shell fully settles, rather than after the full morph completes.
+
+## Task title
+Send Message Flow Timing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the disambiguation -> compose handoff to `600ms` across the message-send flow so the compose surface waits on the longer transition instead of snapping in after the old short delay.
+- Updated the disambiguation pill exit animation to `600ms` to match that handoff timing.
+- Set compose chip appear and disappear motion to `1000ms` in both directions, including the stack container fade timing, so the chip open/close reads as one consistent duration.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after these timing adjustments.
+
+## Recommended next step
+1. Trigger the send-message flow, go through the Hiro disambiguation path, and verify the compose step now lands after a `600ms` handoff.
+2. Hold and release `L` in compose and verify chip open and close both read as `1000ms` motion.
+
+## Task title
 Compose Header Transition Root-Cause Fix
 
 ## Completion status
@@ -2268,3 +2351,30 @@ Flight full primitive migration + message-style list unification
    - list rows now match message-style selection visuals
    - destination/date/confirm/done screens render correctly with primitive cards
    - keyboard focus and selection transitions remain stable.
+# Handoff
+
+## Task title
+Message Compose Timing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the disambiguation -> compose transition timing so the compose content reveal now waits `600ms`.
+- Updated compose chip open and close animation durations from `800ms` to `1000ms`.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Verified `compose-chip-in 1000ms` and `compose-chip-out 1000ms` are present in `src/styles/ai.css`
+
+## Remaining issues / caveats
+- No live browser verification was run after changing these timings.
+
+## Recommended next step
+1. Verify disambiguation -> compose now visually resolves over `600ms`.
+2. Verify both chip appear and dismiss motions now run for `1000ms`.

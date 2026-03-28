@@ -235,6 +235,38 @@ export function createMessageSendRender({
 
   function buildContent() {
     const flow = getFlow();
+    const buildComposeStage = () => {
+      const contact = flow.contact;
+      const hasText = !!String(flow.composeText || "").trim();
+      const chipsHtml = renderComposeChipStack({
+        chips: (flow.composeVisualChips || []).map((chip, idx) => ({ id: String(chip.originalIndex ?? idx), label: chip.label })),
+        selectedIndex: flow.sel,
+        open: !!flow.composeMenuOpen,
+        closing: !!flow.composeMenuClosing,
+        visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
+      });
+      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText });
+      const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
+      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
+    };
+    const buildOutgoingDisambiguationStage = () => {
+      const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
+      return renderDisambiguationPills({
+        phase: "settled",
+        selectedIndex: flow.sel,
+        items: layout.items.map((contact) => ({
+          avatar: contact.avatar,
+          initials: contact.initials,
+          name: contact.name,
+          x: contact.x,
+          y: contact.y,
+          rotStart: contact.rotStart,
+          delay: contact.delay,
+        })),
+        rowDataAttr: "data-g-contact",
+        clusterClass: "g-disambiguation-pills exiting-to-compose",
+      });
+    };
     if (flow.state === GS.IDLE) return "";
     if (flow.state === GS.THINKING || flow.state === GS.SENDING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
     if (flow.state === GS.DISAMBIGUATE) {
@@ -255,18 +287,8 @@ export function createMessageSendRender({
       });
     }
     if (flow.state === GS.COMPOSE) {
-      const contact = flow.contact;
-      const hasText = !!String(flow.composeText || "").trim();
-      const chipsHtml = renderComposeChipStack({
-        chips: (flow.composeVisualChips || []).map((chip, idx) => ({ id: String(chip.originalIndex ?? idx), label: chip.label })),
-        selectedIndex: flow.sel,
-        open: !!flow.composeMenuOpen,
-        closing: !!flow.composeMenuClosing,
-        visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
-      });
-      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText });
-      const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
-      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
+      if (manualComposeEntry) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
+      return buildComposeStage();
     }
     if (flow.state === GS.CONFIRM) {
       const contact = flow.contact;
@@ -318,14 +340,14 @@ export function createMessageSendRender({
     C.rich.classList.toggle("compose-entering", enteringComposeFromDisambiguation);
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
     cancelComposeRevealTimer();
-    if (enteringComposeFromDisambiguation || enteringComposeText) {
+    if (enteringComposeText) {
       C.rich.style.opacity = "0";
       composeRevealTimer = setTimeout(() => {
         composeRevealTimer = null;
         const nextFlow = getFlow();
         if (!nextFlow.active || nextFlow.state !== GS.COMPOSE) return;
         C.rich.style.opacity = "1";
-      }, enteringComposeFromDisambiguation ? 120 : 90);
+      }, 90);
     } else {
       C.rich.style.opacity = flow.active ? "1" : "";
     }

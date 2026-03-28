@@ -898,7 +898,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   animation-delay: var(--pill-delay, 0ms);
 }
 .g-disambiguation-pill.g-disambiguation-pill-exit {
-  animation: disambiguation-pill-out 240ms cubic-bezier(0.42,0,0.2,1) both;
+  animation: disambiguation-pill-out 400ms cubic-bezier(0.42,0,0.2,1) both;
+}
+.g-disambiguation-pills.exiting-to-compose .g-disambiguation-pill {
+  animation: disambiguation-pill-out 400ms cubic-bezier(0.42,0,0.2,1) both;
+  animation-delay: var(--pill-delay, 0ms);
+  pointer-events: none;
 }
 @keyframes disambiguation-pill-in {
   from {
@@ -979,6 +984,11 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   transition: opacity 220ms cubic-bezier(0.22,1,0.36,1), transform 220ms cubic-bezier(0.22,1,0.36,1);
   will-change: opacity, transform;
 }
+.compose-entering .g-compose-header:not(.hidden) {
+  opacity: 0;
+  transform: translate(-50%, 14px);
+  animation: g-compose-header-enter 300ms cubic-bezier(0.22,1,0.36,1) 200ms forwards;
+}
 .g-compose-header.hidden {
   opacity: 0;
   transform: translate(-50%, 10px);
@@ -1007,7 +1017,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   align-items: center;
   gap: 4px;
   transform: translateX(-50%);
-  transition: transform 500ms cubic-bezier(0.22,1,0.36,1), opacity 180ms ease;
+  transition: transform 1000ms cubic-bezier(0.22,1,0.36,1), opacity 1000ms cubic-bezier(0.22,1,0.36,1);
   opacity: 0;
   pointer-events: none;
 }
@@ -1042,12 +1052,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   transform: translateY(var(--chip-travel-start, 120px)) scale(0.82) rotate(var(--chip-rot-start, 0deg));
   opacity: 0;
   transition:
-    transform 800ms cubic-bezier(0.22,1,0.36,1),
+    transform 1000ms cubic-bezier(0.22,1,0.36,1),
     color 200ms ease,
     background 180ms ease,
     box-shadow 200ms ease,
     font-weight 200ms ease,
-    opacity 220ms cubic-bezier(0.22,1,0.36,1);
+    opacity 1000ms cubic-bezier(0.22,1,0.36,1);
 }
 .g-compose-chip::before {
   content: '';
@@ -1079,12 +1089,12 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 
   opacity: 1;
   transform: translateY(0) scale(1) rotate(0deg);
-  animation: compose-chip-in 800ms cubic-bezier(0.22,1,0.36,1) both;
+  animation: compose-chip-in 1000ms cubic-bezier(0.22,1,0.36,1) both;
   animation-delay: calc(var(--chip-order, 0) * 42ms);
 }
 .g-compose-chip-stack.closing .g-compose-chip.is-visible,
 .g-compose-chip-stack:not(.open):not(.closing) .g-compose-chip.is-visible {
-  animation: compose-chip-out 800ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+  animation: compose-chip-out 1000ms cubic-bezier(0.35,0.23,0.13,0.98) both;
   animation-delay: calc(var(--chip-order, 0) * 14ms);
 }
 .g-compose-chip-stack .g-compose-chip:nth-child(1) { --chip-order: 0; }
@@ -1173,7 +1183,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 .g-compose-stage.placeholder-delayed .g-compose-field-empty {
   opacity: 0;
   transform: translateY(4px);
-  animation: g-compose-placeholder-in 220ms ease 400ms forwards;
+  animation: g-compose-placeholder-in 300ms ease 100ms forwards;
 }
 .g-compose-field-text {
   width: calc(100% - 28px);
@@ -1256,7 +1266,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   to { opacity: 0; transform: scale(0.82); }
 }
 .g-chip-exit {
-  animation: g-chip-exit 320ms cubic-bezier(0.35,0.23,0.13,0.98) forwards;
+  animation: g-chip-exit 1000ms cubic-bezier(0.35,0.23,0.13,0.98) forwards;
   pointer-events: none;
 }
 @keyframes g-text-fadein {
@@ -1315,7 +1325,7 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
   animation: g-fadein-up 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
 }
 .g-chip.chip-enter {
-  animation: g-fadein-up 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
+  animation: g-fadein-up 1000ms cubic-bezier(0.35,0.23,0.13,0.98) both;
 }
 .g-listen-field.field-enter {
   animation: g-fadein-up 500ms cubic-bezier(0.35,0.23,0.13,0.98) both;
@@ -1358,6 +1368,10 @@ body[data-ai-home-state="context"][data-current-shape="pill"] #c-divider {
 @keyframes g-compose-placeholder-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes g-compose-header-enter {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 @keyframes g-compose-chip-in {

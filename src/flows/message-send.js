@@ -22,6 +22,7 @@ const CONTACTS = [
 
 export function createMessageSendFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
+  const DISAMBIGUATION_TO_COMPOSE_MS = 600;
   const COMPOSE_MENU_HOLD_MS = 280;
   const COMPOSE_MENU_EXPAND_MS = 3000;
   const COMPOSE_MENU_CLOSE_MS = 260;
@@ -476,15 +477,16 @@ export function createMessageSendFlow(ctx) {
     const geo = render.composeGeo();
     ctx.morph.morphTo(render.glassStateShape(GS.COMPOSE), { icon: "", primary: "", secondary: "", detail: "" }, geo);
     ctx.updateActive?.(render.glassStateShape(GS.COMPOSE));
+    render.render(false);
     setTimeout(() => {
       if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
       render.setManualComposeEntry(false);
       render.render(false);
-    }, 120);
+    }, DISAMBIGUATION_TO_COMPOSE_MS);
     render.markStateCommitted();
 
     speakOutput(voiceText || "");
-    setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, 240);
+    setTimeout(() => { if (isEpochAlive(epoch)) ctx.input.focus(); }, DISAMBIGUATION_TO_COMPOSE_MS);
   }
 
   function beginCompose(contact, voiceText) {
