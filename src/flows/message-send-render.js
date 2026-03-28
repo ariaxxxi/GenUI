@@ -10,6 +10,7 @@ import {
   renderInputField,
   renderTextBubble,
 } from "./ui-primitives.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
 
 export function createMessageSendRender({
   document,
@@ -143,18 +144,12 @@ export function createMessageSendRender({
   }
 
   function sentGeo() {
-    const base = SHAPES.pill || SHAPES.card;
-    const textEl = C.rich.querySelector("[data-glass-sent]");
-    let w = 200;
-    let h = 52;
-    if (textEl) {
-      const rect = textEl.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        w = clampFn(Math.round(rect.width + 48), 140, 360);
-        h = clampFn(Math.round(rect.height + 32), 52, 140);
-      }
-    }
-    return { ...base, main: { ...base.main, w, h, tx: -(w / 2), ty: -(h / 2) - 18 } };
+    return measureSuccessToastGeometry({
+      richRoot: C.rich,
+      pillShape: SHAPES.pill || SHAPES.card,
+      fallbackLabel: "Message sent",
+      clamp: clampFn,
+    });
   }
 
   function cancelMeasure() {
@@ -258,6 +253,21 @@ export function createMessageSendRender({
     return clampFn(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
   }
 
+  function buildScreenSpec() {
+    const flow = getFlow();
+    if (flow.state === GS.CONFIRM) {
+      return {
+        actions: [
+          { id: "send", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="2,18 19,10 2,2 2,8 14,10 2,12"/></svg>` },
+          { id: "edit", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l4 4-9 9H4v-4l9-9z"/></svg>` },
+          { id: "cancel", iconHtml: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg>` },
+        ],
+        actionSelectedIndex: flow.sel,
+      };
+    }
+    return { actions: [], actionSelectedIndex: 0 };
+  }
+
   function buildContent() {
     const flow = getFlow();
     const buildComposeStage = () => {
@@ -328,6 +338,7 @@ export function createMessageSendRender({
     renderToken += 1;
     const token = renderToken;
     const shape = glassStateShape(flow.state);
+    const screenSpec = buildScreenSpec();
     const dropMain = document.getElementById("drop-main");
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
     const composeVoiceVizActive = flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim() && !flow.composeMenuOpen;
@@ -377,7 +388,7 @@ export function createMessageSendRender({
       C.rich.style.opacity = flow.active ? "1" : "";
     }
     C.rich.style.transform = (flow.active && flow.state === GS.SENT) ? "translateY(-18px)" : "";
-    renderControls();
+    renderControls(screenSpec);
     cancelMeasure();
     cancelSettle();
 
@@ -393,7 +404,7 @@ export function createMessageSendRender({
         ) {
           morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
         }
-        renderControls();
+        renderControls(screenSpec);
       };
       apply(shouldMorph);
       void C.rich.offsetHeight;
@@ -430,17 +441,12 @@ export function createMessageSendRender({
       } else if (shouldMorph) {
         morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
       }
-      renderControls();
+      renderControls(screenSpec);
     } else if (shouldMorph) {
       morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
-      renderControls();
+      renderControls(screenSpec);
     }
-
-    C.prim.style.opacity = flow.active ? "0" : "";
-    C.sec.style.opacity = flow.active ? "0" : "";
-    C.det.style.opacity = flow.active ? "0" : "";
-    C.div.style.opacity = flow.active ? "0" : "";
-    C.div.style.display = (flow.active && flow.state === GS.SENT) ? "none" : "";
+    applyFlowChromeVisibility({ C, active: flow.active, richSent: flow.state === GS.SENT });
     const glow = document.getElementById("home-glow-layer");
     if (glow) glow.style.opacity = "";
     updateOrbLabel();
@@ -467,6 +473,7 @@ export function createMessageSendRender({
     sentGeo,
     contentHeightPx,
     composeGeo,
+    buildScreenSpec,
     buildContent,
     render,
     setManualComposeEntry(flag) {
@@ -493,7 +500,7 @@ export function createMessageSendRender({
         return chips.length > 0;
       }
       if (flow.state === GS.CONFIRM) {
-        renderControls();
+        renderControls(buildScreenSpec());
         return true;
       }
       return false;

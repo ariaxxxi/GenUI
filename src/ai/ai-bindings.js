@@ -163,7 +163,7 @@ function clearGlassFlowUiImmediate() {
 }
 
 function ensurePassiveCommandListening() {
-  if (messageFlow?.isActive?.() || flightFlow?.isActive?.()) return;
+  if (messageFlow?.isActive?.() || flightFlow?.isActive?.() || coffeeFlow?.isActive?.()) return;
   voice?.voiceEngine?.start?.("command");
 }
 
@@ -175,6 +175,7 @@ function ensureHomeAwake() {
 function resetActiveFlows() {
   if (messageFlow?.isActive?.()) { messageFlow.reset(); return true; }
   if (flightFlow?.isActive?.()) { flightFlow.reset(); return true; }
+  if (coffeeFlow?.isActive?.()) { coffeeFlow.reset(); return true; }
   return false;
 }
 
@@ -248,6 +249,7 @@ function armAiWakeListening(options = {}) {
   if (force) {
     if (messageFlow?.isActive?.()) messageFlow.reset();
     if (flightFlow?.isActive?.()) flightFlow.reset();
+    if (coffeeFlow?.isActive?.()) coffeeFlow.reset();
   }
   aiAwake = true;
   listeningPromptText = "";
@@ -257,7 +259,7 @@ function armAiWakeListening(options = {}) {
     teardownAiMode();
     setHomeStateData(HOME_STATES.CONTEXT);
   }
-  if (!messageFlow?.isActive() && !flightFlow?.isActive()) {
+  if (!messageFlow?.isActive() && !flightFlow?.isActive() && !coffeeFlow?.isActive?.()) {
     voice?.voiceEngine?.start?.("command");
     if (fromSleep || fromHome) {
       document.body.classList.remove("sleep-to-listening");
@@ -444,11 +446,14 @@ input?.addEventListener("input", (e) => {
     updateActive("circle");
   }
 });
-document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; if (e.key === "L" || e.key === "l") { if (messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) { e.preventDefault(); if (!e.repeat) messageFlow.startComposeMenuHold(); return; } e.preventDefault(); const currentShape = morph.getCurrentShape(); if (currentShape === "listening" && aiAwake) { setHomeState("context"); aiAwake = false; return; } if (messageFlow.isActive()) { if (input) input.focus(); return; } armAiWakeListening({ source: "keyboard-l" }); return; } if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if (!focusedInTextInput && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if (!focusedInTextInput && (e.code === "Space" || e.key === "1")) { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") { e.preventDefault(); setHomeState("context"); return; } if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") armAiWakeListening(); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
+let restoreComposeInputFocus = false;
+document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; const composeMenuActive = messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE && (messageFlow.flow.composeMenuOpen || messageFlow.flow.composeMenuHolding || messageFlow.flow.composeMenuClosing); if (e.key === "L" || e.key === "l") { if (messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) { e.preventDefault(); restoreComposeInputFocus = focusedInTextInput; if (focusedInTextInput) input?.blur(); if (!e.repeat) messageFlow.startComposeMenuHold(); return; } e.preventDefault(); const currentShape = morph.getCurrentShape(); if (currentShape === "listening" && aiAwake) { setHomeState("context"); aiAwake = false; return; } if (messageFlow.isActive()) { if (input) input.focus(); return; } armAiWakeListening({ source: "keyboard-l" }); return; } if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.code === "Space" || e.key === "1")) { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (coffeeFlow?.handleKeyDown?.(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") { e.preventDefault(); setHomeState("context"); return; } if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") armAiWakeListening(); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
 document.addEventListener("keyup", (e) => {
   if ((e.key === "L" || e.key === "l") && messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) {
     e.preventDefault();
     messageFlow.endComposeMenuHold();
+    if (restoreComposeInputFocus && !messageFlow.flow.composeMenuOpen && !messageFlow.flow.composeMenuClosing) input?.focus();
+    restoreComposeInputFocus = false;
   }
 });
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
