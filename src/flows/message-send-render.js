@@ -85,7 +85,7 @@ export function createMessageSendRender({
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
     const w = measureComposeFieldWidth(hasText);
-    const h = measureComposeFieldHeight(hasText);
+    const h = measureComposeFieldHeight(hasText, w);
     const bottom = COMPOSE_FIELD_BOTTOM;
     return {
       ...SHAPES["card-form"],
@@ -134,15 +134,21 @@ export function createMessageSendRender({
     );
   }
 
-  function measureComposeFieldHeight(hasText) {
+  function measureComposeFieldHeight(hasText, targetWidth = COMPOSE_FIELD_W) {
     const baseMin = hasText ? COMPOSE_FIELD_ACTIVE_H : COMPOSE_FIELD_H;
     const field = C.rich.querySelector("[data-compose-field]");
     if (!field) return baseMin;
-    const measured = Math.ceil(Math.max(
-      field.getBoundingClientRect().height || 0,
-      field.offsetHeight || 0,
-      field.scrollHeight || 0,
+    const measure = (node) => Math.ceil(Math.max(
+      node?.getBoundingClientRect?.().height || 0,
+      node?.offsetHeight || 0,
+      node?.scrollHeight || 0,
     ));
+    const measureWidth = clamp(Math.round(targetWidth || COMPOSE_FIELD_W), COMPOSE_FIELD_W, COMPOSE_FIELD_MAX_W);
+    const layer = ensureMeasureLayer("glass-compose-field-measure");
+    layer.style.width = `${measureWidth}px`;
+    layer.innerHTML = field.outerHTML;
+    const probe = layer.querySelector("[data-compose-field]");
+    const measured = measure(probe) || measure(field);
     if (!measured) return baseMin;
     return clamp(measured, baseMin, COMPOSE_FIELD_MAX_H);
   }
@@ -444,7 +450,7 @@ export function createMessageSendRender({
     } else if (flow.state === GS.DISAMBIGUATE) {
       setSimInputState({ label: "Voice Command", placeholder: 'Say a name, e.g. "Tanaka"', hint: "", dictating: false });
     } else if (flow.state === GS.COMPOSE) {
-      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: "Auto confirm after 2s silence", dictating: true });
+      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: "Hold click + drag to browse chips · Auto confirm after 2s silence", dictating: true });
     } else if (flow.state === GS.CONFIRM) {
       setSimInputState({ label: "Voice Command", placeholder: '"send", "edit", or "cancel"', hint: "", dictating: false });
     }

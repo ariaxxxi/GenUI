@@ -51,6 +51,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     } catch {}
   }
 
+  function getComposePulseField() {
+    return document.querySelector('[data-compose-field]');
+  }
+
   function applyVoiceVisualization(level, actionBtns) {
     const glassUi = getGlassUi();
     const GS = getGlassState();
@@ -88,11 +92,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       clearActionBtns();
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
-      const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
+      const field = getComposePulseField();
       if (field && field.dataset.pulseLock !== '1') {
-        if (field.id !== 'drop-main') {
-          field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
-        }
+        field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
         field.style.setProperty('box-shadow', shadow(level), 'important');
       }
     }
@@ -121,12 +123,12 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   function resetVizStyles({ clearDropMain = true } = {}) {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
-    const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
+    const field = getComposePulseField();
     if (field) {
-      if (field.id !== 'drop-main') field.style.transition = '';
+      field.style.transition = '';
       field.style.removeProperty('box-shadow');
     }
-    if (clearDropMain) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
+    if (clearDropMain) document.getElementById('drop-main')?.style.removeProperty('box-shadow');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
@@ -215,10 +217,18 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   voiceEngine.start = function(mode) {
     if (!voiceEngine.supported || !voiceEngine.recognition) return;
+    const previousMode = voiceEngine.mode;
     voiceEngine.mode = mode;
     if (mode === 'off') return void voiceEngine.stop();
     voiceEngine.restartOnEnd = true;
-    if (voiceEngine.active) return;
+    if (voiceEngine.active) {
+      if (previousMode !== mode) {
+        if (mode === 'dictation') dictationStart = Date.now();
+        resetVizStyles({ clearDropMain: true });
+      }
+      updateMicIndicator();
+      return;
+    }
     try {
       voiceEngine.recognition.start();
       voiceEngine.active = true;

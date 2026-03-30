@@ -448,16 +448,36 @@ input?.addEventListener("input", (e) => {
     updateActive("circle");
   }
 });
-let restoreComposeInputFocus = false;
-document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; const composeMenuActive = messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE && (messageFlow.flow.composeMenuOpen || messageFlow.flow.composeMenuHolding || messageFlow.flow.composeMenuClosing); if (e.key === "L" || e.key === "l") { if (messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) { e.preventDefault(); restoreComposeInputFocus = focusedInTextInput; if (focusedInTextInput) input?.blur(); if (!e.repeat) messageFlow.startComposeMenuHold(); return; } e.preventDefault(); const currentShape = morph.getCurrentShape(); if (currentShape === "listening" && aiAwake) { setHomeState("context"); aiAwake = false; return; } if (messageFlow.isActive()) { if (input) input.focus(); return; } armAiWakeListening({ source: "keyboard-l" }); return; } if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) { e.preventDefault(); messageFlow.flow.sel = Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.code === "Space" || e.key === "1")) { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (coffeeFlow?.handleKeyDown?.(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") { e.preventDefault(); setHomeState("context"); return; } if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") armAiWakeListening(); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
-document.addEventListener("keyup", (e) => {
-  if ((e.key === "L" || e.key === "l") && messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE) {
-    e.preventDefault();
-    messageFlow.endComposeMenuHold();
-    if (restoreComposeInputFocus && !messageFlow.flow.composeMenuOpen && !messageFlow.flow.composeMenuClosing) input?.focus();
-    restoreComposeInputFocus = false;
-  }
+let composeMenuPointerActive = false;
+let composeMenuPointerId = null;
+const isComposeMenuPointerTarget = (target) => {
+  const stage = document.getElementById("stage");
+  return !!(stage && target && stage.contains(target));
+};
+document.addEventListener("keydown", (e) => { const captureAction = getCaptureHotkeyAction(e); if (captureAction) { e.preventDefault(); if (captureAction === "copy-png") void copyStagePng(); else void exportStageSvg(); return; } const focusedInTextInput = document.activeElement === input; const composeMenuActive = messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE && (messageFlow.flow.composeMenuOpen || messageFlow.flow.composeMenuHolding || messageFlow.flow.composeMenuClosing); if (e.key === "L" || e.key === "l") { e.preventDefault(); const currentShape = morph.getCurrentShape(); if (currentShape === "listening" && aiAwake) { setHomeState("context"); aiAwake = false; return; } if (messageFlow.isActive()) { if (input) input.focus(); return; } armAiWakeListening({ source: "keyboard-l" }); return; } if (messageFlow.isActive()) { if (e.key === "Escape") { e.preventDefault(); messageFlow.dismiss(); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) { e.preventDefault(); messageFlow.flow.sel = composeMenuActive ? Math.max(-1, messageFlow.flow.sel - 1) : Math.max(0, messageFlow.flow.sel - 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) { e.preventDefault(); messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1); if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false); return; } if ((!focusedInTextInput || composeMenuActive) && (e.code === "Space" || e.key === "1")) { e.preventDefault(); messageFlow.confirm(); return; } } if (flightFlow.handleKeyDown(e)) return; if (coffeeFlow?.handleKeyDown?.(e)) return; if (document.activeElement?.matches?.("input, textarea, select")) return; if (e.key === "1") { e.preventDefault(); setHomeState("context"); return; } if (e.key === "9") demo.manualShape("magic"); if (e.key === "5") demo.manualShape("list"); if (e.key === "6") demo.manualShape("split"); if (e.key === "0") armAiWakeListening(); if (e.key === "Escape") { morph.hideRich(); shell.hideIntentHeader(); if (responseMode === RESPONSE_MODE.AI) returnToHomeContext(); else previewScenario(selectedScenario()); } });
+document.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  if (!messageFlow.isActive() || messageFlow.flow.state !== messageFlow.GS.COMPOSE) return;
+  if (!isComposeMenuPointerTarget(e.target)) return;
+  if (!messageFlow.startComposeMenuHold({ pointerOriginY: e.clientY })) return;
+  composeMenuPointerActive = true;
+  composeMenuPointerId = e.pointerId;
+  if (document.activeElement === input) input?.blur();
+  e.preventDefault();
 });
+document.addEventListener("pointermove", (e) => {
+  if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
+  if (messageFlow.updateComposeMenuPointerGesture(e.clientY)) e.preventDefault();
+});
+const releaseComposeMenuPointer = (e) => {
+  if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
+  composeMenuPointerActive = false;
+  composeMenuPointerId = null;
+  messageFlow.endComposeMenuHold({ commitSelection: true });
+  e.preventDefault();
+};
+document.addEventListener("pointerup", releaseComposeMenuPointer);
+document.addEventListener("pointercancel", releaseComposeMenuPointer);
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
 
 const fullscreenToggle = document.getElementById("debug-fullscreen-toggle");

@@ -23,17 +23,20 @@ const CONTACTS = [
 
 export function createMessageSendFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
-  const DISAMBIGUATION_TO_COMPOSE_MS = 600;
+  const DISAMBIGUATION_TO_COMPOSE_MS = 1000;
   const COMPOSE_MENU_HOLD_MS = 280;
   const COMPOSE_MENU_EXPAND_MS = 3000;
   const COMPOSE_MENU_CLOSE_MS = 260;
   const COMPOSE_MENU_BASE_COUNT = 3;
+  const COMPOSE_MENU_POINTER_STEP_PX = 48;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
   const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   let flowEpoch = 0;
+  let composeMenuPointerOriginY = 0;
+  let composeMenuPointerCurrentY = 0;
 
   function isEpochAlive(epoch) {
     return epoch === flowEpoch && flow.active;
@@ -195,10 +198,36 @@ export function createMessageSendFlow(ctx) {
     return Math.max(0, Math.min(flow.composeMenuVisibleCount || 0, chips.length));
   }
 
+  function clearComposeMenuPointerGesture() {
+    composeMenuPointerOriginY = 0;
+    composeMenuPointerCurrentY = 0;
+  }
+
+  function setComposeMenuSelection(index) {
+    const visibleCount = getComposeMenuVisibleCount();
+    const nextIndex = index < 0 || visibleCount <= 0
+      ? -1
+      : Math.max(0, Math.min(index, visibleCount - 1));
+    if (flow.sel === nextIndex) return false;
+    flow.sel = nextIndex;
+    return !!(render.updateComposeMenuUiOnly?.() || render.render(false));
+  }
+
+  function updateComposeMenuSelectionFromPointer() {
+    if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuOpen) return false;
+    const visibleCount = getComposeMenuVisibleCount();
+    if (visibleCount <= 0) return setComposeMenuSelection(-1);
+    const deltaUp = Math.max(0, composeMenuPointerOriginY - composeMenuPointerCurrentY);
+    const steps = Math.min(visibleCount, Math.floor(deltaUp / COMPOSE_MENU_POINTER_STEP_PX));
+    const nextIndex = steps <= 0 ? -1 : (visibleCount - steps);
+    return setComposeMenuSelection(nextIndex);
+  }
+
   function cancelComposeMenu(options = {}) {
     clearComposeMenuTimers();
     flow.composeMenuHolding = false;
     flow.composeMenuOpen = false;
+    clearComposeMenuPointerGesture();
     if (options.immediate) {
       flow.composeMenuClosing = false;
       flow.composeMenuVisibleCount = 0;
@@ -219,10 +248,16 @@ export function createMessageSendFlow(ctx) {
     flow.composeMenuVisibleCount = 0;
   }
 
-  function startComposeMenuHold() {
+  function startComposeMenuHold(options = {}) {
     if (!flow.active || flow.state !== GS.COMPOSE) return false;
     ensureComposeVisualChips();
     clearComposeMenuTimers();
+    if (Number.isFinite(options.pointerOriginY)) {
+      composeMenuPointerOriginY = Number(options.pointerOriginY);
+      composeMenuPointerCurrentY = Number(options.pointerOriginY);
+    } else {
+      clearComposeMenuPointerGesture();
+    }
     flow.composeMenuHolding = true;
     flow.composeMenuClosing = false;
     if (timers.autoConfirm) {
@@ -233,40 +268,57 @@ export function createMessageSendFlow(ctx) {
       timers.composeMenuHold = null;
       if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding) return;
       flow.composeMenuOpen = true;
-        flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
-      flow.sel = Math.min(flow.sel, Math.max(0, flow.composeMenuVisibleCount - 1));
+      flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
+      flow.sel = -1;
       render.updateComposeMenuUiOnly?.() || render.render(false);
+      updateComposeMenuSelectionFromPointer();
       timers.composeMenuExpand = setTimeout(() => {
         timers.composeMenuExpand = null;
         if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding || !flow.composeMenuOpen) return;
         flow.composeMenuVisibleCount = Math.min(ensureComposeVisualChips().length, COMPOSE_MENU_BASE_COUNT + 2);
-        flow.sel = Math.min(flow.sel, Math.max(0, flow.composeMenuVisibleCount - 1));
         if (!render.updateComposeMenuUiOnly?.()) render.render(false);
+        updateComposeMenuSelectionFromPointer();
       }, COMPOSE_MENU_EXPAND_MS);
     }, COMPOSE_MENU_HOLD_MS);
     return true;
   }
 
-  function endComposeMenuHold() {
+  function updateComposeMenuPointerGesture(pointerY) {
+    if (!Number.isFinite(pointerY)) return false;
+    composeMenuPointerCurrentY = Number(pointerY);
+    return updateComposeMenuSelectionFromPointer();
+  }
+
+  function endComposeMenuHold(options = {}) {
     if (!flow.active || flow.state !== GS.COMPOSE) return false;
+    const commitSelection = options.commitSelection === true;
     if (timers.composeMenuHold) {
       clearTimeout(timers.composeMenuHold);
       timers.composeMenuHold = null;
       flow.composeMenuHolding = false;
+      clearComposeMenuPointerGesture();
       return true;
     }
     if (flow.composeMenuOpen || flow.composeMenuClosing) {
+      flow.composeMenuHolding = false;
+      const chip = commitSelection ? getSelectedVisualChip() : null;
+      if (chip) {
+        clearComposeMenuPointerGesture();
+        selectChipWithAnimation(chip.originalIndex);
+        return true;
+      }
       cancelComposeMenu();
       render.updateComposeMenuUiOnly?.() || render.render(false);
       return true;
     }
     flow.composeMenuHolding = false;
+    clearComposeMenuPointerGesture();
     return true;
   }
 
   function getSelectedVisualChip() {
     const chips = ensureComposeVisualChips();
-    return chips[flow.sel] || null;
+    return flow.sel >= 0 ? (chips[flow.sel] || null) : null;
   }
 
   function findVisualChipIndexByOriginalIndex(originalIndex) {
@@ -819,6 +871,7 @@ export function createMessageSendFlow(ctx) {
     render: (shouldMorph = true) => render.render(shouldMorph),
     updateSelectionUiOnly: () => render.updateSelectionUiOnly(),
     startComposeMenuHold,
+    updateComposeMenuPointerGesture,
     endComposeMenuHold,
     handleInputChange,
     handleInputSubmit,

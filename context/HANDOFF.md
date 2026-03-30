@@ -1,6 +1,186 @@
 # Handoff
 
 ## Task title
+Compose Chip Release Commit Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the mouse-release commit bug in [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js).
+- Root cause: the release path checked for a selected chip while `flow.composeMenuHolding` was still `true`, so a highlighted chip was not being committed on mouse-up.
+- Updated the release path to clear the holding state before checking the selected chip.
+- Result: releasing the mouse with a highlighted chip now commits that chip’s predefined sentence and advances to confirm as intended.
+
+## Files changed
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this fix.
+
+## Recommended next step
+1. Enter the message compose screen.
+2. Long press anywhere on the stage to open the chip stack.
+3. Highlight a chip, release, and verify the predefined sentence is committed and the flow advances to confirm.
+
+## Task title
+Compose Chip Gesture Full-Screen Trigger
+
+## Completion status
+- Completed
+
+## Summary
+- Expanded the compose chip long-press trigger from the compose shell to the full on-screen stage area in [ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js).
+- The gesture can now start anywhere on the screen while the message flow is in compose.
+- No change was needed to the chip commit path:
+  - selecting a chip still writes its predefined `chip.message` into the compose field
+  - the flow still advances immediately to confirm after selection
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after widening the pointer hit area.
+
+## Recommended next step
+1. Enter the message compose screen.
+2. Long press in empty screen space outside the compose shell.
+3. Verify the chip stack still opens, scrubs, and commits exactly the same way as pressing on the shell itself.
+
+## Task title
+Compose Chip Mouse Hold + Vertical Scrub
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the compose-state chip picker trigger with a pointer gesture:
+  - long press on the compose surface opens the chip stack
+  - vertical drag while holding scrubs the highlight
+  - release commits the highlighted chip only if one is selected
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so the compose chip stack now supports a true `no selection` state (`sel = -1`) while open.
+- Implemented bottom-up scrub mapping:
+  - no upward drag: nothing highlighted
+  - first upward step: bottom visible chip
+  - further upward steps: chips above it
+  - dragging back down steps the highlight back toward none
+- Updated [ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) to drive the interaction from `pointerdown` / `pointermove` / `pointerup` instead of compose-state `L` hold.
+- Updated the compose simulator hint in [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so the gesture is discoverable.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/ai/ai-bindings.js`
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after the new pointer gesture was added.
+- Keyboard arrow navigation still exists as a fallback path; this change only replaced the compose-state `L` hold gesture.
+
+## Recommended next step
+1. Enter the message compose screen.
+2. Long press on the compose surface until the chip stack opens.
+3. Drag upward and confirm the first highlight lands on the bottom visible chip.
+4. Drag back down and confirm the highlight clears before release.
+5. Release once with a highlighted chip and once with no highlight to verify the commit/no-op behavior.
+
+## Task title
+Compose Handoff 1000ms Retiming
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the message-flow disambiguation -> compose handoff duration from `600ms` to `1000ms`.
+- Updated the single source-of-truth constant in [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js#L26), which controls when the manual compose-entry overlap ends and when input focus is restored.
+- Kept the narrower child animation timings unchanged in this pass.
+
+## Files changed
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this retime.
+- The inner pill/header/placeholder animation durations were not changed, so only the overall handoff timing is now `1000ms`.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path.
+2. Select a contact.
+3. Verify the compose handoff now holds for about `1000ms` before fully settling.
+
+## Task title
+Compose Dictation Oversized Shell Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the compose-screen geometry bug that could show a second dark container behind the dictated message after speech finished.
+- Root cause was in [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js): compose height was measured from the current DOM field width before the shell finished widening, so long wrapped text could produce an oversized outer shell for a frame and make the compose field appear pushed upward inside it.
+- Updated compose measurement so height is now measured against the target compose width before morphing.
+- Result: the shell height and final wrapped text layout are derived from the same width, which removes the transient double-container state.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this layout-measurement fix.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path.
+2. Dictate a long multi-line message.
+3. Verify the compose shell no longer grows taller than the text field during or after the final dictation update.
+
+## Task title
+Compose Entry Single Blue Shadow Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the disambiguation -> compose transition so the message compose entry keeps a single blue dictation glow instead of briefly showing both the outer shell glow and the inner compose-field glow.
+- Root cause was in [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js): switching from command listening to dictation while speech recognition was already active changed `voiceEngine.mode`, but it did not reset the active visualization state or restart the dictation delay clock.
+- Updated the voice engine so active mode switches now:
+  - clear the previous visualization immediately
+  - reset `dictationStart` when entering dictation mid-session
+  - apply dictation glow only to the real compose field, not the fallback outer shell
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this voice-visualization fix, so the final visual result is based on code-path inspection plus JS syntax validation.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path.
+2. Choose a contact and watch the disambiguation -> compose transition.
+3. Verify the blue glow appears on only one layer throughout the handoff and after the compose field settles.
+
+## Task title
 Message Confirm Action Row Removal
 
 ## Completion status
