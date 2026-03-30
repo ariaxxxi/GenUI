@@ -51,13 +51,12 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     } catch {}
   }
 
-  function applyVoiceVisualization(level) {
+  function applyVoiceVisualization(level, actionBtns) {
     const glassUi = getGlassUi();
     const GS = getGlassState();
     const state = glassUi?.state;
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
-    const actionBtns = document.querySelectorAll('.g-action-btn');
     const clearActionBtns = () => actionBtns.forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
     if (voiceEngine.mode === 'command') {
       const allowCommandViz = shouldShowCommandViz?.() !== false;
@@ -104,13 +103,17 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (voiceEngine.vizRaf) cancelAnimationFrame(voiceEngine.vizRaf);
     vizLevel = 0;
     const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
+    let actionBtns = document.querySelectorAll('.g-action-btn');
+    let lastState = null;
     const tick = () => {
       if (!voiceEngine.active || voiceEngine.mode === 'off') { voiceEngine.vizRaf = null; return; }
+      const currentState = getGlassUi()?.state;
+      if (currentState !== lastState) { actionBtns = document.querySelectorAll('.g-action-btn'); lastState = currentState; }
       voiceEngine.analyser.getByteFrequencyData(data);
       const avg = data.reduce((s, v) => s + v, 0) / data.length;
       const raw = Math.pow(Math.min(avg / 32, 1), 0.6);
       vizLevel += (raw - vizLevel) * 0.18;
-      applyVoiceVisualization(vizLevel);
+      applyVoiceVisualization(vizLevel, actionBtns);
       voiceEngine.vizRaf = requestAnimationFrame(tick);
     };
     voiceEngine.vizRaf = requestAnimationFrame(tick);

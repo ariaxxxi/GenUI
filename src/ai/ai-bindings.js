@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, loadAiVoiceEnabled, loadDisableTextInput } from "../app-state.js";
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, loadAiVoiceEnabled, loadDisableTextInput, persistToStorage } from "../app-state.js";
+import { clamp } from "../utils.js";
 import { initMorph } from "../shared/morph.js";
 import { initScenarioData } from "../shared/scenario-data.js";
 import { buildUiRefs, initSidebar } from "../shared/sidebar.js";
@@ -25,7 +26,6 @@ const detailMeasureEl = document.createElement("div");
 detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";
 document.body.appendChild(detailMeasureEl);
 
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const FULLSCREEN_STAGE_OUTLINE_STORAGE_KEY = "genui_ai_fullscreen_stage_outline_visible";
 let canvasSettings = loadCanvasSettings();
 let responseMode = loadResponseMode();
@@ -61,10 +61,9 @@ function loadScenarioLibrary() {
   scenarios.forEach((scenario) => { scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || "none" }); });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
-function persistToStorage(key, value, label) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { console.warn(`Unable to persist ${label}`, err); } }
 function persistScenarios() { persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, "scenarios"); }
 function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, "canvas settings"); }
-function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) localStorage.setItem(STORAGE_KEYS.mode, JSON.stringify(responseMode)); }
+function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, "response mode"); }
 function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, "AI stage override"); }
 function persistAiVoiceEnabled(enabled) { persistToStorage(STORAGE_KEYS.aiVoiceEnabled, enabled !== false, "AI voice toggle"); }
 function persistStageLibrary() { persistToStorage(STORAGE_KEYS.stages, stageLibrary, "stage library"); }

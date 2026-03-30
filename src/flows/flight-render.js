@@ -1,5 +1,7 @@
 import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
-import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
+import { normalizeFlightDateValue } from "./flight-ai.js";
+import { clamp } from "../utils.js";
 
 export function createFlightRender({
   SHAPES,
@@ -16,46 +18,17 @@ export function createFlightRender({
   getFlow,
   buildRouteRowHtml,
 }) {
-  const MONTHS = {
-    jan: 0,
-    feb: 1,
-    mar: 2,
-    apr: 3,
-    may: 4,
-    jun: 5,
-    jul: 6,
-    aug: 7,
-    sep: 8,
-    oct: 9,
-    nov: 10,
-    dec: 11,
-  };
   const THINKING_HOLD_MS = 3000;
   const TOP = 10;
   const BOTTOM = 10;
   const MIN_H = 100;
   const MAX_H = 400;
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  let measureLayer = null;
   let controlsTrack = null;
   let confirmHeaderTrack = null;
 
-  function ensureMeasureLayer() {
-    if (measureLayer) return measureLayer;
-    measureLayer = document.getElementById("flight-measure-layer");
-    if (measureLayer) return measureLayer;
-    const layer = document.createElement("div");
-    layer.id = "flight-measure-layer";
-    layer.setAttribute("aria-hidden", "true");
-    layer.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;";
-    document.body.appendChild(layer);
-    measureLayer = layer;
-    return layer;
-  }
-
   function contentHeightPx(html) {
-    const layer = ensureMeasureLayer();
+    const layer = ensureMeasureLayer("flight-measure-layer");
     if (!layer) return 180;
     layer.innerHTML = `<div data-flight-measure-body>${html}</div>`;
     const body = layer.querySelector("[data-flight-measure-body]");
@@ -84,8 +57,9 @@ export function createFlightRender({
     if (!hdr || !stage || !shell) return;
     const stageRect = stage.getBoundingClientRect();
     const shellRect = shell.getBoundingClientRect();
-    const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
-    const headerW = Math.ceil(hdr.getBoundingClientRect().width || hdr.offsetWidth || 0);
+    const hdrRect = hdr.getBoundingClientRect();
+    const headerH = Math.ceil(hdrRect.height || hdr.offsetHeight || 0);
+    const headerW = Math.ceil(hdrRect.width || hdr.offsetWidth || 0);
     const centerX = Math.round((shellRect.left + (shellRect.width / 2)) - stageRect.left);
     const top = Math.max(8, Math.round(shellRect.top - stageRect.top - headerH - 12));
     hdr.style.left = `${Math.round(centerX - (headerW / 2))}px`;
@@ -119,36 +93,7 @@ export function createFlightRender({
       richRoot: document.getElementById("c-rich"),
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: labelText,
-      clamp,
     });
-  }
-
-  function formatDisplayDate(value) {
-    const raw = String(value || "").trim();
-    if (!raw) return "";
-    const formatDate = (date) => {
-      if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
-      const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-      const month = date.toLocaleDateString("en-US", { month: "short" });
-      return `${weekday}, ${month} ${date.getDate()}`;
-    };
-    if (/^[A-Z][a-z]{2},\s+[A-Z][a-z]{2}\s+\d{1,2}$/.test(raw)) return raw;
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) return formatDate(parsed);
-    const match = raw.match(/\b(?:[A-Z][a-z]{2},\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b[\s,]+(\d{1,2})\b/i);
-    if (!match) return raw;
-    const monthIndex = MONTHS[match[1].slice(0, 3).toLowerCase()];
-    const day = Number(match[2]);
-    if (!Number.isInteger(monthIndex) || !Number.isFinite(day)) return raw;
-    const now = new Date();
-    let year = now.getFullYear();
-    let date = new Date(year, monthIndex, day);
-    if (Number.isNaN(date.getTime())) return raw;
-    if (date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-      year += 1;
-      date = new Date(year, monthIndex, day);
-    }
-    return formatDate(date);
   }
 
   function optionRows(options) {
@@ -198,8 +143,8 @@ export function createFlightRender({
   function buildConfirmRows() {
     const flow = getFlow();
     const selected = flow.selectedFlightOption || flow.currentRecommendedFlight?.() || null;
-    const departDate = formatDisplayDate(flow.data.depart) || "—";
-    const returnDate = formatDisplayDate(flow.data.return) || "—";
+    const departDate = normalizeFlightDateValue(flow.data.depart) || "—";
+    const returnDate = normalizeFlightDateValue(flow.data.return) || "—";
     const fromCode = flow.data.origin || "SFO";
     const toCode = flow.cityToAirport(flow.data.destination || "");
     const priceMatch = String(selected?.sub || "").match(/\$\d[\d,]*/);
@@ -267,8 +212,8 @@ export function createFlightRender({
               destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?",
               { originReady: true, destinationReady: !!destination }
             ),
-            depart: formatDisplayDate(flow.data.depart) || "",
-            ret: formatDisplayDate(flow.data.return) || "",
+            depart: normalizeFlightDateValue(flow.data.depart) || "",
+            ret: normalizeFlightDateValue(flow.data.return) || "",
           },
         },
       };

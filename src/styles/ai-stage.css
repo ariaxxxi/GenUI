@@ -1,0 +1,61 @@
+/* ── Stage ── */
+@keyframes float {
+  0%,100% { transform: translateY(0px) rotate(0deg); }
+  33%     { transform: translateY(-8px) rotate(-0.3deg); }
+  66%     { transform: translateY(-3px) rotate(0.2deg); }
+}
+#stage {
+  position: relative; width: 420px;
+  animation: float 6s ease-in-out infinite;
+  flex-shrink: 0;
+  mix-blend-mode: screen;
+  transition: height var(--anim-h);
+}
+#stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.12),
+    0 0 18px rgba(255,255,255,0.07);
+  z-index: 9;
+}
+body.hide-stage-outline-fullscreen #stage::after {
+  box-shadow: none;
+}
+body.hide-stage-outline-fullscreen #ui-frame.glasses::after {
+  box-shadow: none;
+}
+body.hide-stage-outline-fullscreen #ui-frame.phone {
+  box-shadow: none;
+}
+body.hide-stage-outline-fullscreen #stage {
+  mix-blend-mode: normal;
+}
+#glass-controls-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+#glass-controls-layer.visible {
+  pointer-events: auto;
+  opacity: 1;
+}
+#glass-controls-layer .g-glass-controls {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  transform: translate(-50%, 0);
+}
+body.bg-off #stage { mix-blend-mode: normal; }
+body.float-off #stage { animation: none; }
+#stage.flow-active { animation-play-state: paused; height: 420px; }
+
+body.mode-ai .mode-manual-only { display: none !important; }
+body.mode-manual .mode-ai-only { display: none !important; }

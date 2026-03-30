@@ -1,6 +1,7 @@
 import { getPaymentDefaultSources } from "../ai/flow-engine.js";
 import { createFlightRender } from "./flight-render.js";
 import { createFlightAi } from "./flight-ai.js";
+import { apiUrl } from "../utils.js";
 
 const AIRLINE_LOGOS = {
   ANA: "src/assets/airline-ana.png",
@@ -65,13 +66,10 @@ const FLOW_STEPS = [
 ];
 
 export function createFlightBookingFlow(ctx) {
-  // Flight remains a bespoke runtime flow in this revision.
-  // It is not yet migrated onto the generic engine the way coffee is.
   const FLOW_START_THINK_MS = 1600;
   const CONFIRM_CONTAINER_INDEX = 2;
   const CONFIRM_SCROLL_STEP = 72;
   const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, recommendationMode: "recommend", showConfirmDetails: false, selectedFlightOption: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", returnFlight: "", paymentMethod: "" }, thinkingTimer: null, startupTimer: null, C: ctx.C };
-  const apiUrl = (path) => `${location.protocol === "file:" ? "http://localhost:5180" : ""}${path}`;
   let flowEpoch = 0;
 
   function isEpochAlive(epoch) {

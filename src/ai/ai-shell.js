@@ -91,10 +91,11 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     if (!hdr || !stage || !main) return;
     const stageRect = stage.getBoundingClientRect();
     const mainRect = main.getBoundingClientRect();
-    const headerH = Math.ceil(hdr.getBoundingClientRect().height || hdr.offsetHeight || 0);
+    const hdrRect = hdr.getBoundingClientRect();
+    const headerH = Math.ceil(hdrRect.height || hdr.offsetHeight || 0);
     const centerX = Math.round((mainRect.left + (mainRect.width / 2)) - stageRect.left);
     const top = Math.max(8, Math.round(mainRect.top - stageRect.top - headerH - 12));
-    const headerW = Math.ceil(hdr.getBoundingClientRect().width || hdr.offsetWidth || 0);
+    const headerW = Math.ceil(hdrRect.width || hdr.offsetWidth || 0);
     const left = Math.round(centerX - (headerW / 2));
     hdr.style.left = `${left}px`;
     hdr.style.top = `${top}px`;

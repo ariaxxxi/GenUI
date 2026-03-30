@@ -10,7 +10,8 @@ import {
   renderInputField,
   renderTextBubble,
 } from "./ui-primitives.js";
-import { applyFlowChromeVisibility, measureSuccessToastGeometry } from "../shared/flow-toast.js";
+import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
+import { clamp } from "../utils.js";
 
 export function createMessageSendRender({
   document,
@@ -27,9 +28,7 @@ export function createMessageSendRender({
   renderControls,
   updateOrbLabel,
   setSimInputState,
-  clamp,
 }) {
-  const clampFn = typeof clamp === "function" ? clamp : (value, min, max) => Math.max(min, Math.min(max, value));
   const TOP = 10;
   const BOTTOM = 10;
   const CONTROLS_LIFT = 78;
@@ -75,7 +74,7 @@ export function createMessageSendRender({
   function dynamicGeo(shape, contentHeightPx) {
     const flow = getFlow();
     const base = SHAPES[shape] || SHAPES.card;
-    const shellHeight = clampFn(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
+    const shellHeight = clamp(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
     const controlsLift = shape === "card" ? CONTROLS_LIFT : 0;
     return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
   }
@@ -115,15 +114,20 @@ export function createMessageSendRender({
 
     const sample = value || "Speak your message...";
     const lines = sample.split(/\r?\n/).filter(Boolean);
-    const canvas = measureComposeFieldWidth._canvas || (measureComposeFieldWidth._canvas = document.createElement("canvas"));
-    const ctx2d = canvas.getContext("2d");
-    if (!ctx2d) return COMPOSE_FIELD_W;
-    ctx2d.font = "500 24px 'DM Sans'";
+    if (!measureComposeFieldWidth._ctx) {
+      const canvas = document.createElement("canvas");
+      const ctx2d = canvas.getContext("2d");
+      if (!ctx2d) return COMPOSE_FIELD_W;
+      ctx2d.font = "500 24px 'DM Sans'";
+      measureComposeFieldWidth._canvas = canvas;
+      measureComposeFieldWidth._ctx = ctx2d;
+    }
+    const ctx2d = measureComposeFieldWidth._ctx;
     const widestLine = Math.max(
       ...lines.map((line) => Math.ceil(ctx2d.measureText(line).width)),
       0,
     );
-    return clampFn(
+    return clamp(
       Math.ceil(widestLine + COMPOSE_FIELD_SIDE_PADDING),
       COMPOSE_FIELD_W,
       COMPOSE_FIELD_MAX_W,
@@ -140,7 +144,7 @@ export function createMessageSendRender({
       field.scrollHeight || 0,
     ));
     if (!measured) return baseMin;
-    return clampFn(measured, baseMin, COMPOSE_FIELD_MAX_H);
+    return clamp(measured, baseMin, COMPOSE_FIELD_MAX_H);
   }
 
   function sentGeo() {
@@ -148,7 +152,6 @@ export function createMessageSendRender({
       richRoot: C.rich,
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: "Message sent",
-      clamp: clampFn,
     });
   }
 
@@ -231,35 +234,23 @@ export function createMessageSendRender({
 
   function contentHeightPx() {
     const measure = (node) => node ? Math.ceil(Math.max(node.getBoundingClientRect().height || 0, node.offsetHeight || 0, node.scrollHeight || 0)) : 0;
-    let layer = document.getElementById("glass-measure-layer");
-    if (!layer) {
-      layer = document.createElement("div");
-      layer.id = "glass-measure-layer";
-      layer.setAttribute("aria-hidden", "true");
-      layer.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:380px;visibility:hidden;pointer-events:none;z-index:-1;";
-      document.body.appendChild(layer);
-    }
+    const layer = ensureMeasureLayer("glass-measure-layer");
     layer.innerHTML = C.rich.innerHTML;
     let raw = measure(layer.querySelector("[data-glass-body]"));
     if (raw <= 0) raw = measure(C.rich.querySelector("[data-glass-body]"));
     const flow = getFlow();
     if (raw > 0) {
-      const resolved = clampFn(raw, 60, MAX_H - TOP - BOTTOM);
+      const resolved = clamp(raw, 60, MAX_H - TOP - BOTTOM);
       lastContentHeight = resolved;
       if (isCardState(flow.state)) heightByState[flow.state] = resolved;
       return resolved;
     }
-    if (isCardState(flow.state) && Number.isFinite(heightByState[flow.state])) return clampFn(heightByState[flow.state], 60, MAX_H - TOP - BOTTOM);
-    return clampFn(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
+    if (isCardState(flow.state) && Number.isFinite(heightByState[flow.state])) return clamp(heightByState[flow.state], 60, MAX_H - TOP - BOTTOM);
+    return clamp(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
   }
 
-  function buildScreenSpec() {
-    const flow = getFlow();
-    if (flow.state === GS.CONFIRM) {
-      return { actions: [], actionSelectedIndex: 0 };
-    }
-    return { actions: [], actionSelectedIndex: 0 };
-  }
+  const EMPTY_SCREEN_SPEC = { actions: [], actionSelectedIndex: 0 };
+  function buildScreenSpec() { return EMPTY_SCREEN_SPEC; }
 
   function buildContent() {
     const flow = getFlow();

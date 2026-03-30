@@ -1,50 +1,39 @@
+export function formatParsedDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+  const month = date.toLocaleDateString("en-US", { month: "short" });
+  return `${weekday}, ${month} ${date.getDate()}`;
+}
+
+const FLIGHT_MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+
+export function formatFlightDate(monthIndex, day) {
+  const now = new Date();
+  let year = now.getFullYear();
+  let date = new Date(year, monthIndex, day);
+  if (Number.isNaN(date.getTime())) return "";
+  if (date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+    year += 1;
+    date = new Date(year, monthIndex, day);
+  }
+  return formatParsedDate(date);
+}
+
+export function normalizeFlightDateValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^[A-Z][a-z]{2},\s+[A-Z][a-z]{2}\s+\d{1,2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) return formatParsedDate(parsed);
+  const match = raw.match(/\b(?:[A-Z][a-z]{2},\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b[\s,]+(\d{1,2})\b/i);
+  if (!match) return raw;
+  const monthIndex = FLIGHT_MONTHS[match[1].slice(0, 3).toLowerCase()];
+  const day = Number(match[2]);
+  if (!Number.isInteger(monthIndex) || !Number.isFinite(day)) return raw;
+  return formatFlightDate(monthIndex, day) || raw;
+}
+
 export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
-  function formatParsedDate(date) {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-    const month = date.toLocaleDateString("en-US", { month: "short" });
-    return `${weekday}, ${month} ${date.getDate()}`;
-  }
-
-  function formatFlightDate(monthIndex, day) {
-    const now = new Date();
-    let year = now.getFullYear();
-    let date = new Date(year, monthIndex, day);
-    if (Number.isNaN(date.getTime())) return "";
-    if (date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-      year += 1;
-      date = new Date(year, monthIndex, day);
-    }
-    return formatParsedDate(date);
-  }
-
-  function normalizeFlightDateValue(value) {
-    const raw = String(value || "").trim();
-    if (!raw) return "";
-    if (/^[A-Z][a-z]{2},\s+[A-Z][a-z]{2}\s+\d{1,2}$/.test(raw)) return raw;
-    const parsed = new Date(raw);
-    if (!Number.isNaN(parsed.getTime())) return formatParsedDate(parsed);
-    const match = raw.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b[\s,]+(\d{1,2})\b/i);
-    if (!match) return raw;
-    const months = {
-      jan: 0,
-      feb: 1,
-      mar: 2,
-      apr: 3,
-      may: 4,
-      jun: 5,
-      jul: 6,
-      aug: 7,
-      sep: 8,
-      oct: 9,
-      nov: 10,
-      dec: 11,
-    };
-    const monthIndex = months[match[1].slice(0, 3).toLowerCase()];
-    const day = Number(match[2]);
-    if (!Number.isInteger(monthIndex) || !Number.isFinite(day)) return raw;
-    return formatFlightDate(monthIndex, day) || raw;
-  }
 
   function normalizeFlightDateData(data) {
     const next = { ...(data || {}) };
