@@ -77,11 +77,11 @@ export function renderInputField({ text = "", placeholder = "Listening...", hasT
   return renderTextBubble({ text, placeholder, mode: "listening", hasText });
 }
 
-export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false } = {}) {
+export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false, magicPending = false } = {}) {
   const value = String(text || "").trim();
   const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}`;
   if (value) {
-    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text" data-compose-field-text>${esc(text)}</div></div>`;
+    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text${magicPending ? " g-compose-text-pending" : ""}" data-compose-field-text>${esc(text)}</div></div>`;
   }
   return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
 }
@@ -148,7 +148,7 @@ export function renderActionRow({ actions = [], selectedIndex = 0 } = {}) {
 
 export function renderCompactStatus({ type = "loading", label = "", icon = "", dotsId = "g-thinking-dots" } = {}) {
   if (type === "loading") {
-    return `<div class="g-center-row"><div class="g-spinner"></div><span id="${esc(dotsId)}">${esc(label || "·")}</span></div>`;
+    return `<div class="g-center-row"><span id="${esc(dotsId)}">${esc(label || "·")}</span></div>`;
   }
   const finalIcon = icon || (type === "error" ? "⚠️" : "✅");
   return `<div data-glass-sent class="g-sent-toast"><span class="g-sent-emoji">${esc(finalIcon)}</span><span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;

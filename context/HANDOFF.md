@@ -1,6 +1,249 @@
 # Handoff
 
 ## Task title
+Thinking Orb Inner Spinner Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the rotating inner spinner from the thinking/loading visual.
+- Updated [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) so `renderCompactStatus({ type: "loading" })` now renders only the loading text/dots and no spinner element.
+- Removed the unused `.g-spinner` style and `spin` keyframes from [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css).
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- Searched source for removed spinner hooks:
+  - no remaining `g-spinner`
+  - no remaining `@keyframes spin`
+
+## Remaining issues / caveats
+- I did not run a fresh browser pass after removing the spinner, but the loading primitive no longer emits any rotating element.
+
+## Recommended next step
+1. Trigger a listening -> thinking transition.
+2. Verify the orb/loading state now shows only the orb plus loading text, with no rotating inner spinner.
+
+## Task title
+Listening To Thinking Orb Bridge Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the listening -> thinking handoff so it no longer jumps straight into the magic visual.
+- Updated [morph.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js) so `circle/listening -> magic/ai/idle` now routes through the home-to-thinking bridge instead of going directly through `morphCore`.
+- Updated [morph-bridges.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js) so the bridge can carry real target content/geometry and, for `magic`, hold the listening orb briefly before handing off into the thinking shell.
+- Updated [morph-render.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js) so home-like shapes (`circle`, `listening`) and thinking-like shapes (`magic`, `ai`) use the softer motion profile.
+
+## Files changed
+- `src/shared/morph.js`
+- `src/shared/morph-bridges.js`
+- `src/shared/morph-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-bridges.js`
+- `node --check src/shared/morph.js`
+- `node --check src/shared/morph-render.js`
+- Headless Playwright UI check on `ai.html` using the real wake -> quick chip -> message flow path:
+  - before fix: at `120ms` after request start, shape was already `magic` and orb opacity had dropped to `0`
+  - after fix: at `120ms`, shape remained `listening` with orb opacity ~`1`
+  - at `360ms`, shape had transitioned into `magic` while orb opacity was still mid-fade (~`0.42`), confirming a continuous handoff instead of an instant switch
+
+## Remaining issues / caveats
+- Validation was targeted to the listening -> message thinking path. Other thinking entries should now use the same bridge route, but I did not run separate UI passes for every flow.
+
+## Recommended next step
+1. Trigger a fresh request from the listening orb.
+2. Verify the orb lingers briefly and fades into the thinking shell instead of snapping directly to the magic state.
+3. Spot-check flight and coffee request starts, since they share the same listening/circle -> thinking bridge path.
+
+## Task title
+Fresh Compose Chip First-Run Double Layer Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the first-run message-compose glitch where selecting a prompted chip during the initial disambiguation-to-compose handoff could leave an extra outgoing layer active and produce a duplicate-container look.
+- Root cause: fresh compose entry temporarily rendered the outgoing disambiguation stage alongside the compose stage, and that overlay was still allowed even after chip interaction or compose text started.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so the outgoing disambiguation layer is now shown only while compose is still passive and empty.
+- As soon as compose text exists, chip magic is pending, or the chip menu is being held/opened/closed, the renderer falls back to a single compose stage.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after tightening the fresh-entry overlay gate.
+
+## Recommended next step
+1. Start a brand-new message flow.
+2. Immediately choose `Share a file` or `Design review`.
+3. Verify the chip magic now stays on a single compose shell even on the first selection of a fresh flow.
+
+## Task title
+Disambiguation To Compose Inner Timing Retune
+
+## Completion status
+- Completed
+
+## Summary
+- Retimed the inner disambiguation-to-compose animations in [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css).
+- Increased disambiguation pill exit duration from `400ms` to `600ms`.
+- Increased compose header enter duration from `300ms` to `600ms` and moved its delay from `200ms` to `400ms`.
+- Moved the empty compose placeholder enter delay from `100ms` to `400ms`.
+
+## Files changed
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS timing values updated in source
+
+## Remaining issues / caveats
+- No live browser verification was run after retiming the inner transition elements.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation flow.
+2. Verify the pills linger longer on exit and the compose header/placeholder enter later.
+3. Confirm the slower overlap still feels clean inside the existing `1000ms` handoff window.
+
+## Task title
+Chip Magic Text Reveal Width Sync Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the prompted-chip magic case where the inserted sentence became visible before the compose shell had widened enough to contain it.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so chip commit now enters a short pending phase:
+  - the target sentence is rendered immediately for sizing
+  - the text stays hidden for the first `260ms`
+  - the shell glow starts right away
+  - the text then reveals with the existing magic animation after the shell has had time to expand
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) and [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) to pass through a `magicPending` render state for the compose field text.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) with a hidden pending-text class so layout still measures against the real sentence while the early reveal is suppressed.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after delaying the text reveal.
+
+## Recommended next step
+1. Commit a prompted chip with a longer sentence.
+2. Verify the shell widens first, then the text reveals inside bounds.
+3. Verify the magic glow timing still feels correct and the flow still auto-advances to confirm.
+
+## Task title
+Chip Magic Slower + Stronger Glow
+
+## Completion status
+- Completed
+
+## Summary
+- Slowed the prompted-chip magic beat slightly so the one-shot insert effect has more time to read before confirm.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) to increase `COMPOSE_CHIP_MAGIC_MS` from `760ms` to `920ms`.
+- Strengthened the peak shell glow in [ai-drop.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-drop.css) by increasing the inset blue/white highlight intensity and spread during the pulse.
+- Kept the effect on the outer shell glow layer, so this retime does not reintroduce the duplicate-container glitch.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-drop.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after retiming and strengthening the chip magic glow.
+
+## Recommended next step
+1. Commit a prompted chip in the message flow.
+2. Verify the shell glow lingers a bit longer and reads more clearly.
+3. Verify the effect still stays on a single shell with no duplicate-container artifact.
+
+## Task title
+Chip Magic Duplicate Container Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the duplicate-container glitch during the prompted-chip magic effect.
+- Root cause: the one-shot glow was being applied to the inner compose field, which rendered like a second glowing pill inside the outer compose shell.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so chip insertion now triggers the one-shot magic class on `#drop-main` instead of the inner field.
+- Updated [ai-drop.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-drop.css) with a shell-level `#home-glow-layer` animation for that one-shot pulse.
+- Removed the inner compose-field pulse hook so the effect no longer produces a stacked shell look.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-drop.css`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after moving the effect to the shell glow layer.
+
+## Recommended next step
+1. Trigger the chip picker and commit a prompted chip.
+2. Verify the inserted sentence still gets the one-shot magic treatment.
+3. Verify the glow now stays on a single shell with no duplicate container underneath.
+
+## Task title
+Prompted Chip Magic Glow Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the one-shot “magic” insert effect when a prompted chip is committed in the message compose flow.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so chip commit now:
+  - writes the predefined sentence into the compose field
+  - renders one beat in compose
+  - applies a one-shot field glow and text-magic animation
+  - then auto-advances to confirm after the effect
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so the compose field can reuse the existing `g-field-pulse` animation via `.g-compose-field.magic-arriving`.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after restoring the chip-insert animation.
+
+## Recommended next step
+1. Open the message compose flow.
+2. Trigger the chip picker and commit a prompted chip.
+3. Verify the sentence appears in the compose field, the field glows once, and the flow then advances to confirm automatically.
+
+## Task title
 Compose Chip Release Commit Fix
 
 ## Completion status
@@ -34,8 +277,8 @@ Compose Chip Gesture Full-Screen Trigger
 - Completed
 
 ## Summary
-- Expanded the compose chip long-press trigger from the compose shell to the full on-screen stage area in [ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js).
-- The gesture can now start anywhere on the screen while the message flow is in compose.
+- Expanded the compose chip long-press trigger from the compose shell to the full screen outside the left-side panels in [ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js).
+- The gesture can now start anywhere except inside `#left-sidebar` or `#sim-panel` while the message flow is in compose.
 - No change was needed to the chip commit path:
   - selecting a chip still writes its predefined `chip.message` into the compose field
   - the flow still advances immediately to confirm after selection
@@ -52,7 +295,7 @@ Compose Chip Gesture Full-Screen Trigger
 
 ## Recommended next step
 1. Enter the message compose screen.
-2. Long press in empty screen space outside the compose shell.
+2. Long press in empty screen space outside the left-side panels.
 3. Verify the chip stack still opens, scrubs, and commits exactly the same way as pressing on the shell itself.
 
 ## Task title

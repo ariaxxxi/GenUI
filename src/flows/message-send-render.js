@@ -270,7 +270,7 @@ export function createMessageSendRender({
         closing: !!flow.composeMenuClosing,
         visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
       });
-      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText });
+      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText, magicPending: !!flow.composeChipMagicPending });
       const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
       return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
     };
@@ -312,7 +312,14 @@ export function createMessageSendRender({
       });
     }
     if (flow.state === GS.COMPOSE) {
-      if (manualComposeEntry) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
+      const hasComposeText = !!String(flow.composeText || "").trim();
+      const shouldShowOutgoingDisambiguation = manualComposeEntry
+        && !hasComposeText
+        && !flow.composeChipMagicPending
+        && !flow.composeMenuOpen
+        && !flow.composeMenuHolding
+        && !flow.composeMenuClosing;
+      if (shouldShowOutgoingDisambiguation) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
       return buildComposeStage();
     }
     if (flow.state === GS.CONFIRM) {

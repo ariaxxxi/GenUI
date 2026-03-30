@@ -107,19 +107,30 @@ export function createMorphBridges(ctx) {
     }, thinkingBridgeMs());
   }
 
-  function bridgeHomeToThinking(targetShape) {
+  function bridgeHomeToThinking(targetShape, contentData = EMPTY_CONTENT, customGeo = null, stageId = null) {
     if (state.thinkingBridgeTimer) { clearTimeout(state.thinkingBridgeTimer); state.thinkingBridgeTimer = null; }
-    callbacks.stopSiriOrb();
-    runtime.morphCore('circle', EMPTY_CONTENT, null, true, 0);
+    const currentShape = state.currentShape === 'listening' ? 'listening' : 'circle';
+    const bridgeMs = homeThinkingBridgeMs();
+    runtime.morphCore(currentShape, EMPTY_CONTENT, null, true, 0);
     C.thumb.style.opacity = '0';
     callbacks.updateActive(targetShape);
     state.thinkingBridgeTimer = setTimeout(() => {
       state.thinkingBridgeTimer = null;
-      runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
-      if (targetShape === 'idle') { callbacks.showAiIdle(); callbacks.updateActive('idle'); return; }
-      callbacks.startSiriOrb(true);
-      callbacks.updateActive('ai');
-    }, homeThinkingBridgeMs());
+      if (targetShape === 'idle') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.showAiIdle();
+        callbacks.updateActive('idle');
+        return;
+      }
+      if (targetShape === 'ai') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.startSiriOrb(true);
+        callbacks.updateActive('ai');
+        return;
+      }
+      callbacks.stopSiriOrb({ keepAiMode: true });
+      runtime.morphCore(targetShape, contentData, customGeo, false, 0, stageId);
+    }, bridgeMs);
   }
 
   function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = null) {

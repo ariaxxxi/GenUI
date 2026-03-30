@@ -147,12 +147,9 @@ export function createMorphRender(ctx) {
   function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
     const root = document.documentElement;
     let transitionMs = bridges.transitionAnimMs(fromShape, toShape, callbacks.getAnimDuration(), fromGeo, toGeo);
-    const isHomeThinkingPair = (
-      (fromShape === 'circle' && toShape === 'ai') ||
-      (fromShape === 'ai' && toShape === 'circle') ||
-      (fromShape === 'magic' && toShape === 'ai') ||
-      (fromShape === 'ai' && toShape === 'magic')
-    );
+    const homeLikeShape = fromShape === 'circle' || fromShape === 'listening' || toShape === 'circle' || toShape === 'listening';
+    const thinkingLikeShape = fromShape === 'ai' || fromShape === 'magic' || toShape === 'ai' || toShape === 'magic';
+    const isHomeThinkingPair = homeLikeShape && thinkingLikeShape;
     if (isHomeThinkingPair) {
       transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
     }
