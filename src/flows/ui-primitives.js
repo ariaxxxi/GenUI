@@ -80,7 +80,17 @@ export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true,
 
 export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
-  return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => `<div class="g-compose-chip ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div>`;
+  return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
+    const accentRgb = String(chip?.accentRgb || "255 255 255").trim();
+    const accentSecondaryRgb = String(chip?.accentSecondaryRgb || accentRgb).trim();
+    const orbitMs = Number.isFinite(Number(chip?.orbitMs)) ? Math.max(600, Math.round(Number(chip.orbitMs))) : null;
+    const styleVars = [];
+    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
+    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
+    return `<div class="g-compose-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}"${styleAttr}>${renderAccentOrbitChrome()}<span class="g-compose-chip-label">${esc(chip.label || "")}</span></div>`;
+  }).join("")}</div>`;
 }
 
 export function renderTextBubble({ text = "", placeholder = "", mode = "static", hasText = false } = {}) {

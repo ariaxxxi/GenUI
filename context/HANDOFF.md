@@ -118,6 +118,15 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
   - `--g-accent-rgb`
   - `--g-accent-secondary-rgb`
   - `--g-accent-orbit-ms`
+- Reused the same accent-shell treatment on the compose-field suggestion chips:
+  - `renderComposeChipStack(...)` now mounts `renderAccentOrbitChrome()` inside each compose chip host
+  - compose suggestion chips default their accent vars to white: `--g-accent-rgb: 255 255 255`, `--g-accent-secondary-rgb: 255 255 255`
+  - the selected compose chip suppresses the old border/glass highlight so the reusable shell owns the highlighted state
+  - a later compose-only retune softened the white shell, then nudged it slightly brighter again with:
+    - `.g-accent-orbit-fill::before` opacity `0.70`
+    - `.g-accent-orbit-fill::before` `filter: blur(10px)`
+    - `.g-accent-orbit-fill::after` opacity `0.40`
+    - a reduced compose-only inner glow and ring so the chip stays calmer than the disambiguation pill
 - Later visual tuning thinned the highlighted pill edge by reducing the inset ring weight, easing back the inner glow, and softening the selected pill inset shadows so the border reads closer to the thinner reference treatment.
 - A later pass increased the reusable inner-shadow alpha values by `0.1` so the selected pill depth reads more clearly without restoring the thicker edge look.
 
@@ -180,6 +189,25 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
     - selected pill inset shadow: `rgba(255, 255, 255, 0.145) 0px 12px 18px 0px inset, rgba(0, 0, 0, 0.62) 0px -18px 24px 0px inset`
     - reduced inner glow intensity across `g-accent-orbit-inner-glow`
     - softer selected-pill inset shell shadow
+- Browser validation via Playwright after compose-chip shell reuse on `add-visual`:
+  - entered compose through the real flow, opened the suggestion-chip hold menu, and captured `/tmp/compose-chip-selected-white-accent.png`
+  - confirmed the highlighted visible compose suggestion chip resolves with:
+    - classes: `g-compose-chip g-accent-orbit-host is-visible selected`
+    - `--g-accent-rgb: 255 255 255`
+    - `--g-accent-secondary-rgb: 255 255 255`
+    - `.g-accent-orbit` opacity: `1`
+- Browser validation via Playwright after compose-chip brightness retune on `add-visual`:
+  - captured `/tmp/compose-chip-selected-white-accent-brighter-again.png`
+  - confirmed the current highlighted visible compose suggestion chip resolves with:
+    - `.g-accent-orbit-fill::before` opacity: `0.7`
+    - `.g-accent-orbit-fill::after` opacity: `0.4`
+    - compose-only inner glow: `rgba(255, 255, 255, 0.12) 0px 0px 16px 0px inset, rgba(255, 255, 255, 0.22) 0px -7px 14px 0px inset, rgba(255, 255, 255, 0.08) -5px 0px 8px 0px inset, rgba(255, 255, 255, 0.07) 5px 0px 9px 0px inset, rgba(255, 255, 255, 0.06) 0px 1px 6px 0px inset`
+    - compose-only ring: `rgba(255, 255, 255, 0.58) 0px 0px 2px 1px inset`
+- Browser validation via Playwright after compose-chip top-left blur retune on `add-visual`:
+  - captured `/tmp/compose-chip-top-left-blur10.png`
+  - confirmed the highlighted visible compose suggestion chip now resolves with:
+    - `.g-accent-orbit-fill::before` opacity: `0.7`
+    - `.g-accent-orbit-fill::before` filter: `blur(10px)`
 
 ## Remaining issues / caveats
 - Final sign-off still depends on your eye against the Figma target at presentation scale. If the edge still feels too heavy, the next safe tuning knob is the inset ring strength before changing the shell gradients.
@@ -319,9 +347,11 @@ Restore Confirm-Step Listening Orb Voice Reactivity
 - Root cause: confirm mode had diverged onto a separate simplified outer-glow path on `#siri-orb`, while disambiguation/listening mode uses the real reactive shell shadow values. The mic loop was still active, but the visible confirm orb was no longer using the same reactive layer, so it appeared static.
 - Switched the confirm-await-orb command visualization back to the same `shadow(level)` path used by the listening/disambiguation orb, applied on the confirm orb’s `#home-glow-layer`.
 - Kept `drop-main` shell shadow cleared in confirm so only the docked orb reacts.
+- Later changed the deepest blue stop inside `shadow(level)` and `buttonShadow(level)` from the old bright blue family to `rgba(0,22,67,1)`, so confirm-step listening and the compose-field voice-viz pulse share the same darker base blue as the listening/magic shell.
 
 ## Files changed
 - `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
 
 ## Validation performed
 - `node --check src/ai/voice-engine.js`
@@ -332,6 +362,9 @@ Restore Confirm-Step Listening Orb Voice Reactivity
   - `sim-mic-label` remained `Listening…`
   - `#home-glow-layer` carried the reactive listening shadow values instead of staying blank
   - `#siri-orb` kept its stable base shell shadow
+- Code-level validation after blue-token retune:
+  - `node --check src/ai/voice-engine.js`
+  - confirmed `shadow(level)` and `buttonShadow(level)` now end with `rgba(0,22,67,1)` instead of the previous brighter blue
 
 ## Remaining issues / caveats
 - Validation was done in headless Chromium, so I verified the confirm branch and live style targets but did not synthesize real microphone amplitude in-browser.
@@ -3468,11 +3501,15 @@ AI parity pass: disambiguate→compose choreography + chip-select motion + liste
   - Changed `home-glow` toggle from `shape === 'circle'` to `shape === 'listening' || shape === 'magic'`.
   - Added `magic-glow` toggle for `shape === 'magic'`.
   - This aligns with `main` class behavior and restores vivid listening/thinking blue-layer glow visibility.
+- Later retuned the deepest shared blue stop used by the listening/magic shell glow from `#0042CB` to `#001643` in the base home-glow stack so both states carry the darker blue in their bottom inset bloom.
 
 ## Files changed
 - `src/flows/message-send.js`
 - `src/flows/message-send-render.js`
 - `src/tool/index-app.js`
+- `src/styles/ai-drop.css`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
 
 ## Validation performed
 - `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
@@ -3481,6 +3518,10 @@ AI parity pass: disambiguate→compose choreography + chip-select motion + liste
   - `glassChipSelect` timing path
   - compose-entry suppression behavior
   - home/thinking glow class toggles
+- Browser validation after listening/magic blue-token retune on `add-visual`:
+  - listening capture: `/tmp/orb-listening-001643.png`
+  - magic capture: `/tmp/orb-magic-001643.png`
+  - confirmed both listening and magic `#home-glow-layer` shadows now end with `rgb(0, 22, 67) 0px -70px 60px -30px inset`
 
 ## Remaining issues / caveats
 - Exact frame-by-frame browser pixel diff against served `main:ai.html` baseline not run in this pass.

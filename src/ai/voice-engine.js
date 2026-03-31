@@ -27,12 +27,12 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   const shadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
     const lc = (r0,g0,b0,a0, r1,g1,b1,a1) => `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
-    return [`inset 0 ${lr(-22,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`, `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`, `inset 0 ${lr(-3,-56)}px 60px -30px rgba(19,75,192,1)`].join(', ');
+    return [`inset 0 ${lr(-22,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`, `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`, `inset 0 ${lr(-3,-56)}px 60px -30px rgba(0,22,67,1)`].join(', ');
   };
   const buttonShadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
     const lc = (r0,g0,b0,a0, r1,g1,b1,a1) => `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
-    return [`inset 0 ${lr(-5,6)}px ${lr(6,6)}px -2px ${lc(70,132,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-6,-11)}px ${lr(7.8,20)}px -8px ${lc(172,188,247,0.50, 255,255,255,0.40)}`, `inset 0 ${lr(-1,10)}px ${lr(14.4,30)}px -6px ${lc(255,255,255,0.40, 172,188,247,0.50)}`, `inset 0 ${lr(-6,-56)}px ${lr(47.4,60)}px -30px rgba(19,75,192,1)`].join(', ');
+    return [`inset 0 ${lr(-5,6)}px ${lr(6,6)}px -2px ${lc(70,132,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-6,-11)}px ${lr(7.8,20)}px -8px ${lc(172,188,247,0.50, 255,255,255,0.40)}`, `inset 0 ${lr(-1,10)}px ${lr(14.4,30)}px -6px ${lc(255,255,255,0.40, 172,188,247,0.50)}`, `inset 0 ${lr(-6,-56)}px ${lr(47.4,60)}px -30px rgba(0,22,67,1)`].join(', ');
   };
 
   async function initVoiceAnalyser() {
