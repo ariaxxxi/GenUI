@@ -161,6 +161,7 @@ export function createMessageSendRender({
     layer.style.width = `${measureWidth}px`;
     layer.innerHTML = field.outerHTML;
     const probe = layer.querySelector("[data-compose-field]");
+    probe?.classList.remove("g-compose-field-magic-pending");
     const measured = measure(probe) || measure(field);
     if (!measured) return baseMin;
     return clamp(measured, baseMin, COMPOSE_FIELD_MAX_H);

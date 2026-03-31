@@ -1,6 +1,43 @@
 # Handoff
 
 ## Task title
+Stabilize Long-Text Chip Insert Shell During Transition
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining double-container glitch on long chip inserts such as `Share a file`.
+- Root cause: during `composeChipMagicPending`, the live compose field was auto-sizing to the full multi-line text height while the outer shell was still morphing from the smaller `Speak your message...` geometry.
+- Added a dedicated pending-field class so the live compose field stays locked to the current shell height while the inserted text is still hidden.
+- Updated the compose-height measurement path to ignore that pending-only class, so the outer shell still animates toward the real final long-text height instead of measuring the temporary locked state.
+- Removed the pending-field class at reveal time before the text magic animation starts.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Re-ran the full flow 3 times: wake with `L` -> `send message to hiro` -> choose default Hiro -> long-press stage -> release on `Share a file`
+- Verified the critical first half of the transition stayed aligned on every run:
+  - at `0ms`, `40ms`, `80ms`, `120ms`, and `180ms`, compose field height matched shell height exactly
+  - while the field/shell mismatch briefly reappears after the reveal starts, the field background remains transparent during that interval, so the second black container no longer renders
+  - by `600ms`, shell and field were effectively aligned again at final long-text size
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+- There is still a small geometry delta right after the text reveal starts (`~5px` at around `260ms` on the sampled runs), but the field remains transparent during that moment, so it does not produce the visible double-container artifact.
+
+## Recommended next step
+1. Do one manual fullscreen pass on the `Share a file` chip to confirm the long-text insert now reads as a single shell at presentation scale.
+
+## Task title
 Standardize Animation Easing To `0.35, 0.23, 0.13, 0.98`
 
 ## Completion status

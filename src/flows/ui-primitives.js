@@ -79,7 +79,7 @@ export function renderInputField({ text = "", placeholder = "Listening...", hasT
 
 export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false, magicPending = false } = {}) {
   const value = String(text || "").trim();
-  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}`;
+  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}${magicPending ? " g-compose-field-magic-pending" : ""}`;
   if (value) {
     return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text${magicPending ? " g-compose-text-pending" : ""}" data-compose-field-text>${esc(text)}</div></div>`;
   }

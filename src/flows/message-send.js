@@ -563,6 +563,8 @@ export function createMessageSendFlow(ctx) {
       if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
       flow.composeChipMagicPending = false;
       const text = ctx.C.rich?.querySelector("[data-compose-field-text]");
+      const field = ctx.C.rich?.querySelector("[data-compose-field]");
+      field?.classList.remove("g-compose-field-magic-pending");
       if (!text) {
         render.render(false);
         return;
