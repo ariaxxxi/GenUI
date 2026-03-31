@@ -193,22 +193,44 @@
 }
 .g-accent-orbit-fill {
   background:
-    radial-gradient(58% 176% at 13% -10%,
-      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.96) 0%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0.90) 11%,
-      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.60) 22%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0.16) 34%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0) 48%),
-    radial-gradient(24% 130% at 100% 50%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0.92) 0%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0.32) 29%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0) 62%),
     linear-gradient(90deg,
       rgb(52 52 59 / 0.90) 0%,
       rgb(26 21 38 / 0.90) 23%,
       rgb(6 6 10 / 0.99) 47%,
       rgb(0 0 0 / 1) 100%);
   opacity: 1;
+}
+.g-accent-orbit-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(58% 176% at 13% -10%,
+      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 1) 0%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.98) 11%,
+      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.74) 22%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.22) 34%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0) 48%);
+  filter: blur(5px);
+  pointer-events: none;
+}
+.g-accent-orbit-fill::after {
+  content: '';
+  position: absolute;
+  right: -6%;
+  bottom: -18%;
+  width: 30%;
+  height: 88%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 72% 50%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.94) 0%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.42) 30%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.12) 48%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0) 68%);
+  filter: blur(10px);
+  pointer-events: none;
 }
 .g-accent-orbit-left-spot {
   inset: auto;
@@ -229,20 +251,21 @@
   will-change: left, top;
   filter: blur(14px);
   mix-blend-mode: screen;
-  opacity: 0.78;
-  animation: g-accent-orbit-middle-loop var(--g-accent-orbit-ms, 6112ms) linear infinite;
+  opacity: 0;
+  animation: none;
 }
 .g-accent-orbit-inner-glow {
   box-shadow:
-    inset 0 0 22px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.11),
-    inset 0 -8px 18px rgb(var(--g-accent-rgb, 144 172 255) / 0.42),
-    inset -6px 0 10px rgb(var(--g-accent-rgb, 144 172 255) / 0.12),
-    inset 6px 0 12px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.08),
-    inset 0 1px 8px rgba(255,255,255,0.05);
+    inset 0 0 24px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.23),
+    inset 0 -9px 20px rgb(var(--g-accent-rgb, 144 172 255) / 0.57),
+    inset -7px 0 12px rgb(var(--g-accent-rgb, 144 172 255) / 0.25),
+    inset 7px 0 13px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.20),
+    inset 0 1px 9px rgba(255,255,255,0.16);
 }
 .g-accent-orbit-middle {
   inset: auto;
   z-index: 3;
+  isolation: isolate;
   width: var(--g-accent-hotspot-len, 24px);
   height: var(--g-accent-hotspot-thickness, 24px);
   left: var(--g-accent-hotspot-corner, 16px);
@@ -262,7 +285,27 @@
   will-change: left, top;
   filter: blur(15px);
   mix-blend-mode: screen;
-  animation: g-accent-orbit-middle-loop var(--g-accent-orbit-ms, 6112ms) linear infinite;
+  opacity: 0;
+  animation: none;
+}
+.g-accent-orbit-middle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 34%,
+      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.96) 0%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.74) 34%,
+      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.30) 62%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0) 100%);
+  transform: translate(-16%, -14%) scale(1.55);
+  transform-origin: center;
+  filter: blur(9px);
+  mix-blend-mode: screen;
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: -1;
 }
 .g-accent-orbit-ring {
   position: absolute;
@@ -377,8 +420,8 @@
 .g-disambiguation-pill.selected {
   background: linear-gradient(180deg, rgba(52,52,58,0.96) 0%, rgba(16,16,22,0.98) 46%, rgba(0,0,0,1) 100%);
   box-shadow:
-    inset 0 12px 18px rgba(255,255,255,0.03),
-    inset 0 -16px 22px rgba(0,0,0,0.46);
+    inset 0 12px 18px rgba(255,255,255,0.145),
+    inset 0 -18px 24px rgba(0,0,0,0.62);
   transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y, 0px))) scale(1);
 }
 .g-disambiguation-pill:not(.selected) {

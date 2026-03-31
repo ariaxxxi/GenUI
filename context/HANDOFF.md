@@ -8,16 +8,14 @@ Traveling Hotspot And Linked Accent Orbit Retune
 
 ## Summary
 - Consolidated the traveling-spot work into the final selected-chip motion behavior.
-- The reusable `g-accent-orbit-middle` hotspot is now:
-  - `24px x 24px`
-  - `border-radius: 50%`
-  - `filter: blur(15px)`
-  - `animation-duration: 6112ms`
-- The reusable `g-accent-orbit-left-spot` is now a linked companion aura that follows the same clockwise orbit as the hotspot instead of remaining pinned to the left side.
+- The reusable traveling hotspot layers are currently hidden for now:
+  - `g-accent-orbit-middle` remains configured as a `24px x 24px`, `border-radius: 50%`, `filter: blur(15px)` hotspot with the attached accent-colored blurred `::before` layer
+  - `g-accent-orbit-left-spot` remains configured as the linked companion aura
+  - both moving layers now resolve with `opacity: 0` and `animation: none`, so the selected pill keeps only the static shell treatment
 - The shared orbit path is now pushed well outside the capsule with:
   - `--g-accent-hotspot-inset: -28px`
   - `--g-accent-hotspot-corner: 16px`
-- Result: the hotspot body sits outside the pill on the straight edges, leaving only a very faint clipped blur fringe visible inside the capsule.
+- Result: the hotspot system is preserved for reuse, but no traveling light is visible on the selected disambiguation pill.
 - Fixed the first-load hotspot jump by stopping the `entering -> settled` phase change from rebuilding the disambiguation pill DOM:
   - `renderDisambiguationPills(...)` no longer bakes the phase class into the HTML string
   - `message-send-render.js` now toggles the `entering/settled` class in place on the existing cluster node
@@ -35,30 +33,30 @@ Traveling Hotspot And Linked Accent Orbit Retune
 - Browser validation via Playwright on `add-visual`:
   - opened `http://127.0.0.1:5174/ai.html`
   - triggered the Hiro disambiguation state through the real quick-chip path
-  - captured `/tmp/disambiguation-chip-hotspot-most-hidden.png`
-  - confirmed hotspot computed styles:
-    - `width: 24px`
-    - `height: 24px`
-    - `border-radius: 50%`
-    - `filter: blur(15px)`
-    - `animation-duration: 6.112s`
-  - confirmed linked orbit behavior:
-    - left spot and hotspot sampled with matching `left/top` positions on the same loop
+  - captured `/tmp/disambiguation-chip-hotspot-removed.png`
+  - confirmed hidden hotspot computed styles:
+    - `g-accent-orbit-left-spot`
+      - `opacity: 0`
+      - `animation-name: none`
+      - `animation-duration: 0s`
+    - `g-accent-orbit-middle`
+      - `opacity: 0`
+      - `animation-name: none`
+      - `animation-duration: 0s`
   - confirmed final resolved orbit geometry on the selected pill:
     - `--g-accent-hotspot-inset: -28px`
     - `--g-accent-hotspot-corner: 16px`
-    - hotspot sample position: `left 16px`, `top -28px`
   - confirmed first-load no-jump fix across the old phase boundary:
     - first sample during entry: `left 20.5781px`, `top -28px`, cluster `g-disambiguation-pills entering`
     - later sample after `950ms`: same hotspot node persisted, `left 107.438px`, `top -28px`, cluster `g-disambiguation-pills settled`
+  - confirmed the selected chip now renders with only the static shell treatment and no visible traveling hotspot
 
 ## Remaining issues / caveats
-- The hotspot body is now well outside the capsule on the straight edges. Any farther outward will mostly affect only the blur fringe and may make the motion effectively disappear.
+- The hotspot system is hidden, not deleted. Re-enabling motion later only requires restoring non-zero opacity and the orbit animation on the existing moving layers.
 
 ## Recommended next step
-1. Open the Hiro disambiguation state on `add-visual`.
-2. Watch the top-edge portion of the orbit.
-3. Confirm the motion is now reduced to an extremely faint clipped glow rather than a readable moving spot.
+1. Leave the static shell in place unless motion is intentionally reintroduced.
+2. If motion comes back later, start by re-enabling only `g-accent-orbit-middle` before bringing back the linked aura.
 
 ## Task title
 Reduce Left Accent Fill On Selected Disambiguation Pill
@@ -105,8 +103,8 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
 - The previous reusable selected-chip shell was missing key Figma layers and the traveling spotlight was too subtle.
 - Rebuilt the selected pill highlight stack to match the Figma node more closely using distinct internal layers:
   - `g-accent-orbit-fill`
-    - top-left purple/blue sweep
-    - stronger blue right-edge tint
+    - top-left purple/blue sweep split into a separate blurred layer, anchored directly at `13% -10%`, `blur(5px)`, and brightened with stronger leading gradient stops
+    - stronger blue accent now split into a separate blurred layer and anchored lower so it reads from the bottom-right edge
     - darker black-right base fill
   - `g-accent-orbit-left-spot`
     - large white/cool spotlight on the left
@@ -121,6 +119,7 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
   - `--g-accent-secondary-rgb`
   - `--g-accent-orbit-ms`
 - Later visual tuning thinned the highlighted pill edge by reducing the inset ring weight, easing back the inner glow, and softening the selected pill inset shadows so the border reads closer to the thinner reference treatment.
+- A later pass increased the reusable inner-shadow alpha values by `0.1` so the selected pill depth reads more clearly without restoring the thicker edge look.
 
 ## Files changed
 - `src/flows/ui-primitives.js`
@@ -145,6 +144,40 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
   - captured `/tmp/disambiguation-chip-thinner-edge.png`
   - confirmed slimmer edge treatment on the selected pill:
     - ring: `inset 0 0 3px 1px rgba(255,255,255,0.82)`
+- Browser validation via Playwright after right-accent position retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-right-accent-bottom-right.png`
+  - confirmed the static right-side blue radial now reads from the bottom-right instead of the mid-right edge
+- Browser validation via Playwright after lower blurred right-accent retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-right-accent-lower-blur10.png`
+  - confirmed the right accent now sits farther down and is softened with a `10px` blur
+- Browser validation via Playwright after left-accent alignment retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-left-accent-shifted-level.png`
+  - confirmed the top-left accent now sits farther left and lower, reading closer to the same horizontal line as the bottom-right accent
+- Browser validation via Playwright after top-left blur retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-blur10.png`
+  - confirmed the top-left accent is now rendered via a separate `::before` layer with `filter: blur(10px)`
+- Browser validation via Playwright after top-left position nudge on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-up.png`
+  - confirmed the isolated top-left accent now resolves higher with `top: -5.59375px` while keeping `filter: blur(10px)`
+- Browser validation via Playwright after exact top-left anchor retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-13-neg10.png`
+  - confirmed the isolated top-left accent now resolves from `radial-gradient(58% 176% at 13% -10%, ...)`
+- Browser validation via Playwright after top-left blur reduction on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-blur5.png`
+  - confirmed the isolated top-left accent now resolves with `filter: blur(5px)` while keeping the same `13% -10%` gradient anchor
+- Browser validation via Playwright after top-left brightness retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-brighter.png`
+  - confirmed the isolated top-left accent now resolves from `radial-gradient(58% 176% at 13% -10%, rgb(151, 97, 255) 0%, rgba(145, 172, 255, 0.98) 11%, rgba(151, 97, 255, 0.74) 22%, rgba(145, 172, 255, 0.22) 34%, rgba(145, 172, 255, 0) 48%)` with `filter: blur(5px)`
+- Browser validation via Playwright after inner-shadow retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-inner-shadow-stronger.png`
+  - confirmed slightly stronger inner depth on the live selected pill:
+    - orbit glow: `rgba(151, 97, 255, 0.13) 0px 0px 24px 0px inset, rgba(145, 172, 255, 0.47) 0px -9px 20px 0px inset, rgba(145, 172, 255, 0.15) -7px 0px 12px 0px inset, rgba(151, 97, 255, 0.1) 7px 0px 13px 0px inset, rgba(255, 255, 255, 0.06) 0px 1px 9px 0px inset`
+    - selected pill inset shadow: `rgba(255, 255, 255, 0.043) 0px 12px 18px 0px inset, rgba(0, 0, 0, 0.52) 0px -18px 24px 0px inset`
+- Browser validation via Playwright after `+0.1` inner-shadow alpha retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-inner-shadow-alpha-plus-point1.png`
+  - confirmed updated live selected-pill inset values:
+    - orbit glow: `rgba(151, 97, 255, 0.23) 0px 0px 24px 0px inset, rgba(145, 172, 255, 0.57) 0px -9px 20px 0px inset, rgba(145, 172, 255, 0.25) -7px 0px 12px 0px inset, rgba(151, 97, 255, 0.2) 7px 0px 13px 0px inset, rgba(255, 255, 255, 0.16) 0px 1px 9px 0px inset`
+    - selected pill inset shadow: `rgba(255, 255, 255, 0.145) 0px 12px 18px 0px inset, rgba(0, 0, 0, 0.62) 0px -18px 24px 0px inset`
     - reduced inner glow intensity across `g-accent-orbit-inner-glow`
     - softer selected-pill inset shell shadow
 
