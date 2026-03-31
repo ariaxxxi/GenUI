@@ -31,7 +31,7 @@ export function createMessageSendFlow(ctx) {
   const COMPOSE_MENU_CLOSE_MS = 260;
   const COMPOSE_MENU_BASE_COUNT = 3;
   const COMPOSE_MENU_POINTER_STEP_PX = 48;
-  const COMPOSE_CHIP_MAGIC_MS = 920;
+  const COMPOSE_CHIP_MAGIC_MS = 800;
   const COMPOSE_CHIP_MAGIC_REVEAL_MS = 260;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeChipMagicPending: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "", sentTransitionActive: false, sentToastEnterPending: false };
@@ -337,6 +337,7 @@ export function createMessageSendFlow(ctx) {
     GS,
     getFlow: () => flow,
     morphTo: ctx.morph.morphTo,
+    applyGeometry: ctx.morph.applyGeometry,
     getCurrentMainGeometry: ctx.morph.getCurrentMainGeometry,
     setIntentHeader: ctx.shell.setIntentHeader,
     hideIntentHeader: ctx.shell.hideIntentHeader,
@@ -546,19 +547,17 @@ export function createMessageSendFlow(ctx) {
     ctx.input.blur();
     render.render(true);
 
-    requestAnimationFrame(() => {
-      if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
-      const dropMain = document.getElementById("drop-main");
-      const text = ctx.C.rich?.querySelector("[data-compose-field-text]");
-      if (dropMain) {
-        dropMain.classList.remove("compose-chip-magic");
-        void dropMain.offsetHeight;
-        dropMain.classList.add("compose-chip-magic");
-      }
-      if (text) {
-        text.classList.remove("g-text-magic");
-      }
-    });
+    if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
+    const dropMain = document.getElementById("drop-main");
+    const text = ctx.C.rich?.querySelector("[data-compose-field-text]");
+    if (dropMain) {
+      dropMain.classList.remove("compose-chip-magic");
+      void dropMain.offsetHeight;
+      dropMain.classList.add("compose-chip-magic");
+    }
+    if (text) {
+      text.classList.remove("g-text-magic");
+    }
 
     setTimeout(() => {
       if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;

@@ -21,6 +21,7 @@ export function createMessageSendRender({
   GS,
   getFlow,
   morphTo,
+  applyGeometry,
   getCurrentMainGeometry,
   setIntentHeader,
   hideIntentHeader,
@@ -92,13 +93,13 @@ export function createMessageSendRender({
 
   function composeGeo() {
     const flow = getFlow();
-    const isConfirm = flow.state === GS.CONFIRM;
+    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicPending);
     const hasText = flow.state === GS.CONFIRM
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
     const w = measureComposeFieldWidth(hasText);
     const h = measureComposeFieldHeight(hasText, w);
-    const bottom = COMPOSE_FIELD_BOTTOM - (isConfirm ? CONFIRM_AWAIT_ORB_SHIFT : 0);
+    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? CONFIRM_AWAIT_ORB_SHIFT : 0);
     return {
       ...SHAPES["card-form"],
       main: {
@@ -194,7 +195,7 @@ export function createMessageSendRender({
     const flow = getFlow();
     const dropMain = document.getElementById("drop-main");
     if (!dropMain) return;
-    const confirmAwaitOrb = flow.active && flow.state === GS.CONFIRM;
+    const confirmAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicPending));
     const showListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrb);
     const showHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrb);
     dropMain.classList.toggle("confirm-await-orb", confirmAwaitOrb);
@@ -388,6 +389,9 @@ export function createMessageSendRender({
     if (sendTransitionActive && !prevSendTransitionActive) confirmTransitionFrozenTextWidth = measureConfirmTransitionTextWidthPx();
     else if (!sendTransitionActive) confirmTransitionFrozenTextWidth = null;
     const shape = sendTransitionActive ? "magic" : glassStateShape(flow.state);
+    const confirmAwaitOrbActive = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicPending));
+    const shouldShowListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrbActive);
+    const shouldShowHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrbActive);
     const screenSpec = buildScreenSpec();
     const dropMain = document.getElementById("drop-main");
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
@@ -422,6 +426,10 @@ export function createMessageSendRender({
     dropMain?.classList.toggle("compose-surface", flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM));
     dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM && !sendTransitionActive);
     dropMain?.classList.toggle("compose-text-active", flow.active && composeVoiceVizActive);
+    dropMain?.classList.toggle("compose-chip-sizing", flow.active && flow.state === GS.COMPOSE && !!flow.composeChipMagicPending);
+    dropMain?.classList.toggle("confirm-await-orb", confirmAwaitOrbActive);
+    dropMain?.classList.toggle("listening-orb", shouldShowListeningOrb);
+    dropMain?.classList.toggle("home-glow", shouldShowHomeGlow);
     C.rich.classList.toggle("visible", flow.active);
     const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM || sendTransitionActive);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);
@@ -444,7 +452,7 @@ export function createMessageSendRender({
     } else {
       C.rich.style.opacity = flow.active ? "1" : "";
     }
-    C.rich.style.transform = (flow.active && flow.state === GS.SENT && !sendTransitionActive) ? "translateY(-18px)" : "";
+    C.rich.style.transform = "";
     renderControls(screenSpec);
     cancelMeasure();
     cancelSettle();
@@ -584,6 +592,9 @@ export function createMessageSendRender({
     updateComposeMenuUiOnly() {
       const flow = getFlow();
       if (!flow.active || flow.state !== GS.COMPOSE) return false;
+      const glassBodies = C.rich.querySelectorAll("[data-glass-body]");
+      const hasOutgoingDisambiguationLayer = glassBodies.length > 1 || !!C.rich.querySelector(".g-disambiguation-pills.exiting-to-compose");
+      if (manualComposeEntry || hasOutgoingDisambiguationLayer) return false;
       const stack = C.rich.querySelector(".g-compose-chip-stack");
       if (!stack) return false;
       const previousStackRect = stack.getBoundingClientRect();

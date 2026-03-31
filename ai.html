@@ -21,12 +21,8 @@
 
 <style id="anim-style">
   :root {
-    --spring: linear(
-      0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
-      0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
-      1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
-      1.004 92%, 1.001 97%, 1
-    );
+    --motion-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
+    --spring: var(--motion-ease);
     --anim-w:  450ms var(--spring);
     --anim-h:  450ms var(--spring);
     --anim-br: 450ms var(--spring);

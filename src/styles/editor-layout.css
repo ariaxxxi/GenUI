@@ -27,7 +27,7 @@ body {
   font-size: 12px;
   letter-spacing: .04em;
   text-decoration: none;
-  transition: background .18s, border-color .18s, transform .1s;
+  transition: background .18s var(--motion-ease), border-color .18s var(--motion-ease), transform .1s var(--motion-ease);
 }
 .entry-point-btn:hover {
   border-color: rgba(255,255,255,0.52);
@@ -68,7 +68,7 @@ body {
   background-position: center;
   filter: none;
   transform: scale(1.04);
-  transition: opacity 260ms ease, filter 260ms ease;
+  transition: opacity 260ms var(--motion-ease), filter 260ms var(--motion-ease);
 }
 #ui-frame.glasses {
   width: 420px;
@@ -115,7 +115,7 @@ body {
   position: relative;
   z-index: 1;
   opacity: 1;
-  transition: opacity 220ms ease;
+  transition: opacity 220ms var(--motion-ease);
 }
 
 #intent-header {
@@ -123,7 +123,7 @@ body {
   height: 36px; margin-bottom: 12px;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 360ms ease, transform 360ms ease;
+  transition: opacity 360ms var(--motion-ease), transform 360ms var(--motion-ease);
   pointer-events: none;
 }
 #intent-header.visible {
@@ -139,14 +139,14 @@ body {
   background: rgba(255,255,255,0.22);
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 200ms ease;
+  transition: opacity 200ms var(--motion-ease);
 }
 #intent-step-dot.visible { opacity: 1; }
 #intent-step-lbl {
   font-size: 9px; letter-spacing: .22em;
   color: rgba(255,255,255,0.28);
   text-transform: uppercase;
-  transition: opacity 200ms ease;
+  transition: opacity 200ms var(--motion-ease);
 }
 
 /* ── Drop shell ── */
@@ -160,10 +160,10 @@ body {
     height        var(--anim-h),
     border-radius var(--anim-br),
     transform     var(--anim-tx),
-    opacity       300ms ease,
-    background    420ms ease,
-    box-shadow    520ms ease,
-    filter        520ms ease;
+    opacity       300ms var(--motion-ease),
+    background    420ms var(--motion-ease),
+    box-shadow    520ms var(--motion-ease),
+    filter        520ms var(--motion-ease);
   will-change: transform, width, height, border-radius, opacity;
 }
 .drop::before {
@@ -207,7 +207,7 @@ body {
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.12);
   transition: width var(--anim-w), height var(--anim-h), transform var(--anim-tx),
-              border-radius var(--anim-br), opacity var(--thumb-fade-ms, 280ms) ease;
+              border-radius var(--anim-br), opacity var(--thumb-fade-ms, 280ms) var(--motion-ease);
 }
 #c-thumb.thumb-plain-icon {
   background: transparent;
@@ -249,7 +249,7 @@ body {
     inset 0 0 82px rgba(210,230,255,0.22),
     0 0 52px rgba(255,255,255,0.24),
     0 0 120px rgba(210,230,255,0.20);
-  transition: opacity 500ms ease var(--home-glow-delay, 0ms);
+  transition: opacity 500ms var(--motion-ease) var(--home-glow-delay, 0ms);
 }
 #c-primary {
   position: absolute; z-index: 3;
@@ -257,9 +257,9 @@ body {
   color: rgba(255,255,255,0.90); white-space: nowrap; line-height: 1.1;
   transition:
     transform var(--content-move-t, var(--anim-t)),
-    opacity var(--content-fade-ms, 260ms) ease,
+    opacity var(--content-fade-ms, 260ms) var(--motion-ease),
     font-size var(--primary-size-anim-ms, var(--anim-t)),
-    color 220ms ease;
+    color 220ms var(--motion-ease);
 }
 #c-secondary {
   position: absolute; z-index: 3;
@@ -267,9 +267,9 @@ body {
   color: rgba(255,255,255,0.48); white-space: nowrap; line-height: 1.2;
   transition:
     transform var(--content-move-t, var(--anim-t)),
-    opacity var(--content-fade-ms, 260ms) ease,
+    opacity var(--content-fade-ms, 260ms) var(--motion-ease),
     font-size var(--text-size-anim-ms, var(--anim-t)),
-    color 220ms ease;
+    color 220ms var(--motion-ease);
 }
 #c-detail {
   position: absolute; z-index: 3;
@@ -277,14 +277,14 @@ body {
   color: rgba(255,255,255,0.26); white-space: nowrap; line-height: 1.2;
   transition:
     transform var(--content-move-t, var(--anim-t)),
-    opacity var(--detail-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    opacity var(--detail-fade-ms, var(--content-fade-ms, 260ms)) var(--motion-ease),
     font-size var(--text-size-anim-ms, var(--anim-t)),
-    color 220ms ease;
+    color 220ms var(--motion-ease);
 }
 #c-divider {
   position: absolute; z-index: 3;
   height: 1px; background: rgba(255,255,255,0.08);
-  transition: transform var(--anim-t), width var(--anim-t), opacity var(--content-fade-ms, 260ms) ease;
+  transition: transform var(--anim-t), width var(--anim-t), opacity var(--content-fade-ms, 260ms) var(--motion-ease);
 }
 #c-media,
 .c-media-extra {
@@ -296,7 +296,7 @@ body {
   opacity: 0;
   transition:
     transform var(--anim-t),
-    opacity var(--media-fade-ms, var(--content-fade-ms, 260ms)) ease,
+    opacity var(--media-fade-ms, var(--content-fade-ms, 260ms)) var(--motion-ease),
     width var(--anim-w),
     height var(--anim-h);
 }
@@ -306,7 +306,7 @@ body {
   position: absolute; inset: 0; z-index: 5;
   padding: 20px; overflow: hidden;
   opacity: 0;
-  transition: opacity 220ms ease;
+  transition: opacity 220ms var(--motion-ease);
   pointer-events: none;
   user-select: text; -webkit-user-select: text;
   display: flex; flex-direction: column;
@@ -328,7 +328,7 @@ body {
   font-family: 'DM Sans', sans-serif;
   font-size: 15px; font-weight: 400;
   cursor: pointer; outline: none;
-  transition: background .18s, border-color .18s, color .18s;
+  transition: background .18s var(--motion-ease), border-color .18s var(--motion-ease), color .18s var(--motion-ease);
   margin-top: auto; flex-shrink: 0;
 }
 .rich-action-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.40); color: #fff; }
@@ -390,7 +390,7 @@ body {
   display: flex; align-items: center;
   padding: 14px 0;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s var(--motion-ease);
   flex-shrink: 0;
   border-radius: 8px;
   margin: 0 -6px; padding-left: 6px; padding-right: 6px;
@@ -429,7 +429,7 @@ body {
 }
 #stage {
   position: relative; width: 420px;
-  animation: float 6s ease-in-out infinite;
+  animation: float 6s var(--motion-ease) infinite;
   flex-shrink: 0;
   mix-blend-mode: screen;
   transition: height var(--anim-h);
@@ -443,7 +443,7 @@ body.float-off #stage { animation: none; }
   position: fixed; bottom: 36px; left: var(--panel-w);
   width: calc(100% - (var(--panel-w) * 2));
   display: flex; flex-direction: column; align-items: center;
-  transition: opacity 300ms ease, transform 300ms ease;
+  transition: opacity 300ms var(--motion-ease), transform 300ms var(--motion-ease);
 }
 body.mode-manual #input-area { display: none; }
 body.mode-ai .mode-manual-only { display: none !important; }
@@ -461,7 +461,7 @@ body.mode-manual .mode-ai-only { display: none !important; }
   font-family: 'DM Sans', sans-serif;
   font-size: 15px; font-weight: 300;
   outline: none; caret-color: rgba(255,255,255,0.6);
-  transition: border-color .2s, background .2s;
+  transition: border-color .2s var(--motion-ease), background .2s var(--motion-ease);
   user-select: text; -webkit-user-select: text;
 }
 #user-input::placeholder { color: rgba(255,255,255,0.30); }
@@ -474,7 +474,7 @@ body.mode-manual .mode-ai-only { display: none !important; }
   color: rgba(255,255,255,0.65);
   font-size: 16px; cursor: pointer; outline: none;
   display: flex; align-items: center; justify-content: center;
-  transition: background .2s, border-color .2s, color .2s, transform .1s;
+  transition: background .2s var(--motion-ease), border-color .2s var(--motion-ease), color .2s var(--motion-ease), transform .1s var(--motion-ease);
 }
 #send-btn:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.80); color: rgba(255,255,255,1); }
 #send-btn:active { transform: translateY(-50%) scale(0.88); }
@@ -493,7 +493,7 @@ body.mode-manual .mode-ai-only { display: none !important; }
   font-family: 'DM Sans', sans-serif;
   font-size: 12px; font-weight: 300;
   cursor: pointer; outline: none; white-space: nowrap;
-  transition: border-color .18s, color .18s, background .18s, transform .1s;
+  transition: border-color .18s var(--motion-ease), color .18s var(--motion-ease), background .18s var(--motion-ease), transform .1s var(--motion-ease);
 }
 .ex-chip:hover  { border-color: rgba(255,255,255,0.28); color: rgba(255,255,255,0.80); background: rgba(255,255,255,0.07); }
 .ex-chip:active { transform: scale(.93); }

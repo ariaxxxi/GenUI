@@ -6,7 +6,7 @@
 }
 #stage {
   position: relative; width: 420px;
-  animation: float 6s ease-in-out infinite;
+  animation: float 6s var(--motion-ease) infinite;
   flex-shrink: 0;
   mix-blend-mode: screen;
   transition: height var(--anim-h);
@@ -40,7 +40,7 @@ body.hide-stage-outline-fullscreen #stage {
   z-index: 8;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 250ms ease;
+  transition: opacity 250ms var(--motion-ease);
 }
 #glass-controls-layer.visible {
   pointer-events: auto;

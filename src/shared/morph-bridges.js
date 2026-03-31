@@ -145,7 +145,7 @@ export function createMorphBridges(ctx) {
   function getActiveEasing() {
     const sel = document.getElementById('ease-select-left') || document.getElementById('ease-select');
     const pick = sel ? callbacks.getEasingFns()?.[sel.value] : null;
-    return pick ? pick() : 'cubic-bezier(0.22,1,0.36,1)';
+    return pick ? pick() : 'cubic-bezier(0.35,0.23,0.13,0.98)';
   }
 
   function getCurrentMainGeometry() {

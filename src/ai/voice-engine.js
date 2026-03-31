@@ -82,9 +82,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
         clearSiriOrb();
       } else if (state === GS.CONFIRM && confirmAwaitOrb) {
-        if (glowEl) glowEl.style.boxShadow = shadow(level);
+        if (glowEl) glowEl.style.boxShadow = '';
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        clearSiriOrb();
+        if (siriOrb) siriOrb.style.boxShadow = glowShadow(level);
         clearActionBtns();
       } else {
         if (glowEl) glowEl.style.boxShadow = shadow(level);
@@ -104,7 +104,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
       const field = getComposePulseField();
       if (field && field.dataset.pulseLock !== '1') {
-        field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
+        field.style.transition = 'min-height 400ms var(--motion-ease), background 400ms var(--motion-ease), border-color 400ms var(--motion-ease), box-shadow 180ms var(--motion-ease)';
         field.style.setProperty('box-shadow', shadow(level), 'important');
       }
     }

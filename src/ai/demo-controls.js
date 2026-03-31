@@ -37,7 +37,7 @@ export function initDemoControls({
     if (stage) stage.style.height = `${stackHeight}px`;
     items.slice(1).forEach((item, i) => {
       const pill = buildListPill(item, i + 1, items);
-      pill.style.transition = "transform 500ms cubic-bezier(0.22,1,0.36,1), opacity 420ms cubic-bezier(0.22,1,0.36,1)";
+      pill.style.transition = "transform 500ms var(--motion-ease), opacity 420ms var(--motion-ease)";
       pill.style.transform = `translateY(${stackTop + 20}px)`;
       pill.style.opacity = "0.01";
       wrap.appendChild(pill);

@@ -1,11 +1,5 @@
 export function initAnimControls({ document, clamp }) {
   let animDur = 600;
-  const SPRING_WITH_ANTICIPATION = `linear(
-    0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
-    0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
-    1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
-    1.004 92%, 1.001 97%, 1
-  )`;
   const DEFAULT_CUSTOM_BEZIER = [0.35, 0.23, 0.13, 0.98];
   const sliderEls = () => [document.getElementById('dur-sl-left'), document.getElementById('dur-sl')].filter(Boolean);
   const valueEls = () => [document.getElementById('dur-val-left'), document.getElementById('dur-val')].filter(Boolean);
@@ -22,11 +16,12 @@ export function initAnimControls({ document, clamp }) {
   };
   const getCustomBezierValues = () => parseBezierInput((document.getElementById('bz-input-left') || document.getElementById('bz-input'))?.value) || DEFAULT_CUSTOM_BEZIER;
   const formatBezierValues = (values) => values.map((v) => String(Math.round(v * 1000) / 1000)).join(', ');
+  const sharedEase = () => `cubic-bezier(${getCustomBezierValues().join(',')})`;
   const EASING_FN = {
-    custom: () => `cubic-bezier(${getCustomBezierValues().join(',')})`,
-    spring: () => SPRING_WITH_ANTICIPATION,
-    ease: () => 'cubic-bezier(0.25,0.1,0.25,1)',
-    linear: () => 'linear',
+    custom: sharedEase,
+    spring: sharedEase,
+    ease: sharedEase,
+    linear: sharedEase,
   };
 
   function syncAnimationEasingUi(selectedValue) {
@@ -41,7 +36,8 @@ export function initAnimControls({ document, clamp }) {
     const easing = EASING_FN[curve]();
     document.getElementById('anim-style').textContent = `
       :root {
-        --spring: ${easing};
+        --motion-ease: ${easing};
+        --spring: var(--motion-ease);
         --anim-w:  ${animDur}ms var(--spring);
         --anim-h:  ${animDur}ms var(--spring);
         --anim-br: ${animDur}ms var(--spring);

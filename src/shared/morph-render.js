@@ -153,7 +153,7 @@ export function createMorphRender(ctx) {
     if (isHomeThinkingPair) {
       transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
     }
-    const geometryEase = isHomeThinkingPair ? 'cubic-bezier(0.42,0,0.2,1)' : 'var(--spring)';
+    const geometryEase = 'var(--motion-ease)';
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;

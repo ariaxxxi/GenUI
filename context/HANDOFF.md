@@ -1,6 +1,273 @@
 # Handoff
 
 ## Task title
+Standardize Animation Easing To `0.35, 0.23, 0.13, 0.98`
+
+## Completion status
+- Completed
+
+## Summary
+- Standardized the shared motion curve across both `ai.html` and `index.html` to `cubic-bezier(0.35, 0.23, 0.13, 0.98)`.
+- Added a shared root token `--motion-ease` and made the generated animation style block emit that token instead of the old spring curve.
+- Updated the shared morph/render path so shell geometry, content movement, and deformation fallback all use the same easing value.
+- Replaced the remaining hardcoded AI and prototype/editor motion easings with the shared token, including shell transitions, orb transitions, chip motion, toast motion, sidebar controls, and mirrored editor motion styles.
+- Kept the sidebar easing controls in place, but all presets now resolve to the same shared bezier so the motion system no longer diverges by preset.
+
+## Files changed
+- `ai.html`
+- `index.html`
+- `src/shared/anim-controls.js`
+- `src/shared/morph-render.js`
+- `src/shared/morph-bridges.js`
+- `src/shared/list-demo.js`
+- `src/ai/demo-controls.js`
+- `src/ai/voice-engine.js`
+- `src/styles/ai-layout.css`
+- `src/styles/ai-drop.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/ai-frame.css`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-sidebar.css`
+- `src/styles/ai-stage.css`
+- `src/styles/editor-layout.css`
+- `src/styles/editor-decorative.css`
+- `src/styles/editor-sidebar.css`
+
+## Validation performed
+- `node --check src/shared/anim-controls.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/shared/morph-bridges.js`
+- `node --check src/shared/list-demo.js`
+- `node --check src/ai/demo-controls.js`
+- `node --check src/ai/voice-engine.js`
+- `git diff --check`
+- Searched the AI and editor motion styles to confirm the old hardcoded easing values (`0.22,1,0.36,1`, `0.42,0,0.2,1`, `ease`, `ease-in-out`) were removed from the motion stack and replaced by `var(--motion-ease)`
+
+## Remaining issues / caveats
+- I did not run a fresh fullscreen/manual browser review after this motion sweep, so this is validated by syntax/diff checks and source audit rather than a new visual pass.
+- The sidebar easing dropdown still shows legacy option labels like `Ease` and `Liquid feeling`, but those presets now resolve to the same shared curve.
+
+## Recommended next step
+1. Do one quick visual sweep of the AI message flow and prototype page to make sure the unified easing feels correct in motion at presentation scale.
+
+## Task title
+Stabilize Chip Insert Listening Orb Appearance
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the mini listening orb during chip insert so it no longer flashes through multiple visual looks.
+- Root cause: the orb was borrowing `#home-glow-layer` as its fill while that same layer was also being animated for the chip shell pulse, and later the confirm voice visualization reused that layer again. That made the orb appear as a bright flat circle first, then shift to a different blue fill, then darken again.
+- The mini orb now carries its own shell background and shell shadow using the same base values as the listening shell, so its fill is stable throughout the transition.
+- The chip shell pulse no longer animates the docked orb glow layer, and confirm command-mode voice visualization now reacts on the orb’s own outer glow instead of recoloring the orb fill.
+
+## Files changed
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Sampled the real chip-insert timeline at `60ms`, `180ms`, `360ms`, `720ms`, `880ms`, and `1040ms`
+- Confirmed the orb styling stayed consistent across the transition:
+  - orb background stayed `rgba(255, 255, 255, 0.05)`
+  - orb box shadow stayed `0 0 40px rgba(255,255,255,0.02)`
+  - the docked glow layer no longer changed to a separate bright pulse behind the orb
+- Saved and inspected a headless screenshot showing a single consistent orb treatment during the chip-insert beat
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+
+## Recommended next step
+1. Recheck the chip-insert transition in the fullscreen review setup to confirm the orb no longer flashes through multiple looks at presentation scale.
+
+## Task title
+Restore Chip Insert Shell Blink While Orb Is Docked
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the visible blue blink/glow on the compose field after a chip is selected.
+- Root cause: during chip insert, `confirm-await-orb` is active immediately, which relocates `#home-glow-layer` down to the mini listening orb. The old chip-magic animation was still targeting that layer, so the orb glowed but the compose shell no longer did.
+- The chip-magic glow on `#home-glow-layer` is now aligned to `800ms`, and the compose shell itself now gets a dedicated `::after` inset-pulse animation during `compose-chip-magic`.
+
+## Files changed
+- `src/styles/ai-drop.css`
+
+## Validation performed
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Confirmed `drop-main` had `compose-chip-magic` active during the chip insert beat
+- Confirmed the compose shell `::after` pseudo-element was animating a strong inset blue/white pulse while the orb glow animation was also active
+- Saved and inspected a headless screenshot showing the compose shell visibly blue during the chip-insert blink
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+
+## Recommended next step
+1. Recheck one real chip flow in the fullscreen review setup to confirm the restored compose-field blink reads correctly at presentation scale.
+
+## Task title
+Stretch Chip Shell Morph And Orb Entry To 800ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the chip-hit transition so both the compose shell morph and the listening orb appearance now take `800ms`.
+- The chip transition clock in the message flow is now `800ms`, the chip-specific shell geometry transition is `800ms`, and the chip-specific confirm-await orb entry transition is also `800ms`.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-decorative.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Confirmed the shell and orb are still mid-transition well past the halfway point:
+  - `t=120ms`: shell about `368x104`, orb opacity about `0.10`
+  - `t=240ms`: shell about `400x108`, orb opacity about `0.35`
+  - `t=400ms`: shell about `416x110`, orb opacity about `0.74`
+  - `t=620ms`: shell about `420x111`, orb opacity about `0.95`
+  - `t=780ms`: shell settled near `420x111`, orb opacity about `1.00`
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this timing update.
+
+## Recommended next step
+1. Recheck one real chip flow in the fullscreen review setup to confirm the `800ms` shell/orb beat feels right at presentation scale.
+
+## Task title
+Restore Smooth Placeholder-To-Chip Shell Morph
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the chip-insert transition so the compose shell now grows from the small `Speak your message...` placeholder state instead of visually jumping into the larger chip-filled state.
+- Root cause: the chip-insert path had regressed to a normal text-active compose layout. During `composeChipMagicPending`, the render logic was no longer using the confirm-await orb geometry, and `syncDropMainOrbClasses()` was stripping the orb/lift classes back off after the morph call.
+- The compose geometry now treats chip-magic pending as the same lifted/orb-aware layout used by the confirm-await beat, and the orb-class sync keeps `confirm-await-orb`, `listening-orb`, and `home-glow` active throughout the chip-insert morph.
+- The `compose-chip-magic` shell class is now applied on the same synchronous beat as the chip insert instead of one frame later, so the outer shell is the only visible container from the first frame of the transition.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Repeated headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Confirmed `Share a file` was the selected chip before release
+- Across 3 repeated runs, first-frame chip-insert geometry stayed at the small placeholder shell size and then smoothly expanded:
+  - `t=0ms`: shell about `307x96`
+  - `t=30ms`: shell about `338x100`
+  - `t=60ms`: shell about `381x106`
+  - `t=120ms`: shell about `413x110`
+  - `t=240ms`: shell about `420x111`
+- Confirmed the lift/orb path now starts on the same beat:
+  - `confirm-await-orb`, `listening-orb`, and `home-glow` classes were present from `t=0ms`
+  - orb opacity rose from `0` to about `0.62` by `240ms` and about `0.96` by `420ms`
+- Saved and inspected a headless screenshot on the real `Share a file` path showing the shell still small while growing, with the orb already entering below it
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium and with saved screenshots. I did not do a manual fullscreen/device pass after this patch.
+
+## Recommended next step
+1. Recheck `Share a file` once in the fullscreen review setup to confirm the small-shell-to-large-shell morph feels correct at presentation scale.
+
+## Task title
+Pre-Expand Long Chip Insert Geometry Before Magic Pulse
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining long-chip transition glitch on `Share a file`.
+- Root cause: the inserted long sentence made the compose field reflow to its final multi-line size immediately, but the outer shell was still animating from the short empty-compose geometry. That created a brief oversized inner field during the chip-magic beat.
+- The compose render path now snaps shell geometry with transitions disabled whenever chip-magic pending content is being inserted, so the container is already at the final long-message size before the glow/text sequence starts.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Repeated headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Before fix, first-frame chip-magic geometry was approximately:
+  - shell: `307x97`
+  - field: `420x143`
+- After fix, first-frame chip-magic geometry is approximately:
+  - shell: `420x112`
+  - field: `420x112`
+- Confirmed the fixed geometry holds through the chip-magic timeline and into confirm
+
+## Remaining issues / caveats
+- Validation was repeated in headless Chromium and with saved screenshots. I did not do a manual headset/fullscreen check after this pass.
+
+## Recommended next step
+1. Recheck the `Share a file` chip once in the exact fullscreen review setup to confirm the long-string transition now reads cleanly end-to-end.
+
+## Task title
+Remove Duplicate Shell During Chip-Select Transition
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the first-run chip-selection glitch where the outgoing disambiguation layer could stay mounted while the compose chip menu was being updated in place.
+- Added a guard so the compose-menu UI-only update path falls back to a full re-render whenever the disambiguation-to-compose handoff is still active or multiple glass-body layers are present.
+- Removed the inner compose field fill during the chip magic pulse so the outer shell remains the only visible container during the blue transition.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html`
+- Fast first-run chip selection path:
+  - during chip-menu hold, `#c-rich [data-glass-body]` count stayed at `1`
+  - outgoing disambiguation layer was absent
+  - during chip magic, compose field background resolved to `rgba(0, 0, 0, 0)` with no box shadow
+- Settled chip selection path:
+  - same single-layer result
+  - same transparent inner field during chip magic
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium against the real page flow. I did not do a manual visual pass on-device after this patch.
+
+## Recommended next step
+1. Recheck the chip-select transition in the full-screen stage view to confirm the duplicate-shell artifact is gone in the exact presentation mode used for review.
+
+## Task title
+Center Message Sent Toast Vertically In Message Flow
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the message-flow sent toast so the row is vertically centered inside the sent pill instead of sitting slightly low.
+- Removed the message-flow-only upward translate on the sent state and centered the message-flow `glass-sent` layout directly in CSS.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless runtime measurement on `http://127.0.0.1:5174/ai.html` in the sent state:
+  - toast center offset from pill center: about `-0.008px`
+  - text center offset from pill center: about `0.036px`
+
+## Remaining issues / caveats
+- This alignment fix is scoped to the message flow sent state only.
+
+## Recommended next step
+1. If needed, review coffee/flight success toasts separately; they still keep their own previous sent positioning.
+
+## Task title
 Mute Thinking And Sending AI Speech
 
 ## Completion status
