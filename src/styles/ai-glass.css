@@ -167,7 +167,7 @@
   --g-accent-middle-size-y: 128%;
   --g-accent-hotspot-len: 24px;
   --g-accent-hotspot-thickness: 24px;
-  --g-accent-hotspot-inset: 3px;
+  --g-accent-hotspot-inset: -28px;
   --g-accent-hotspot-corner: 16px;
 }
 .g-accent-orbit {
@@ -211,24 +211,34 @@
   opacity: 1;
 }
 .g-accent-orbit-left-spot {
+  inset: auto;
+  z-index: 2;
+  width: var(--g-accent-hotspot-len, 24px);
+  height: var(--g-accent-hotspot-thickness, 24px);
+  left: var(--g-accent-hotspot-corner, 16px);
+  top: var(--g-accent-hotspot-inset, 3px);
   background:
-    radial-gradient(24% 102% at 4% 16%,
-      rgba(255,255,255,0.98) 0%,
-      rgba(244,247,255,0.96) 14%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0.82) 28%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0.24) 43%,
-      rgb(var(--g-accent-rgb, 144 172 255) / 0) 62%);
-  filter: blur(8px);
+    radial-gradient(circle at center,
+      rgba(255,255,255,0.82) 0%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0.94) 28%,
+      rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.70) 56%,
+      rgb(var(--g-accent-rgb, 144 172 255) / 0) 100%);
+  border-radius: 50%;
+  transform: scale(2.3);
+  transform-origin: center;
+  will-change: left, top;
+  filter: blur(14px);
   mix-blend-mode: screen;
-  opacity: 0.90;
+  opacity: 0.78;
+  animation: g-accent-orbit-middle-loop var(--g-accent-orbit-ms, 6112ms) linear infinite;
 }
 .g-accent-orbit-inner-glow {
   box-shadow:
-    inset 0 0 30px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.16),
-    inset 0 -10px 24px rgb(var(--g-accent-rgb, 144 172 255) / 0.58),
-    inset -8px 0 14px rgb(var(--g-accent-rgb, 144 172 255) / 0.18),
-    inset 8px 0 18px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.12),
-    inset 0 1px 12px rgba(255,255,255,0.07);
+    inset 0 0 22px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.11),
+    inset 0 -8px 18px rgb(var(--g-accent-rgb, 144 172 255) / 0.42),
+    inset -6px 0 10px rgb(var(--g-accent-rgb, 144 172 255) / 0.12),
+    inset 6px 0 12px rgb(var(--g-accent-secondary-rgb, var(--g-accent-rgb, 144 172 255)) / 0.08),
+    inset 0 1px 8px rgba(255,255,255,0.05);
 }
 .g-accent-orbit-middle {
   inset: auto;
@@ -258,49 +268,41 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 6px 1.5px rgba(255,255,255,0.96);
+  box-shadow: inset 0 0 3px 1px rgba(255,255,255,0.82);
 }
 @keyframes g-accent-orbit-middle-loop {
   0%,
   100% {
     left: var(--g-accent-hotspot-corner, 16px);
     top: var(--g-accent-hotspot-inset, 3px);
-    transform: none;
   }
   12.5% {
     left: calc(50% - (var(--g-accent-hotspot-len, 24px) / 2));
     top: var(--g-accent-hotspot-inset, 3px);
-    transform: none;
   }
   25% {
     left: calc(100% - var(--g-accent-hotspot-corner, 16px) - var(--g-accent-hotspot-len, 24px));
     top: var(--g-accent-hotspot-inset, 3px);
-    transform: none;
   }
   37.5% {
     left: calc(100% - var(--g-accent-hotspot-inset, 3px) - var(--g-accent-hotspot-thickness, 24px));
     top: calc(50% - (var(--g-accent-hotspot-len, 24px) / 2));
-    transform: none;
   }
   50% {
     left: calc(100% - var(--g-accent-hotspot-corner, 16px) - var(--g-accent-hotspot-len, 24px));
     top: calc(100% - var(--g-accent-hotspot-inset, 3px) - var(--g-accent-hotspot-thickness, 24px));
-    transform: none;
   }
   62.5% {
     left: calc(50% - (var(--g-accent-hotspot-len, 24px) / 2));
     top: calc(100% - var(--g-accent-hotspot-inset, 3px) - var(--g-accent-hotspot-thickness, 24px));
-    transform: none;
   }
   75% {
     left: var(--g-accent-hotspot-corner, 16px);
     top: calc(100% - var(--g-accent-hotspot-inset, 3px) - var(--g-accent-hotspot-thickness, 24px));
-    transform: none;
   }
   87.5% {
     left: var(--g-accent-hotspot-inset, 3px);
     top: calc(50% - (var(--g-accent-hotspot-len, 24px) / 2));
-    transform: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -308,7 +310,11 @@
     animation: none;
     left: var(--g-accent-hotspot-corner, 16px);
     top: var(--g-accent-hotspot-inset, 3px);
-    transform: none;
+  }
+  .g-accent-orbit-left-spot {
+    animation: none;
+    left: var(--g-accent-hotspot-corner, 16px);
+    top: var(--g-accent-hotspot-inset, 3px);
   }
 }
 .g-disambiguation-pills {
@@ -371,8 +377,8 @@
 .g-disambiguation-pill.selected {
   background: linear-gradient(180deg, rgba(52,52,58,0.96) 0%, rgba(16,16,22,0.98) 46%, rgba(0,0,0,1) 100%);
   box-shadow:
-    inset 0 14px 22px rgba(255,255,255,0.04),
-    inset 0 -18px 26px rgba(0,0,0,0.50);
+    inset 0 12px 18px rgba(255,255,255,0.03),
+    inset 0 -16px 22px rgba(0,0,0,0.46);
   transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y, 0px))) scale(1);
 }
 .g-disambiguation-pill:not(.selected) {

@@ -1,18 +1,31 @@
 # Handoff
 
 ## Task title
-Enlarge And Slow Traveling Hotspot
+Traveling Hotspot And Linked Accent Orbit Retune
 
 ## Completion status
 - Completed
 
 ## Summary
-- Doubled the reusable traveling hotspot size from `12px` to `24px` while keeping it circular.
-- Increased hotspot blur from `10px` to `15px`.
-- Slowed the orbit to `0.6x` of the previous speed by increasing the reusable duration from `3667ms` to `6112ms`.
-- Applied the same slower default duration on the disambiguation pill host so the live chip uses the new timing without additional overrides.
+- Consolidated the traveling-spot work into the final selected-chip motion behavior.
+- The reusable `g-accent-orbit-middle` hotspot is now:
+  - `24px x 24px`
+  - `border-radius: 50%`
+  - `filter: blur(15px)`
+  - `animation-duration: 6112ms`
+- The reusable `g-accent-orbit-left-spot` is now a linked companion aura that follows the same clockwise orbit as the hotspot instead of remaining pinned to the left side.
+- The shared orbit path is now pushed well outside the capsule with:
+  - `--g-accent-hotspot-inset: -28px`
+  - `--g-accent-hotspot-corner: 16px`
+- Result: the hotspot body sits outside the pill on the straight edges, leaving only a very faint clipped blur fringe visible inside the capsule.
+- Fixed the first-load hotspot jump by stopping the `entering -> settled` phase change from rebuilding the disambiguation pill DOM:
+  - `renderDisambiguationPills(...)` no longer bakes the phase class into the HTML string
+  - `message-send-render.js` now toggles the `entering/settled` class in place on the existing cluster node
+  - this preserves hotspot node identity across the `800ms` phase boundary, so the orbit animation no longer restarts
 
 ## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
 - `src/styles/ai-glass.css`
 - `context/HANDOFF.md`
 
@@ -22,57 +35,30 @@ Enlarge And Slow Traveling Hotspot
 - Browser validation via Playwright on `add-visual`:
   - opened `http://127.0.0.1:5174/ai.html`
   - triggered the Hiro disambiguation state through the real quick-chip path
-  - captured `/tmp/disambiguation-chip-hotspot-x2.png`
-  - confirmed computed hotspot styles:
+  - captured `/tmp/disambiguation-chip-hotspot-most-hidden.png`
+  - confirmed hotspot computed styles:
     - `width: 24px`
     - `height: 24px`
     - `border-radius: 50%`
     - `filter: blur(15px)`
     - `animation-duration: 6.112s`
+  - confirmed linked orbit behavior:
+    - left spot and hotspot sampled with matching `left/top` positions on the same loop
+  - confirmed final resolved orbit geometry on the selected pill:
+    - `--g-accent-hotspot-inset: -28px`
+    - `--g-accent-hotspot-corner: 16px`
+    - hotspot sample position: `left 16px`, `top -28px`
+  - confirmed first-load no-jump fix across the old phase boundary:
+    - first sample during entry: `left 20.5781px`, `top -28px`, cluster `g-disambiguation-pills entering`
+    - later sample after `950ms`: same hotspot node persisted, `left 107.438px`, `top -28px`, cluster `g-disambiguation-pills settled`
 
 ## Remaining issues / caveats
-- The larger hotspot occupies more of the pill edge path. If it starts to feel too heavy in motion, the next safe adjustment is hotspot opacity or glow intensity, not more size.
+- The hotspot body is now well outside the capsule on the straight edges. Any farther outward will mostly affect only the blur fringe and may make the motion effectively disappear.
 
 ## Recommended next step
 1. Open the Hiro disambiguation state on `add-visual`.
-2. Watch the selected chip for one full orbit.
-3. Confirm the larger light still reads cleanly against the inset ring and does not overpower the rest of the shell.
-
-## Task title
-Retune Traveling Hotspot Blur And Shape
-
-## Completion status
-- Completed
-
-## Summary
-- Reduced the selected-chip traveling hotspot blur from `30px` to `10px`.
-- Changed the hotspot from an elongated blob to a true circular light by making its width and height equal.
-- Updated the hotspot fill to use a circular radial gradient and removed the old rotational animation dependency so the object stays visually round around the full orbit path.
-
-## Files changed
-- `src/styles/ai-glass.css`
-- `context/HANDOFF.md`
-
-## Validation performed
-- `node --check src/flows/ui-primitives.js`
-- `node --check src/flows/message-send-render.js`
-- Browser validation via Playwright on `add-visual`:
-  - opened `http://127.0.0.1:5174/ai.html`
-  - triggered the Hiro disambiguation state through the real quick-chip path
-  - captured `/tmp/disambiguation-chip-circle-hotspot.png`
-  - confirmed computed hotspot styles:
-    - `width: 12px`
-    - `height: 12px`
-    - `border-radius: 50%`
-    - `filter: blur(10px)`
-
-## Remaining issues / caveats
-- The hotspot is now smaller and tighter, so if it becomes too subtle at presentation scale, the next tuning knob should be hotspot size rather than reintroducing a larger blur.
-
-## Recommended next step
-1. Open the Hiro disambiguation state on `add-visual`.
-2. Watch the selected chip in motion.
-3. Confirm the traveling light now reads as a compact circular highlight rather than an elongated streak.
+2. Watch the top-edge portion of the orbit.
+3. Confirm the motion is now reduced to an extremely faint clipped glow rather than a readable moving spot.
 
 ## Task title
 Reduce Left Accent Fill On Selected Disambiguation Pill
@@ -110,71 +96,6 @@ Reduce Left Accent Fill On Selected Disambiguation Pill
 3. If it still feels too full, reduce only the left spotlight width before changing the rest of the shell.
 
 ## Task title
-Hotspot Blur And Speed Retune
-
-## Completion status
-- Completed
-
-## Summary
-- Updated the visible moving hotspot on the selected disambiguation chip.
-- Applied `filter: blur(30px)` to the moving hotspot light.
-- Slowed the orbit to `0.6x` of the prior motion by changing the reusable orbit duration from `2200ms` to `3667ms`.
-- Kept the rest of the selected-chip shell unchanged.
-
-## Files changed
-- `src/styles/ai-glass.css`
-- `context/HANDOFF.md`
-
-## Validation performed
-- `node --check src/flows/ui-primitives.js`
-- `node --check src/flows/message-send-render.js`
-
-## Remaining issues / caveats
-- This change intentionally makes the hotspot softer and slower; if it becomes too diffuse at presentation scale, the next tuning knob should be hotspot size rather than more blur.
-
-## Recommended next step
-1. Open the Hiro disambiguation state on `add-visual`.
-2. Verify the moving hotspot now feels softer due to the `30px` blur and slower due to the longer orbit duration.
-
-## Task title
-Make Moving Hotspot Clearly Visible
-
-## Completion status
-- Completed
-
-## Summary
-- The previous motion pass technically animated the highlight, but it still read as a subtle texture shift instead of a visible traveling hotspot.
-- Reworked only the motion layer in `src/styles/ai-glass.css`:
-  - replaced the diffuse full-surface moving texture with a compact bright hotspot blob
-  - increased contrast with stronger white core and blue glow
-  - sped the loop up from `3600ms` to `2200ms`
-  - kept the movement clockwise around the inside edge of the selected chip
-- Left the rest of the shell intact so the corrected static Figma layers remain unchanged.
-
-## Files changed
-- `src/styles/ai-glass.css`
-- `context/HANDOFF.md`
-
-## Validation performed
-- `node --check src/flows/ui-primitives.js`
-- `node --check src/flows/message-send-render.js`
-- Browser validation via Playwright on `add-visual`:
-  - triggered Hiro disambiguation
-  - captured `/tmp/disambiguation-chip-hotspot-visible.png`
-  - sampled `.g-accent-orbit-middle` geometry twice during playback:
-    - first rect: `x=845.68, y=594.24`
-    - later rect: `x=857.47, y=634.61`
-  - this confirms the hotspot itself is moving on screen rather than only changing internal gradient values
-
-## Remaining issues / caveats
-- Final motion feel is still subjective; if needed, tune only the hotspot blob size/speed/path in `g-accent-orbit-middle` and `@keyframes g-accent-orbit-middle-loop`.
-
-## Recommended next step
-1. Open `ai.html` on `add-visual`.
-2. Watch the selected Hiro chip for 2-3 seconds.
-3. Confirm the bright hotspot is now clearly orbiting clockwise around the inner edge.
-
-## Task title
 Disambiguation Pill Pixel-Parity Layer Rebuild
 
 ## Completion status
@@ -199,6 +120,7 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
   - `--g-accent-rgb`
   - `--g-accent-secondary-rgb`
   - `--g-accent-orbit-ms`
+- Later visual tuning thinned the highlighted pill edge by reducing the inset ring weight, easing back the inner glow, and softening the selected pill inset shadows so the border reads closer to the thinner reference treatment.
 
 ## Files changed
 - `src/flows/ui-primitives.js`
@@ -219,9 +141,15 @@ Disambiguation Pill Pixel-Parity Layer Rebuild
   - verified the moving highlight is active by sampling `background-position` twice:
     - first sample: `37.3127% 10%`
     - later sample: `95% 64.6617%`
+- Browser validation via Playwright after edge-thinning retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-thinner-edge.png`
+  - confirmed slimmer edge treatment on the selected pill:
+    - ring: `inset 0 0 3px 1px rgba(255,255,255,0.82)`
+    - reduced inner glow intensity across `g-accent-orbit-inner-glow`
+    - softer selected-pill inset shell shadow
 
 ## Remaining issues / caveats
-- The moving hotspot is now visually stronger, but final sign-off still depends on your eye against the Figma target at presentation scale.
+- Final sign-off still depends on your eye against the Figma target at presentation scale. If the edge still feels too heavy, the next safe tuning knob is the inset ring strength before changing the shell gradients.
 
 ## Recommended next step
 1. Open the Hiro disambiguation state in `ai.html` on `add-visual`.

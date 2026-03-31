@@ -220,6 +220,14 @@ export function createMessageSendRender({
     disambiguationTimer = null;
   }
 
+  function syncDisambiguationPhaseUi() {
+    const cluster = C.rich.querySelector(".g-disambiguation-pills:not(.exiting-to-compose)");
+    if (!cluster) return false;
+    cluster.classList.toggle("entering", disambiguationPhase === "entering");
+    cluster.classList.toggle("settled", disambiguationPhase !== "entering");
+    return true;
+  }
+
   function cancelComposeRevealTimer() {
     if (composeRevealTimer) clearTimeout(composeRevealTimer);
     composeRevealTimer = null;
@@ -409,7 +417,7 @@ export function createMessageSendRender({
         disambiguationTimer = null;
         if (!getFlow().active || getFlow().state !== GS.DISAMBIGUATE) return;
         disambiguationPhase = "settled";
-        render(false);
+        syncDisambiguationPhaseUi();
       }, DISAMBIGUATION_ENTER_MS);
     } else if (flow.state !== GS.DISAMBIGUATE) {
       disambiguationPhase = "settled";
@@ -420,6 +428,7 @@ export function createMessageSendRender({
       const nextContent = buildContent();
       if (C.rich.innerHTML !== nextContent) C.rich.innerHTML = nextContent;
     }
+    if (flow.state === GS.DISAMBIGUATE) syncDisambiguationPhaseUi();
     if (flow.sentToastEnterPending && flow.state === GS.SENT && !sendTransitionActive) flow.sentToastEnterPending = false;
     prevState = flow.state;
     prevComposeHasText = composeHasText;
@@ -570,6 +579,7 @@ export function createMessageSendRender({
     clearDisambiguationMotion() {
       disambiguationPhase = "settled";
       cancelDisambiguationTimer();
+      syncDisambiguationPhaseUi();
     },
     updateSelectionUiOnly() {
       const flow = getFlow();

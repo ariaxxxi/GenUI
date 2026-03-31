@@ -50,7 +50,7 @@ export function renderAccentOrbitChrome() {
 
 export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
-  return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}">${items.map((item, index) => {
+  return `<div data-glass-body class="${esc(clusterClass)}">${items.map((item, index) => {
     const selected = index === selectedIndex;
     const title = String(item?.name || item?.title || "").trim();
     const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-pill-media" });
