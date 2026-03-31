@@ -1,7 +1,37 @@
 # Handoff
 
-Implement this design from Figma.
-@https://www.figma.com/design/dSQHQxqhPIoi3vagBYmvhf/GenUI?node-id=110-1157&m=dev
+## Task title
+Apply Figma Selected Pill Styling To Disambiguation Chip
+
+## Completion status
+- Completed
+
+## Summary
+- Implemented the selected disambiguation chip container styling from Figma node `288:6` in file `LTNbsRqNkyLeo81OSL1X7J`.
+- Kept the existing disambiguation pill layout, avatar, text, and interactions unchanged; only the highlighted chip surface was restyled.
+- Added a selected-only dark pill background, layered inset shell glow, and a left-biased purple/blue highlight overlay to match the Figma node’s visual treatment.
+- Left the unselected pill styling as-is so only the highlighted contact gets the new design.
+
+## Files changed
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- Figma MCP:
+  - `get_design_context` on file `LTNbsRqNkyLeo81OSL1X7J`, node `288:6`
+  - `get_screenshot` on file `LTNbsRqNkyLeo81OSL1X7J`, node `288:6`
+- `git diff --check`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html`
+- Verified the live disambiguation state after `send message to hiro`:
+  - selected pill had the new dark gradient background
+  - selected pill had the new inset glow stack
+  - selected `::after` highlight overlay was active
+  - unselected pill background remained `rgba(255, 255, 255, 0.06)`
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium plus Figma screenshot/context review. I did not do a manual fullscreen/device visual pass after the styling change.
+
+## Recommended next step
+1. Do a quick visual pass against the Figma screenshot at presentation scale and tune the purple-left highlight intensity if you want even tighter parity.
 
 ## Task title
 Restore Confirm-Step Listening Orb Voice Reactivity
