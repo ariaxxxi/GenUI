@@ -132,26 +132,28 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
 #drop-main:not(.listening-orb) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 #drop-main.confirm-await-orb {
   overflow: visible !important;
+  --g-confirm-orb-size: 50px;
+  --g-confirm-orb-radius: 25px;
 }
 #drop-main.confirm-await-orb #home-glow-layer {
   inset: auto;
   left: 50%;
   top: calc(100% + 16px);
-  width: 44px;
-  height: 44px;
+  width: var(--g-confirm-orb-size);
+  height: var(--g-confirm-orb-size);
   transform: translateX(-50%);
-  border-radius: 22px;
+  border-radius: var(--g-confirm-orb-radius);
 }
 #drop-main.confirm-await-orb.listening-orb #siri-orb,
 #drop-main.confirm-await-orb.listening-orb #siri-orb.visible {
   inset: auto;
   left: 50%;
   top: calc(100% + 16px);
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
+  width: var(--g-confirm-orb-size);
+  height: var(--g-confirm-orb-size);
+  border-radius: var(--g-confirm-orb-radius);
   transform: translateX(-50%) scale(1);
-  background: rgba(255,255,255,0.05);
+  background: transparent;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 0 40px rgba(255,255,255,0.02);
@@ -180,7 +182,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   inset: 0;
   z-index: 9;
   border-radius: inherit;
-  box-shadow: inset 0 0 10px rgba(255,255,255,0.25);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.25);
   pointer-events: none;
 }
 #drop-main.confirm-await-orb #siri-orb canvas {

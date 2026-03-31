@@ -50,7 +50,7 @@ export function createMessageSendRender({
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
   const DISAMBIGUATION_ENTER_MS = 800;
-  const DISAMBIGUATION_ORB_SCALE = 0.8;
+  const DISAMBIGUATION_ORB_SCALE = 0.625;
   const heightByState = { [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
   let measureRaf = null;
   let settleTimer = null;
@@ -93,7 +93,7 @@ export function createMessageSendRender({
 
   function composeGeo() {
     const flow = getFlow();
-    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicPending);
+    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
     const hasText = flow.state === GS.CONFIRM
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
@@ -196,7 +196,7 @@ export function createMessageSendRender({
     const flow = getFlow();
     const dropMain = document.getElementById("drop-main");
     if (!dropMain) return;
-    const confirmAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicPending));
+    const confirmAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
     const showListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrb);
     const showHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrb);
     dropMain.classList.toggle("confirm-await-orb", confirmAwaitOrb);
@@ -398,7 +398,7 @@ export function createMessageSendRender({
     if (sendTransitionActive && !prevSendTransitionActive) confirmTransitionFrozenTextWidth = measureConfirmTransitionTextWidthPx();
     else if (!sendTransitionActive) confirmTransitionFrozenTextWidth = null;
     const shape = sendTransitionActive ? "magic" : glassStateShape(flow.state);
-    const confirmAwaitOrbActive = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicPending));
+    const confirmAwaitOrbActive = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
     const shouldShowListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrbActive);
     const shouldShowHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrbActive);
     const screenSpec = buildScreenSpec();
@@ -436,7 +436,7 @@ export function createMessageSendRender({
     dropMain?.classList.toggle("compose-surface", flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM));
     dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM && !sendTransitionActive);
     dropMain?.classList.toggle("compose-text-active", flow.active && composeVoiceVizActive);
-    dropMain?.classList.toggle("compose-chip-sizing", flow.active && flow.state === GS.COMPOSE && !!flow.composeChipMagicPending);
+    dropMain?.classList.toggle("compose-chip-sizing", flow.active && flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
     dropMain?.classList.toggle("confirm-await-orb", confirmAwaitOrbActive);
     dropMain?.classList.toggle("listening-orb", shouldShowListeningOrb);
     dropMain?.classList.toggle("home-glow", shouldShowHomeGlow);

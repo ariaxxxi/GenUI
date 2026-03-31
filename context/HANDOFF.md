@@ -348,9 +348,18 @@ Restore Confirm-Step Listening Orb Voice Reactivity
 - Switched the confirm-await-orb command visualization back to the same `shadow(level)` path used by the listening/disambiguation orb, applied on the confirm orb’s `#home-glow-layer`.
 - Kept `drop-main` shell shadow cleared in confirm so only the docked orb reacts.
 - Later changed the deepest blue stop inside `shadow(level)` and `buttonShadow(level)` from the old bright blue family to `rgba(0,22,67,1)`, so confirm-step listening and the compose-field voice-viz pulse share the same darker base blue as the listening/magic shell.
+- Aligned the confirm-step mini listening orb back to the same shell treatment used by the disambiguation/listening orb:
+  - docked orb fill is transparent again, matching the disambiguation/listening orb shell
+  - docked orb stroke uses the shared glass-shell gradient
+  - docked orb inset lighting uses the same `inset 0 0 20px rgba(255,255,255,0.25)` family instead of the custom spherical treatment
+  - shared listening orb geometry now resolves to `50px x 50px` with `25px` radius in both disambiguation and confirm
 
 ## Files changed
 - `src/ai/voice-engine.js`
+- `src/flows/message-send-render.js`
+- `src/shapes.js`
+- `src/shapes.legacy.js`
+- `src/styles/ai-decorative.css`
 - `context/HANDOFF.md`
 
 ## Validation performed
@@ -365,6 +374,17 @@ Restore Confirm-Step Listening Orb Voice Reactivity
 - Code-level validation after blue-token retune:
   - `node --check src/ai/voice-engine.js`
   - confirmed `shadow(level)` and `buttonShadow(level)` now end with `rgba(0,22,67,1)` instead of the previous brighter blue
+- Browser validation after confirm-orb brightness retune on `add-visual`:
+  - captured the disambiguation orb reference to `/tmp/disambiguation-orb-50.png`
+  - reached confirm via the real message flow and captured `/tmp/confirm-orb-50.png`
+  - confirmed the docked confirm orb now resolves with the same shell language as the disambiguation/listening orb:
+    - fill: transparent
+    - shell shadow: `rgba(255, 255, 255, 0.02) 0px 0px 40px 0px`
+    - stroke: shared glass-shell gradient
+    - inset lighting: `rgba(255, 255, 255, 0.25) 0px 0px 20px 0px inset`
+    - deepest listening glow stop: `rgb(0, 22, 67) 0px -70px 60px -30px inset`
+    - measured disambiguation orb size: `50px x 50px`
+    - measured confirm orb size: `50px x 50px`
 
 ## Remaining issues / caveats
 - Validation was done in headless Chromium, so I verified the confirm branch and live style targets but did not synthesize real microphone amplitude in-browser.
@@ -656,18 +676,25 @@ Remove Duplicate Shell During Chip-Select Transition
 - Fixed the first-run chip-selection glitch where the outgoing disambiguation layer could stay mounted while the compose chip menu was being updated in place.
 - Added a guard so the compose-menu UI-only update path falls back to a full re-render whenever the disambiguation-to-compose handoff is still active or multiple glass-body layers are present.
 - Removed the inner compose field fill during the chip magic pulse so the outer shell remains the only visible container during the blue transition.
+- Added a separate delayed chip-select orb/lift path in `message-send.js` / `message-send-render.js`:
+  - compose-chip text/magic state still starts immediately on selection
+  - the listening orb and compose-field upward shift now wait `300ms` before activating
 
 ## Files changed
+- `src/flows/message-send.js`
 - `src/flows/message-send-render.js`
 - `src/styles/ai-glass.css`
 
 ## Validation performed
 - `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
 - Headless runtime validation on `http://127.0.0.1:5174/ai.html`
 - Fast first-run chip selection path:
   - during chip-menu hold, `#c-rich [data-glass-body]` count stayed at `1`
   - outgoing disambiguation layer was absent
   - during chip magic, compose field background resolved to `rgba(0, 0, 0, 0)` with no box shadow
+- Later timing retune:
+  - chip-select orb/lift delay reduced from `400ms` to `300ms`
 - Settled chip selection path:
   - same single-layer result
   - same transparent inner field during chip magic
