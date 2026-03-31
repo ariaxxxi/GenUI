@@ -1,4 +1,4 @@
-import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill } from '../../shared/list-demo.js';
+import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill, selectListItem } from '../../shared/list-demo.js';
 
 export function initManualDemo({
   document,

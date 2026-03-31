@@ -1,6 +1,476 @@
 # Handoff
 
 ## Task title
+Mute Thinking And Sending AI Speech
+
+## Completion status
+- Completed
+
+## Summary
+- Stopped the message flow from announcing AI copy during `GS.THINKING` and `GS.SENDING`.
+- Kept the interim text available for the orb label by still updating `flow.aiVoice`, but suppressed the sim voice/TTS path for those states.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` after starting the message flow:
+  - `glassState === "1"` (`GS.THINKING`)
+  - sim voice output not visible
+  - sim voice text empty
+  - orb label still showed `Searching contact...`
+
+## Remaining issues / caveats
+- This change is scoped to the message flow only.
+
+## Recommended next step
+1. If you want the same behavior in other flows, apply the same silent-announce pattern there instead of changing global TTS behavior.
+
+## Task title
+Sending Stage Holds For 1s With Label Above Orb
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the confirm -> magic transition at `600ms`, then added a separate `1000ms` pure sending/magic hold before the final sent toast.
+- Added a dedicated `sending...` status label for `GS.SENDING`, positioned above the orb instead of using the generic centered loading row.
+- Restored the `sentTransitionActive` cutoff timer so the confirm overlay drops away after `600ms` while the shell remains in the real magic state.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - `320ms`: `magic`, confirm-exit overlay still active, `sending...` present
+  - `700ms`: `magic`, confirm-exit overlay gone, `sending...` still present
+  - `1450ms`: still `magic` with `sending...`
+  - `1750ms`: final `pill` sent toast visible, `sending...` removed
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium only.
+
+## Recommended next step
+1. Manual visual pass if you want to tune the vertical offset of the `sending...` label relative to the orb.
+
+## Task title
+Confirm To Thinking Duration Reduced To 600ms
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the confirm -> thinking/send handoff from `1000ms` to `600ms`.
+- Kept the timing aligned across the flow timer, the `card-form -> magic` morph bridge, and the confirm-exit CSS so the shell and fading confirm content still resolve together.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/shared/morph-bridges.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - `80ms`, `320ms`, and `560ms` after `send`: still in `magic` / `GS.SENDING`
+  - `760ms` after `send`: already in `pill` / `GS.SENT` with the sent toast visible
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium only.
+
+## Recommended next step
+1. Manual visual pass if you want to tune the split between the `magic` hold and the final toast further.
+
+## Task title
+Confirm To Send Uses Real Thinking Stage Before Toast
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the confirm -> send handoff so it no longer forces a sent-pill shell during the transition window.
+- The send flow now stays in the real `GS.SENDING` / `magic` stage for the full `1000ms` beat, with the loading state rendered underneath the fading confirm overlay.
+- The flow only switches to `GS.SENT` after that beat completes, so the final `Message sent` toast becomes a second phase instead of replacing a fake blue sent shell mid-transition.
+- Removed the confirm-await orb/sent-shell override during the sending beat so the transition uses the normal thinking-stage styling instead of the previous over-blue intermediate shell.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/shared/morph-bridges.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - `80ms`, `520ms`, and `920ms` after `send`: `currentShape === "magic"`, `state === "5"` (`GS.SENDING`), loading UI present, no sent toast present
+  - `1200ms` after `send`: `currentShape === "pill"`, `state === "6"` (`GS.SENT`), single settled sent toast visible
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. Live mic-driven orb behavior was not exercised in this pass.
+
+## Recommended next step
+1. Manual visual pass on-device to confirm the `magic -> sent toast` handoff feels right with real voice input timing.
+
+## Task title
+Confirm To Send Text Freeze And Fast Fade
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the confirm-to-send text exit so the message no longer rewraps while the container shrinks.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to inject a frozen confirm-text width for the transition layer using the pre-shrink compose width.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so the transition text block keeps that fixed width, gets cropped by the shrinking field, and fades out over the first `400ms` of the `1000ms` send transition instead of staying visible long enough to reflow.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless Playwright run on `http://127.0.0.1:5174/ai.html` through the real message send path.
+- Measured transition values after `send`:
+  - `80ms`: text width `392px`, field width about `398.6px`, text opacity about `0.235`
+  - `260ms`: text width `392px`, field width about `287.1px`, text opacity about `0.0017`
+  - `520ms`: text width `392px`, field width about `217.4px`, text opacity `0`
+- Visual frame review of `/tmp/genui-send-t080.png`, `/tmp/genui-send-t260.png`, `/tmp/genui-send-t520.png` confirmed the text is cropped by the shrinking field rather than reflowing into new line breaks.
+
+## Remaining issues / caveats
+- None for this specific text-exit behavior.
+
+## Recommended next step
+1. Check one manual send in `ai.html`.
+2. If needed, tune only the fade timing, not the text layout behavior.
+
+## Task title
+Confirm To Send Transition Fix On Real Sending Path
+
+## Completion status
+- Completed
+
+## Summary
+- Corrected the message send handoff so the animation starts on `CONFIRM -> SENDING`, not only after `SENT`, which was the real reason the contact header and orb appeared to jump away.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to treat `SENDING` and `SENT` as one shared confirm-to-send transition window while `flow.sentTransitionActive` is true.
+- During that window, the outer shell now morphs immediately to the sent pill while the confirm layer stays mounted, so the contact header can fade/float down, the orb can fade out, and the compose text can remain visible inside the shrinking field.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so:
+  - the contact header exits downward with opacity fade
+  - the compose text stays visible until late in the transition
+  - the inner blue field glow ramps in progressively instead of appearing in one frame
+  - the sent toast only takes over after the transition has substantially finished
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm orb now fades/scales out in place instead of lifting away.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Headless Playwright run on `http://127.0.0.1:5174/ai.html` through the real message path:
+  - wake via `window.armAiWakeListening({ source: "keyboard-l" })`
+  - start flow with `send message to hiro`
+  - disambiguate with `Tanaka`
+  - compose `Hey, do you have time for a design review sometime?`
+  - issue `send`
+- Captured transition frames at `80ms`, `260ms`, `520ms`, and `920ms` after `send`:
+  - `80ms`: shape already `pill`, header opacity about `0.60`, orb opacity about `0.60`, text opacity `1`, blue inset shadow already partially ramped in
+  - `260ms`: header opacity about `0.15`, orb opacity about `0.15`, text opacity still `1`, blue inset shadow stronger
+  - `520ms`: header effectively gone, text still visible inside the shrinking field, blue inset glow near full
+  - `920ms`: toast visible as `Message sent`, orb gone
+- Visual frame review of `/tmp/genui-send-before.png`, `/tmp/genui-send-t080.png`, `/tmp/genui-send-t260.png`, `/tmp/genui-send-t520.png`, `/tmp/genui-send-t920.png`
+
+## Remaining issues / caveats
+- This validation used the real browser flow and screenshots, but it still does not synthesize live microphone amplitude during the confirm orb fade. The orb fade itself is verified; live-volume behavior still needs an on-device mic glance if that matters.
+
+## Recommended next step
+1. Run one manual send in `ai.html`.
+2. Check whether you want the text to hold even longer before fading, now that the jump itself is gone.
+
+## Task title
+Confirm To Sent Transition Smoothing
+
+## Completion status
+- Completed
+
+## Summary
+- Smoothed the message flow handoff from confirm to the sent toast by giving the shell morph, confirm content exit, sent toast entry, and confirm orb fade a shared `1000ms` transition window.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) to track a dedicated confirm-to-sent transition state for `1000ms` before dropping the confirm orb classes.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so the sent state can temporarily render both layers at once: the confirm card exits while the sent toast enters, instead of replacing the DOM in one frame.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) with `1000ms` confirm-header, confirm-field, and sent-toast animations.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm listening orb and glow animate out over the same `1000ms` window.
+- Updated [morph-bridges.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js) so the confirm card-form to sent pill shell morph also uses `1000ms` during this specific message-flow handoff.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `src/shared/morph-bridges.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Source verification:
+  - confirm-to-sent transition constant set to `1000ms`
+  - confirm header, field, toast, orb, and glow all use `1000ms` transition/animation rules
+  - confirm-to-sent shell morph override set to `1000ms`
+
+## Remaining issues / caveats
+- I attempted a headless end-to-end browser check on `ai.html`, but the side-panel input path did not reliably advance into the auto-confirm/send path in that environment, so this change was validated by syntax checks plus direct source verification rather than a full recorded browser send sequence.
+
+## Recommended next step
+1. Run the real confirm -> sent flow on-device.
+2. Verify the contact header, compose field, orb, and shell all hand off together over about one second with no visible pop.
+
+## Task title
+Confirm Orb Inner Highlight Blur Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the confirm-stage mini listening orb’s inner inset highlight blur by `10px`.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm-specific `#siri-orb::after` inset shadow now uses `10px` blur instead of `20px`, tightening the inner glow without changing the rest of the copied disambiguation-shell treatment.
+
+## Files changed
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) now sets `box-shadow: inset 0 0 10px rgba(255,255,255,0.25)` for the confirm-stage mini orb highlight
+
+## Remaining issues / caveats
+- This was a targeted visual adjustment only. I did not rerun a live browser flow for this single-value change.
+
+## Recommended next step
+1. Check the confirm stage visually.
+2. Verify the mini orb’s center highlight feels tighter and less washed out.
+
+## Task title
+Confirm Orb Exact Disambiguation Shell Match
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the remaining confirm-only orb substitute styling that was causing the mini orb to read like a dark disk instead of the disambiguation orb.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm mini orb now reuses the same shell recipe as the disambiguation orb: transparent orb body, the exact shell stroke gradient, and the same inset shell highlight copied from the base `.drop` treatment.
+- Kept the confirm glow on [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) aligned with the same blue listening-family shadow path instead of introducing a separate confirm-only tint.
+
+## Files changed
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- Headless browser screenshot comparison in `ai.html`:
+  - captured the disambiguation orb as the reference baseline
+  - captured the confirm-stage orb after the exact shell-layer copy
+  - verified the confirm orb no longer renders as a black/dark disk and now matches the same blue glass orb family as disambiguation
+
+## Remaining issues / caveats
+- The headless check verifies the settled confirm render path and the copied shell values. It does not synthesize real microphone amplitude, so live-volume response still needs an on-device mic check.
+
+## Recommended next step
+1. Check the confirm stage on-device while command listening is active.
+2. Verify the mini orb stays visually aligned with the disambiguation orb while the outer glow reacts to voice volume.
+
+## Task title
+Prototype Background Toggle Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the prototype-mode startup crash that prevented sidebar bindings from registering, which is why the `Background image` toggle appeared to do nothing.
+- Updated [manual-demo.js](/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-demo.js) to import `selectListItem` from the shared list-demo module before returning it from `initManualDemo()`.
+- With that runtime error removed, the existing prototype canvas-setting bindings now run correctly again, so toggling `Background image` updates `canvasSettings.backgroundEnabled`, persists the setting, and applies `body.bg-off` as intended.
+
+## Files changed
+- `src/tool/modules/manual-demo.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-demo.js`
+- Headless browser check on `index.html`:
+  - verified no page-load `ReferenceError`
+  - toggled `#bg-toggle`
+  - confirmed `body` class changed to include/exclude `bg-off`
+  - confirmed `.bg-blur-image` opacity changed with the toggle
+  - confirmed `genui.settings.v1` persisted `backgroundEnabled`
+
+## Remaining issues / caveats
+- Existing stored settings still override the new default-off behavior on subsequent loads, by design.
+
+## Recommended next step
+1. Toggle `Background image` on and off in prototype mode.
+2. Verify the blurred background visibly hides/shows and the setting persists across refresh.
+
+## Task title
+Background Image Default Off
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the global canvas-settings default so the stage background image is off unless it has been explicitly enabled and persisted by the user.
+- Updated [app-state.js](/Users/ariax/Documents/GitHub/GenUI/src/app-state.js) so `loadCanvasSettings()` now defaults `backgroundEnabled` to `false` on a fresh load.
+- Removed the static `checked` attribute from the `Background image` toggle in [ai.html](/Users/ariax/Documents/GitHub/GenUI/ai.html) and [index.html](/Users/ariax/Documents/GitHub/GenUI/index.html) so the initial checkbox markup matches the runtime default.
+
+## Files changed
+- `src/app-state.js`
+- `ai.html`
+- `index.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/app-state.js`
+- Source verification:
+  - `bg-toggle` is no longer statically checked in `ai.html`
+  - `bg-toggle` is no longer statically checked in `index.html`
+
+## Remaining issues / caveats
+- Existing localStorage settings still win. If this browser already has `genui.settings.v1.backgroundEnabled: true`, the toggle will still come up enabled until that stored setting is changed or cleared.
+
+## Recommended next step
+1. Load the page in a fresh browser profile or clear `genui.settings.v1`.
+2. Verify the background image starts off and the toggle appears unchecked on first load.
+
+## Task title
+Confirm Stage Orb Outside Recolor And Downsize
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the real listening orb in confirm mode, but moved it fully outside the compose card again and reduced it from `52px` to `44px` so it reads like the reference rather than a second container element.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so confirm mode lifts the compose card by a smaller `60px` offset (`44px` orb + `16px` gap), leaving the orb below the card while still inside the overall stage bounds.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm orb and glow dock below the shell at the smaller size and the confirm-specific glow layer uses a soft outer aura instead of the large shell’s inset blue-white fill.
+- Updated [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so confirm mode no longer stacks both the glow-layer shadow and the orb shadow at once; confirm now drives the live command-volume response through the orb itself, which keeps the orb color much closer to the listening reference.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/ai/voice-engine.js`
+- Headless Playwright UI check on `ai.html` using the real message flow path:
+  - woke listening
+  - started `Send message to Hiro`
+  - selected Hiro
+  - typed `Hello there`
+  - waited for confirm to settle
+  - verified `#drop-main` carried `confirm-await-orb listening-orb home-glow`
+  - verified the compose card stayed above the orb
+  - verified the orb settled outside the card with a positive gap
+  - verified the orb measured about `44px x 44px`
+
+## Remaining issues / caveats
+- The headless pass verifies geometry and styling hooks. It does not synthesize real microphone amplitude, so the confirm orb’s live volume response is validated by sharing the same orb-driven visualization path rather than by fake audio input.
+
+## Recommended next step
+1. Check confirm mode on-device with normal room noise and a spoken follow-up command.
+2. Verify the orb now reads darker/bluer like the listening reference and no longer looks like a pale container badge.
+
+## Task title
+Confirm Stage Real Listening Orb Dock
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the fake confirm-stage orb badge with the real listening-orb surface used by the disambiguation stage.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so confirm mode now reserves an internal orb dock in the shell, removes the fake `.g-confirm-await-orb` markup, and keeps `#drop-main` synchronized with `confirm-await-orb`, `listening-orb`, and `home-glow` classes even through the post-render geometry settle pass.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so confirm mode shortens the field wrap by `96px`, leaving room for the orb inside the confirm shell.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the real `#siri-orb` and `#home-glow-layer` dock at the bottom-center of confirm mode as a `64px` orb, matching the disambiguation orb size and glass treatment.
+- Updated [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so command-mode voice visualization now targets the docked confirm orb using the same live shadow/glow path as disambiguation instead of trying to pulse confirm buttons.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/ai/voice-engine.js`
+- Headless Playwright UI check on `ai.html` using the real message flow path:
+  - woke listening
+  - started `Send message to Hiro`
+  - selected the default Hiro contact
+  - typed `Hello there`
+  - waited for confirm to fully settle
+  - verified `#drop-main` carried `confirm-await-orb listening-orb home-glow`
+  - verified the fake confirm orb markup was gone
+  - verified the confirm shell settled at `190px` height
+  - verified the real orb settled at about `64.26px x 64.26px`
+  - verified the orb sat inside the confirm shell below the field with a positive gap of about `13.25px`
+
+## Remaining issues / caveats
+- The headless pass verified the real orb dock, size, and settled geometry. It did not simulate real microphone amplitude, so the exact live volume response was verified by wiring confirm to the same voice-visualization path as disambiguation rather than by synthetic audio input.
+
+## Recommended next step
+1. Speak a confirm-stage command on-device.
+2. Verify the orb responds to live mic volume exactly like disambiguation while staying docked inside the confirm shell.
+
+## Task title
+Confirm Stage Mini Listening Orb
+
+## Completion status
+- Completed
+
+## Summary
+- Added a mini listening-style orb to the confirm stage to indicate the system is waiting for the user’s next command.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so confirm mode renders a dedicated `.g-confirm-await-orb` below the compose field.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) with a `32px` orb treatment that matches the listening orb language at `0.4x` scale, including a short entry animation and a subtle ambient breathe.
+- Kept the confirm shell at its stable compose height and positioned the mini orb just below the shell with `overflow: visible`, which proved more reliable than trying to grow the confirm shell itself.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless Playwright UI check on `ai.html` using the real message flow path:
+  - woke the listening orb
+  - started `Send message to Hiro`
+  - selected the default Hiro contact
+  - typed `Hello there` and waited for auto-confirm
+  - verified the confirm-stage mini orb rendered at about `32.15px x 32.15px`
+  - verified the orb sat below the compose field with a positive measured gap of about `13.21px`
+
+## Remaining issues / caveats
+- The confirm shell itself does not currently grow to contain the orb; the orb is intentionally rendered just below the shell instead. This matches the requested visual while avoiding overlap.
+
+## Recommended next step
+1. Check the confirm stage with a longer wrapped message.
+2. Verify the mini orb still reads clearly below the field on-device and does not compete with any future confirm controls.
+
+## Task title
 Thinking Orb Inner Spinner Removal
 
 ## Completion status
@@ -1684,6 +2154,42 @@ AI home-state rebuild from reference: `sleep` / `home-still` / `home-context` + 
 
 ## Blockers
 - None
+
+## Task title
+Confirm To Send Single Shell And Single Toast
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm -> send transition so the transition layer stays stable through the full `1000ms` handoff instead of remounting at the `SENDING -> SENT` boundary.
+- Removed the transition-layer sent toast; the final settled `Message sent` toast now enters once after the transition window ends.
+- Removed the inner compose field shell during the transition and moved the blue send fill onto the outer `#drop-main::after` shell, which eliminates the nested/double-container look.
+- Prevented the confirm header and message text from reappearing after the blue fade by preserving identical transition markup until the handoff completes.
+- Hard-froze the transition DOM after the first send frame so later renders during `sentTransitionActive` cannot remount the confirm layer.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - The confirm transition DOM stayed identity-stable through `920ms` (`sameHeader: true`, `sameText: true`, `sameLayer: true`).
+  - At `80ms`, `260ms`, `520ms`, and `920ms` after `send`, the confirm header/text only continued fading out and did not reappear.
+  - During the transition window, no sent toast node was present.
+  - After the `1000ms` handoff, a single settled `Message sent` toast appeared and remained visible.
+
+## Remaining issues / caveats
+- Validation covered the actual send flow path in Chromium, but not live microphone amplitude during the orb fade.
+
+## Recommended next step
+1. Manual visual pass on-device for confirm -> send with real speech input, mainly to confirm the orb fade still feels correct under live volume changes.
 
 ---
 

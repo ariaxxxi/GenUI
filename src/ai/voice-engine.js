@@ -61,34 +61,44 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const state = glassUi?.state;
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
+    const siriOrb = document.getElementById('siri-orb');
+    const confirmAwaitOrb = dropMain?.classList.contains('confirm-await-orb') === true;
     const clearActionBtns = () => actionBtns.forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+    const clearSiriOrb = () => {
+      if (siriOrb) siriOrb.style.boxShadow = '';
+    };
     if (voiceEngine.mode === 'command') {
       const allowCommandViz = shouldShowCommandViz?.() !== false;
       if (!allowCommandViz) {
         if (glowEl) glowEl.style.boxShadow = '';
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
+        clearSiriOrb();
         clearActionBtns();
         return;
       }
       const flightContainerViz = document.getElementById('stage')?.classList.contains('flight-voice-viz') === true;
-      if (glowEl) glowEl.style.boxShadow = shadow(level);
       if (state === GS.DISAMBIGUATE || flightContainerViz) {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
-      } else {
+        clearSiriOrb();
+      } else if (state === GS.CONFIRM && confirmAwaitOrb) {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
-      }
-      if (state === GS.CONFIRM) {
-        actionBtns.forEach((btn) => {
-          btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)';
-          btn.style.boxShadow = buttonShadow(level);
-        });
+        clearSiriOrb();
+        clearActionBtns();
       } else {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
+        if (dropMain) dropMain.style.setProperty('box-shadow', '');
+        clearSiriOrb();
+      }
+      if (state !== GS.CONFIRM || !confirmAwaitOrb) {
         clearActionBtns();
       }
     }
     if (voiceEngine.mode === 'dictation') {
       if (glowEl) glowEl.style.boxShadow = '';
       if (dropMain) dropMain.style.removeProperty('box-shadow');
+      clearSiriOrb();
       clearActionBtns();
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
@@ -123,6 +133,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   function resetVizStyles({ clearDropMain = true } = {}) {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
+    document.getElementById('siri-orb')?.style.setProperty('box-shadow', '');
     const field = getComposePulseField();
     if (field) {
       field.style.transition = '';

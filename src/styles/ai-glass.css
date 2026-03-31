@@ -3,7 +3,7 @@
   position: absolute; inset: 0; z-index: 5;
   padding: 20px; overflow: hidden;
   opacity: 0;
-  transition: opacity 220ms ease;
+  transition: opacity 220ms ease, transform 1000ms cubic-bezier(0.22,1,0.36,1);
   pointer-events: none;
   user-select: text; -webkit-user-select: text;
   display: flex; flex-direction: column;
@@ -300,6 +300,72 @@
   color: rgba(255,255,255,1);
   line-height: 1.2;
   white-space: nowrap;
+}
+.g-confirm-to-sent-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.g-send-thinking-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.g-sending-status {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.g-sending-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, calc(-50% - 54px));
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(255,255,255,0.58);
+  white-space: nowrap;
+}
+.g-compose-stage.confirm-exit-to-sent .g-compose-header {
+  animation: g-confirm-header-to-sent 600ms cubic-bezier(0.22,1,0.36,1) both;
+}
+.g-compose-stage.confirm-exit-to-sent .g-compose-field {
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+  will-change: opacity;
+  animation: g-confirm-field-to-sent 600ms cubic-bezier(0.22,1,0.36,1) both;
+}
+.g-compose-stage.confirm-exit-to-sent .g-compose-field-text {
+  width: var(--g-confirm-text-freeze-w, calc(100% - 28px));
+  min-width: var(--g-confirm-text-freeze-w, calc(100% - 28px));
+  max-width: none;
+  flex: 0 0 auto;
+  will-change: opacity, transform, filter;
+  animation: g-confirm-field-text-to-sent 600ms cubic-bezier(0.22,1,0.36,1) both;
+}
+.g-confirm-to-sent-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.g-confirm-to-sent-toast .g-sent-toast {
+  opacity: 0;
+  transform: scale(0.92);
+}
+.g-sent-toast.sent-toast-enter {
+  opacity: 0;
+  transform: scale(0.92);
+  animation: g-sent-toast-enter 180ms cubic-bezier(0.22,1,0.36,1) both;
 }
 .g-sent-emoji {
   display: inline-flex;
@@ -727,6 +793,39 @@
 @keyframes g-compose-header-enter {
   from { opacity: 0; transform: translate(-50%, 14px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes g-confirm-header-to-sent {
+  0% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%, 26px) scale(0.98); filter: blur(6px); }
+}
+@keyframes g-confirm-field-to-sent {
+  0% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes g-confirm-field-text-to-sent {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  40% {
+    opacity: 0;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(0);
+  }
+}
+@keyframes g-sent-toast-enter {
+  0% { opacity: 0; transform: scale(0.92); filter: blur(10px); }
+  100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
 @keyframes g-compose-chip-in {

@@ -24,6 +24,8 @@ const CONTACTS = [
 export function createMessageSendFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
   const DISAMBIGUATION_TO_COMPOSE_MS = 1000;
+  const CONFIRM_TO_SENDING_MS = 600;
+  const SENDING_HOLD_MS = 1000;
   const COMPOSE_MENU_HOLD_MS = 280;
   const COMPOSE_MENU_EXPAND_MS = 3000;
   const COMPOSE_MENU_CLOSE_MS = 260;
@@ -32,8 +34,8 @@ export function createMessageSendFlow(ctx) {
   const COMPOSE_CHIP_MAGIC_MS = 920;
   const COMPOSE_CHIP_MAGIC_REVEAL_MS = 260;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
-  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeChipMagicPending: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "" };
-  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null };
+  const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeChipMagicPending: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "", sentTransitionActive: false, sentToastEnterPending: false };
+  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, sentTransition: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   let flowEpoch = 0;
@@ -53,9 +55,10 @@ export function createMessageSendFlow(ctx) {
     });
   }
 
-  function speakOutput(text) {
+  function speakOutput(text, options = {}) {
+    const announce = options.announce !== false;
     flow.aiVoice = text;
-    ctx.setSimVoice(text);
+    ctx.setSimVoice(announce ? text : "");
     ctx.shell.updateOrbLabel();
   }
 
@@ -363,10 +366,17 @@ export function createMessageSendFlow(ctx) {
   }
 
   function transitionTo(state, voiceText = "") {
+    const confirmToSend = flow.state === GS.CONFIRM && state === GS.SENDING;
     if (state !== GS.COMPOSE && timers.autoConfirm) {
       clearTimeout(timers.autoConfirm);
       timers.autoConfirm = null;
     }
+    if (state !== GS.SENDING && state !== GS.SENT && timers.sentTransition) {
+      clearTimeout(timers.sentTransition);
+      timers.sentTransition = null;
+    }
+    if (state !== GS.SENDING && state !== GS.SENT) flow.sentTransitionActive = false;
+    if (state !== GS.SENT) flow.sentToastEnterPending = false;
     if (state !== GS.COMPOSE) flow.composeChipMagicPending = false;
     if (timers.dots) clearInterval(timers.dots);
     timers.dots = null;
@@ -376,7 +386,7 @@ export function createMessageSendFlow(ctx) {
         setTimeout(() => {
           flow.state = state;
           flow.sel = 0;
-          speakOutput(voiceText);
+          speakOutput(voiceText, { announce: state !== GS.THINKING && state !== GS.SENDING });
           render.render(true);
           applyVoiceMode();
           if (state === GS.THINKING) {
@@ -395,7 +405,9 @@ export function createMessageSendFlow(ctx) {
     }
     flow.state = state;
     flow.sel = 0;
-    speakOutput(voiceText);
+    if (confirmToSend) flow.sentTransitionActive = true;
+    else if (state !== GS.SENT) flow.sentTransitionActive = false;
+    speakOutput(voiceText, { announce: state !== GS.THINKING && state !== GS.SENDING });
     render.render(true);
     applyVoiceMode();
     if (state === GS.THINKING) {
@@ -408,6 +420,14 @@ export function createMessageSendFlow(ctx) {
       if (dropMain) dropMain.style.boxShadow = "";
     }
     if (state === GS.THINKING || state === GS.SENDING) startDotsAnimation();
+    if (confirmToSend) {
+      timers.sentTransition = setTimeout(() => {
+        timers.sentTransition = null;
+        if (!flow.active || flow.state !== GS.SENDING) return;
+        flow.sentTransitionActive = false;
+        render.render(false);
+      }, CONFIRM_TO_SENDING_MS);
+    }
   }
 
   function reset() {
@@ -434,6 +454,8 @@ export function createMessageSendFlow(ctx) {
     flow.replaceComposeOnNextDictation = false;
     flow.dictationInterimActive = false;
     flow.dictationBaseText = "";
+    flow.sentTransitionActive = false;
+    flow.sentToastEnterPending = false;
     speakOutput("");
     if (ctx.C?.rich) {
       ctx.C.rich.innerHTML = "";
@@ -442,7 +464,7 @@ export function createMessageSendFlow(ctx) {
       ctx.C.rich.style.opacity = "";
       ctx.C.rich.style.transform = "";
     }
-    document.body.classList.remove("glass-flow-active");
+    document.body.classList.remove("glass-flow-active", "message-confirm-to-sent");
     if (ctx.C?.glassControlsLayer) {
       ctx.C.glassControlsLayer.innerHTML = "";
       ctx.C.glassControlsLayer.classList.remove("visible");
@@ -565,11 +587,13 @@ export function createMessageSendFlow(ctx) {
       transitionTo(GS.SENDING, "");
       timers.send = setTimeout(() => {
         if (!isEpochAlive(epoch)) return;
+        flow.sentTransitionActive = false;
+        flow.sentToastEnterPending = true;
         transitionTo(GS.SENT, "");
         if (typeof ctx.playEarcon === "function") ctx.playEarcon("sent");
         ctx.addSimLog(`✓ Delivered to ${flow.contact?.name || "contact"}`, "success");
         timers.sent = setTimeout(() => reset(), 2500);
-      }, 900);
+      }, CONFIRM_TO_SENDING_MS + SENDING_HOLD_MS);
       return;
     }
     if (index === 1) {
@@ -880,6 +904,8 @@ export function createMessageSendFlow(ctx) {
     flow.composeMenuVisibleCount = 0;
     flow.composeVisualChips = [];
     flow.showCheck = false;
+    flow.sentTransitionActive = false;
+    flow.sentToastEnterPending = false;
     flow.disambiguateContacts = CONTACTS.filter((contact) => contact.name.toLowerCase().includes("hiro"));
     if (ctx.input) ctx.input.value = "";
     transitionTo(GS.THINKING, "Searching contact...");

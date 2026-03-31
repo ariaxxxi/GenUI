@@ -17,10 +17,12 @@ export function createMorphBridges(ctx) {
   function transitionAnimMs(fromShape, toShape, baseMs = callbacks.getAnimDuration(), fromGeo = null, toGeo = null) {
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
+    const isMessageConfirmToSent = document.body?.classList.contains('message-confirm-to-sent') === true;
     const isDotPillPair = (fromShape === 'dot' && toShape === 'pill') || (fromShape === 'pill' && toShape === 'dot');
     const isPillCardPair = (fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill');
     const isDotCardPair = (fromShape === 'dot' && toCardLike) || (fromCardLike && toShape === 'dot');
     const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
+    if (isMessageConfirmToSent && fromShape === 'card-form' && toShape === 'magic') return 600;
     if (isDotPillPair) return clamp(baseMs, 100, 1800);
     if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
     if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);

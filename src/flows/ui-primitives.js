@@ -146,10 +146,14 @@ export function renderActionRow({ actions = [], selectedIndex = 0 } = {}) {
   return `<div class="g-action-row enter">${actions.map((action, idx) => `<div class="g-action-btn ${idx === selectedIndex ? "selected" : ""}" data-action-id="${esc(action.id || idx)}">${action.iconHtml || esc(action.emoji || "")}</div>`).join("")}</div>`;
 }
 
-export function renderCompactStatus({ type = "loading", label = "", icon = "", dotsId = "g-thinking-dots" } = {}) {
+export function renderCompactStatus({ type = "loading", label = "", icon = "", dotsId = "g-thinking-dots", enter = false } = {}) {
   if (type === "loading") {
     return `<div class="g-center-row"><span id="${esc(dotsId)}">${esc(label || "·")}</span></div>`;
   }
   const finalIcon = icon || (type === "error" ? "⚠️" : "✅");
-  return `<div data-glass-sent class="g-sent-toast"><span class="g-sent-emoji">${esc(finalIcon)}</span><span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;
+  return `<div data-glass-sent class="g-sent-toast${enter ? " sent-toast-enter" : ""}"><span class="g-sent-emoji">${esc(finalIcon)}</span><span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;
+}
+
+export function renderSendingStatus({ label = "sending..." } = {}) {
+  return `<div class="g-sending-status"><div class="g-sending-label">${esc(label)}</div></div>`;
 }

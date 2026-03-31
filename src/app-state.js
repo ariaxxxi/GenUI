@@ -44,7 +44,7 @@ export function readStoredJson(key, fallback) {
 export function loadCanvasSettings() {
   const stored = readStoredJson(STORAGE_KEYS.settings, null);
   return {
-    backgroundEnabled: stored?.backgroundEnabled !== false,
+    backgroundEnabled: stored?.backgroundEnabled === true,
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
