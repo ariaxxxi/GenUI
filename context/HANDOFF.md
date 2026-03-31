@@ -1,6 +1,65 @@
 # Handoff
 
 ## Task title
+Restore Confirm-Step Listening Orb Voice Reactivity
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm-step mini listening orb so it reacts to command listening again.
+- Root cause: confirm mode had diverged onto a separate simplified outer-glow path on `#siri-orb`, while disambiguation/listening mode uses the real reactive shell shadow values. The mic loop was still active, but the visible confirm orb was no longer using the same reactive layer, so it appeared static.
+- Switched the confirm-await-orb command visualization back to the same `shadow(level)` path used by the listening/disambiguation orb, applied on the confirm orb’s `#home-glow-layer`.
+- Kept `drop-main` shell shadow cleared in confirm so only the docked orb reacts.
+
+## Files changed
+- `src/ai/voice-engine.js`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- Headless flow validation on `http://127.0.0.1:5174/ai.html`
+- Verified real confirm state after `send message to hiro` -> select Hiro -> dictate message:
+  - `state` reached `GS.CONFIRM`
+  - `drop-main` had `confirm-await-orb listening-orb home-glow`
+  - `sim-mic-label` remained `Listening…`
+  - `#home-glow-layer` carried the reactive listening shadow values instead of staying blank
+  - `#siri-orb` kept its stable base shell shadow
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium, so I verified the confirm branch and live style targets but did not synthesize real microphone amplitude in-browser.
+
+## Recommended next step
+1. Do a quick manual confirm-step voice pass to confirm the mini orb now visibly reacts while saying `send`, `edit`, or `cancel`.
+
+## Task title
+Keep Expanded Long Chips Pinned To Shell During Insert
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining double-container glitch on the expanded chip path, specifically `Need your input`.
+- Root cause: after the hidden-text reveal began, the live compose field dropped its pending-height lock too early. At intermediate shell widths, `Need your input` temporarily rewrapped to a taller multi-line layout than the shell, so the inner field visibly outgrew the morphing container.
+- The pending-height lock now stays on the compose field for the full chip-magic transition instead of being removed at the reveal point.
+- The reveal still starts on time, but the field remains pinned to the shell and cropped until the chip-magic beat completes.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real expanded `Need your input` chip path
+- Re-ran the full flow 3 times: wake with `L` -> `send message to hiro` -> choose default Hiro -> long-hold stage for expanded chip menu -> release on `Need your input`
+- Sampled the transition at `0ms`, `40ms`, `80ms`, `120ms`, `180ms`, `260ms`, `400ms`, `600ms`, and `780ms`
+- Confirmed field height matched shell height exactly at every sampled frame on all 3 runs, with the field background remaining transparent throughout the chip-magic beat
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+
+## Recommended next step
+1. Do one manual fullscreen pass on `Need your input` and `Share a file` to confirm both long-chip variants now read as a single shell at presentation scale.
+
+## Task title
 Stabilize Long-Text Chip Insert Shell During Transition
 
 ## Completion status

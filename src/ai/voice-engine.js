@@ -24,7 +24,6 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (!lastTtsTextNorm) return true;
     return normalized.includes(lastTtsTextNorm) || lastTtsTextNorm.includes(normalized);
   }
-  const glowShadow = (t) => `0 0 ${(t * 12).toFixed(1)}px ${(t * 3).toFixed(1)}px rgba(34,105,245,${(t * 0.45).toFixed(3)})`;
   const shadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
     const lc = (r0,g0,b0,a0, r1,g1,b1,a1) => `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
@@ -82,9 +81,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
         clearSiriOrb();
       } else if (state === GS.CONFIRM && confirmAwaitOrb) {
-        if (glowEl) glowEl.style.boxShadow = '';
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        if (siriOrb) siriOrb.style.boxShadow = glowShadow(level);
+        clearSiriOrb();
         clearActionBtns();
       } else {
         if (glowEl) glowEl.style.boxShadow = shadow(level);

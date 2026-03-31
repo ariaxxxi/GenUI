@@ -563,8 +563,6 @@ export function createMessageSendFlow(ctx) {
       if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
       flow.composeChipMagicPending = false;
       const text = ctx.C.rich?.querySelector("[data-compose-field-text]");
-      const field = ctx.C.rich?.querySelector("[data-compose-field]");
-      field?.classList.remove("g-compose-field-magic-pending");
       if (!text) {
         render.render(false);
         return;
@@ -577,6 +575,7 @@ export function createMessageSendFlow(ctx) {
     setTimeout(() => {
       if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
       document.getElementById("drop-main")?.classList.remove("compose-chip-magic");
+      ctx.C.rich?.querySelector("[data-compose-field]")?.classList.remove("g-compose-field-magic-pending");
       flow.msg = String(flow.composeText || flow.msg || "").trim();
       transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
     }, COMPOSE_CHIP_MAGIC_MS);
