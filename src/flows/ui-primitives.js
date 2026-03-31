@@ -42,6 +42,12 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
   }).join("")}</div>`;
 }
 
+// Reusable edge-light scaffold. Host containers can recolor it with
+// --g-accent-rgb / --g-accent-secondary-rgb and toggle .selected / .is-accented.
+export function renderAccentOrbitChrome() {
+  return `<span class="g-accent-orbit" aria-hidden="true"><span class="g-accent-orbit-fill"></span><span class="g-accent-orbit-left-spot"></span><span class="g-accent-orbit-inner-glow"></span><span class="g-accent-orbit-middle"></span><span class="g-accent-orbit-ring"></span></span>`;
+}
+
 export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
   return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}">${items.map((item, index) => {
@@ -51,7 +57,20 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
     const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
     const finalScale = selected ? 1 : 0.98;
-    return `<div class="g-disambiguation-pill ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="--pill-x:${Math.round(Number(item?.x) || 0)}px;--pill-y:${Math.round(Number(item?.y) || 0)}px;--pill-rot-start:${rotStart}deg;--pill-delay:${delay}ms;--pill-scale-final:${finalScale};">${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
+    const accentRgb = String(item?.accentRgb || "").trim();
+    const accentSecondaryRgb = String(item?.accentSecondaryRgb || "").trim();
+    const orbitMs = Number.isFinite(Number(item?.orbitMs)) ? Math.max(600, Math.round(Number(item.orbitMs))) : null;
+    const styleVars = [
+      `--pill-x:${Math.round(Number(item?.x) || 0)}px`,
+      `--pill-y:${Math.round(Number(item?.y) || 0)}px`,
+      `--pill-rot-start:${rotStart}deg`,
+      `--pill-delay:${delay}ms`,
+      `--pill-scale-final:${finalScale}`,
+    ];
+    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
+    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    return `<div class="g-disambiguation-pill g-accent-orbit-host ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
   }).join("")}</div>`;
 }
 
