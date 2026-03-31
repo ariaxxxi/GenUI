@@ -1,5 +1,8 @@
 # Handoff
 
+Implement this design from Figma.
+@https://www.figma.com/design/dSQHQxqhPIoi3vagBYmvhf/GenUI?node-id=20-1157&m=dev
+
 ## Task title
 Restore Confirm-Step Listening Orb Voice Reactivity
 
