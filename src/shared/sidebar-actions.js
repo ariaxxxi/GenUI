@@ -94,22 +94,44 @@ export function createSidebarActions(ctx, refs) {
 
   function deleteCurrentStage() {
     const scenario = ctx.selectedScenario();
-    const stage = ctx.stageById(scenario?.shape);
-    if (!stage || stage.preset) return;
-    const nextStages = ctx.getStageLibrary().filter((item) => item.id !== stage.id);
-    ctx.setStageLibrary(nextStages);
-    ctx.persistStageLibrary();
-    commitScenarioChange((draft) => { draft.shape = 'pill'; return draft; });
+    const stage = ctx.stageById(scenario?.shape, scenario);
+    if (!stage) return;
+    const visibleStages = typeof ctx.visibleScenarioStages === 'function'
+      ? ctx.visibleScenarioStages(scenario)
+      : ctx.getStageLibrary();
+    const currentIndex = visibleStages.findIndex((item) => item.id === stage.id);
+    const fallbackStage = visibleStages[currentIndex + 1] || visibleStages[currentIndex - 1] || null;
+    if (!fallbackStage) return;
+    commitScenarioChange((draft) => {
+      const hidden = new Set(draft.content.hiddenStageIds || []);
+      hidden.add(stage.id);
+      draft.content.hiddenStageIds = [...hidden];
+      if (draft.shape === stage.id) draft.shape = fallbackStage.id;
+    });
   }
 
   function resetCurrentStageToDefault() {
     const scenario = ctx.selectedScenario();
-    const stage = ctx.stageById(scenario?.shape);
+    const stage = ctx.stageById(scenario?.shape, scenario);
     const builtin = ctx.builtinStageById(stage?.id);
     if (!stage || !builtin) return;
     const nextStages = ctx.getStageLibrary().map((item) => item.id === stage.id ? ctx.normalizeStage(builtin, builtin) : item);
     ctx.setStageLibrary(nextStages);
     ctx.persistStageLibrary();
+    const nextScenarios = ctx.getScenarioLibrary().map((item) => {
+      if (item.id !== ctx.getSelectedScenarioId()) return item;
+      const draft = structuredClone(item);
+      if (draft.content?.stageRenderShapeById) {
+        draft.content.stageRenderShapeById = { ...draft.content.stageRenderShapeById };
+        delete draft.content.stageRenderShapeById[stage.id];
+      }
+      if (Array.isArray(draft.content?.hiddenStageIds)) {
+        draft.content.hiddenStageIds = draft.content.hiddenStageIds.filter((id) => id !== stage.id);
+      }
+      return ctx.normalizeScenario(draft);
+    });
+    ctx.setScenarioLibrary(nextScenarios);
+    ctx.persistScenarios();
     refs.render.renderScenarioUi();
     ctx.previewScenario(ctx.selectedScenario());
   }

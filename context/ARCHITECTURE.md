@@ -33,7 +33,7 @@ Each shape definition has `main`, `left`, `right` variants:
 
 Key exports: `SHAPES`, `defaultTypographyForShape()`, `normalizeTypography()`, `normalizeStage()`, `normalizeIcon()`, `normalizeImagesByShape()`, `configureShapeHelpers()`
 
-Stage components toggled per-scenario per-shape: `icon`, `primary`, `secondary`, `detail`, `image`
+Stage components toggled per-scenario per-shape: `icon`, `primary`, `secondary`, `detail`, `image`, `intent-header`
 
 `src/shapes.legacy.js` — copy for `file://` loading (no ES module support); keep in sync manually.
 
@@ -57,9 +57,19 @@ Stage components toggled per-scenario per-shape: `icon`, `primary`, `secondary`,
     detail: { size, color }
   },
   images: { [shape]: string[] },           // per-shape image galleries
-  stageOverrides: { [shape]: StageConfig } // per-scenario, fully independent
+  stageOverrides: { [shape]: StageConfig } // legacy doc field; current per-scenario stage settings live in content maps
 }
 ```
+
+Current scenario-local stage state is layered on top of the shared stage library through `content` maps:
+- `textByShape[shape]` → `{ primary, secondary, detail, intentHeader }`
+- `typographyByShape[shape]` → `{ icon, primary, secondary, detail, intentHeader }`
+- `selectedByShape[shape]`
+- `accentColorByShape[shape]`
+- `secondaryAccentColorByShape[shape]`
+- `sizeByShape[shape]`
+- `stageRenderShapeById[stageId]` → scenario-local `card` / `card-s` render override
+- `hiddenStageIds[]` → scenario-local stage deletion/hiding
 
 ### Stage (built-in presets, then copied per-scenario)
 ```js
@@ -77,7 +87,7 @@ Stage components toggled per-scenario per-shape: `icon`, `primary`, `secondary`,
 }
 ```
 
-**Scenario-stage settings are fully independent** — changing one scenario's stage must never affect another.
+**Scenario-stage settings are fully independent** — changing one scenario's stage must never affect another. Built-in stage definitions stay in the shared stage library, while scenario-local render shape, visibility, selection shell, accent colors, and intent-header text are stored in the scenario `content` maps.
 
 ---
 

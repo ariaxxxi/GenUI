@@ -54,6 +54,8 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const slbl = document.getElementById('intent-step-lbl');
     if (!hdr || !lbl || !dot || !slbl) return;
     const normalizedLabel = String(label || '').replace(/^\s*([a-z])/, (m, c) => m.replace(c, c.toUpperCase()));
+    lbl.style.fontSize = '';
+    lbl.style.color = '';
     lbl.textContent = normalizedLabel;
     if (step) { slbl.textContent = step; dot.classList.add('visible'); }
     else { slbl.textContent = ''; dot.classList.remove('visible'); }
@@ -170,6 +172,11 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     hdr.style.display = 'none';
     hdr.style.left = '';
     hdr.style.top = '';
+    const lbl = document.getElementById('intent-label');
+    if (lbl) {
+      lbl.style.fontSize = '';
+      lbl.style.color = '';
+    }
     if (intentHeaderShowTimer) {
       clearTimeout(intentHeaderShowTimer);
       intentHeaderShowTimer = null;

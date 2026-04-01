@@ -297,6 +297,12 @@
           <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
         </div>
       </div>
+      <div id="stage-card-s-row" class="sb-row tight hidden">
+        <label class="sb-toggle" for="stage-card-s-toggle">
+          <div class="sb-toggle-copy"><strong>Card-S layout</strong></div>
+          <input id="stage-card-s-toggle" class="sb-toggle-input" type="checkbox"/>
+        </label>
+      </div>
       <div id="stage-components-panel" class="sb-row tight hidden">
         <span class="sb-lbl">Components</span>
         <div id="stage-component-controls"></div>
@@ -395,6 +401,25 @@
         <div class="typo-controls">
           <input id="scenario-detail-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
           <input id="scenario-detail-color" class="typo-color" type="color" value="#5a5a5a"/>
+        </div>
+      </div>
+    </div>
+
+    <div id="editor-intent-header-field" class="layer-row editor-field hidden">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Intent Header</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-intent-header-text" class="layer-preview-val"></span>
+          <span id="layer-preview-intent-header-size" class="layer-preview-size"></span>
+          <span id="layer-preview-intent-header-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <input id="scenario-intent-header" class="sb-input" type="text" autocomplete="off" spellcheck="false" placeholder="Intent header text"/>
+        <div class="typo-controls">
+          <input id="scenario-intent-header-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
+          <input id="scenario-intent-header-color" class="typo-color" type="color" value="#666666"/>
         </div>
       </div>
     </div>

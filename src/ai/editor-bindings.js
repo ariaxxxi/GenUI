@@ -107,6 +107,7 @@ export function initEditorBindings({
   UI.scenarioPrimary?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].primary = e.target.value; return scenario; }));
   UI.scenarioSecondary?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].secondary = e.target.value; return scenario; }));
   UI.scenarioDetail?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].detail = e.target.value; return scenario; }));
+  UI.scenarioIntentHeader?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].intentHeader = e.target.value; return scenario; }));
   UI.scenarioShapeRow?.addEventListener("click", (e) => {
     const button = e.target.closest("[data-scenario-shape]");
     const shape = String(button?.dataset?.scenarioShape || "");
@@ -124,6 +125,16 @@ export function initEditorBindings({
   UI.stageDelete?.addEventListener("click", () => sidebar.deleteCurrentStage());
   UI.stageReset?.addEventListener("click", () => sidebar.resetCurrentStageToDefault());
   UI.stageNameInput?.addEventListener("input", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || "").trim() || "Untitled Stage"; return draft; }); });
+  UI.stageCardSToggle?.addEventListener("change", (e) => {
+    const scenario = selectedScenario();
+    const stage = stageById(scenario?.shape, scenario);
+    if (!scenario || !stage) return;
+    sidebar.commitScenarioChange((draft) => {
+      draft.content.stageRenderShapeById = { ...(draft.content.stageRenderShapeById || {}) };
+      draft.content.stageRenderShapeById[stage.id] = e.target.checked ? "card-s" : "card";
+      return draft;
+    });
+  });
   UI.stagePhoneBlurToggle?.addEventListener("change", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.phoneBgBlur = e.target.checked; return draft; }); });
   UI.stageSelectedToggle?.addEventListener("change", (e) => {
     const scenario = selectedScenario();
@@ -164,7 +175,7 @@ export function initEditorBindings({
     const checkbox = e.target.closest("[data-stage-comp-toggle]");
     const type = String(checkbox?.dataset?.stageCompToggle || "");
     const stage = stageById(selectedScenario()?.shape);
-    if (!stage || !["icon", "primary", "secondary", "detail"].includes(type)) return;
+    if (!stage || !["icon", "primary", "secondary", "detail", "intent-header"].includes(type)) return;
     sidebar.commitStageChange(stage.id, (draft) => { const next = [...(draft.components || [])].filter((item) => item !== type); if (checkbox.checked) next.push(type); draft.components = next; return draft; });
   });
 
@@ -172,7 +183,8 @@ export function initEditorBindings({
   sidebar.bindTypographyInputs("primary", UI.scenarioPrimarySize, UI.scenarioPrimaryColor);
   sidebar.bindTypographyInputs("secondary", UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
   sidebar.bindTypographyInputs("detail", UI.scenarioDetailSize, UI.scenarioDetailColor);
-  [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail, UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor, UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor].forEach((el) => { if (el) el.addEventListener("input", sidebar.updateLayerPreviews); });
+  if (UI.scenarioIntentHeaderSize && UI.scenarioIntentHeaderColor) sidebar.bindTypographyInputs("intentHeader", UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor);
+  [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail, UI.scenarioIntentHeader, UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor, UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor, UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor].forEach((el) => { if (el) el.addEventListener("input", sidebar.updateLayerPreviews); });
   sidebar.initSidebarTabs();
   sidebar.initLayerRowToggles();
   sidebar.initSidebarCollapsibleSections();

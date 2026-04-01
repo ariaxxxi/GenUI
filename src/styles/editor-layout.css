@@ -119,12 +119,34 @@ body {
 }
 
 #intent-header {
-  display: flex; align-items: center; gap: 10px;
+  display: none; align-items: center; gap: 10px;
   height: 36px; margin-bottom: 12px;
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 360ms var(--motion-ease), transform 360ms var(--motion-ease);
   pointer-events: none;
+}
+#intent-header.glass-intent {
+  position: absolute;
+  z-index: 30;
+  margin-bottom: 0;
+  height: auto;
+  gap: 0;
+  align-items: flex-start;
+}
+#intent-header.glass-intent #intent-step-dot,
+#intent-header.glass-intent #intent-step-lbl {
+  display: none;
+}
+#intent-header.glass-intent #intent-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  margin-left: 0;
+  padding-left: 0;
 }
 #intent-header.visible {
   opacity: 1; transform: translateY(0);

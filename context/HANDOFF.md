@@ -1,6 +1,74 @@
 # Handoff
 
 ## Task title
+Prototype Intent Header Content Field
+
+## Completion status
+- Completed
+
+## Summary
+- Added a prototype Content-tab edit field for the `intent-header` stage component in both prototype entry points.
+- Kept the header text in the same per-scenario/per-stage `textByShape` model as the other text layers by extending each entry to:
+  - `primary`
+  - `secondary`
+  - `detail`
+  - `intentHeader`
+- Extended the same per-stage typography model so the prototype intent header now has editable:
+  - `font size`
+  - `color`
+- The Content row now includes:
+  - header text input
+  - size input
+  - color input
+- The new field only appears when the current stage has the `intent-header` component enabled.
+- Prototype preview now renders the intent header label from `textByShape[shape].intentHeader` and falls back to the scenario name when the field is blank.
+- Prototype preview applies the header typography from `typographyByShape[shape].intentHeader`.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/scenario-data.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/sidebar-bindings.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/tool/index-app.js`
+- `src/ai/editor-bindings.js`
+- `src/ai/ai-shell.js`
+- `src/ai/ai-bindings.js`
+- `context/architecture.md`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/shared/sidebar-bindings.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/editor-bindings.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed `#editor-intent-header-field` starts hidden
+  - enabled `intent-header` on the `card` stage and confirmed the field becomes visible in the Content tab
+  - entered `WEATHER ALERT` and confirmed:
+    - rendered header text updated to `WEATHER ALERT`
+    - `localStorage['genui.scenarios.v1'][0].content.textByShape.card.intentHeader === 'WEATHER ALERT'`
+  - changed the header typography and confirmed:
+    - rendered font size updated to `26px`
+    - rendered color updated to `rgb(255, 102, 0)`
+    - `localStorage['genui.scenarios.v1'][0].content.typographyByShape.card.intentHeader.size === 26`
+    - `localStorage['genui.scenarios.v1'][0].content.typographyByShape.card.intentHeader.color === '#ff6600'`
+  - screenshot: `/tmp/add-visual-intent-header-content-tab.png`
+  - screenshot: `/tmp/add-visual-intent-header-typography.png`
+
+## Remaining issues / caveats
+- The prototype header still falls back to the scenario name if `intentHeader` is blank. This is intentional so existing scenarios with the component enabled do not render an empty label.
+
+## Recommended next step
+1. If the prototype editor later needs separate typography controls for the intent header, add them as a dedicated header layer instead of reusing primary/detail typography.
+
+## Task title
 Prototype Selected Shell Bottom-Right Highlight Rebuild
 
 ## Completion status

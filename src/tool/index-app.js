@@ -31,9 +31,10 @@ let manualDemo = null;
 let flight = null;
 let actions = null;
 let splitAnimStyleBackup = null;
+let prototypeIntentHeaderTrackRaf = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
@@ -97,7 +98,7 @@ function applyCanvasSettings() {
 function applyStagePhoneBlur(shape) {
   const frame = document.getElementById('ui-frame');
   if (!frame) return;
-  const stage = stageById(shape);
+  const stage = stageById(shape, selectedScenario());
   const shouldBlur = currentScenarioFrameMode() === 'phone' && !!canvasSettings.phoneFrameBackground?.src && !!stage?.phoneBgBlur;
   frame.classList.toggle('stage-blur', shouldBlur);
 }
@@ -114,6 +115,14 @@ function setIntentHeader(label, step) {
   const lbl = document.getElementById('intent-label');
   const dot = document.getElementById('intent-step-dot');
   const slbl = document.getElementById('intent-step-lbl');
+  if (!hdr || !lbl || !dot || !slbl) return;
+  cancelPrototypeIntentHeaderTracking();
+  hdr.classList.remove('glass-intent');
+  hdr.style.display = 'flex';
+  hdr.style.left = '';
+  hdr.style.top = '';
+  lbl.style.fontSize = '';
+  lbl.style.color = '';
   lbl.textContent = label;
   if (step) {
     slbl.textContent = step;
@@ -126,7 +135,80 @@ function setIntentHeader(label, step) {
 }
 
 function hideIntentHeader() {
-  document.getElementById('intent-header').classList.remove('visible');
+  const hdr = document.getElementById('intent-header');
+  if (!hdr) return;
+  cancelPrototypeIntentHeaderTracking();
+  hdr.classList.remove('visible', 'glass-intent');
+  hdr.style.display = 'none';
+  hdr.style.left = '';
+  hdr.style.top = '';
+  const lbl = document.getElementById('intent-label');
+  if (lbl) {
+    lbl.style.fontSize = '';
+    lbl.style.color = '';
+  }
+}
+
+function cancelPrototypeIntentHeaderTracking() {
+  if (!prototypeIntentHeaderTrackRaf) return;
+  cancelAnimationFrame(prototypeIntentHeaderTrackRaf);
+  prototypeIntentHeaderTrackRaf = null;
+}
+
+function positionPrototypeIntentHeaderAboveMain() {
+  const hdr = document.getElementById('intent-header');
+  const wrap = document.getElementById('stage-wrap');
+  const main = document.getElementById('drop-main');
+  if (!hdr || !wrap || !main) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  const mainRect = main.getBoundingClientRect();
+  const hdrRect = hdr.getBoundingClientRect();
+  const headerH = Math.ceil(hdrRect.height || hdr.offsetHeight || 0);
+  const centerX = Math.round((mainRect.left + (mainRect.width / 2)) - wrapRect.left);
+  const top = Math.max(8, Math.round(mainRect.top - wrapRect.top - headerH - 12));
+  const headerW = Math.ceil(hdrRect.width || hdr.offsetWidth || 0);
+  const left = Math.round(centerX - (headerW / 2));
+  hdr.style.left = `${left}px`;
+  hdr.style.top = `${top}px`;
+}
+
+function trackPrototypeIntentHeader(ms = anim.getAnimDuration() + 120) {
+  cancelPrototypeIntentHeaderTracking();
+  const end = performance.now() + Math.max(120, ms);
+  const tick = () => {
+    const hdr = document.getElementById('intent-header');
+    if (!hdr || !hdr.classList.contains('glass-intent') || !hdr.classList.contains('visible')) return;
+    positionPrototypeIntentHeaderAboveMain();
+    if (performance.now() < end) prototypeIntentHeaderTrackRaf = requestAnimationFrame(tick);
+    else prototypeIntentHeaderTrackRaf = null;
+  };
+  prototypeIntentHeaderTrackRaf = requestAnimationFrame(tick);
+}
+
+function syncPrototypeIntentHeader(scenario) {
+  const stage = stageById(scenario?.shape, scenario);
+  if (!scenario || !stageHasComponent(stage, 'intent-header')) {
+    hideIntentHeader();
+    return;
+  }
+  const stageText = stageTextForShape(scenario, scenario.shape);
+  const typography = morphApi.getScenarioTypography(scenario, scenario.shape);
+  const label = String(stageText.intentHeader || scenario.name || '').trim();
+  const hdr = document.getElementById('intent-header');
+  const lbl = document.getElementById('intent-label');
+  const dot = document.getElementById('intent-step-dot');
+  const slbl = document.getElementById('intent-step-lbl');
+  if (!hdr || !lbl || !dot || !slbl) return;
+  cancelPrototypeIntentHeaderTracking();
+  lbl.textContent = label;
+  lbl.style.fontSize = `${typography.intentHeader.size}px`;
+  lbl.style.color = typography.intentHeader.color;
+  slbl.textContent = '';
+  dot.classList.remove('visible');
+  hdr.style.display = 'flex';
+  hdr.classList.add('glass-intent', 'visible');
+  positionPrototypeIntentHeaderAboveMain();
+  trackPrototypeIntentHeader();
 }
 
 function updateActive(shape) {
@@ -154,7 +236,8 @@ function previewScenario(scenario) {
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-  morphApi.morphTo(renderShapeForStageId(scenario.shape), morphApi.scenarioToRenderContent(scenario), null, scenario.shape);
+  morphApi.morphTo(renderShapeForStageId(scenario.shape, scenario), morphApi.scenarioToRenderContent(scenario), null, scenario.shape);
+  syncPrototypeIntentHeader(scenario);
 }
 
 function previewScenarioInstant(scenario) {
@@ -166,7 +249,7 @@ function previewScenarioInstant(scenario) {
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-  const shape = renderShapeForStageId(scenario.shape);
+  const shape = renderShapeForStageId(scenario.shape, scenario);
   const content = morphApi.scenarioToRenderContent(scenario);
   const geo = morphApi.resolveGeometryForContent(shape, content, null, scenario.shape);
   const root = document.documentElement;
@@ -193,6 +276,7 @@ function previewScenarioInstant(scenario) {
   morphApi.setLastMainGeo({ ...geo.main });
   updateActive(shape);
   morphApi.setSuppressDeformation(false);
+  syncPrototypeIntentHeader(scenario);
   ['--anim-w','--anim-h','--anim-br','--anim-tx','--anim-t','--content-fade-ms','--detail-fade-ms','--media-fade-ms','--content-move-t','--primary-size-anim-ms','--text-size-anim-ms'].forEach((key) => root.style.removeProperty(key));
 }
 
@@ -203,7 +287,7 @@ morphApi = initMorph({
   callbacks: {
     clamp,
     selectedScenario,
-    stageById,
+    stageById: (id, scenario = selectedScenario()) => stageById(id, scenario),
     updateActive,
     stopSiriOrb: (...args) => orb.stopSiriOrb(...args),
     startSiriOrb: (...args) => orb.startSiriOrb(...args),
@@ -215,7 +299,7 @@ morphApi = initMorph({
     stageMainSize,
     stageIconTextGap,
     stageIconLeftPadding,
-    renderShapeForStageId,
+    renderShapeForStageId: (id) => renderShapeForStageId(id, selectedScenario()),
     getCanvasSettings: () => canvasSettings,
     stageComponentCounts,
     stageTextForShape,
@@ -238,6 +322,7 @@ const sidebar = initSidebar({
   selectedScenario,
   stageById,
   availableScenarioShapes,
+  visibleScenarioStages,
   persistScenarios,
   persistStageLibrary: () => {
     try {
@@ -266,6 +351,7 @@ const sidebar = initSidebar({
   stageTextForShape,
   stageIconForShape,
   stageImagesForShape,
+  stageRenderShapeForShape,
   stageSelectedForShape,
   stageAccentColorForShape,
   stageSecondaryAccentColorForShape,

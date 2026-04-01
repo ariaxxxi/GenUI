@@ -71,6 +71,12 @@ export function createSidebarBindings(ctx, refs) {
     setPreview('layer-preview-primary-text', 'layer-preview-primary-size', 'layer-preview-primary-color', stageText.primary, typography.primary.size, typography.primary.color);
     setPreview('layer-preview-secondary-text', 'layer-preview-secondary-size', 'layer-preview-secondary-color', stageText.secondary, typography.secondary.size, typography.secondary.color);
     setPreview('layer-preview-detail-text', 'layer-preview-detail-size', 'layer-preview-detail-color', stageText.detail, typography.detail.size, typography.detail.color);
+    const intentPreview = document.getElementById('layer-preview-intent-header-text');
+    const intentSizePreview = document.getElementById('layer-preview-intent-header-size');
+    const intentColorPreview = document.getElementById('layer-preview-intent-header-color');
+    if (intentPreview) intentPreview.textContent = stageText.intentHeader || '—';
+    if (intentSizePreview) intentSizePreview.textContent = `${typography.intentHeader.size}px`;
+    if (intentColorPreview) intentColorPreview.style.background = typography.intentHeader.color || '#666666';
   }
 
   function initSidebarCollapsibleSections() {

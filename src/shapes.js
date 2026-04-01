@@ -1,6 +1,6 @@
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
-const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
+const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const shapeHelperConfig = {
   clampFn: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
@@ -137,6 +137,7 @@ export function defaultTypographyForShape(shape = 'pill') {
     primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
+    intentHeader: { size: 18, color: '#666666' },
   };
 }
 

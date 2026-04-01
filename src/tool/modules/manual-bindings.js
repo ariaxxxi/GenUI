@@ -284,6 +284,7 @@ export function initManualBindings({
   commitTextField('primary', UI.scenarioPrimary);
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
+  if (UI.scenarioIntentHeader) commitTextField('intentHeader', UI.scenarioIntentHeader);
   UI.scenarioShapeRow.addEventListener('click', (e) => {
     const button = e.target.closest('[data-scenario-shape]');
     if (!button) return;
@@ -348,6 +349,15 @@ export function initManualBindings({
     if (!value) return void (e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '');
     commitStageIconPadOverride(value);
   });
+  UI.stageCardSToggle?.addEventListener('change', (e) => {
+    const scenario = selectedScenario();
+    const stage = stageById(scenario?.shape, scenario);
+    if (!scenario || !stage) return;
+    commitScenarioChange((draft) => {
+      draft.content.stageRenderShapeById = { ...(draft.content.stageRenderShapeById || {}) };
+      draft.content.stageRenderShapeById[stage.id] = e.target.checked ? 'card-s' : 'card';
+    });
+  });
   UI.stagePhoneBlurToggle.addEventListener('change', (e) => {
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
@@ -400,7 +410,7 @@ export function initManualBindings({
     const checkbox = e.target.closest('[data-stage-comp-toggle]');
     if (!checkbox) return;
     const type = String(checkbox.dataset.stageCompToggle || '');
-    if (!['icon', 'primary', 'secondary', 'detail'].includes(type)) return;
+    if (!['icon', 'primary', 'secondary', 'detail', 'intent-header'].includes(type)) return;
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
     commitStageChange(stage.id, (draft) => {
@@ -490,9 +500,14 @@ export function initManualBindings({
   bindTypographyInputs('primary', UI.scenarioPrimarySize, UI.scenarioPrimaryColor);
   bindTypographyInputs('secondary', UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
   bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
+  if (UI.scenarioIntentHeaderSize && UI.scenarioIntentHeaderColor) {
+    bindTypographyInputs('intentHeader', UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor);
+  }
   [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
+    UI.scenarioIntentHeader,
     UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor,
     UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,
+    UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor,
   ].forEach((el) => { if (el) el.addEventListener('input', updateLayerPreviews); });
 
   initSidebarTabs();

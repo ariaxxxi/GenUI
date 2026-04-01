@@ -20,8 +20,8 @@ import {
 } from '../shapes.js';
 
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
-const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
+const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
@@ -71,22 +71,56 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return normalized;
   }
 
-  function stageById(id) {
+  function normalizeStageRenderShapeById(value = {}) {
+    const output = {};
+    const allowed = new Set(Object.keys(SHAPES));
+    Object.entries(value || {}).forEach(([stageIdValue, renderShape]) => {
+      const key = String(stageIdValue || '').trim();
+      const normalizedShape = String(renderShape || '').trim();
+      if (!key || !allowed.has(normalizedShape)) return;
+      output[key] = normalizedShape;
+    });
+    return output;
+  }
+
+  function normalizeHiddenStageIds(value = []) {
+    if (!Array.isArray(value)) return [];
+    const known = new Set(stageLibrary().map((stage) => stage.id));
+    const output = [];
+    value.forEach((item) => {
+      const id = String(item || '').trim();
+      if (!id || !known.has(id) || output.includes(id)) return;
+      output.push(id);
+    });
+    return output;
+  }
+
+  function stageById(id, scenario = null) {
     const stages = stageLibrary();
-    return stages.find((stage) => stage.id === id) || stages.find((stage) => stage.id === 'pill') || stages[0] || null;
+    const baseStage = stages.find((stage) => stage.id === id) || stages.find((stage) => stage.id === 'pill') || stages[0] || null;
+    if (!baseStage) return null;
+    const overrideShape = scenario?.content?.stageRenderShapeById?.[baseStage.id];
+    return overrideShape ? { ...baseStage, renderShape: overrideShape } : baseStage;
   }
 
   function builtinStageById(id) {
     return BUILTIN_STAGE_DEFS.find((stage) => stage.id === id) || null;
   }
 
-  function renderShapeForStageId(id) {
-    const stage = stageById(id);
+  function renderShapeForStageId(id, scenario = null) {
+    const stage = stageById(id, scenario);
     return stage?.renderShape || 'pill';
   }
 
   function availableScenarioShapes() {
     return stageLibrary().map((stage) => stage.id);
+  }
+
+  function visibleScenarioStages(scenario = null) {
+    const hidden = new Set(normalizeHiddenStageIds(scenario?.content?.hiddenStageIds));
+    return stageLibrary()
+      .filter((stage) => !hidden.has(stage.id))
+      .map((stage) => stageById(stage.id, scenario));
   }
 
   configureShapeHelpers({
@@ -122,23 +156,24 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       primary: String(value?.primary ?? fallback?.primary ?? ''),
       secondary: String(value?.secondary ?? fallback?.secondary ?? ''),
       detail: String(value?.detail ?? fallback?.detail ?? ''),
+      intentHeader: String(value?.intentHeader ?? fallback?.intentHeader ?? ''),
     };
   }
 
   function hasMeaningfulStageText(value = {}) {
     const entry = normalizeStageTextEntry(value);
-    return !!(entry.primary.trim() || entry.secondary.trim() || entry.detail.trim());
+    return !!(entry.primary.trim() || entry.secondary.trim() || entry.detail.trim() || entry.intentHeader.trim());
   }
 
   function defaultStageTextFallback(shape) {
     const renderShape = renderShapeForStageId(shape) || shape;
     if (renderShape === 'pill') {
-      return { primary: 'Primary text', secondary: 'Secondary text', detail: '' };
+      return { primary: 'Primary text', secondary: 'Secondary text', detail: '', intentHeader: '' };
     }
     if (renderShape === 'card' || renderShape === 'card-s') {
-      return { primary: 'Primary text', secondary: 'Secondary text', detail: 'Detail text example' };
+      return { primary: 'Primary text', secondary: 'Secondary text', detail: 'Detail text example', intentHeader: '' };
     }
-    return { primary: '', secondary: '', detail: '' };
+    return { primary: '', secondary: '', detail: '', intentHeader: '' };
   }
 
   function isPlaceholderStageText(entry, shape) {
@@ -241,6 +276,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       output[shape] = normalizeHexColor(value?.[shape], stageById(shape)?.secondaryAccentColor || '#9761ff');
     });
     return output;
+  }
+
+  function stageRenderShapeForShape(scenario, shape) {
+    return renderShapeForStageId(shape, scenario);
   }
 
   function scenarioStageSizeOverride(scenario, shape) {
@@ -373,6 +412,8 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
           widthOverride: content.widthOverride,
           heightOverride: content.heightOverride,
         }),
+        stageRenderShapeById: normalizeStageRenderShapeById(content.stageRenderShapeById),
+        hiddenStageIds: normalizeHiddenStageIds(content.hiddenStageIds),
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
         secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
@@ -478,6 +519,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     builtinStageById,
     renderShapeForStageId,
     availableScenarioShapes,
+    visibleScenarioStages,
     stageComponentCounts,
     stageHasComponent,
     stageVisibleEditorFields,
@@ -499,6 +541,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageTextForShape,
     stageIconForShape,
     stageImagesForShape,
+    stageRenderShapeForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
