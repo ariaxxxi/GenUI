@@ -23,13 +23,17 @@ Prototype Stage Selected Highlight Shell
   - accent-colored inner shadow
 - Added the missing white inset outline so prototype selected mode now includes the brighter selected ring used by the AI name chip:
   - `.g-stage-selected-ring`
-  - `box-shadow: inset 0 0 2px 0.75px rgba(255,255,255,0.78)`
+  - `box-shadow: inset 0 0 2px 0.5px rgba(255,255,255,0.78)`
 - Later retuned the bottom-right highlight ball to read softer by increasing its blur from `10px` to `40px`.
 - Added a card-only softening pass so rectangular card stages blend the highlight more like the pill:
   - bottom-right highlight moved lower, enlarged slightly, reduced in opacity, and increased to `blur(40px)`
 - Later removed the card-only top-left override so card now uses the exact same top-left highlight as pill:
   - same gradient anchor: `58% 176% at 13% -10%`
   - same blur: `5px`
+- Later moved the prototype selected-shell highlight geometry to pixel-based values so pill and card keep visual parity instead of drifting with aspect ratio:
+  - top-left highlight: `244px 176px at 55px -10px`, `blur(5px)`
+  - bottom-right highlight: `width 126px`, `height 88px`, `right -25px`, `bottom -18px`, `blur(40px)`
+- This also removed the remaining card-only bottom-right override so both pill and card now use the same highlight geometry.
 - When `Selected` is off, the stage keeps its current container look with no added shell effect.
 
 ## Files changed
@@ -71,8 +75,8 @@ Prototype Stage Selected Highlight Shell
     - captured `/tmp/prototype-stage-pill-ring.png`
     - captured `/tmp/prototype-stage-card-ring.png`
     - confirmed the prototype selected shell now resolves with the same inset outline on both shapes:
-      - pill: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.75px inset`
-      - card: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.75px inset`
+      - pill: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.5px inset`
+      - card: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.5px inset`
   - after card-only softening pass:
     - switched prototype stage to `Card`
     - captured `/tmp/prototype-stage-card-selected-softened.png`
@@ -87,6 +91,12 @@ Prototype Stage Selected Highlight Shell
     - confirmed pill and card now resolve to identical top-left highlight values:
       - `filter: blur(5px)`
       - `radial-gradient(58% 176% at 13% -10%, rgb(144, 172, 255) 0%, rgba(144, 172, 255, 0.92) 12%, rgba(144, 172, 255, 0.54) 24%, rgba(144, 172, 255, 0.16) 36%, rgba(144, 172, 255, 0) 50%)`
+  - after pixel-based parity retune:
+    - captured `/tmp/prototype-stage-pill-pixel-parity.png`
+    - captured `/tmp/prototype-stage-card-pixel-parity.png`
+    - confirmed pill and card now resolve to identical highlight geometry on both accents:
+      - left: `radial-gradient(244px 176px at 55px -10px, rgb(144, 172, 255) 0%, rgba(144, 172, 255, 0.92) 12%, rgba(144, 172, 255, 0.54) 24%, rgba(144, 172, 255, 0.16) 36%, rgba(144, 172, 255, 0) 50%)`, `filter: blur(5px)`
+      - right: `width 126px`, `height 88px`, `right -25px`, `bottom -18px`, `filter: blur(40px)`
   - after per-scenario/per-stage state migration:
     - captured `/tmp/prototype-stage-scenario-independent.png`
     - confirmed stage independence inside one scenario:

@@ -2,6 +2,16 @@
 
 #drop-main {
   --g-stage-selected-rgb: 144 172 255;
+  --g-stage-selected-left-w: 244px;
+  --g-stage-selected-left-h: 176px;
+  --g-stage-selected-left-x: 55px;
+  --g-stage-selected-left-y: -10px;
+  --g-stage-selected-left-blur: 5px;
+  --g-stage-selected-right-w: 126px;
+  --g-stage-selected-right-h: 88px;
+  --g-stage-selected-right-right: -25px;
+  --g-stage-selected-right-bottom: -18px;
+  --g-stage-selected-right-blur: 40px;
 }
 
 #prototype-stage-selection {
@@ -30,20 +40,20 @@
 .g-stage-selected-accent-left {
   inset: 0;
   background:
-    radial-gradient(58% 176% at 13% -10%,
+    radial-gradient(var(--g-stage-selected-left-w) var(--g-stage-selected-left-h) at var(--g-stage-selected-left-x) var(--g-stage-selected-left-y),
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 1) 0%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.92) 12%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.54) 24%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.16) 36%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 50%);
-  filter: blur(5px);
+  filter: blur(var(--g-stage-selected-left-blur));
 }
 
 .g-stage-selected-accent-right {
-  right: -6%;
-  bottom: -18%;
-  width: 30%;
-  height: 88%;
+  right: var(--g-stage-selected-right-right);
+  bottom: var(--g-stage-selected-right-bottom);
+  width: var(--g-stage-selected-right-w);
+  height: var(--g-stage-selected-right-h);
   border-radius: 50%;
   background:
     radial-gradient(circle at 72% 50%,
@@ -51,7 +61,7 @@
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.42) 30%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.12) 48%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 68%);
-  filter: blur(40px);
+  filter: blur(var(--g-stage-selected-right-blur));
 }
 
 .g-stage-selected-inner-glow {
@@ -66,19 +76,5 @@
 
 .g-stage-selected-ring {
   inset: 0;
-  box-shadow: inset 0 0 2px 0.75px rgba(255,255,255,0.78);
-}
-
-body[data-current-shape="card"] #drop-main.prototype-stage-selected .g-stage-selected-accent-right {
-  right: -10%;
-  bottom: -26%;
-  width: 34%;
-  height: 94%;
-  background:
-    radial-gradient(circle at 70% 50%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.58) 0%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.26) 28%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.08) 46%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 72%);
-  filter: blur(40px);
+  box-shadow: inset 0 0 2px 0.5px rgba(255,255,255,0.78);
 }
