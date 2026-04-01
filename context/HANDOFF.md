@@ -1,6 +1,121 @@
 # Handoff
 
 ## Task title
+Prototype Selected Shell Bottom-Right Highlight Rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Rebuilt the prototype selected-shell bottom-right highlight to match the mirrored 3-layer Figma structure from node `349:10`.
+- Updated both prototype entry points so the right highlight now mounts:
+  - `g-stage-selected-accent-right-base`
+  - `g-stage-selected-accent-right-white-2`
+  - `g-stage-selected-accent-right-white-1`
+- Translated the Figma right-side geometry directly into CSS pixel positioning:
+  - accent circle: `166px` at `right -51px`, `bottom -139px`
+  - white spotlight 2: `59.463px` at `right 2.27px`, `bottom -85.73px`
+  - white spotlight 1: `32px` at `right 16px`, `bottom -72px`
+- Kept the same selected accent color contract:
+  - the accent circle is driven by `--g-stage-selected-rgb` / `--g-stage-selected-secondary-rgb`
+  - both white spotlights stay white with `mix-blend-mode: plus-lighter`
+- Left the host morph transition stack unchanged.
+- Later reduced the selected-shell inner glow and rebalanced the bottom inset so the top and bottom read closer in strength without changing highlight geometry.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed the selected shell now contains `3` right highlight layers
+  - confirmed the right white spotlights stay white while the accent circle is color-driven
+  - confirmed `#drop-main` still resolves to:
+    - `width, height, border-radius, transform, opacity, background, box-shadow, filter`
+- Browser validation on `http://127.0.0.1:5174/ai.html`:
+  - confirmed the same `3` right highlight layers are present there as well
+
+## Task title
+Prototype Selected Shell Top-Left Highlight Rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Rebuilt the prototype selected-shell top-left highlight to match Figma node `349:10` as an explicit 3-layer stack instead of a single blurred gradient.
+- Updated both prototype entry points so `#prototype-stage-selection` now mounts a left highlight group with:
+  - `g-stage-selected-accent-left-base`
+  - `g-stage-selected-accent-left-white-2`
+  - `g-stage-selected-accent-left-white-1`
+- Translated the Figma layer geometry directly into CSS pixel positioning:
+  - accent circle: `166px` at `left -52px`, `top -98px`
+  - white spotlight 2: `59.463px` at `left 1.27px`, `top -44.73px`
+  - white spotlight 1: `32px` at `left 15px`, `top -31px`
+- Kept the existing bottom-right highlight, inner glow, selected-state logic, per-stage accent colors, and color-transition system unchanged.
+- Preserved the recent morph regression fix:
+  - no new transition was added to `#drop-main`
+  - the selected color interpolation remains owned by `#prototype-stage-selection`
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed the selected shell now contains the 3 left highlight nodes
+  - confirmed the accent color updates only the base accent circle while both white spotlights remain white
+  - confirmed `#drop-main` still resolves to the original morph transition stack:
+    - `width, height, border-radius, transform, opacity, background, box-shadow, filter`
+- Browser validation on `http://127.0.0.1:5174/ai.html`:
+  - confirmed the same 3-layer left highlight stack is present there as well
+
+## Remaining issues / caveats
+- The rebuilt left highlight is a CSS translation of the Figma frame, not a direct asset import, so any later parity tuning should happen in `src/styles/shared.css`.
+
+## Recommended next step
+1. If the top-left stack needs more Figma parity, tune only the three left-layer gradients and blur radii in `src/styles/shared.css`.
+
+## Task title
+Prototype Selected Color Stage Transition Smoothing
+
+## Completion status
+- Completed
+
+## Summary
+- Smoothed prototype selected-shell accent color changes when moving between stages on `add-visual`.
+- Converted the two selected-shell accent vars into typed color custom properties so the browser can interpolate them instead of snapping:
+  - `--g-stage-selected-rgb`
+  - `--g-stage-selected-secondary-rgb`
+- Updated the prototype selected-shell gradients and inner glow to consume those vars as colors via `color-mix(...)`, preserving the existing visual while allowing animated color blending.
+- Added a `320ms var(--motion-ease)` transition for both selected-shell color vars on `#prototype-stage-selection`, not on `#drop-main`, so the stage geometry morph stack stays intact.
+- Updated the morph renderer to write the selected accent values as real CSS colors (`rgb(...)`) instead of raw channel strings, and to mirror them onto `#prototype-stage-selection`, which is required for typed custom-property interpolation without breaking host morphing.
+
+## Files changed
+- `src/styles/shared.css`
+- `src/shared/morph-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-render.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed `#drop-main` still resolves to the original geometry transition stack:
+    - `width, height, border-radius, transform, opacity, background, box-shadow, filter`
+  - confirmed the selected-shell colors still blend during transition on the overlay:
+    - start: `rgb(144, 172, 255)` / `rgb(151, 97, 255)`
+    - mid at `160ms`: `rgb(29, 202, 149)` / `rgb(31, 98, 255)`
+    - end: `rgb(0, 210, 122)` / `rgb(0, 98, 255)`
+
+## Remaining issues / caveats
+- The smooth interpolation applies to prototype selected-shell color changes on `#drop-main`. Geometry changes for stage shape/size are unchanged.
+
+## Recommended next step
+1. If the color ramp still feels too quick or too slow in-browser, tune only the `320ms` custom-property transition in `src/styles/shared.css`.
+
+## Task title
 Prototype Stage Selected Highlight Shell
 
 ## Completion status

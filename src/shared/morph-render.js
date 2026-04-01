@@ -7,23 +7,24 @@ export function createMorphRender(ctx) {
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
 
-  function hexToRgbString(value, fallback = '144 172 255') {
+  function hexToCssColor(value, fallback = 'rgb(144 172 255)') {
     const raw = String(value || '').trim();
     const full = raw.match(/^#([0-9a-f]{6})$/i);
     if (full) {
       const hex = full[1];
-      return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+      return `rgb(${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)})`;
     }
     const short = raw.match(/^#([0-9a-f]{3})$/i);
     if (short) {
       const hex = short[1];
-      return `${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)}`;
+      return `rgb(${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)})`;
     }
     return fallback;
   }
 
   function syncPrototypeStageSelection(stageId = null, scenario = null) {
     const main = DROPS.main;
+    const selectionOverlay = document.getElementById('prototype-stage-selection');
     if (!main) return;
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
     const stage = stageId ? callbacks.stageById?.(stageId) : null;
@@ -34,6 +35,8 @@ export function createMorphRender(ctx) {
     if (!selected) {
       main.style.removeProperty('--g-stage-selected-rgb');
       main.style.removeProperty('--g-stage-selected-secondary-rgb');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-rgb');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-secondary-rgb');
       return;
     }
     const accentColor = stageId
@@ -42,8 +45,12 @@ export function createMorphRender(ctx) {
     const accentSecondaryColor = stageId
       ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
       : null;
-    main.style.setProperty('--g-stage-selected-rgb', hexToRgbString(accentColor, '144 172 255'));
-    main.style.setProperty('--g-stage-selected-secondary-rgb', hexToRgbString(accentSecondaryColor, '151 97 255'));
+    const primary = hexToCssColor(accentColor, 'rgb(144 172 255)');
+    const secondary = hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)');
+    main.style.setProperty('--g-stage-selected-rgb', primary);
+    main.style.setProperty('--g-stage-selected-secondary-rgb', secondary);
+    selectionOverlay?.style.setProperty('--g-stage-selected-rgb', primary);
+    selectionOverlay?.style.setProperty('--g-stage-selected-secondary-rgb', secondary);
   }
 
   function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {
