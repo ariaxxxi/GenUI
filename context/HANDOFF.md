@@ -20,6 +20,7 @@ Prototype Selected Shell Bottom-Right Highlight Rebuild
   - the accent circle is driven by `--g-stage-selected-rgb` / `--g-stage-selected-secondary-rgb`
   - both white spotlights stay white with `mix-blend-mode: plus-lighter`
 - Left the host morph transition stack unchanged.
+- Later reduced the bottom inner shadow slightly from `57%` to `48%` while leaving the rest of the inner glow unchanged.
 
 ## Files changed
 - `index.html`

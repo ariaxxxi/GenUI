@@ -162,7 +162,7 @@
   inset: 0;
   box-shadow:
     inset 0 0 24px color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 23%, transparent),
-    inset 0 -9px 20px color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 57%, transparent),
+    inset 0 -9px 20px color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 48%, transparent),
     inset -7px 0 12px color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 25%, transparent),
     inset 7px 0 13px color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 20%, transparent),
     inset 0 1px 9px rgba(255,255,255,0.16);
