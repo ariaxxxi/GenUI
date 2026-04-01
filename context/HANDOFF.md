@@ -24,7 +24,7 @@ Prototype Stage Selected Highlight Shell
   - accent-colored inner shadow
 - Added the missing white inset outline so prototype selected mode now includes the brighter selected ring used by the AI name chip:
   - `.g-stage-selected-ring`
-  - `box-shadow: inset 0 0 2px 0.2px rgba(255,255,255,0.78)`
+  - `box-shadow: none`
 - Later retuned the bottom-right highlight ball to read softer by increasing its blur from `10px` to `40px`.
 - Added a card-only softening pass so rectangular card stages blend the highlight more like the pill:
   - bottom-right highlight moved lower, enlarged slightly, reduced in opacity, and increased to `blur(40px)`
@@ -43,6 +43,7 @@ Prototype Stage Selected Highlight Shell
   - `--g-stage-selected-rgb`
   - `--g-stage-selected-secondary-rgb`
 - Increased the prototype selected-shell top-left highlight blur from `5px` to `15px` so the left accent reads softer while keeping the same pixel anchor and gradient stops.
+- Removed the extra selected-only inset ring so selected mode now reuses the same base container outline as non-selected, with only the accent highlights and inner glow changing.
 - When `Selected` is off, the stage keeps its current container look with no added shell effect.
 
 ## Files changed
