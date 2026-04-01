@@ -160,12 +160,12 @@ export function createMorphLayout(ctx) {
   const mediaStackHeight = (mediaHeights) => !Array.isArray(mediaHeights) || !mediaHeights.length ? 0 : mediaHeights.reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * Math.max(0, mediaHeights.length - 1);
 
   function measureCardDetailHeight(detailText, typography, cardWidth) {
-    const text = String(detailText || '').trim();
-    if (!text) return 0;
+    const text = String(detailText || '');
+    if (!text.trim()) return 0;
     detailMeasureEl.style.width = `${cardDetailTextWidth(cardWidth)}px`;
     detailMeasureEl.style.fontSize = `${typography.detail.size}px`;
     detailMeasureEl.style.lineHeight = '1.2';
-    detailMeasureEl.style.whiteSpace = 'normal';
+    detailMeasureEl.style.whiteSpace = 'pre-wrap';
     detailMeasureEl.style.wordBreak = 'break-word';
     detailMeasureEl.textContent = text;
     return Math.ceil(detailMeasureEl.getBoundingClientRect().height);

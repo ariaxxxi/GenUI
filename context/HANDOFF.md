@@ -1,6 +1,48 @@
 # Handoff
 
 ## Task title
+Prototype Detail Multiline Editing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the prototype detail editor in both prototype entry points from a single-line input to a multiline textarea.
+- Detail text now supports:
+  - spaces
+  - explicit line breaks via `Enter`
+- Updated the prototype stage preview so detail text preserves newline characters instead of collapsing them into one wrapped paragraph.
+- Kept the same per-scenario/per-stage `textByShape[shape].detail` storage contract; only the editor and display behavior changed.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/editor-layout.css`
+- `src/styles/ai-drop.css`
+- `src/shared/morph-layout.js`
+- `src/shared/morph-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/morph-layout.js`
+- `node --check src/shared/morph-render.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed `#scenario-detail` is now a `TEXTAREA`
+  - entered `Line 1 with space` + `Enter` + `Line 2`
+  - confirmed stored value:
+    - `localStorage['genui.scenarios.v1'][0].content.textByShape.card.detail === 'Line 1 with space\\nLine 2'`
+  - confirmed rendered detail text preserves the newline
+  - confirmed rendered `#c-detail` resolves to `white-space: pre-wrap`
+  - confirmed textarea min height is `78px`
+  - screenshot: `/tmp/add-visual-detail-multiline.png`
+
+## Remaining issues / caveats
+- None for the prototype editor path. The change is scoped to prototype detail editing/rendering only.
+
+## Recommended next step
+1. If other editable text layers later need multiline behavior, reuse the same `textarea + pre-wrap` path instead of introducing per-layer newline hacks.
+
+## Task title
 Prototype Intent Header Content Field
 
 ## Completion status

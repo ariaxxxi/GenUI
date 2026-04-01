@@ -80,7 +80,7 @@ export function createMorphRender(ctx) {
   const applyCardDetailLayout = (cardWidth) => {
     C.det.style.width = `${layout.cardDetailTextWidth(cardWidth)}px`;
     C.det.style.maxWidth = `${layout.cardDetailTextWidth(cardWidth)}px`;
-    C.det.style.whiteSpace = 'normal';
+    C.det.style.whiteSpace = 'pre-wrap';
     C.det.style.wordBreak = 'break-word';
   };
   const resetDetailInlineLayout = () => {
