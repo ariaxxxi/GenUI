@@ -82,6 +82,8 @@ export function createSidebarActions(ctx, refs) {
       iconTextGap: template.iconTextGap,
       iconLeftPadding: template.iconLeftPadding,
       phoneBgBlur: false,
+      selected: false,
+      accentColor: '#90acff',
       components: template.components,
     });
     ctx.setStageLibrary([...ctx.getStageLibrary(), newStage]);

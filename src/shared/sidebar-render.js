@@ -59,6 +59,8 @@ export function createSidebarRender(ctx, refs) {
     const stage = ctx.stageById(scenario?.shape);
     const builtin = ctx.builtinStageById(stage?.id);
     const sizeOverride = ctx.scenarioStageSizeOverride(scenario, scenario?.shape);
+    const stageSelected = ctx.stageSelectedForShape ? ctx.stageSelectedForShape(scenario, scenario?.shape) : !!stage?.selected;
+    const stageAccentColor = ctx.stageAccentColorForShape ? ctx.stageAccentColorForShape(scenario, scenario?.shape) : String(stage?.accentColor || '#90acff');
     if (ctx.UI.stageNameInput) ctx.UI.stageNameInput.value = stage?.name || '';
     if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
     if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
@@ -66,6 +68,11 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
     if (ctx.UI.stagePhoneBlurToggle) ctx.UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
+    if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
+    if (ctx.UI.stageAccentColor) {
+      ctx.UI.stageAccentColor.value = String(stageAccentColor || '#90acff');
+      ctx.UI.stageAccentColor.disabled = !stage;
+    }
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage || !!stage.preset;
     if (ctx.UI.stageReset) ctx.UI.stageReset.disabled = !stage || !builtin;

@@ -140,6 +140,17 @@ export function defaultTypographyForShape(shape = 'pill') {
   };
 }
 
+export function normalizeHexColor(value, fallback = '#90acff') {
+  const raw = String(value || fallback || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+  const short = raw.match(/^#([0-9a-f]{3})$/i);
+  if (short) {
+    const [, hex] = short;
+    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`.toLowerCase();
+  }
+  return String(fallback || '#90acff').toLowerCase();
+}
+
 export function normalizeTypography(value = {}, shape = 'pill') {
   const defaults = defaultTypographyForShape(shape);
   const output = {};
@@ -193,10 +204,14 @@ export function normalizeStage(raw, fallback) {
   const phoneBgBlur = raw?.phoneBgBlur === undefined
     ? !!fallbackStage.phoneBgBlur
     : raw?.phoneBgBlur === true;
+  const selected = raw?.selected === undefined
+    ? !!fallbackStage.selected
+    : raw?.selected === true;
+  const accentColor = normalizeHexColor(raw?.accentColor, fallbackStage.accentColor || '#90acff');
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => stageComponentTypes().includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, selected, accentColor, components };
 }
 
 export function normalizeStageImage(value) {

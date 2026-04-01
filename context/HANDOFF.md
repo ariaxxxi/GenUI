@@ -1,6 +1,111 @@
 # Handoff
 
 ## Task title
+Prototype Stage Selected Highlight Shell
+
+## Completion status
+- Completed
+
+## Summary
+- Applied the reusable name-chip highlight treatment to prototype-mode stage containers without replacing each stage's existing base appearance.
+- Kept stage-level `selected` and `accentColor` on normalized stage records only as legacy/default fallback for migration and new-stage seeding.
+- Moved prototype selected-shell state out of the shared stage library and into scenario content so it is now independent per scenario and per stage:
+  - `content.selectedByShape`
+  - `content.accentColorByShape`
+- The right-panel `Selected` toggle and `Accent color` control now edit the active scenario's current stage entry instead of mutating the shared stage definition.
+- Added a `Selected` toggle plus `Accent color` control to the right-panel Style tab in both prototype entry points:
+  - `index.html`
+  - `ai.html`
+- Implemented a shared overlay inside `#drop-main` that only turns on when the current prototype stage has `selected: true`.
+- The selected overlay includes only the requested chip-highlight pieces:
+  - top-left accent highlight ball
+  - bottom-right accent highlight ball
+  - accent-colored inner shadow
+- Added the missing white inset outline so prototype selected mode now includes the brighter selected ring used by the AI name chip:
+  - `.g-stage-selected-ring`
+  - `box-shadow: inset 0 0 2px 0.75px rgba(255,255,255,0.78)`
+- Later retuned the bottom-right highlight ball to read softer by increasing its blur from `10px` to `40px`.
+- Added a card-only softening pass so rectangular card stages blend the highlight more like the pill:
+  - bottom-right highlight moved lower, enlarged slightly, reduced in opacity, and increased to `blur(40px)`
+- Later removed the card-only top-left override so card now uses the exact same top-left highlight as pill:
+  - same gradient anchor: `58% 176% at 13% -10%`
+  - same blur: `5px`
+- When `Selected` is off, the stage keeps its current container look with no added shell effect.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `src/shapes.js`
+- `src/shared/scenario-data.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/sidebar-actions.js`
+- `src/shared/morph-render.js`
+- `src/ai/editor-bindings.js`
+- `src/tool/modules/manual-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shapes.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/shared/sidebar-actions.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/ai/editor-bindings.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- Browser validation via Playwright on `add-visual`:
+  - opened `http://127.0.0.1:5174/index.html`
+  - captured `/tmp/prototype-stage-selected-off.png`
+  - toggled `Selected` on for the current stage and captured `/tmp/prototype-stage-selected-on.png`
+  - changed the right-panel accent color to `#ff6600` and captured `/tmp/prototype-stage-selected-orange.png`
+  - confirmed state transitions:
+    - initial: `checked=false`, `selectedClass=false`, overlay opacity `0`
+    - selected: `checked=true`, `selectedClass=true`, overlay opacity `1`
+    - recolored: CSS var `--g-stage-selected-rgb` resolved from `144 172 255` to `255 102 0`
+  - after right-bottom blur retune:
+    - captured `/tmp/prototype-stage-selected-blur40.png`
+    - confirmed `.g-stage-selected-accent-right` resolves to `filter: blur(40px)`
+  - after missing-outline fix:
+    - captured `/tmp/prototype-stage-pill-ring.png`
+    - captured `/tmp/prototype-stage-card-ring.png`
+    - confirmed the prototype selected shell now resolves with the same inset outline on both shapes:
+      - pill: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.75px inset`
+      - card: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.75px inset`
+  - after card-only softening pass:
+    - switched prototype stage to `Card`
+    - captured `/tmp/prototype-stage-card-selected-softened.png`
+    - confirmed card-specific selected-shell values:
+      - `body[data-current-shape="card"]`
+      - right highlight `filter: blur(40px)`
+      - right highlight `bottom: -67.4688px`
+      - right highlight size `142.797px x 243.953px`
+  - after card-left parity retune:
+    - captured `/tmp/prototype-stage-pill-left-reference.png`
+    - captured `/tmp/prototype-stage-card-left-matched-to-pill.png`
+    - confirmed pill and card now resolve to identical top-left highlight values:
+      - `filter: blur(5px)`
+      - `radial-gradient(58% 176% at 13% -10%, rgb(144, 172, 255) 0%, rgba(144, 172, 255, 0.92) 12%, rgba(144, 172, 255, 0.54) 24%, rgba(144, 172, 255, 0.16) 36%, rgba(144, 172, 255, 0) 50%)`
+  - after per-scenario/per-stage state migration:
+    - captured `/tmp/prototype-stage-scenario-independent.png`
+    - confirmed stage independence inside one scenario:
+      - `Weather Snapshot` pill set to `selected=true`, color `#ff6600`
+      - switching `Weather Snapshot` to card showed `selected=false`, color `#90acff`
+      - after setting `Weather Snapshot` card to `selected=true`, color `#00ff66`, switching back to pill restored the original pill state unchanged
+    - confirmed scenario independence for the same stage:
+      - `Incoming Message` card started at `selected=false`, color `#90acff`
+      - after setting it to `selected=true`, color `#3366ff`, `QR Access Pass` card still remained `selected=false`, color `#90acff`
+      - switching back to `Incoming Message` restored its own card state unchanged
+
+## Remaining issues / caveats
+- The selected-shell overlay is currently scoped to `#drop-main`, which matches the current prototype-stage preview architecture. If preview rendering later moves to other stage containers, the same overlay pattern can be mounted there with the same `prototype-stage-selected` class and `--g-stage-selected-rgb` variable.
+
+## Recommended next step
+1. If more selected-state polish is needed, tune only the overlay layers in `src/styles/shared.css` so the underlying stage visuals stay untouched.
+2. If this selected shell needs to appear in more preview surfaces, reuse the same markup and `--g-stage-selected-rgb` contract rather than creating a second highlight system.
+
+## Task title
 Traveling Hotspot And Linked Accent Orbit Retune
 
 ## Completion status

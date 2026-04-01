@@ -208,6 +208,12 @@
         <div id="glass-orb-label"></div>
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
+          <div id="prototype-stage-selection" aria-hidden="true">
+            <div class="g-stage-selected-accent g-stage-selected-accent-left"></div>
+            <div class="g-stage-selected-accent g-stage-selected-accent-right"></div>
+            <div class="g-stage-selected-inner-glow"></div>
+            <div class="g-stage-selected-ring"></div>
+          </div>
           <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
           <div id="c-primary"></div>
           <div id="c-secondary"></div>
@@ -401,6 +407,18 @@
         <div class="sb-toggle-copy"><strong>Phone BG blur</strong></div>
         <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
+    </div>
+
+    <div class="sb-row tight">
+      <label class="sb-toggle" for="stage-selected-toggle">
+        <div class="sb-toggle-copy"><strong>Selected</strong></div>
+        <input id="stage-selected-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
+    </div>
+
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="stage-accent-color">Accent color</label>
+      <input id="stage-accent-color" class="typo-color" type="color" value="#90acff"/>
     </div>
 
     <div class="sb-section" data-collapsible="1">

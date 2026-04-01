@@ -353,6 +353,22 @@ export function initManualBindings({
     if (!stage) return;
     commitStageChange(stage.id, (draft) => { draft.phoneBgBlur = e.target.checked; });
   });
+  UI.stageSelectedToggle?.addEventListener('change', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
+      draft.content.selectedByShape[draft.shape] = e.target.checked;
+    });
+  });
+  UI.stageAccentColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.accentColorByShape = { ...(draft.content.accentColorByShape || {}) };
+      draft.content.accentColorByShape[draft.shape] = String(e.target.value || '#90acff');
+    });
+  });
 
   UI.stageComponentControls.addEventListener('click', (e) => {
     const button = e.target.closest('[data-stage-comp-action][data-stage-comp-type]');

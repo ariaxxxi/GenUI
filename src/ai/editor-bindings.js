@@ -125,6 +125,24 @@ export function initEditorBindings({
   UI.stageReset?.addEventListener("click", () => sidebar.resetCurrentStageToDefault());
   UI.stageNameInput?.addEventListener("input", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || "").trim() || "Untitled Stage"; return draft; }); });
   UI.stagePhoneBlurToggle?.addEventListener("change", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.phoneBgBlur = e.target.checked; return draft; }); });
+  UI.stageSelectedToggle?.addEventListener("change", (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    sidebar.commitScenarioChange((draft) => {
+      draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
+      draft.content.selectedByShape[draft.shape] = e.target.checked;
+      return draft;
+    });
+  });
+  UI.stageAccentColor?.addEventListener("input", (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    sidebar.commitScenarioChange((draft) => {
+      draft.content.accentColorByShape = { ...(draft.content.accentColorByShape || {}) };
+      draft.content.accentColorByShape[draft.shape] = String(e.target.value || '#90acff');
+      return draft;
+    });
+  });
   UI.stageComponentControls?.addEventListener("click", (e) => {
     const button = e.target.closest("[data-stage-comp-action][data-stage-comp-type]");
     const type = String(button?.dataset?.stageCompType || "");

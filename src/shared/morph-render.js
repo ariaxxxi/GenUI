@@ -7,7 +7,41 @@ export function createMorphRender(ctx) {
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
 
-  function applyGeometry(shape, resolvedGeo, stageId = null) {
+  function hexToRgbString(value, fallback = '144 172 255') {
+    const raw = String(value || '').trim();
+    const full = raw.match(/^#([0-9a-f]{6})$/i);
+    if (full) {
+      const hex = full[1];
+      return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+    }
+    const short = raw.match(/^#([0-9a-f]{3})$/i);
+    if (short) {
+      const hex = short[1];
+      return `${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)}`;
+    }
+    return fallback;
+  }
+
+  function syncPrototypeStageSelection(stageId = null, scenario = null) {
+    const main = DROPS.main;
+    if (!main) return;
+    const activeScenario = scenario || callbacks.selectedScenario?.() || null;
+    const stage = stageId ? callbacks.stageById?.(stageId) : null;
+    const selected = stageId
+      ? (callbacks.stageSelectedForShape?.(activeScenario, stageId) ?? !!stage?.selected)
+      : false;
+    main.classList.toggle('prototype-stage-selected', selected);
+    if (!selected) {
+      main.style.removeProperty('--g-stage-selected-rgb');
+      return;
+    }
+    const accentColor = stageId
+      ? (callbacks.stageAccentColorForShape?.(activeScenario, stageId) || stage?.accentColor)
+      : null;
+    main.style.setProperty('--g-stage-selected-rgb', hexToRgbString(accentColor, '144 172 255'));
+  }
+
+  function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
     const mainRadius = stageId ? layout.stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
     const bottomAlignRef = callbacks.getBottomAlignRefHeight?.() || BOTTOM_ALIGN_REF_H;
@@ -27,6 +61,7 @@ export function createMorphRender(ctx) {
     const stage = document.getElementById('stage');
     if (stage) stage.style.height = `${alignedStageHeight}px`;
     state.lastMainGeo = { ...geo.main };
+    syncPrototypeStageSelection(stageId, scenario);
   }
 
   const clearUiFadeTimers = () => { while (uiFadeTimers.length) clearTimeout(uiFadeTimers.pop()); };
@@ -309,7 +344,7 @@ export function createMorphRender(ctx) {
     const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
     state.currentShape = shape;
     document.body.dataset.currentShape = shape;
-    applyGeometry(shape, nextGeo, stageId);
+    applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
     const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;

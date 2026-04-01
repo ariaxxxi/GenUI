@@ -332,6 +332,7 @@ export function createMorphLayout(ctx) {
       images: has('image') ? callbacks.stageImagesForShape(scenario, shape) : [],
       typography: getScenarioTypography(scenario, shape),
       sizeOverride: callbacks.scenarioStageSizeOverride(scenario, shape),
+      scenario,
     };
   }
 

@@ -1,1 +1,84 @@
 /* Shared styles extracted during refactor. Page-specific styles remain in ai.css and editor.css for parity. */
+
+#drop-main {
+  --g-stage-selected-rgb: 144 172 255;
+}
+
+#prototype-stage-selection {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms var(--motion-ease);
+}
+
+#drop-main.prototype-stage-selected #prototype-stage-selection {
+  opacity: 1;
+}
+
+.g-stage-selected-accent,
+.g-stage-selected-inner-glow,
+.g-stage-selected-ring {
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.g-stage-selected-accent-left {
+  inset: 0;
+  background:
+    radial-gradient(58% 176% at 13% -10%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 1) 0%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.92) 12%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.54) 24%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.16) 36%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 50%);
+  filter: blur(5px);
+}
+
+.g-stage-selected-accent-right {
+  right: -6%;
+  bottom: -18%;
+  width: 30%;
+  height: 88%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 72% 50%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.94) 0%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.42) 30%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.12) 48%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 68%);
+  filter: blur(40px);
+}
+
+.g-stage-selected-inner-glow {
+  inset: 0;
+  box-shadow:
+    inset 0 0 24px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.18),
+    inset 0 -9px 20px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.36),
+    inset -7px 0 12px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.16),
+    inset 7px 0 13px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.14),
+    inset 0 1px 9px rgba(255,255,255,0.14);
+}
+
+.g-stage-selected-ring {
+  inset: 0;
+  box-shadow: inset 0 0 2px 0.75px rgba(255,255,255,0.78);
+}
+
+body[data-current-shape="card"] #drop-main.prototype-stage-selected .g-stage-selected-accent-right {
+  right: -10%;
+  bottom: -26%;
+  width: 34%;
+  height: 94%;
+  background:
+    radial-gradient(circle at 70% 50%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.58) 0%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.26) 28%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.08) 46%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 72%);
+  filter: blur(40px);
+}

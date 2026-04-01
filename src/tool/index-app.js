@@ -33,7 +33,7 @@ let actions = null;
 let splitAnimStyleBackup = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageSelectedForShape, stageAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
@@ -184,7 +184,7 @@ function previewScenarioInstant(scenario) {
   morphApi.clearUiFadeTimers();
   morphApi.setSuppressDeformation(true);
   morphApi.setCurrentShape(shape);
-  morphApi.applyGeometry(shape, geo, scenario.shape);
+  morphApi.applyGeometry(shape, geo, scenario.shape, scenario);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
   DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
@@ -221,6 +221,8 @@ morphApi = initMorph({
     stageTextForShape,
     stageIconForShape,
     stageImagesForShape,
+    stageSelectedForShape,
+    stageAccentColorForShape,
     createIcon,
     getAnimDuration: anim.getAnimDuration,
     getEasingFns: anim.getEasingFns,
@@ -263,6 +265,8 @@ const sidebar = initSidebar({
   stageTextForShape,
   stageIconForShape,
   stageImagesForShape,
+  stageSelectedForShape,
+  stageAccentColorForShape,
   normalizeTriggers,
   normalizeIconByShape,
   createIcon,

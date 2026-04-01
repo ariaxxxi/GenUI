@@ -36,6 +36,8 @@ export function buildUiRefs(documentRef = document) {
     stageGapInput: documentRef.getElementById('stage-gap-input'),
     stageIconPadInput: documentRef.getElementById('stage-icon-pad-input'),
     stagePhoneBlurToggle: documentRef.getElementById('stage-phone-blur-toggle'),
+    stageSelectedToggle: documentRef.getElementById('stage-selected-toggle'),
+    stageAccentColor: documentRef.getElementById('stage-accent-color'),
     stageComponentsPanel: documentRef.getElementById('stage-components-panel'),
     stageComponentControls: documentRef.getElementById('stage-component-controls'),
     scenarioShapeRow: documentRef.getElementById('scenario-shape-row'),
