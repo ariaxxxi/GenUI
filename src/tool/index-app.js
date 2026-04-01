@@ -326,7 +326,7 @@ const sidebar = initSidebar({
   persistScenarios,
   persistStageLibrary: () => {
     try {
-      localStorage.setItem(STORAGE_KEYS.stageLibrary, JSON.stringify(stageLibrary));
+      localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(stageLibrary));
     } catch (err) {
       console.warn('Unable to persist stage library', err);
     }
@@ -408,7 +408,7 @@ manualDemo = initManualDemo({
   C,
 });
 
-const { renderAiStageOverrideUi, previewAiStageOverride, renderScenarioUi, updateLayerPreviews, initSidebarTabs, initLayerRowToggles, initSidebarCollapsibleSections, bindTypographyInputs, isSupportedAssetFile, commitScenarioChange, commitStageChange, addStage, deleteCurrentStage, resetCurrentStageToDefault, addScenario, duplicateScenario, deleteScenario, getScenarioImagesForStage } = sidebar;
+const { renderAiStageOverrideUi, previewAiStageOverride, renderScenarioUi, updateLayerPreviews, initSidebarTabs, initLayerRowToggles, initSidebarCollapsibleSections, bindTypographyInputs, isSupportedAssetFile, commitScenarioChange, commitStageChange, addStage, duplicateCurrentStage, deleteCurrentStage, resetCurrentStageToDefault, addScenario, duplicateScenario, deleteScenario, getScenarioImagesForStage } = sidebar;
 
 const scenarioMatchesText = (scenario, text) => {
   const haystack = String(text || '').toLowerCase();
@@ -499,6 +499,7 @@ initManualBindings({
   deleteScenario,
   commitScenarioChange,
   addStage,
+  duplicateCurrentStage,
   deleteCurrentStage,
   resetCurrentStageToDefault,
   commitStageChange,

@@ -61,9 +61,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
 
   function loadStageLibrary() {
     const stored = readStoredJson(STORAGE_KEYS.stages, null);
-    if (!Array.isArray(stored)) return defaultStageLibrary();
+    const legacyStored = Array.isArray(stored) ? stored : readStoredJson('undefined', null);
+    if (!Array.isArray(legacyStored)) return defaultStageLibrary();
     const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
-    const normalized = stored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
+    const normalized = legacyStored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
     const ids = new Set(normalized.map((stage) => stage.id));
     BUILTIN_STAGE_DEFS.forEach((builtin) => {
       if (!ids.has(builtin.id)) normalized.unshift(normalizeStage(builtin, builtin));

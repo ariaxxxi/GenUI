@@ -122,6 +122,7 @@ export function initEditorBindings({
   });
 
   UI.stageAdd?.addEventListener("click", () => sidebar.addStage());
+  UI.stageDuplicate?.addEventListener("click", () => sidebar.duplicateCurrentStage());
   UI.stageDelete?.addEventListener("click", () => sidebar.deleteCurrentStage());
   UI.stageReset?.addEventListener("click", () => sidebar.resetCurrentStageToDefault());
   UI.stageNameInput?.addEventListener("input", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || "").trim() || "Untitled Stage"; return draft; }); });

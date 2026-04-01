@@ -1,6 +1,70 @@
 # Handoff
 
 ## Task title
+Prototype Stage Duplication And Persistence Hardening
+
+## Completion status
+- Completed
+
+## Summary
+- Added a `Duplicate` stage action to the prototype stage toolbar in both prototype entry points.
+- Duplicating a stage now:
+  - creates a new non-preset stage in the shared stage library
+  - copies the current stage's effective render shape
+  - copies the current scenario's stage-scoped content and styling into the new stage:
+    - text
+    - icon
+    - images
+    - typography
+    - size override
+    - selected state
+    - primary accent color
+    - secondary accent color
+  - switches the current scenario to the new duplicated stage
+- Fixed the manual prototype page stage-library persistence bug:
+  - it was saving to `STORAGE_KEYS.stageLibrary`, which does not exist
+  - it now correctly saves to `STORAGE_KEYS.stages`
+- Added a legacy load fallback so stage edits written by the buggy manual build under `localStorage['undefined']` can still be recovered by the current branch.
+- Result: scenario and stage edits now persist reliably across refresh, and because they are stored in browser localStorage rather than the git checkout, they also survive pulling new code unless browser storage is explicitly cleared.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-actions.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/scenario-data.js`
+- `src/tool/index-app.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/ai/editor-bindings.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/sidebar-actions.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/ai/editor-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - duplicated the `card` stage and confirmed stage chip count changed `6 -> 7`
+  - renamed the scenario to `Persistence Check`
+  - renamed the duplicated stage to `Card Copy Alpha`
+  - refreshed the page and confirmed:
+    - selected scenario shape remained the duplicated stage id
+    - scenario name remained `Persistence Check`
+    - stage name remained `Card Copy Alpha`
+    - active stage chip still matched the duplicated stage id
+  - screenshot: `/tmp/add-visual-stage-duplicate-persist.png`
+
+## Remaining issues / caveats
+- The durability guarantee here is browser-storage based. If localStorage is manually cleared, stage/scenario edits will still be lost.
+
+## Recommended next step
+1. If explicit export/import of prototype edits is needed later, add a user-facing backup action on top of the existing localStorage persistence rather than replacing it.
+
+## Task title
 Prototype Detail Multiline Editing
 
 ## Completion status

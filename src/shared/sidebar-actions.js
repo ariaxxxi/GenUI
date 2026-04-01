@@ -92,6 +92,61 @@ export function createSidebarActions(ctx, refs) {
     commitScenarioChange((scenario) => { scenario.shape = newStage.id; return scenario; });
   }
 
+  function duplicateCurrentStage() {
+    const scenario = ctx.selectedScenario();
+    const stage = ctx.stageById(scenario?.shape, scenario);
+    if (!scenario || !stage) return;
+    const sourceStageId = stage.id;
+    const newStage = ctx.normalizeStage({
+      ...stage,
+      id: ctx.stageId(),
+      name: `${stage.name} Copy`,
+      preset: false,
+      renderShape: stage.renderShape,
+    });
+    ctx.setStageLibrary([...ctx.getStageLibrary(), newStage]);
+    ctx.persistStageLibrary();
+    commitScenarioChange((draft) => {
+      const sourceShape = draft.shape;
+      draft.content.textByShape = ctx.normalizeStageTextByShape(draft.content.textByShape, sourceShape, draft.content);
+      draft.content.textByShape[newStage.id] = structuredClone(draft.content.textByShape[sourceShape] || {});
+
+      draft.content.iconByShape = ctx.normalizeIconByShape(draft.content.iconByShape, sourceShape, draft.content.icon);
+      draft.content.iconByShape[newStage.id] = structuredClone(draft.content.iconByShape[sourceShape] || ctx.createIcon('none', ''));
+
+      draft.content.imagesByShape = ctx.normalizeImagesByShape(draft.content.imagesByShape, sourceShape, draft.content.images);
+      draft.content.imagesByShape[newStage.id] = structuredClone(draft.content.imagesByShape[sourceShape] || []);
+
+      draft.content.typographyByShape = ctx.normalizeTypographyByShape(draft.content.typographyByShape, sourceShape);
+      draft.content.typographyByShape[newStage.id] = structuredClone(draft.content.typographyByShape[sourceShape] || {});
+
+      draft.content.sizeByShape = ctx.normalizeStageSizeByShape(draft.content.sizeByShape, sourceShape, draft.content);
+      draft.content.sizeByShape[newStage.id] = structuredClone(draft.content.sizeByShape[sourceShape] || {});
+
+      draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
+      if (Object.prototype.hasOwnProperty.call(draft.content.selectedByShape, sourceShape)) {
+        draft.content.selectedByShape[newStage.id] = draft.content.selectedByShape[sourceShape];
+      }
+
+      draft.content.accentColorByShape = { ...(draft.content.accentColorByShape || {}) };
+      if (draft.content.accentColorByShape[sourceShape]) {
+        draft.content.accentColorByShape[newStage.id] = draft.content.accentColorByShape[sourceShape];
+      }
+
+      draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
+      if (draft.content.secondaryAccentColorByShape[sourceShape]) {
+        draft.content.secondaryAccentColorByShape[newStage.id] = draft.content.secondaryAccentColorByShape[sourceShape];
+      }
+
+      draft.content.stageRenderShapeById = { ...(draft.content.stageRenderShapeById || {}) };
+      delete draft.content.stageRenderShapeById[newStage.id];
+      draft.content.hiddenStageIds = (draft.content.hiddenStageIds || []).filter((id) => id !== newStage.id);
+
+      draft.shape = newStage.id;
+      return draft;
+    });
+  }
+
   function deleteCurrentStage() {
     const scenario = ctx.selectedScenario();
     const stage = ctx.stageById(scenario?.shape, scenario);
@@ -180,6 +235,7 @@ export function createSidebarActions(ctx, refs) {
     commitScenarioChange,
     commitStageChange,
     addStage,
+    duplicateCurrentStage,
     deleteCurrentStage,
     resetCurrentStageToDefault,
     addScenario,

@@ -36,6 +36,7 @@ export function initManualBindings({
   deleteScenario,
   commitScenarioChange,
   addStage,
+  duplicateCurrentStage,
   deleteCurrentStage,
   resetCurrentStageToDefault,
   commitStageChange,
@@ -302,6 +303,7 @@ export function initManualBindings({
     const kind = String(UI.stageAddKind?.value || 'card');
     addStage(kind);
   });
+  UI.stageDuplicate?.addEventListener('click', () => duplicateCurrentStage());
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());
   UI.stageReset.addEventListener('click', () => resetCurrentStageToDefault());
   UI.stageNameInput.addEventListener('input', (e) => {

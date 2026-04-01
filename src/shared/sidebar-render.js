@@ -93,6 +93,7 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageAccentSecondaryColor.disabled = !stage;
     }
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
+    if (ctx.UI.stageDuplicate) ctx.UI.stageDuplicate.disabled = !stage;
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage;
     if (ctx.UI.stageReset) ctx.UI.stageReset.disabled = !stage || !builtin;
     renderStageComponentControls(stage);
