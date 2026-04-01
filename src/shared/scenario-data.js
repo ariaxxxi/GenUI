@@ -24,12 +24,12 @@ const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
-  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', components: [] },
-  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', components: ['icon'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, selected: false, accentColor: '#90acff', components: ['icon', 'primary', 'secondary'] },
-  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, selected: false, accentColor: '#90acff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', components: ['image'] },
+  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
+  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
+  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
+  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
 ]);
 
 export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }) {
@@ -235,6 +235,14 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return output;
   }
 
+  function normalizeSecondaryAccentColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      output[shape] = normalizeHexColor(value?.[shape], stageById(shape)?.secondaryAccentColor || '#9761ff');
+    });
+    return output;
+  }
+
   function scenarioStageSizeOverride(scenario, shape) {
     return normalizeStageSizeEntry(scenario?.content?.sizeByShape?.[shape]);
   }
@@ -320,6 +328,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return normalizeHexColor(scenario?.content?.accentColorByShape?.[shape], stageById(shape)?.accentColor || '#90acff');
   }
 
+  function stageSecondaryAccentColorForShape(scenario, shape) {
+    return normalizeHexColor(scenario?.content?.secondaryAccentColorByShape?.[shape], stageById(shape)?.secondaryAccentColor || '#9761ff');
+  }
+
   function normalizeTriggers(value) {
     if (Array.isArray(value)) return value.map(v => String(v || '').trim()).filter(Boolean);
     return String(value || '')
@@ -363,6 +375,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         }),
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
+        secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
         canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
       },
       triggers: normalizeTriggers(triggers),
@@ -488,6 +501,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageImagesForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
+    stageSecondaryAccentColorForShape,
     createScenario,
     normalizeTriggers,
     normalizeScenario,

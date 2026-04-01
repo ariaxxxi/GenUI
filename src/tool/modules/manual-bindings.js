@@ -369,6 +369,14 @@ export function initManualBindings({
       draft.content.accentColorByShape[draft.shape] = String(e.target.value || '#90acff');
     });
   });
+  UI.stageAccentSecondaryColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
+      draft.content.secondaryAccentColorByShape[draft.shape] = String(e.target.value || '#9761ff');
+    });
+  });
 
   UI.stageComponentControls.addEventListener('click', (e) => {
     const button = e.target.closest('[data-stage-comp-action][data-stage-comp-type]');

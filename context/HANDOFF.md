@@ -8,12 +8,13 @@ Prototype Stage Selected Highlight Shell
 
 ## Summary
 - Applied the reusable name-chip highlight treatment to prototype-mode stage containers without replacing each stage's existing base appearance.
-- Kept stage-level `selected` and `accentColor` on normalized stage records only as legacy/default fallback for migration and new-stage seeding.
+- Kept stage-level `selected`, `accentColor`, and `secondaryAccentColor` on normalized stage records only as legacy/default fallback for migration and new-stage seeding.
 - Moved prototype selected-shell state out of the shared stage library and into scenario content so it is now independent per scenario and per stage:
   - `content.selectedByShape`
   - `content.accentColorByShape`
-- The right-panel `Selected` toggle and `Accent color` control now edit the active scenario's current stage entry instead of mutating the shared stage definition.
-- Added a `Selected` toggle plus `Accent color` control to the right-panel Style tab in both prototype entry points:
+  - `content.secondaryAccentColorByShape`
+- The right-panel `Selected`, `Accent primary`, and `Accent secondary` controls now edit the active scenario's current stage entry instead of mutating the shared stage definition.
+- Added a `Selected` toggle plus `Accent primary` / `Accent secondary` controls to the right-panel Style tab in both prototype entry points:
   - `index.html`
   - `ai.html`
 - Implemented a shared overlay inside `#drop-main` that only turns on when the current prototype stage has `selected: true`.
@@ -23,7 +24,7 @@ Prototype Stage Selected Highlight Shell
   - accent-colored inner shadow
 - Added the missing white inset outline so prototype selected mode now includes the brighter selected ring used by the AI name chip:
   - `.g-stage-selected-ring`
-  - `box-shadow: inset 0 0 2px 0.5px rgba(255,255,255,0.78)`
+  - `box-shadow: inset 0 0 2px 0.2px rgba(255,255,255,0.78)`
 - Later retuned the bottom-right highlight ball to read softer by increasing its blur from `10px` to `40px`.
 - Added a card-only softening pass so rectangular card stages blend the highlight more like the pill:
   - bottom-right highlight moved lower, enlarged slightly, reduced in opacity, and increased to `blur(40px)`
@@ -34,6 +35,14 @@ Prototype Stage Selected Highlight Shell
   - top-left highlight: `244px 176px at 55px -10px`, `blur(5px)`
   - bottom-right highlight: `width 126px`, `height 88px`, `right -25px`, `bottom -18px`, `blur(40px)`
 - This also removed the remaining card-only bottom-right override so both pill and card now use the same highlight geometry.
+- Retuned the selected-shell color application to match the AI disambiguation name chip:
+  - top-left highlight now uses the same secondary-primary-secondary-primary stop pattern as the AI chip highlight
+  - bottom-right highlight stays primary-led
+  - inner glow now mixes primary and secondary accent colors with the same split left/right weighting as the AI chip
+- Added the second prototype selected-shell color to the live preview contract:
+  - `--g-stage-selected-rgb`
+  - `--g-stage-selected-secondary-rgb`
+- Increased the prototype selected-shell top-left highlight blur from `5px` to `15px` so the left accent reads softer while keeping the same pixel anchor and gradient stops.
 - When `Selected` is off, the stage keeps its current container look with no added shell effect.
 
 ## Files changed
@@ -46,6 +55,8 @@ Prototype Stage Selected Highlight Shell
 - `src/shared/sidebar-render.js`
 - `src/shared/sidebar-actions.js`
 - `src/shared/morph-render.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
 - `src/ai/editor-bindings.js`
 - `src/tool/modules/manual-bindings.js`
 - `context/HANDOFF.md`
@@ -57,6 +68,8 @@ Prototype Stage Selected Highlight Shell
 - `node --check src/shared/sidebar-render.js`
 - `node --check src/shared/sidebar-actions.js`
 - `node --check src/shared/morph-render.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
 - `node --check src/ai/editor-bindings.js`
 - `node --check src/tool/modules/manual-bindings.js`
 - Browser validation via Playwright on `add-visual`:
@@ -107,9 +120,21 @@ Prototype Stage Selected Highlight Shell
       - `Incoming Message` card started at `selected=false`, color `#90acff`
       - after setting it to `selected=true`, color `#3366ff`, `QR Access Pass` card still remained `selected=false`, color `#90acff`
       - switching back to `Incoming Message` restored its own card state unchanged
+  - after two-color selected-shell gradient wiring:
+    - captured `/tmp/prototype-stage-two-color-gradient.png`
+    - confirmed the live selected-shell CSS vars resolve independently:
+      - primary `--g-stage-selected-rgb`: `255 102 0`
+      - secondary `--g-stage-selected-secondary-rgb`: `91 46 255`
+    - confirmed the prototype left highlight now uses the AI chip stop pattern:
+      - `radial-gradient(244px 176px at 55px -10px, rgb(91, 46, 255) 0%, rgba(255, 102, 0, 0.98) 11%, rgba(91, 46, 255, 0.74) 22%, rgba(255, 102, 0, 0.22) 34%, rgba(255, 102, 0, 0) 50%)`
+    - confirmed the prototype inner glow now mixes both colors instead of a single accent:
+      - `rgba(91, 46, 255, 0.23) 0px 0px 24px 0px inset`
+      - `rgba(255, 102, 0, 0.57) 0px -9px 20px 0px inset`
+      - `rgba(255, 102, 0, 0.25) -7px 0px 12px 0px inset`
+      - `rgba(91, 46, 255, 0.2) 7px 0px 13px 0px inset`
 
 ## Remaining issues / caveats
-- The selected-shell overlay is currently scoped to `#drop-main`, which matches the current prototype-stage preview architecture. If preview rendering later moves to other stage containers, the same overlay pattern can be mounted there with the same `prototype-stage-selected` class and `--g-stage-selected-rgb` variable.
+- The selected-shell overlay is currently scoped to `#drop-main`, which matches the current prototype-stage preview architecture. If preview rendering later moves to other stage containers, the same overlay pattern can be mounted there with the same `prototype-stage-selected` class plus the `--g-stage-selected-rgb` and `--g-stage-selected-secondary-rgb` variables.
 
 ## Recommended next step
 1. If more selected-state polish is needed, tune only the overlay layers in `src/styles/shared.css` so the underlying stage visuals stay untouched.

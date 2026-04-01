@@ -33,7 +33,7 @@ let actions = null;
 let splitAnimStyleBackup = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageSelectedForShape, stageAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function loadScenarioLibrary() {
   const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
@@ -223,6 +223,7 @@ morphApi = initMorph({
     stageImagesForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
+    stageSecondaryAccentColorForShape,
     createIcon,
     getAnimDuration: anim.getAnimDuration,
     getEasingFns: anim.getEasingFns,
@@ -267,6 +268,7 @@ const sidebar = initSidebar({
   stageImagesForShape,
   stageSelectedForShape,
   stageAccentColorForShape,
+  stageSecondaryAccentColorForShape,
   normalizeTriggers,
   normalizeIconByShape,
   createIcon,

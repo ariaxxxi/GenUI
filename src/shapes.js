@@ -208,10 +208,11 @@ export function normalizeStage(raw, fallback) {
     ? !!fallbackStage.selected
     : raw?.selected === true;
   const accentColor = normalizeHexColor(raw?.accentColor, fallbackStage.accentColor || '#90acff');
+  const secondaryAccentColor = normalizeHexColor(raw?.secondaryAccentColor, fallbackStage.secondaryAccentColor || '#9761ff');
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => stageComponentTypes().includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, selected, accentColor, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, selected, accentColor, secondaryAccentColor, components };
 }
 
 export function normalizeStageImage(value) {

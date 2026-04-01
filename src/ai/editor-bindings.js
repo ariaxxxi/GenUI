@@ -143,6 +143,15 @@ export function initEditorBindings({
       return draft;
     });
   });
+  UI.stageAccentSecondaryColor?.addEventListener("input", (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    sidebar.commitScenarioChange((draft) => {
+      draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
+      draft.content.secondaryAccentColorByShape[draft.shape] = String(e.target.value || '#9761ff');
+      return draft;
+    });
+  });
   UI.stageComponentControls?.addEventListener("click", (e) => {
     const button = e.target.closest("[data-stage-comp-action][data-stage-comp-type]");
     const type = String(button?.dataset?.stageCompType || "");

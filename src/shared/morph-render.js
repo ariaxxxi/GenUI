@@ -33,12 +33,17 @@ export function createMorphRender(ctx) {
     main.classList.toggle('prototype-stage-selected', selected);
     if (!selected) {
       main.style.removeProperty('--g-stage-selected-rgb');
+      main.style.removeProperty('--g-stage-selected-secondary-rgb');
       return;
     }
     const accentColor = stageId
       ? (callbacks.stageAccentColorForShape?.(activeScenario, stageId) || stage?.accentColor)
       : null;
+    const accentSecondaryColor = stageId
+      ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
+      : null;
     main.style.setProperty('--g-stage-selected-rgb', hexToRgbString(accentColor, '144 172 255'));
+    main.style.setProperty('--g-stage-selected-secondary-rgb', hexToRgbString(accentSecondaryColor, '151 97 255'));
   }
 
   function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {

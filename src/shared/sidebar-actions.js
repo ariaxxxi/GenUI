@@ -84,6 +84,7 @@ export function createSidebarActions(ctx, refs) {
       phoneBgBlur: false,
       selected: false,
       accentColor: '#90acff',
+      secondaryAccentColor: '#9761ff',
       components: template.components,
     });
     ctx.setStageLibrary([...ctx.getStageLibrary(), newStage]);

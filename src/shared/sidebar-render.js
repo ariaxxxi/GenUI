@@ -61,6 +61,7 @@ export function createSidebarRender(ctx, refs) {
     const sizeOverride = ctx.scenarioStageSizeOverride(scenario, scenario?.shape);
     const stageSelected = ctx.stageSelectedForShape ? ctx.stageSelectedForShape(scenario, scenario?.shape) : !!stage?.selected;
     const stageAccentColor = ctx.stageAccentColorForShape ? ctx.stageAccentColorForShape(scenario, scenario?.shape) : String(stage?.accentColor || '#90acff');
+    const stageAccentSecondaryColor = ctx.stageSecondaryAccentColorForShape ? ctx.stageSecondaryAccentColorForShape(scenario, scenario?.shape) : String(stage?.secondaryAccentColor || '#9761ff');
     if (ctx.UI.stageNameInput) ctx.UI.stageNameInput.value = stage?.name || '';
     if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
     if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
@@ -72,6 +73,10 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageAccentColor) {
       ctx.UI.stageAccentColor.value = String(stageAccentColor || '#90acff');
       ctx.UI.stageAccentColor.disabled = !stage;
+    }
+    if (ctx.UI.stageAccentSecondaryColor) {
+      ctx.UI.stageAccentSecondaryColor.value = String(stageAccentSecondaryColor || '#9761ff');
+      ctx.UI.stageAccentSecondaryColor.disabled = !stage;
     }
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage || !!stage.preset;

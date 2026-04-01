@@ -2,11 +2,12 @@
 
 #drop-main {
   --g-stage-selected-rgb: 144 172 255;
+  --g-stage-selected-secondary-rgb: 151 97 255;
   --g-stage-selected-left-w: 244px;
   --g-stage-selected-left-h: 176px;
   --g-stage-selected-left-x: 55px;
   --g-stage-selected-left-y: -10px;
-  --g-stage-selected-left-blur: 5px;
+  --g-stage-selected-left-blur: 15px;
   --g-stage-selected-right-w: 126px;
   --g-stage-selected-right-h: 88px;
   --g-stage-selected-right-right: -25px;
@@ -41,10 +42,10 @@
   inset: 0;
   background:
     radial-gradient(var(--g-stage-selected-left-w) var(--g-stage-selected-left-h) at var(--g-stage-selected-left-x) var(--g-stage-selected-left-y),
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 1) 0%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.92) 12%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.54) 24%,
-      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.16) 36%,
+      rgb(var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, 144 172 255)) / 1) 0%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.98) 11%,
+      rgb(var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, 144 172 255)) / 0.74) 22%,
+      rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.22) 34%,
       rgb(var(--g-stage-selected-rgb, 144 172 255) / 0) 50%);
   filter: blur(var(--g-stage-selected-left-blur));
 }
@@ -67,14 +68,14 @@
 .g-stage-selected-inner-glow {
   inset: 0;
   box-shadow:
-    inset 0 0 24px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.18),
-    inset 0 -9px 20px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.36),
-    inset -7px 0 12px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.16),
-    inset 7px 0 13px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.14),
-    inset 0 1px 9px rgba(255,255,255,0.14);
+    inset 0 0 24px rgb(var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, 144 172 255)) / 0.23),
+    inset 0 -9px 20px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.57),
+    inset -7px 0 12px rgb(var(--g-stage-selected-rgb, 144 172 255) / 0.25),
+    inset 7px 0 13px rgb(var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, 144 172 255)) / 0.20),
+    inset 0 1px 9px rgba(255,255,255,0.16);
 }
 
 .g-stage-selected-ring {
   inset: 0;
-  box-shadow: inset 0 0 2px 0.5px rgba(255,255,255,0.78);
+  box-shadow: inset 0 0 2px 0.2px rgba(255,255,255,0.78);
 }
