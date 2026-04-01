@@ -1,6 +1,38 @@
 # Handoff
 
 ## Task title
+Prototype Text Input Space-Key Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed AI-page prototype/editor text inputs so `Space` is no longer swallowed by the document-level shortcut handler.
+- Broadened the focused-text-editor detection in `src/ai/ai-bindings.js` from only the main sim input to any focused:
+  - `input`
+  - `textarea`
+  - `select`
+  - `contenteditable`
+- Kept the message-flow shortcuts active for the main sim input only, so the prototype/editor fields can now accept normal typing while the flow still preserves its intended keyboard behavior.
+- Result: text entry with spaces now works across the editable sidebar fields on the AI prototype page, including multiline detail editing.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/ai-bindings.js`
+- Verified the keydown gate now returns early for any focused text editor other than the main sim input:
+  - `const focusedInTextInput = activeEl?.matches?.("input, textarea, select") || activeEl?.isContentEditable`
+  - `if (focusedInTextInput && !focusedInMainInput) return;`
+
+## Remaining issues / caveats
+- None in the editor shortcut path. This change is scoped to the AI-page document key handler.
+
+## Recommended next step
+1. If additional global shortcuts are added later, keep them behind the same focused-text-editor guard so typing behavior does not regress.
+
+## Task title
 Prototype Stage Duplication And Persistence Hardening
 
 ## Completion status
