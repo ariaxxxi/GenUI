@@ -38,11 +38,23 @@ Thinking Orb Soft Luminous Sphere Port
   - prototype `magic` now uses explicit `80x80` geometry in the manual-demo path
   - this avoids the smaller shared `SHAPES.magic` fallback on the prototype page
   - prototype `magic` now also forces `#siri-orb` to `transform: scale(1)` in the manual-page decorative CSS, matching listening instead of staying at the base `scale(0.2)`
+- Restored the visible thinking-orb scale to `0.7` in both entry points:
+  - `#drop-main.magic-glow #siri-orb .thinking-orb-visual` now resolves to `transform: scale(0.7)` in AI mode and prototype mode
+- Changed non-thinking -> thinking entry timing from a class-delay to a visual-delay:
+  - the stage now morphs into `magic` immediately
+  - `--thinking-entry-delay: 300ms` is applied only when entering thinking from a non-thinking shape
+  - all visible thinking layers now inherit `--thinking-entry-progress`, so white/blue/purple color stays at `0` during the first `300ms` and then fades in smoothly
+- Added a matching shell fade delay for non-thinking -> thinking entry:
+  - `--thinking-shell-delay: 400ms` is now applied on the same transition
+  - the old container stroke/inner shell hold for the first `400ms`
+  - after that delay, the shell fades out while the thinking orb color ramp fades in
 
 ## Files changed
 - `index.html`
 - `ai.html`
 - `src/styles/shared.css`
+- `src/styles/ai-drop.css`
+- `src/styles/editor-layout.css`
 - `src/styles/ai-decorative.css`
 - `src/styles/editor-decorative.css`
 - `src/tool/modules/manual-demo.js`
@@ -81,6 +93,30 @@ Thinking Orb Soft Luminous Sphere Port
     - wash `6.8s`
     - bottom lobe `7.4s`
   - sampled transforms changed significantly over a `1.2s` interval on all three layers
+- Browser validation on the real `card -> magic` path after the `0.7` scale + `300ms` visual-delay update:
+  - `index.html` and `ai.html` both resolved `--thinking-entry-delay: 300ms`
+  - early sample:
+    - `.thinking-orb-visual` opacity `0`
+    - `--thinking-entry-progress: 0`
+    - halo/sphere/top/bottom opacity all `0`
+  - mid sample at `220ms`:
+    - stage already in `drop home-blur home-glow magic-glow`
+    - `.thinking-orb-visual` already at the target geometry (`~0.703` scale)
+    - `--thinking-entry-progress: 0`
+    - halo/sphere/top/bottom opacity all still `0`
+  - later sample:
+    - `--thinking-entry-progress` rose to `~0.62`
+    - halo opacity `~0.546`
+    - sphere/top/bottom opacity `~0.621`
+  - full sample:
+    - `.thinking-orb-visual` transform `matrix(0.7, 0, 0, 0.7, 0, 0)`
+    - `--thinking-entry-progress` `~0.99`
+  - shell timing check:
+    - early and mid samples still had `::before` / `::after` opacity `1`
+    - late sample showed shell fade underway:
+      - with the updated `400ms` shell delay, `::before` / `::after` opacity stayed around `~0.897` at the late sample while orb progress was already `~0.775`
+    - full sample:
+      - `::before` / `::after` opacity fell near `0.02`
 - Reference capture:
   - `/tmp/add-visual-thinking-orb-soft-sphere.png`
   - `/tmp/thinking-loop-index.png`
@@ -90,6 +126,12 @@ Thinking Orb Soft Luminous Sphere Port
   - `/tmp/thinking-color-separation-ai.png`
   - `/tmp/thinking-dramatic-index.png`
   - `/tmp/thinking-dramatic-ai.png`
+  - `/tmp/thinking-delay300-index-final.png`
+  - `/tmp/thinking-delay300-ai-final.png`
+  - `/tmp/thinking-shell-delay-index.png`
+  - `/tmp/thinking-shell-delay-ai.png`
+  - `/tmp/thinking-shell-delay400-index.png`
+  - `/tmp/thinking-shell-delay400-ai.png`
 
 ## Remaining issues / caveats
 - This was a direct port of the latest detached-worktree thinking orb, not a broader refactor of the older AI/prototype debug flow.

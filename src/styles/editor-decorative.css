@@ -58,6 +58,8 @@
   box-shadow: none !important;
   animation: none !important;
   filter: none !important;
+  backdrop-filter: blur(0px) !important;
+  -webkit-backdrop-filter: blur(0px) !important;
   overflow: visible !important;
 }
 #drop-main.magic-glow::before,
@@ -80,7 +82,7 @@
 }
 #drop-main.magic-glow #siri-orb .thinking-orb-visual {
   opacity: 1;
-  transform: scale(1);
+  transform: scale(0.7);
 }
 #drop-main.ai-mode #home-glow-layer {
   opacity: 1 !important;

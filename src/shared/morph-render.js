@@ -6,6 +6,31 @@ export function createMorphRender(ctx) {
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
+  let thinkingVisualEnterTimer = null;
+
+  function clearThinkingVisualEnterTimer() {
+    if (!thinkingVisualEnterTimer) return;
+    clearTimeout(thinkingVisualEnterTimer);
+    thinkingVisualEnterTimer = null;
+  }
+
+  function setThinkingVisualState({ thinkingVisualShape = false, listeningShape = false, delayed = false } = {}) {
+    clearThinkingVisualEnterTimer();
+    DROPS.main.classList.toggle('listening-orb', listeningShape);
+    if (delayed) {
+      DROPS.main.classList.remove('home-blur', 'home-glow', 'magic-glow');
+      thinkingVisualEnterTimer = setTimeout(() => {
+        thinkingVisualEnterTimer = null;
+        if (state.currentShape !== 'magic' && state.currentShape !== 'ai') return;
+        DROPS.main.classList.add('home-glow', 'magic-glow');
+        DROPS.main.classList.toggle('home-blur', state.currentShape === 'magic');
+      }, 300);
+      return;
+    }
+    DROPS.main.classList.toggle('home-blur', state.currentShape === 'magic');
+    DROPS.main.classList.toggle('home-glow', listeningShape || thinkingVisualShape);
+    DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
+  }
 
   function hexToCssColor(value, fallback = 'rgb(144 172 255)') {
     const raw = String(value || '').trim();
@@ -358,6 +383,9 @@ export function createMorphRender(ctx) {
     document.body.dataset.currentShape = shape;
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     const thinkingVisualShape = shape === 'magic' || shape === 'ai';
+    const enteringThinking = thinkingVisualShape && fromShape !== 'magic' && fromShape !== 'ai';
+    DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? '300ms' : '0ms');
+    DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? '400ms' : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
     const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;

@@ -103,6 +103,8 @@ body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
   box-shadow: none !important;
   animation: none !important;
   filter: none !important;
+  backdrop-filter: blur(0px) !important;
+  -webkit-backdrop-filter: blur(0px) !important;
   overflow: visible !important;
 }
 #drop-main.magic-glow::before,
@@ -125,7 +127,7 @@ body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
 }
 #drop-main.magic-glow #siri-orb .thinking-orb-visual {
   opacity: 1;
-  transform: scale(1);
+  transform: scale(0.7);
 }
 body[data-ai-home-state="context"][data-current-shape="pill"] #drop-main {
   background: rgba(255,255,255,0.05);

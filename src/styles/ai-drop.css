@@ -1,6 +1,7 @@
 /* ── Drop shell ── */
 .drop {
   position: absolute; left: 50%; top: 50%;
+  --thinking-shell-delay: 0ms;
   background: transparent;
   box-shadow: 0 0 40px rgba(255,255,255,0.02);
   border: none; overflow: hidden;
@@ -10,14 +11,15 @@
     border-radius var(--anim-br),
     transform     var(--anim-tx),
     opacity       300ms var(--motion-ease),
-    background    420ms var(--motion-ease),
-    box-shadow    520ms var(--motion-ease),
-    filter        520ms var(--motion-ease);
+    background    420ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
+    box-shadow    520ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
+    filter        520ms var(--motion-ease) var(--thinking-shell-delay, 0ms);
   will-change: transform, width, height, border-radius, opacity;
 }
 .drop::before {
   content: ''; position: absolute; inset: 0; z-index: 10;
   border-radius: inherit; padding: 1px;
+  opacity: 1;
   background: linear-gradient(var(--glass-stroke-angle),
     var(--glass-shell-stroke-stop-0) 0%,
     var(--glass-shell-stroke-stop-50) 50%,
@@ -28,12 +30,17 @@
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
+  transition: opacity 320ms var(--motion-ease) var(--thinking-shell-delay, 0ms);
 }
 .drop::after {
   content: ''; position: absolute; inset: 0; z-index: 9;
   border-radius: inherit;
+  opacity: 1;
   box-shadow: inset 0 0 20px rgba(255,255,255,0.25);
   pointer-events: none;
+  transition:
+    opacity 320ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
+    box-shadow 360ms var(--motion-ease) var(--thinking-shell-delay, 0ms);
 }
 .drop.metaball-prep {
   will-change: transform, width, height, border-radius, opacity, filter;
@@ -45,6 +52,9 @@
   background: rgba(255,255,255,0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  transition:
+    backdrop-filter 420ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
+    -webkit-backdrop-filter 420ms var(--motion-ease) var(--thinking-shell-delay, 0ms);
 }
 
 /* ── Generic content elements ── */
