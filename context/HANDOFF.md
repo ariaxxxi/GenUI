@@ -1,6 +1,117 @@
 # Handoff
 
 ## Task title
+Prototype Stage AI Debug Buttons
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new `AI Debug` section directly below the stage section in both prototype entry points.
+- The section contains two prototype-only debug buttons:
+  - `Listening`
+  - `Thinking`
+- Corrected the buttons so they now drive the same orb states as the AI page:
+  - `Listening` -> `manualShape('listening')`
+  - `Thinking` -> `manualShape('magic')`
+- Updated the prototype stage styles so these debug states render with the same listening/thinking orb treatment as AI mode:
+  - listening uses the AI-style `home-glow` + `listening-orb` stack
+  - thinking uses the AI-style `home-glow` + `home-blur` + `magic-glow` stack
+- Later retuned the prototype `thinking` (`magic`) state to be whiter and less blue by adjusting only the prototype-side `magic-glow` aura and `magic`-specific `#home-glow-layer` inset stack.
+- Later tightened the prototype `thinking` (`magic`) state further by:
+  - reducing `#drop-main.home-blur` from `4px` to `2px`
+  - reducing the prototype `magic-glow` halo blur from `22.1px` to `15px`
+- Kept the look consistent with the AI-mode debug buttons by reusing `sb-shape-btn`, but added a prototype-only style override so the buttons render in pure white.
+- Scoped the white styling to `.prototype-ai-debug-grid` so the other sidebar/debug buttons keep their current look.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/editor-layout.css`
+- `src/styles/editor-sidebar.css`
+- `src/styles/ai-sidebar.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed the stage tab now includes `AI Debug`
+  - confirmed it renders `Listening` and `Thinking`
+  - confirmed both buttons resolve to prototype-white styling:
+    - `color: rgba(255, 255, 255, 0.96)`
+    - `borderColor: rgba(255, 255, 255, 0.42)`
+- Browser validation on `http://127.0.0.1:5174/index.html` by driving the debug actions directly:
+  - `manualShape('listening')` resolved to:
+    - `shape: listening`
+    - `#drop-main` classes: `drop home-glow listening-orb`
+    - `#home-glow-layer` opacity: `0.974597`
+    - `#siri-orb` opacity: `0.999236`
+  - `manualShape('magic')` resolved to:
+    - `shape: magic`
+    - `#drop-main` classes: `drop home-glow home-blur magic-glow`
+    - animated glow box-shadow: `rgb(123, 194, 255) 0px 0px 22.1px 9.46738px`
+- Browser validation after the white retune on `http://127.0.0.1:5174/index.html`:
+  - `manualShape('magic')` resolved to:
+    - `shape: magic`
+    - `#drop-main` classes: `drop home-blur home-glow magic-glow`
+    - `#home-glow-layer` box-shadow:
+      - `rgba(188, 212, 255, 0.1) 0px 6px 8px -2px inset`
+      - `rgba(228, 235, 255, 0.66) 0px -20px 24px -8px inset`
+      - `rgba(255, 255, 255, 0.6) 0px -18px 24px -6px inset`
+      - `rgba(10, 18, 38, 0.84) 0px -70px 60px -30px inset`
+    - `#drop-main` outer glow box-shadow: `rgba(232, 240, 255, 0.855) 0px 0px 22.1px 8.53061px`
+- Browser validation after the tighter blur pass on `http://127.0.0.1:5174/index.html`:
+  - `manualShape('magic')` resolved to:
+    - `#drop-main` classes: `drop home-blur home-glow magic-glow`
+    - `#drop-main` box-shadow: `rgba(232, 240, 255, 0.86) 0px 0px 15px 8.64404px`
+    - `#drop-main` filter: `blur(2px)`
+- Verified the same mirrored section and button markup was added to `ai.html`
+
+## Remaining issues / caveats
+- None. The section is still UI-only and does not persist stage/scenario state.
+
+## Recommended next step
+1. If more prototype-only AI debug shapes are needed later, add them inside the same `AI Debug` section and keep the white override scoped to `.prototype-ai-debug-grid`.
+
+## Task title
+Stage Capture Includes Prototype Intent Header
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed prototype stage capture so the intent header is included in copied PNGs and exported SVGs.
+- The bug was that capture was using `#stage`, which excludes the prototype `#intent-header` because the header is rendered as a sibling above the container.
+- Updated both prototype entry points to capture `#stage-wrap` instead of `#stage`.
+- Updated the shared capture sizing so it respects the real capture root height instead of forcing a square crop:
+  - PNG blob capture now uses the root's measured `width` and `height`
+  - SVG export now uses the root's measured `width` and `height`
+- Result: when the prototype intent header is visible, it is now part of the copied/exported image.
+
+## Files changed
+- `src/shared/stage-capture.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/stage-capture.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - forced a visible prototype intent header
+  - rendered the old root (`#stage`) and new root (`#stage-wrap`) through `modernScreenshot.domToCanvas(...)`
+  - sampled the top strip where the header sits and confirmed:
+    - old root: `opaqueTopStrip = 0`
+    - new root: `opaqueTopStrip = 940`
+  - this confirms the new capture root includes header pixels while the old one did not
+
+## Remaining issues / caveats
+- None for the prototype capture path. This is scoped to stage capture only.
+
+## Recommended next step
+1. If future prototype elements are intentionally rendered outside `#drop-main`, keep them inside `#stage-wrap` so the capture path continues to include them without special cases.
+
+## Task title
 Prototype Text Input Space-Key Fix
 
 ## Completion status

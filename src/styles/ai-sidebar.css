@@ -384,6 +384,22 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+.prototype-ai-debug-grid .sb-shape-btn {
+  border-color: rgba(255,255,255,0.42);
+  color: rgba(255,255,255,0.96);
+  background: transparent;
+}
+.prototype-ai-debug-grid .sb-shape-btn:hover,
+.prototype-ai-debug-grid .sb-shape-btn:active {
+  border-color: rgba(255,255,255,0.78);
+  color: rgba(255,255,255,1);
+  background: rgba(255,255,255,0.04);
+}
+.prototype-ai-debug-grid .sb-shape-btn.active {
+  border-color: rgba(255,255,255,0.9);
+  color: rgba(255,255,255,1);
+  background: rgba(255,255,255,0.08);
+}
 input[type=range] {
   -webkit-appearance: none; width: 100%; height: 2px;
   background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; cursor: pointer;

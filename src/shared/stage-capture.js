@@ -168,18 +168,20 @@ async function ensureFontsInlined() {
 /* ── Capture via modern-screenshot ── */
 
 function getCaptureOptions(root) {
-  const width = Math.ceil(root.getBoundingClientRect().width);
+  const rect = root.getBoundingClientRect();
+  const width = Math.ceil(rect.width);
+  const height = Math.ceil(rect.height);
   return {
     backgroundColor: null,
     scale: 2,
     width,
-    height: width,
+    height,
     style: {
       "mix-blend-mode": "normal",
       "animation": "none",
       width: width + "px",
-      height: width + "px",
-      overflow: "hidden",
+      height: height + "px",
+      overflow: "visible",
     },
     fetch: {
       placeholderImage: TRANSPARENT_1PX,
@@ -263,9 +265,8 @@ export async function exportStageSvg({ root, filenamePrefix = "stage", documentR
     }
 
     const rect = captureRoot.getBoundingClientRect();
-    const size = Math.ceil(rect.width) * 2;
-    const width = size;
-    const height = size;
+    const width = Math.ceil(rect.width) * 2;
+    const height = Math.ceil(rect.height) * 2;
 
     // Figma-compatible SVG with embedded PNG raster at 2x
     const svgContent = [

@@ -449,7 +449,7 @@ actions = initManualActions({ input, sendBtn, flight, resolveScenario, previewSc
 
 async function copyStagePng() {
   try {
-    const ok = await copyStagePngToClipboard({ root: document.getElementById('stage'), documentRef: document });
+    const ok = await copyStagePngToClipboard({ root: document.getElementById('stage-wrap'), documentRef: document });
     if (!ok) console.warn('[stage-capture] PNG copy did not complete.');
   } catch (err) {
     console.warn('[stage-capture] PNG copy failed:', err);
@@ -457,7 +457,7 @@ async function copyStagePng() {
 }
 
 async function exportStageSvg() {
-  const ok = await exportStageSvgFile({ root: document.getElementById('stage'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
+  const ok = await exportStageSvgFile({ root: document.getElementById('stage-wrap'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
   if (!ok) console.warn('[stage-capture] SVG export did not complete.');
 }
 
