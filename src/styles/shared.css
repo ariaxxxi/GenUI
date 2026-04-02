@@ -173,191 +173,176 @@
   box-shadow: none;
 }
 
-#siri-orb .thinking-orb-visual,
-#siri-orb .thinking-orb-ambient,
-#siri-orb .thinking-orb-core,
-#siri-orb .thinking-orb-rim,
-#siri-orb .thinking-orb-rotor,
-#siri-orb .thinking-orb-halo,
-#siri-orb .thinking-orb-arc,
-#siri-orb .thinking-orb-sparks {
-  position: absolute;
-  pointer-events: none;
+@keyframes thinking-orb-breathe {
+  0%, 100% { transform: scale(1) translate3d(0, 0, 0); }
+  50% { transform: scale(1.04) translate3d(0, -1px, 0); }
+}
+
+@keyframes thinking-orb-halo-pulse {
+  0%, 100% { opacity: 0.72; }
+  50% { opacity: 0.94; }
+}
+
+@keyframes thinking-orb-orbit {
+  0% { transform: rotate(0deg) scale(1); }
+  24% { transform: rotate(84deg) scale(1.04); }
+  51% { transform: rotate(188deg) scale(0.97); }
+  78% { transform: rotate(292deg) scale(1.05); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes thinking-orb-counter-orbit {
+  0% { transform: rotate(0deg) scale(1); }
+  22% { transform: rotate(-76deg) scale(0.96); }
+  48% { transform: rotate(-182deg) scale(1.05); }
+  72% { transform: rotate(-274deg) scale(0.98); }
+  100% { transform: rotate(-360deg) scale(1); }
+}
+
+@keyframes thinking-orb-grain-drift {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 22px -18px, -16px 20px, 18px 14px, -14px -12px; }
 }
 
 #siri-orb .thinking-orb-visual {
-  inset: -18%;
+  position: absolute;
+  inset: -30px;
   opacity: 0;
-  transform: scale(0.82);
-  transition: opacity 320ms var(--motion-ease), transform 720ms var(--motion-ease);
-}
-
-#siri-orb .thinking-orb-ambient {
-  inset: 7%;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 31% 32%, rgba(62, 108, 198, 0.34) 0%, rgba(62, 108, 198, 0.14) 18%, rgba(62, 108, 198, 0) 42%),
-    radial-gradient(circle at 72% 70%, rgba(124, 172, 255, 0.22) 0%, rgba(124, 172, 255, 0.08) 16%, rgba(124, 172, 255, 0) 38%),
-    radial-gradient(circle at 50% 50%, rgba(17, 34, 82, 0.34) 0%, rgba(8, 19, 52, 0.18) 34%, rgba(8, 19, 52, 0) 72%);
-  filter: blur(16px);
-  opacity: 0.88;
-}
-
-#siri-orb .thinking-orb-core,
-#siri-orb .thinking-orb-rim {
-  inset: 18%;
-  border-radius: 50%;
-}
-
-#siri-orb .thinking-orb-core {
-  background:
-    radial-gradient(circle at 50% 58%,
-      rgba(17, 31, 78, 0.26) 0%,
-      rgba(10, 20, 56, 0.42) 28%,
-      rgba(5, 11, 31, 0.88) 68%,
-      rgba(2, 6, 17, 0.98) 100%);
-  box-shadow:
-    inset 0 -14px 30px rgba(112, 166, 255, 0.12),
-    0 0 0 1px rgba(219, 236, 255, 0.05);
-}
-
-#siri-orb .thinking-orb-rim {
-  border: 1.5px solid rgba(218, 235, 255, 0.58);
-  box-shadow:
-    0 0 3px rgba(164, 208, 255, 0.16),
-    inset 0 0 3px rgba(255, 255, 255, 0.10);
-}
-
-#siri-orb .thinking-orb-rotor {
-  inset: 8%;
-  border-radius: 50%;
-}
-
-#siri-orb .thinking-orb-halo,
-#siri-orb .thinking-orb-arc {
-  inset: 0;
-  border-radius: 50%;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition: opacity 280ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #siri-orb .thinking-orb-halo {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+#siri-orb .thinking-orb-sphere,
+#siri-orb .thinking-orb-layer {
+  position: absolute;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+#siri-orb .thinking-orb-halo-cloud {
+  inset: 2px;
   background:
-    conic-gradient(from -110deg,
-      rgba(255, 255, 255, 0) 0deg 288deg,
-      rgba(91, 170, 255, 0.08) 300deg,
-      rgba(149, 208, 255, 0.34) 316deg,
-      rgba(255, 255, 255, 0.96) 334deg,
-      rgba(164, 219, 255, 0.44) 350deg,
-      rgba(101, 177, 255, 0.02) 360deg);
-  filter: blur(15px);
-  opacity: 0.98;
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 11px), #000 calc(100% - 4px), transparent 100%);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 18px), #000 calc(100% - 11px), #000 calc(100% - 4px), transparent 100%);
-}
-
-#siri-orb .thinking-orb-arc {
-  background:
-    conic-gradient(from -110deg,
-      rgba(255, 255, 255, 0) 0deg 292deg,
-      rgba(120, 191, 255, 0.10) 304deg,
-      rgba(193, 231, 255, 0.74) 320deg,
-      rgba(255, 255, 255, 1) 336deg,
-      rgba(208, 236, 255, 0.92) 348deg,
-      rgba(100, 182, 255, 0.12) 357deg,
-      rgba(255, 255, 255, 0) 360deg);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 4px), #000 calc(100% - 1px), transparent 100%);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 4px), #000 calc(100% - 1px), transparent 100%);
-}
-
-#siri-orb .thinking-orb-sparks {
-  left: 50%;
-  top: 5%;
-  width: 68px;
-  height: 68px;
-  transform: translate(-50%, -50%) rotate(14deg);
-  opacity: 0.72;
-  filter: blur(0.4px);
-  background:
-    radial-gradient(circle at 18% 54%, rgba(255, 255, 255, 0.92) 0 1.1px, transparent 1.8px),
-    radial-gradient(circle at 28% 28%, rgba(206, 231, 255, 0.72) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 42% 16%, rgba(255, 255, 255, 0.86) 0 1.1px, transparent 1.9px),
-    radial-gradient(circle at 55% 34%, rgba(171, 212, 255, 0.72) 0 0.9px, transparent 1.6px),
-    radial-gradient(circle at 72% 20%, rgba(255, 255, 255, 0.74) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 62% 58%, rgba(188, 223, 255, 0.58) 0 0.9px, transparent 1.5px),
-    radial-gradient(circle at 82% 44%, rgba(255, 255, 255, 0.62) 0 1px, transparent 1.7px);
-}
-
-#siri-orb .thinking-orb-rotor-a {
-  transform: rotate(-166deg);
-  animation: thinking-orb-rotate-a 6.8s linear infinite;
-}
-
-#siri-orb .thinking-orb-rotor-b {
-  inset: 10%;
-  transform: rotate(84deg) scale(1.02);
-  animation: thinking-orb-rotate-b 8.6s linear infinite;
-}
-
-#siri-orb .thinking-orb-rotor-b .thinking-orb-halo {
+    radial-gradient(circle at 34% 30%, rgba(210, 252, 255, 0.34) 0%, rgba(146, 235, 255, 0.2) 20%, rgba(30, 144, 242, 0.18) 44%, rgba(3, 11, 24, 0) 74%),
+    radial-gradient(circle at 68% 72%, rgba(140, 102, 255, 0.18) 0%, rgba(100, 82, 255, 0.12) 22%, rgba(4, 12, 25, 0) 62%);
+  filter: blur(34px);
   opacity: 0.88;
-  filter: blur(12px);
+  transform: scale(1.48);
+  animation:
+    thinking-orb-halo-pulse 3.8s ease-in-out infinite,
+    thinking-orb-orbit 10.8s linear infinite;
 }
 
-#siri-orb .thinking-orb-rotor-b .thinking-orb-arc {
-  opacity: 0.92;
+#siri-orb .thinking-orb-halo-ring {
+  inset: 6px;
+  background: radial-gradient(circle at 50% 52%,
+    rgba(4, 12, 25, 0) 46%,
+    rgba(212, 245, 255, 0.18) 54%,
+    rgba(106, 198, 255, 0.32) 62%,
+    rgba(120, 98, 255, 0.2) 70%,
+    rgba(4, 12, 25, 0) 84%);
+  filter: blur(24px);
+  opacity: 0.98;
+  transform: scale(1.32);
+  animation:
+    thinking-orb-halo-pulse 3.8s ease-in-out infinite reverse,
+    thinking-orb-counter-orbit 6.4s linear infinite;
+}
+
+#siri-orb .thinking-orb-sphere {
+  inset: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  filter: blur(1px) saturate(1.16);
+  animation: thinking-orb-breathe 3.9s ease-in-out infinite;
+  box-shadow:
+    inset 0 0 16px rgba(255, 255, 255, 0.16),
+    inset 0 -16px 24px rgba(46, 40, 138, 0.28),
+    0 0 28px rgba(132, 226, 255, 0.2);
+}
+
+#siri-orb .thinking-orb-layer {
+  inset: 0;
+  border-radius: inherit;
+}
+
+#siri-orb .thinking-orb-layer-base {
   background:
-    conic-gradient(from -110deg,
-      rgba(255, 255, 255, 0) 0deg 300deg,
-      rgba(111, 184, 255, 0.08) 312deg,
-      rgba(196, 233, 255, 0.64) 326deg,
-      rgba(255, 255, 255, 0.98) 340deg,
-      rgba(190, 229, 255, 0.74) 352deg,
-      rgba(255, 255, 255, 0) 360deg);
+    radial-gradient(circle at 34% 18%,
+      rgba(255, 255, 255, 1) 0%,
+      rgba(246, 252, 255, 0.99) 14%,
+      rgba(198, 242, 255, 0.94) 30%,
+      rgba(110, 215, 255, 0.9) 48%,
+      rgba(35, 144, 255, 0.92) 66%,
+      rgba(40, 74, 214, 0.94) 82%,
+      rgba(98, 72, 214, 0.98) 100%);
 }
 
-#siri-orb .thinking-orb-rotor-b .thinking-orb-sparks {
-  width: 54px;
-  height: 54px;
-  opacity: 0.56;
-  transform: translate(-50%, -50%) rotate(-12deg) scale(0.88);
+#siri-orb .thinking-orb-layer-wash {
+  background: linear-gradient(146deg,
+    rgba(255, 255, 255, 0.92) 2%,
+    rgba(236, 250, 255, 0.92) 18%,
+    rgba(120, 223, 255, 0.62) 38%,
+    rgba(34, 185, 255, 0.26) 56%,
+    rgba(14, 62, 172, 0) 72%);
+  opacity: 0.92;
+  animation: thinking-orb-orbit 6.8s linear infinite;
 }
 
-@keyframes thinking-orb-rotate-a {
-  from { transform: rotate(-166deg); }
-  to { transform: rotate(194deg); }
-}
-
-@keyframes thinking-orb-rotate-b {
-  from { transform: rotate(84deg) scale(1.02); }
-  to { transform: rotate(444deg) scale(1.02); }
-}
-
-#drop-main.magic-glow {
-  box-shadow: none !important;
-  animation: none !important;
-}
-
-#drop-main.magic-glow.home-blur {
-  filter: none !important;
-}
-
-#drop-main.magic-glow #home-glow-layer {
-  opacity: 0 !important;
-  box-shadow: none !important;
-}
-
-#drop-main.magic-glow #siri-orb {
-  opacity: 1 !important;
-  transform: scale(1) !important;
-  filter: none !important;
-  background: transparent !important;
-  overflow: visible;
-}
-
-#drop-main.magic-glow #siri-orb canvas {
-  opacity: 0;
-}
-
-#drop-main.magic-glow #siri-orb .thinking-orb-visual {
+#siri-orb .thinking-orb-layer-toplight {
+  background: radial-gradient(circle at 36% 18%,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 1) 12%,
+    rgba(244, 252, 255, 0.98) 24%,
+    rgba(164, 238, 255, 0.64) 40%,
+    rgba(164, 238, 255, 0.16) 54%,
+    rgba(164, 238, 255, 0) 68%);
+  filter: blur(7px);
   opacity: 1;
-  transform: scale(1);
+  mix-blend-mode: screen;
+  animation: thinking-orb-orbit 4.8s linear infinite;
+}
+
+#siri-orb .thinking-orb-layer-bottomlobe {
+  background: radial-gradient(circle at 68% 80%,
+    rgba(188, 118, 255, 1) 0%,
+    rgba(150, 92, 255, 0.98) 22%,
+    rgba(92, 112, 255, 0.5) 36%,
+    rgba(68, 120, 255, 0.1) 50%,
+    rgba(68, 120, 255, 0) 64%);
+  filter: blur(6px);
+  opacity: 1;
+  animation: thinking-orb-counter-orbit 7.4s linear infinite;
+}
+
+#siri-orb .thinking-orb-layer-rim {
+  background: radial-gradient(circle at 50% 50%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(232, 248, 255, 0.34) 72%,
+    rgba(132, 214, 255, 0.28) 80%,
+    rgba(124, 98, 255, 0.14) 86%,
+    rgba(255, 255, 255, 0) 92%);
+  mix-blend-mode: screen;
+  opacity: 0.8;
+}
+
+#siri-orb .thinking-orb-layer-grain {
+  background-image:
+    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.2) 0 0.7px, transparent 1px),
+    radial-gradient(circle at 72% 64%, rgba(185, 236, 255, 0.16) 0 0.8px, transparent 1.1px),
+    radial-gradient(circle at 42% 78%, rgba(115, 205, 255, 0.12) 0 0.7px, transparent 1px),
+    radial-gradient(circle at 60% 30%, rgba(255, 255, 255, 0.14) 0 0.7px, transparent 1px);
+  background-size: 22px 22px, 28px 28px, 24px 24px, 18px 18px;
+  opacity: 0.1;
+  mix-blend-mode: screen;
+  animation: thinking-orb-grain-drift 12s linear infinite;
 }

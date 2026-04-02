@@ -1,6 +1,104 @@
 # Handoff
 
 ## Task title
+Thinking Orb Soft Luminous Sphere Port
+
+## Completion status
+- Completed
+
+## Summary
+- Ported the latest thinking-orb visual change from the detached worktree into `add-visual`.
+- Replaced the older eclipse-style thinking orb markup with the newer soft luminous sphere stack in both entry points:
+  - diffuse cloud halo
+  - ring halo
+  - softened sphere body
+  - white/cyan top wash
+  - blue/violet lower lobe
+  - subtle grain
+- Updated the thinking-state decorative rules so `magic` now suppresses the old shell glow treatment while the new sphere is active:
+  - no container `box-shadow`
+  - no `home-glow-layer`
+  - no listening canvas visible over the thinking state
+- Kept listening behavior unchanged; only the thinking state switched visual families.
+- Retuned the motion model so the orb reads as a continuous loop instead of a one-time reveal:
+  - halo ring now counter-orbits continuously
+  - top highlight and wash now orbit continuously
+  - lower lobe counter-orbits continuously
+  - grain layer now drifts continuously
+- Retuned the thinking-orb palette separation so the rotation reads more clearly:
+  - white top light is brighter and tighter
+  - cyan/blue body reads cleaner against the purple lower lobe
+  - lower lobe purple is stronger and less blended into the blue shell
+  - halo ring now carries a clearer white-blue-purple split
+- Made the thinking motion more dramatic:
+  - orbit paths now include irregular scale wobble instead of purely smooth rotation
+  - top light, wash, and lower lobe all rotate faster
+  - counter-motion between blue and purple layers is easier to read at a glance
+- Fixed the prototype debug `Thinking` size regression:
+  - prototype `magic` now uses explicit `80x80` geometry in the manual-demo path
+  - this avoids the smaller shared `SHAPES.magic` fallback on the prototype page
+  - prototype `magic` now also forces `#siri-orb` to `transform: scale(1)` in the manual-page decorative CSS, matching listening instead of staying at the base `scale(0.2)`
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-decorative.css`
+- `src/tool/modules/manual-demo.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html` with a forced `magic` state:
+  - `#drop-main` classes: `drop home-blur home-glow magic-glow`
+  - `.thinking-orb-visual` opacity: `1`
+  - `#siri-orb canvas` opacity: `0`
+  - `#drop-main` box-shadow: `none`
+  - `#home-glow-layer` opacity: `0`
+- Browser validation on both entry points with Playwright:
+  - `index.html` and `ai.html` both kept `animation-play-state: running`
+  - sampled transforms changed across three time slices on:
+    - `.thinking-orb-halo-ring`
+    - `.thinking-orb-layer-wash`
+    - `.thinking-orb-layer-toplight`
+    - `.thinking-orb-layer-bottomlobe`
+- Browser validation on `http://127.0.0.1:5174/index.html` after the prototype size fix:
+  - clicked the prototype `Thinking` debug button
+  - `#drop-main` resolved to `80px x 80px`
+  - border radius resolved to `40px`
+  - `#siri-orb` resolved to full size instead of the scaled-down `16px` bug:
+    - listening `#siri-orb`: `80.41px x 80.41px`
+    - magic `#siri-orb`: `80.03px x 80.03px`
+  - `.thinking-orb-visual` opacity remained `1`
+- Browser validation after the color-separation retune:
+  - `index.html` and `ai.html` both resolved:
+    - top light opacity `1`, blur `8px`
+    - bottom lobe opacity `0.96`, blur `7px`
+    - rim opacity `0.8`
+- Browser validation after the motion-dramatic retune:
+  - `index.html` and `ai.html` both resolved faster animation durations:
+    - top light `4.8s`
+    - wash `6.8s`
+    - bottom lobe `7.4s`
+  - sampled transforms changed significantly over a `1.2s` interval on all three layers
+- Reference capture:
+  - `/tmp/add-visual-thinking-orb-soft-sphere.png`
+  - `/tmp/thinking-loop-index.png`
+  - `/tmp/thinking-loop-ai.png`
+  - `/tmp/prototype-thinking-size-fixed.png`
+  - `/tmp/thinking-color-separation-index.png`
+  - `/tmp/thinking-color-separation-ai.png`
+  - `/tmp/thinking-dramatic-index.png`
+  - `/tmp/thinking-dramatic-ai.png`
+
+## Remaining issues / caveats
+- This was a direct port of the latest detached-worktree thinking orb, not a broader refactor of the older AI/prototype debug flow.
+- The visual was validated by forcing the `magic` state rather than through the full debug interaction.
+
+## Recommended next step
+1. Open the normal thinking trigger on `add-visual` and confirm the live interaction path matches the forced-state visual.
+
+## Task title
 Scenario Reload Persistence Hardening
 
 ## Completion status
