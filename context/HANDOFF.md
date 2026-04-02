@@ -5028,6 +5028,8 @@ Prototype Text Inputs Accept Space
 - Fixed prototype-mode text editing so page-level keyboard shortcuts no longer steal `Space` from editable fields.
 - Removed live trimming from prototype scenario/stage name fields so typed spaces are preserved during rerender instead of collapsing `A B` into `AB`.
 - Kept the default fallback labels by restoring `Untitled Scenario` / `Untitled Stage` on blur only when the field is left blank.
+- Hardened the editable-field path further by stopping `keydown` and `keypress` with `stopImmediatePropagation()` for prototype editor inputs, so same-path page shortcuts cannot still win in later listeners.
+- Fixed the underlying rerender bug by preserving focus and caret position for sidebar text inputs across `renderScenarioUi()`. This keeps `primary` / `secondary` focused after the first character so `Space` stays in the field instead of jumping to page controls.
 
 ## Files changed
 - `src/tool/modules/manual-bindings.js`
@@ -5039,11 +5041,15 @@ Prototype Text Inputs Accept Space
 - `node --check src/tool/modules/manual-bindings.js`
 - `node --check src/ai/ai-bindings.js`
 - `node --check src/ai/editor-bindings.js`
+- `node --check src/shared/sidebar-render.js`
 - Browser verification on `http://127.0.0.1:5174/index.html`
   - `#scenario-name` preserved a typed space: `WeatherA B`
   - `#stage-name-input` preserved a typed space: `PillC D`
   - Content tab `#scenario-primary` preserved a typed space: `A B`
   - Content tab `#scenario-secondary` preserved a typed space: `C D`
+  - Slow typing path kept focus during rerender:
+    - after `A`: `document.activeElement.id === "scenario-primary"`
+    - after `Space`: `document.activeElement.id === "scenario-primary"`
 
 ## Remaining issues / caveats
 - The direct browser proof was completed on the manual prototype page (`index.html`). The mirrored AI editor page was not directly validated because its prototype sidebar controls were hidden in the current page state during automation.

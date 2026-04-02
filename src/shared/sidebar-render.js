@@ -1,4 +1,32 @@
 export function createSidebarRender(ctx, refs) {
+  function captureFocusedEditableState() {
+    const active = document.activeElement;
+    const isTextInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+    if (!isTextInput) return null;
+    if (!active.closest('#sidebar, #left-sidebar')) return null;
+    return {
+      id: active.id,
+      selectionStart: typeof active.selectionStart === 'number' ? active.selectionStart : null,
+      selectionEnd: typeof active.selectionEnd === 'number' ? active.selectionEnd : null,
+      selectionDirection: active.selectionDirection || 'none',
+      scrollTop: typeof active.scrollTop === 'number' ? active.scrollTop : null,
+    };
+  }
+
+  function restoreFocusedEditableState(state) {
+    if (!state?.id) return;
+    const next = document.getElementById(state.id);
+    const isTextInput = next instanceof HTMLInputElement || next instanceof HTMLTextAreaElement;
+    if (!isTextInput || next.disabled) return;
+    next.focus({ preventScroll: true });
+    if (typeof next.setSelectionRange === 'function' && state.selectionStart !== null && state.selectionEnd !== null) {
+      try {
+        next.setSelectionRange(state.selectionStart, state.selectionEnd, state.selectionDirection);
+      } catch {}
+    }
+    if (state.scrollTop !== null) next.scrollTop = state.scrollTop;
+  }
+
   function stageComponentLabel(type) {
     return type === 'intent-header' ? 'intent header' : type;
   }
@@ -157,10 +185,12 @@ export function createSidebarRender(ctx, refs) {
   }
 
   function renderScenarioUi() {
+    const focusedEditableState = captureFocusedEditableState();
     refs.actions.renderAiStageOverrideUi();
     renderScenarioList();
     renderScenarioEditor();
     refs.bindings.updateLayerPreviews();
+    restoreFocusedEditableState(focusedEditableState);
   }
 
   return {

@@ -489,7 +489,10 @@ const isComposeMenuPointerTarget = (target) => {
   return true;
 };
 document.addEventListener("keydown", (e) => {
-  if (isEditableTarget(e.target)) e.stopPropagation();
+  if (isEditableTarget(e.target)) e.stopImmediatePropagation();
+}, true);
+document.addEventListener("keypress", (e) => {
+  if (isEditableTarget(e.target)) e.stopImmediatePropagation();
 }, true);
 document.addEventListener("keydown", (e) => {
   const captureAction = getCaptureHotkeyAction(e);
@@ -585,7 +588,10 @@ const releaseComposeMenuPointer = (e) => {
 };
 document.addEventListener("pointerup", releaseComposeMenuPointer);
 document.addEventListener("pointercancel", releaseComposeMenuPointer);
-document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => el.addEventListener("keydown", (e) => e.stopPropagation()));
+document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => {
+  el.addEventListener("keydown", (e) => e.stopImmediatePropagation());
+  el.addEventListener("keypress", (e) => e.stopImmediatePropagation());
+});
 
 const fullscreenToggle = document.getElementById("debug-fullscreen-toggle");
 const fullscreenStageOutlineToggle = document.getElementById("debug-fullscreen-stage-outline-toggle");

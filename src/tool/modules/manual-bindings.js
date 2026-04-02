@@ -66,6 +66,10 @@ export function initManualBindings({
     if (!el) return false;
     return !!el.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
   };
+  const stopEditableShortcutEvent = (e) => {
+    if (!isEditableTarget(e.target)) return;
+    e.stopImmediatePropagation();
+  };
   const input = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
 
@@ -141,10 +145,8 @@ export function initManualBindings({
     e.stopPropagation();
   });
 
-  document.addEventListener('keydown', (e) => {
-    if (!isEditableTarget(e.target)) return;
-    e.stopPropagation();
-  }, true);
+  document.addEventListener('keydown', stopEditableShortcutEvent, true);
+  document.addEventListener('keypress', stopEditableShortcutEvent, true);
 
   document.addEventListener('keydown', (e) => {
     if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
@@ -166,7 +168,10 @@ export function initManualBindings({
     }
   });
 
-  document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach((inp) => inp.addEventListener('keydown', (e) => e.stopPropagation()));
+  document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach((inp) => {
+    inp.addEventListener('keydown', (e) => e.stopImmediatePropagation());
+    inp.addEventListener('keypress', (e) => e.stopImmediatePropagation());
+  });
 
   if (UI.modeToggle && !PAGE_MODE_OVERRIDE) {
     UI.modeToggle.addEventListener('change', () => {
