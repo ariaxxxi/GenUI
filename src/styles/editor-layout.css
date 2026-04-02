@@ -328,6 +328,18 @@ body {
   opacity: 0 !important;
   transform: scale(0.2) !important;
 }
+#drop-main.listening-orb.orb-thinking-bridge #home-glow-layer {
+  opacity: 0.72;
+}
+#drop-main.listening-orb.orb-thinking-bridge #siri-orb {
+  opacity: 0.92;
+  transform: scale(0.97);
+  filter: blur(12px) contrast(19);
+}
+#drop-main.listening-orb.orb-thinking-bridge #siri-orb canvas {
+  opacity: 0.68;
+  filter: blur(0.5px) saturate(0.96);
+}
 #c-primary {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-weight: 600;

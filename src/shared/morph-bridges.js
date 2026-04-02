@@ -114,10 +114,12 @@ export function createMorphBridges(ctx) {
     const currentShape = state.currentShape === 'listening' ? 'listening' : 'circle';
     const bridgeMs = homeThinkingBridgeMs();
     runtime.morphCore(currentShape, EMPTY_CONTENT, null, true, 0);
+    DROPS.main.classList.add('orb-thinking-bridge');
     C.thumb.style.opacity = '0';
     callbacks.updateActive(targetShape);
     state.thinkingBridgeTimer = setTimeout(() => {
       state.thinkingBridgeTimer = null;
+      DROPS.main.classList.remove('orb-thinking-bridge');
       if (targetShape === 'idle') {
         runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
         callbacks.showAiIdle();
@@ -137,6 +139,7 @@ export function createMorphBridges(ctx) {
 
   function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = null) {
     if (state.thinkingBridgeTimer) { clearTimeout(state.thinkingBridgeTimer); state.thinkingBridgeTimer = null; }
+    DROPS.main.classList.remove('orb-thinking-bridge');
     callbacks.stopSiriOrb();
     runtime.morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
     callbacks.updateActive('circle');

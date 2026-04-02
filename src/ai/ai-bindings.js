@@ -16,7 +16,7 @@ import { initInputActions } from "./input-actions.js";
 import { initEditorBindings } from "./editor-bindings.js";
 import { prewarmAiSpeechCache, refreshAiVoice, setAiVoiceEnabled, isAiVoiceEnabled } from "./tts-player.js";
 import { initPhrases } from "./phrases.js";
-import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction } from "../shared/stage-capture.js";
+import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction, isEditableTarget } from "../shared/stage-capture.js";
 
 const DROPS = { main: document.getElementById("drop-main"), left: document.getElementById("drop-left"), right: document.getElementById("drop-right") };
 const C = { thumb: document.getElementById("c-thumb"), thumbLabel: document.getElementById("c-thumb-label"), thumbImg: document.getElementById("c-thumb-img"), prim: document.getElementById("c-primary"), sec: document.getElementById("c-secondary"), div: document.getElementById("c-divider"), det: document.getElementById("c-detail"), media: document.getElementById("c-media"), rich: document.getElementById("c-rich"), glassControlsLayer: document.getElementById("glass-controls-layer") };
@@ -489,6 +489,9 @@ const isComposeMenuPointerTarget = (target) => {
   return true;
 };
 document.addEventListener("keydown", (e) => {
+  if (isEditableTarget(e.target)) e.stopPropagation();
+}, true);
+document.addEventListener("keydown", (e) => {
   const captureAction = getCaptureHotkeyAction(e);
   if (captureAction) {
     e.preventDefault();
@@ -497,7 +500,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   const activeEl = document.activeElement;
-  const focusedInTextInput = activeEl?.matches?.("input, textarea, select") || activeEl?.isContentEditable;
+  const focusedInTextInput = isEditableTarget(e.target) || activeEl?.matches?.("input, textarea, select") || activeEl?.isContentEditable;
   const focusedInMainInput = activeEl === input;
   const composeMenuActive = messageFlow.isActive() && messageFlow.flow.state === messageFlow.GS.COMPOSE && (messageFlow.flow.composeMenuOpen || messageFlow.flow.composeMenuHolding || messageFlow.flow.composeMenuClosing);
   if (focusedInTextInput && !focusedInMainInput) return;

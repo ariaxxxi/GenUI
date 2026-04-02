@@ -359,6 +359,7 @@ export function createMorphRender(ctx) {
 
   function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null, stageId = null) {
     clearUiFadeTimers();
+    DROPS.main.classList.remove('orb-thinking-bridge');
     const fromShape = state.currentShape;
     const prevStageMedia = Array.isArray(state.stageMediaState) ? state.stageMediaState.map((item) => ({ ...item })) : [];
     const prevCardTypography = fromShape === 'card' ? normalizeTypography(state.contentTypographyState, 'card') : null;
@@ -384,8 +385,9 @@ export function createMorphRender(ctx) {
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     const thinkingVisualShape = shape === 'magic' || shape === 'ai';
     const enteringThinking = thinkingVisualShape && fromShape !== 'magic' && fromShape !== 'ai';
-    DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? '300ms' : '0ms');
-    DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? '400ms' : '0ms');
+    const listeningToThinking = enteringThinking && fromShape === 'listening';
+    DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
+    DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
     const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;

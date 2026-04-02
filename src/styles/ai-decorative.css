@@ -169,6 +169,18 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
 #drop-main.listening-orb #siri-orb canvas {
   opacity: 1;
 }
+#drop-main.listening-orb.orb-thinking-bridge #home-glow-layer {
+  opacity: 0.72;
+}
+#drop-main.listening-orb.orb-thinking-bridge #siri-orb {
+  opacity: 0.92;
+  transform: scale(0.97);
+  filter: blur(12px) contrast(19);
+}
+#drop-main.listening-orb.orb-thinking-bridge #siri-orb canvas {
+  opacity: 0.68;
+  filter: blur(0.5px) saturate(0.96);
+}
 #drop-main.confirm-await-orb {
   overflow: visible !important;
   --g-confirm-orb-size: 50px;

@@ -61,6 +61,11 @@ export function initManualBindings({
   rebuildAnim,
   initStarfield,
 }) {
+  const isEditableTarget = (target) => {
+    const el = target instanceof Element ? target : null;
+    if (!el) return false;
+    return !!el.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
+  };
   const input = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
 
@@ -137,7 +142,12 @@ export function initManualBindings({
   });
 
   document.addEventListener('keydown', (e) => {
-    if (document.activeElement?.matches?.('input, textarea, select')) return;
+    if (!isEditableTarget(e.target)) return;
+    e.stopPropagation();
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
     if (flight.handleKeyDown(e)) return;
     if (e.key === '1') manualShape('circle');
     if (e.key === '2') manualShape('dot');
@@ -271,7 +281,12 @@ export function initManualBindings({
   UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
   UI.scenarioDuplicate.addEventListener('click', duplicateScenario);
   UI.scenarioDelete.addEventListener('click', deleteScenario);
-  UI.scenarioName.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.name = e.target.value.trim() || 'Untitled Scenario'; }));
+  UI.scenarioName.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.name = String(e.target.value || ''); }));
+  UI.scenarioName.addEventListener('blur', (e) => {
+    const value = String(e.target.value || '');
+    if (value.trim()) return;
+    commitScenarioChange((scenario) => { scenario.name = 'Untitled Scenario'; });
+  });
   UI.scenarioTriggers.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.triggers = normalizeTriggers(e.target.value); }));
   UI.scenarioIconInput.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     const value = String(e.target.value || '').trim();
@@ -309,7 +324,13 @@ export function initManualBindings({
   UI.stageNameInput.addEventListener('input', (e) => {
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
-    commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || '').trim() || 'Untitled Stage'; });
+    commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || ''); });
+  });
+  UI.stageNameInput.addEventListener('blur', (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    if (String(e.target.value || '').trim()) return;
+    commitStageChange(stage.id, (draft) => { draft.name = 'Untitled Stage'; });
   });
   UI.stageRadiusInput.addEventListener('change', (e) => commitStageRadius(e.target.value));
   UI.stageRadiusInput.addEventListener('blur', (e) => {

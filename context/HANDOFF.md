@@ -45,13 +45,25 @@ Thinking Orb Soft Luminous Sphere Port
   - `--thinking-entry-delay: 300ms` is applied only when entering thinking from a non-thinking shape
   - all visible thinking layers now inherit `--thinking-entry-progress`, so white/blue/purple color stays at `0` during the first `300ms` and then fades in smoothly
 - Added a matching shell fade delay for non-thinking -> thinking entry:
-  - `--thinking-shell-delay: 400ms` is now applied on the same transition
-  - the old container stroke/inner shell hold for the first `400ms`
+  - `--thinking-shell-delay: 300ms` is now applied on the same transition
+  - the old container stroke/inner shell hold for the first `300ms`
   - after that delay, the shell fades out while the thinking orb color ramp fades in
+- Smoothed the listening -> thinking bridge itself:
+  - added a short `orb-thinking-bridge` state during the bridge window before `magic` activates
+  - the listening orb now starts softening immediately instead of holding at full brightness until the magic swap
+  - tuned the bridge so it stays visibly alive instead of dipping dark:
+    - bridge orb now stays brighter (`~0.92` target instead of `~0.82`)
+    - bridge canvas now only fades to `0.68` instead of dropping to `0.46`
+    - bridge shell glow holds near `0.72`
+  - tuned the listening -> thinking timing to overlap earlier:
+    - `--thinking-entry-delay` is `140ms` for listening -> thinking
+    - `--thinking-shell-delay` is `180ms` for listening -> thinking
+    - non-listening -> thinking still uses the existing `300ms` delays
 
 ## Files changed
 - `index.html`
 - `ai.html`
+- `src/shared/morph-bridges.js`
 - `src/styles/shared.css`
 - `src/styles/ai-drop.css`
 - `src/styles/editor-layout.css`
@@ -114,9 +126,31 @@ Thinking Orb Soft Luminous Sphere Port
   - shell timing check:
     - early and mid samples still had `::before` / `::after` opacity `1`
     - late sample showed shell fade underway:
-      - with the updated `400ms` shell delay, `::before` / `::after` opacity stayed around `~0.897` at the late sample while orb progress was already `~0.775`
+      - with the `300ms` shell delay, `::before` / `::after` opacity dropped to about `~0.235` while orb progress was `~0.774`
     - full sample:
-      - `::before` / `::after` opacity fell near `0.02`
+      - `::before` / `::after` opacity fell near `0`
+- Browser validation on the real `listening -> magic` path in `index.html` after the bridge smoothing:
+  - at `t0`, `#drop-main` carried `orb-thinking-bridge`
+  - tuned pass:
+    - `t240` during the bridge:
+      - listening shell glow `~0.695`
+      - orb opacity `~0.908`
+      - canvas opacity `0.68`
+    - `t320` just after `magic` activation:
+      - `--thinking-entry-delay: 140ms`
+      - `--thinking-shell-delay: 180ms`
+      - shell glow still `~0.666`
+      - canvas still `~0.574`
+      - thinking wrapper already visible at `~0.121`
+    - `t400`:
+      - shell glow `~0.429`
+      - thinking wrapper `~0.705`
+      - canvas `~0.144`
+    - `t520`:
+      - thinking progress already `~0.628`
+      - thinking wrapper `~0.983`
+      - canvas effectively gone
+  - this removes the previous dark beat between listening and thinking
 - Reference capture:
   - `/tmp/add-visual-thinking-orb-soft-sphere.png`
   - `/tmp/thinking-loop-index.png`
@@ -130,8 +164,8 @@ Thinking Orb Soft Luminous Sphere Port
   - `/tmp/thinking-delay300-ai-final.png`
   - `/tmp/thinking-shell-delay-index.png`
   - `/tmp/thinking-shell-delay-ai.png`
-  - `/tmp/thinking-shell-delay400-index.png`
-  - `/tmp/thinking-shell-delay400-ai.png`
+  - `/tmp/listening-thinking-smooth-index.png`
+  - `/tmp/listening-thinking-smooth-fixed-index.png`
 
 ## Remaining issues / caveats
 - This was a direct port of the latest detached-worktree thinking orb, not a broader refactor of the older AI/prototype debug flow.
@@ -139,6 +173,44 @@ Thinking Orb Soft Luminous Sphere Port
 
 ## Recommended next step
 1. Open the normal thinking trigger on `add-visual` and confirm the live interaction path matches the forced-state visual.
+
+## Task title
+Prototype Text Inputs Accept Space
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the prototype-mode global keyboard guards so sidebar text fields are always treated as editable targets before any page-level shortcuts run.
+- Manual prototype page:
+  - added a local editable-target check in `manual-bindings`
+  - the document-level shortcut handler now exits if the event target or active element is inside an `input`, `textarea`, `select`, or editable element
+- AI editor page in prototype mode:
+  - reused the shared `isEditableTarget(...)` helper from stage capture
+  - the global AI shortcut handler now checks the actual event target, not just `document.activeElement`
+- This is intended to keep `Space` available in all prototype text fields:
+  - primary
+  - secondary
+  - detail
+  - intent header
+  - other sidebar text inputs using the same editable path
+
+## Files changed
+- `src/tool/modules/manual-bindings.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser verification was attempted against `index.html` and `ai.html` with Playwright keypress simulation, but the long-running field probe did not return in this environment. The actual code-path change is limited to the editable-target guards.
+
+## Remaining issues / caveats
+- A direct automated readback of sidebar field values after `Space` keypress was inconclusive in this headless environment.
+- If you still see a specific field swallowing spaces, point to the exact page and field and I’ll target that handler directly.
+
+## Recommended next step
+1. Spot-check `primary`, `secondary`, `detail`, and `intent header` in prototype mode on both `index.html` and `ai.html`.
 
 ## Task title
 Scenario Reload Persistence Hardening
@@ -4943,3 +5015,38 @@ Message Compose Timing Update
 ## Recommended next step
 1. Verify disambiguation -> compose now visually resolves over `600ms`.
 2. Verify both chip appear and dismiss motions now run for `1000ms`.
+
+---
+
+## Task title
+Prototype Text Inputs Accept Space
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed prototype-mode text editing so page-level keyboard shortcuts no longer steal `Space` from editable fields.
+- Removed live trimming from prototype scenario/stage name fields so typed spaces are preserved during rerender instead of collapsing `A B` into `AB`.
+- Kept the default fallback labels by restoring `Untitled Scenario` / `Untitled Stage` on blur only when the field is left blank.
+
+## Files changed
+- `src/tool/modules/manual-bindings.js`
+- `src/ai/ai-bindings.js`
+- `src/ai/editor-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/ai/editor-bindings.js`
+- Browser verification on `http://127.0.0.1:5174/index.html`
+  - `#scenario-name` preserved a typed space: `WeatherA B`
+  - `#stage-name-input` preserved a typed space: `PillC D`
+  - Content tab `#scenario-primary` preserved a typed space: `A B`
+  - Content tab `#scenario-secondary` preserved a typed space: `C D`
+
+## Remaining issues / caveats
+- The direct browser proof was completed on the manual prototype page (`index.html`). The mirrored AI editor page was not directly validated because its prototype sidebar controls were hidden in the current page state during automation.
+
+## Recommended next step
+1. Manual smoke on the AI-page prototype sidebar to confirm `primary`, `secondary`, `detail`, and `intent header` accept spaces exactly like the manual prototype page.

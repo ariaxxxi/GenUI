@@ -125,7 +125,13 @@ export function initEditorBindings({
   UI.stageDuplicate?.addEventListener("click", () => sidebar.duplicateCurrentStage());
   UI.stageDelete?.addEventListener("click", () => sidebar.deleteCurrentStage());
   UI.stageReset?.addEventListener("click", () => sidebar.resetCurrentStageToDefault());
-  UI.stageNameInput?.addEventListener("input", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || "").trim() || "Untitled Stage"; return draft; }); });
+  UI.stageNameInput?.addEventListener("input", (e) => { const stage = stageById(selectedScenario()?.shape); if (stage) sidebar.commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || ""); return draft; }); });
+  UI.stageNameInput?.addEventListener("blur", (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    if (String(e.target.value || "").trim()) return;
+    sidebar.commitStageChange(stage.id, (draft) => { draft.name = "Untitled Stage"; return draft; });
+  });
   UI.stageCardSToggle?.addEventListener("change", (e) => {
     const scenario = selectedScenario();
     const stage = stageById(scenario?.shape, scenario);
