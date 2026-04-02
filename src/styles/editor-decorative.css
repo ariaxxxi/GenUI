@@ -43,16 +43,16 @@
 }
 
 /* ── AI mode: liquid shell + inner glow, no inner white blob ── */
-#drop-main.ai-mode {
+#drop-main.ai-mode:not(.magic-glow) {
   background: rgba(0,0,0,0.92) !important;
   box-shadow: 0 0 44px rgba(255,255,255,0.08) !important;
   animation: morph 3.4s var(--motion-ease) infinite;
   will-change: border-radius, rotate;
 }
-#drop-main.ai-mode::before { opacity: 0; }
-#drop-main.ai-mode::after  { opacity: 0; }
+#drop-main.ai-mode:not(.magic-glow)::before { opacity: 0; }
+#drop-main.ai-mode:not(.magic-glow)::after  { opacity: 0; }
 #drop-main.home-glow #home-glow-layer { opacity: 1; }
-#drop-main.ai-mode #home-glow-layer {
+#drop-main.ai-mode:not(.magic-glow) #home-glow-layer {
   opacity: 1 !important;
   transition: opacity 280ms var(--motion-ease);
   box-shadow:
@@ -61,7 +61,7 @@
     inset 0 0 82px rgba(210,230,255,0.20),
     0 0 52px rgba(255,255,255,0.16);
 }
-#drop-main.ai-mode #siri-orb { opacity: 0 !important; }
+#drop-main.ai-mode:not(.magic-glow) #siri-orb { opacity: 0 !important; }
 #drop-main { z-index: 3; }
 #list-pills { z-index: 2; }
 

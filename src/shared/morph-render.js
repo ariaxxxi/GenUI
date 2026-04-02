@@ -357,6 +357,7 @@ export function createMorphRender(ctx) {
     state.currentShape = shape;
     document.body.dataset.currentShape = shape;
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
+    const thinkingVisualShape = shape === 'magic' || shape === 'ai';
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
     const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;
@@ -364,12 +365,12 @@ export function createMorphRender(ctx) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
       DROPS.main.classList.remove('home-glow');
       void DROPS.main.offsetWidth;
-      if (shape === 'listening' || shape === 'magic') DROPS.main.classList.add('home-glow');
+      if (shape === 'listening' || thinkingVisualShape) DROPS.main.classList.add('home-glow');
     } else {
       DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-      DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
+      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape);
     }
-    DROPS.main.classList.toggle('magic-glow', shape === 'magic');
+    DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
     DROPS.main.classList.toggle('listening-orb', shape === 'listening');
     if (contentData) applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);

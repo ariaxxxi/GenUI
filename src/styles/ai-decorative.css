@@ -129,7 +129,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main {
 body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::after {
   box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
-#drop-main:not(.listening-orb) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
+#drop-main:not(.listening-orb):not(.magic-glow) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 #drop-main.confirm-await-orb {
   overflow: visible !important;
   --g-confirm-orb-size: 50px;

@@ -1,6 +1,126 @@
 # Handoff
 
 ## Task title
+Scenario Reload Persistence Hardening
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining reload-loss path for scenario-scoped edits like text content and uploaded icon images.
+- Root cause:
+  - scenario edits were still persisted through a single `localStorage` JSON blob
+  - once icon/image data URLs made that blob large enough, local `setItem(...)` could fail and later edits appeared to disappear on reload
+- Kept the existing localStorage snapshot path for fast synchronous bootstrap, but added a durable IndexedDB mirror for scenarios.
+- Added a scenario revision key so reload can choose the newest scenario library instead of trusting whichever storage source responds first.
+- Preserved the existing stage morph behavior:
+  - no transition changes were added to `#drop-main`
+  - the durable restore only updates scenario data and rerenders after boot if IndexedDB has a newer copy
+- Applied the same persistence hardening to both entry points:
+  - manual prototype page
+  - AI editor page
+
+## Files changed
+- `src/app-state.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/app-state.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html` with Playwright:
+  - cleared localStorage and IndexedDB
+  - edited scenario primary text to `Persistent Reload Proof`
+  - uploaded a PNG icon into the current scenario/stage
+  - confirmed local saved state before reload:
+    - primary text: `Persistent Reload Proof`
+    - icon mode: `png/gif`
+    - scenario revision: `1775090386874`
+  - manually corrupted localStorage back to a stale scenario copy and reset the local revision to `0`
+  - reloaded the page
+  - confirmed the newer IndexedDB copy rehydrated correctly:
+    - primary text restored to `Persistent Reload Proof`
+    - icon mode restored to `png/gif`
+    - local revision restored to `1775090386874`
+
+## Remaining issues / caveats
+- This hardening is currently scoped to scenario data because that is where the large uploaded icon/image payloads live.
+- Stage-library persistence still uses localStorage only. The earlier stage-library key fix remains in place.
+
+## Recommended next step
+1. If stage-library edits also start failing under heavy local asset usage, mirror `STORAGE_KEYS.stages` into the same durable IndexedDB path as a follow-up.
+
+## Task title
+Thinking Orb Eclipse Visual Replacement
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the old prototype/AI thinking glow treatment with a dedicated eclipse-style orb visual inspired by the provided reference clip.
+- Added a real thinking-orb layer stack inside `#siri-orb` in both entry points:
+  - ambient nebula
+  - dark core disk
+  - thin rim
+  - two rotating flare groups
+  - halo and spark layers tied to those flare groups
+- Moved the thinking effect away from the old `box-shadow`-only glow model:
+  - when thinking is active, the old `magic-glow` halo, `home-blur`, and `home-glow-layer` treatment are suppressed
+  - the new orb now owns the visual instead
+- Updated the shared render hook so both thinking shapes use the same visual:
+  - `magic`
+  - legacy `ai`
+- Kept listening untouched apart from the shared `#siri-orb` markup.
+- Also corrected the remaining prototype-only `ai-mode` override that was forcing the old white shell and hiding `#siri-orb`.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/morph-render.js`
+- `src/styles/shared.css`
+- `src/styles/editor-layout.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-render.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - `manualShape('magic')` resolved to:
+    - `shape: magic`
+    - classes: `drop home-blur home-glow magic-glow`
+    - `#siri-orb` opacity: `1`
+    - `.thinking-orb-visual` opacity: `1`
+    - `#home-glow-layer` opacity: `0`
+    - `#drop-main` box-shadow: `none`
+    - `#drop-main` filter: `none`
+  - `manualShape('ai')` resolved to:
+    - `shape: ai`
+    - classes: `drop home-glow magic-glow ai-mode`
+    - `#siri-orb` opacity: `1`
+    - `.thinking-orb-visual` opacity: `1`
+    - `#home-glow-layer` opacity: `0`
+    - `#drop-main` box-shadow: `none`
+- Browser validation on `http://127.0.0.1:5174/ai.html` by forcing the `magic-glow` state:
+  - `#siri-orb` opacity: `0.998844`
+  - `.thinking-orb-visual` opacity: `1`
+  - `#home-glow-layer` opacity: `0`
+- Reference captures:
+  - `/tmp/thinking-orb-magic-pass.png`
+  - `/tmp/thinking-orb-ai-pass-2.png`
+  - `/tmp/thinking-orb-ai-page-pass.png`
+  - close crop: `/tmp/thinking-orb-magic-crop-3.png`
+
+## Remaining issues / caveats
+- This is a first-pass approximation of the reference clip, not a frame-perfect particle simulation.
+- The flare crescents are intentionally CSS-driven and lightweight; if a closer match is needed later, the next step should be an SVG-path or canvas-based flare system.
+
+## Recommended next step
+1. If you want the reference matched more tightly, the next tuning pass should focus on flare length, orb size, and particle density rather than returning to box-shadow-based glows.
+
+## Task title
 Prototype Stage AI Debug Buttons
 
 ## Completion status

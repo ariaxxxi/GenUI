@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage } from '../app-state.js';
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage, persistDurableJson, readDurableJsonRecord } from '../app-state.js';
 import { clamp } from '../utils.js';
 import { initMorph } from '../shared/morph.js';
 import { initScenarioData } from '../shared/scenario-data.js';
@@ -23,6 +23,7 @@ const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: 
 let canvasSettings = loadCanvasSettings();
 let responseMode = loadResponseMode();
 let aiStageOverride = loadAiStageOverride();
+let scenarioRevision = Number(readStoredJson(STORAGE_KEYS.scenarioRevision, 0)) || 0;
 let stageLibrary = [];
 let scenarioLibrary = [];
 let selectedScenarioId = '';
@@ -36,22 +37,38 @@ let prototypeIntentHeaderTrackRaf = null;
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
-function loadScenarioLibrary() {
-  const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
-  const scenarios = Array.isArray(stored) ? stored.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
+function normalizeScenarioLibrarySet(source) {
+  const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
   scenarios.forEach((scenario) => {
     scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || 'none' });
   });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
 
-function persistScenarios() { persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, 'scenarios'); }
+function loadScenarioLibrary() {
+  return normalizeScenarioLibrarySet(readStoredJson(STORAGE_KEYS.scenarios, null));
+}
+
+function persistScenarios() {
+  const revision = Date.now();
+  const localScenarioOk = persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, 'scenarios');
+  if (localScenarioOk) persistToStorage(STORAGE_KEYS.scenarioRevision, revision, 'scenario revision');
+  scenarioRevision = revision;
+  void persistDurableJson(STORAGE_KEYS.scenarios, scenarioLibrary, { revision, label: 'scenarios' });
+}
 function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, 'canvas settings'); }
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
 function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
 
 function selectedScenario() {
   return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
+}
+
+function setScenarioLibraryState(nextLibrary) {
+  scenarioLibrary = nextLibrary;
+  if (!scenarioLibrary.some((item) => item.id === selectedScenarioId)) {
+    selectedScenarioId = scenarioLibrary[0]?.id || '';
+  }
 }
 
 function currentScenarioFrameMode() {
@@ -366,7 +383,7 @@ const sidebar = initSidebar({
   normalizeStage,
   stageId,
   getScenarioLibrary: () => scenarioLibrary,
-  setScenarioLibrary: (value) => { scenarioLibrary = value; },
+  setScenarioLibrary: (value) => { setScenarioLibraryState(value); },
   getStageLibrary: () => stageLibrary,
   setStageLibrary: (value) => { stageLibrary = value; },
   getSelectedScenarioId: () => selectedScenarioId,
@@ -446,6 +463,22 @@ flight = initManualFlight({
 const input = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 actions = initManualActions({ input, sendBtn, flight, resolveScenario, previewScenario, renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; } });
+
+async function hydrateDurableScenarios() {
+  const record = await readDurableJsonRecord(STORAGE_KEYS.scenarios);
+  if (!Array.isArray(record?.value)) return;
+  const durableRevision = Number(record.revision) || 0;
+  if (durableRevision <= scenarioRevision) return;
+  setScenarioLibraryState(normalizeScenarioLibrarySet(record.value));
+  scenarioRevision = durableRevision;
+  persistToStorage(STORAGE_KEYS.scenarioRevision, durableRevision, 'scenario revision');
+  renderScenarioUi();
+  applyCanvasSettings();
+  applyStagePhoneBlur(selectedScenario()?.shape);
+  if (document.getElementById('stage')?.classList.contains('flow-active')) return;
+  if (responseMode === RESPONSE_MODE.AI) previewAiStageOverride();
+  else previewScenario(selectedScenario());
+}
 
 async function copyStagePng() {
   try {
@@ -543,3 +576,5 @@ Object.assign(window, {
   copyStagePng,
   exportStageSvg,
 });
+
+void hydrateDurableScenarios();

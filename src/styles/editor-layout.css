@@ -314,7 +314,7 @@ body {
   box-shadow: 0 0 15px 0 rgba(232,240,255,0.72);
   animation: prototype-magic-breathe-spread 1200ms var(--motion-ease) infinite;
 }
-#drop-main:not(.listening-orb) #siri-orb {
+#drop-main:not(.listening-orb):not(.magic-glow) #siri-orb {
   opacity: 0 !important;
   transform: scale(0.2) !important;
 }
