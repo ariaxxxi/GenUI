@@ -122,13 +122,42 @@ export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true,
   return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
 }
 
+const COMPOSE_CHIP_MOTION_PRESETS = [
+  { rotStart: -12, rotEnd: -8, travelStart: 138, travelEnd: 108 },
+  { rotStart: 8, rotEnd: 6, travelStart: 118, travelEnd: 92 },
+  { rotStart: -6, rotEnd: -5, travelStart: 98, travelEnd: 78 },
+  { rotStart: 10, rotEnd: 7, travelStart: 156, travelEnd: 122 },
+  { rotStart: -10, rotEnd: -7, travelStart: 174, travelEnd: 136 },
+];
+
+function composeChipMotionVars(index) {
+  const preset = COMPOSE_CHIP_MOTION_PRESETS[index];
+  if (preset) return { order: index, ...preset };
+  const overflowIndex = index - COMPOSE_CHIP_MOTION_PRESETS.length;
+  const direction = index % 2 === 0 ? -1 : 1;
+  return {
+    order: index,
+    rotStart: direction * (10 + ((overflowIndex % 3) * 2)),
+    rotEnd: direction * (7 + (overflowIndex % 2)),
+    travelStart: 174 + ((overflowIndex + 1) * 18),
+    travelEnd: 136 + ((overflowIndex + 1) * 14),
+  };
+}
+
 export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
   return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
     const accentRgb = String(chip?.accentRgb || "255 255 255").trim();
     const accentSecondaryRgb = String(chip?.accentSecondaryRgb || accentRgb).trim();
     const orbitMs = Number.isFinite(Number(chip?.orbitMs)) ? Math.max(600, Math.round(Number(chip.orbitMs))) : null;
-    const styleVars = [];
+    const motion = composeChipMotionVars(index);
+    const styleVars = [
+      `--chip-order:${motion.order}`,
+      `--chip-rot-start:${motion.rotStart}deg`,
+      `--chip-rot-end:${motion.rotEnd}deg`,
+      `--chip-travel-start:${motion.travelStart}px`,
+      `--chip-travel-end:${motion.travelEnd}px`,
+    ];
     if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
     if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
     if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);

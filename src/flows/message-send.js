@@ -36,7 +36,7 @@ export function createMessageSendFlow(ctx) {
   const COMPOSE_CHIP_ORB_DELAY_MS = 300;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeChipMagicPending: false, composeChipMagicOrbActive: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "", sentTransitionActive: false, sentToastEnterPending: false };
-  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, sentTransition: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null, composeChipOrbDelay: null };
+  const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, sentTransition: null, composeExit: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null, composeChipOrbDelay: null };
   let controlsMode = "";
   const voice = createMessageSendVoice({ contacts: CONTACTS });
   let flowEpoch = 0;
@@ -281,7 +281,7 @@ export function createMessageSendFlow(ctx) {
       timers.composeMenuExpand = setTimeout(() => {
         timers.composeMenuExpand = null;
         if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding || !flow.composeMenuOpen) return;
-        flow.composeMenuVisibleCount = Math.min(ensureComposeVisualChips().length, COMPOSE_MENU_BASE_COUNT + 2);
+        flow.composeMenuVisibleCount = ensureComposeVisualChips().length;
         if (!render.updateComposeMenuUiOnly?.()) render.render(false);
         updateComposeMenuSelectionFromPointer();
       }, COMPOSE_MENU_EXPAND_MS);
@@ -368,7 +368,12 @@ export function createMessageSendFlow(ctx) {
   }
 
   function transitionTo(state, voiceText = "") {
+    const epoch = flowEpoch;
     const confirmToSend = flow.state === GS.CONFIRM && state === GS.SENDING;
+    if (timers.composeExit) {
+      clearTimeout(timers.composeExit);
+      timers.composeExit = null;
+    }
     if (state !== GS.COMPOSE && timers.autoConfirm) {
       clearTimeout(timers.autoConfirm);
       timers.autoConfirm = null;
@@ -388,7 +393,9 @@ export function createMessageSendFlow(ctx) {
     if (flow.state === GS.COMPOSE && state !== GS.COMPOSE) {
       const field = ctx.C.rich?.querySelector("[data-compose-field]");
       if (field) {
-        setTimeout(() => {
+        timers.composeExit = setTimeout(() => {
+          timers.composeExit = null;
+          if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
           flow.state = state;
           flow.sel = 0;
           speakOutput(voiceText, { announce: state !== GS.THINKING && state !== GS.SENDING });

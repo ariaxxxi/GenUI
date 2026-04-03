@@ -758,16 +758,6 @@
   animation: compose-chip-out 1000ms var(--motion-ease) both;
   animation-delay: calc(var(--chip-order, 0) * 14ms);
 }
-.g-compose-chip-stack .g-compose-chip:nth-child(1) { --chip-order: 0; }
-.g-compose-chip-stack .g-compose-chip:nth-child(2) { --chip-order: 1; }
-.g-compose-chip-stack .g-compose-chip:nth-child(3) { --chip-order: 2; }
-.g-compose-chip-stack .g-compose-chip:nth-child(4) { --chip-order: 3; }
-.g-compose-chip-stack .g-compose-chip:nth-child(5) { --chip-order: 4; }
-.g-compose-chip-stack .g-compose-chip:nth-child(1) { --chip-rot-start: -12deg; --chip-rot-end: -8deg; --chip-travel-start: 138px; --chip-travel-end: 108px; }
-.g-compose-chip-stack .g-compose-chip:nth-child(2) { --chip-rot-start: 8deg; --chip-rot-end: 6deg; --chip-travel-start: 118px; --chip-travel-end: 92px; }
-.g-compose-chip-stack .g-compose-chip:nth-child(3) { --chip-rot-start: -6deg; --chip-rot-end: -5deg; --chip-travel-start: 98px; --chip-travel-end: 78px; }
-.g-compose-chip-stack .g-compose-chip:nth-child(4) { --chip-rot-start: 10deg; --chip-rot-end: 7deg; --chip-travel-start: 156px; --chip-travel-end: 122px; }
-.g-compose-chip-stack .g-compose-chip:nth-child(5) { --chip-rot-start: -10deg; --chip-rot-end: -7deg; --chip-travel-start: 174px; --chip-travel-end: 136px; }
 @keyframes compose-chip-in {
   from {
     opacity: 0;

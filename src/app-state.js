@@ -93,7 +93,7 @@ function openDurableDb() {
   if (typeof indexedDB === 'undefined') return Promise.resolve(null);
   durableDbPromise = new Promise((resolve) => {
     const finish = (value) => {
-      if (value === null) durableDbPromise = Promise.resolve(null);
+      if (value === null) durableDbPromise = null;
       resolve(value);
     };
     try {

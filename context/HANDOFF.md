@@ -5208,3 +5208,44 @@ Prototype Text Inputs Accept Space
 
 ## Recommended next step
 1. Manual smoke on the AI-page prototype sidebar to confirm `primary`, `secondary`, `detail`, and `intent header` accept spaces exactly like the manual prototype page.
+
+---
+
+## Task title
+Fix add-visual review findings
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the message compose exit transition so the delayed `COMPOSE -> next state` handoff is tracked in the flow timer map and cancelled on reset or superseding transitions instead of leaving an untracked `setTimeout`.
+- Fixed durable storage retry behavior so a transient IndexedDB open failure no longer poisons the session by caching `null` forever; later calls can retry opening the durable store.
+- Removed the five-chip compose-menu hardcode:
+  - compose-menu expansion now reveals all available chips after the hold delay
+  - compose chip motion variables are now generated per chip in `ui-primitives.js`
+  - the CSS no longer depends on `nth-child(1..5)` motion assignments
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `src/app-state.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/app-state.js`
+- `git diff --check`
+- `node test/smoke.mjs`
+  - failed in existing smoke interaction path because a debug overlay label (`.ai-legacy-debug .sb-toggle`) intercepted a Playwright click before the scenario interaction step completed
+
+## Remaining issues / caveats
+- The repository smoke test is not currently green due to the existing debug-overlay click interception above, so this pass does not include a clean automated browser success signal.
+- Compose-chip overflow for very large chip counts still depends on available stage space; this fix removes the five-item code limit, but visual fit for unusually large chip sets should still be verified in-browser.
+
+## Recommended next step
+1. Manual verify the message flow on `ai.html`:
+   - exit/reset during compose no longer snaps back into a stale delayed transition
+   - long-press compose chip menu can reveal and navigate all chips provided by contact data
+2. Fix or harden `test/smoke.mjs` against the debug overlay so automated browser validation is reliable again.
