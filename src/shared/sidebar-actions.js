@@ -114,6 +114,13 @@ export function createSidebarActions(ctx, refs) {
       draft.content.iconByShape = ctx.normalizeIconByShape(draft.content.iconByShape, sourceShape, draft.content.icon);
       draft.content.iconByShape[newStage.id] = structuredClone(draft.content.iconByShape[sourceShape] || ctx.createIcon('none', ''));
 
+      draft.content.listChipIconsByShape = ctx.normalizeListChipIconsByShape(draft.content.listChipIconsByShape, sourceShape);
+      draft.content.listChipIconsByShape[newStage.id] = structuredClone(draft.content.listChipIconsByShape[sourceShape] || {
+        primary: ctx.createIcon('none', ''),
+        secondary: ctx.createIcon('none', ''),
+        detail: ctx.createIcon('none', ''),
+      });
+
       draft.content.imagesByShape = ctx.normalizeImagesByShape(draft.content.imagesByShape, sourceShape, draft.content.images);
       draft.content.imagesByShape[newStage.id] = structuredClone(draft.content.imagesByShape[sourceShape] || []);
 

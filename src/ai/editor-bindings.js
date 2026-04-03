@@ -10,6 +10,7 @@ export function initEditorBindings({
   normalizeScenarioCanvas,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
   createIcon,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
@@ -104,6 +105,20 @@ export function initEditorBindings({
   UI.scenarioName?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.name = String(e.target.value || ""); return scenario; }));
   UI.scenarioTriggers?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.triggers = normalizeTriggers(e.target.value); return scenario; }));
   UI.scenarioIconInput?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon); scenario.content.iconByShape[scenario.shape] = e.target.value.trim() ? createIcon("emoji", e.target.value.trim()) : createIcon("none", ""); return scenario; }));
+  const commitListChipIconField = (slot, value) => sidebar.commitScenarioChange((scenario) => {
+    scenario.content.listChipIconsByShape = normalizeListChipIconsByShape(scenario.content.listChipIconsByShape, scenario.shape);
+    scenario.content.listChipIconsByShape[scenario.shape][slot] = value;
+    return scenario;
+  });
+  const bindListChipIconInput = (slot, inputEl) => {
+    inputEl?.addEventListener("input", (e) => {
+      const value = String(e.target.value || "").trim();
+      commitListChipIconField(slot, value ? createIcon("emoji", value) : createIcon("none", ""));
+    });
+  };
+  bindListChipIconInput("primary", UI.scenarioListChipPrimaryIconInput);
+  bindListChipIconInput("secondary", UI.scenarioListChipSecondaryIconInput);
+  bindListChipIconInput("detail", UI.scenarioListChipDetailIconInput);
   UI.scenarioPrimary?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].primary = e.target.value; return scenario; }));
   UI.scenarioSecondary?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].secondary = e.target.value; return scenario; }));
   UI.scenarioDetail?.addEventListener("input", (e) => sidebar.commitScenarioChange((scenario) => { scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content); scenario.content.textByShape[scenario.shape].detail = e.target.value; return scenario; }));
@@ -186,12 +201,59 @@ export function initEditorBindings({
     sidebar.commitStageChange(stage.id, (draft) => { const next = [...(draft.components || [])].filter((item) => item !== type); if (checkbox.checked) next.push(type); draft.components = next; return draft; });
   });
 
+  const readAssetDataUrl = async (file) => {
+    if (!file || !sidebar.isSupportedAssetFile(file)) return "";
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error || new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    }).catch(() => "");
+  };
+  UI.scenarioIconReset?.addEventListener("click", () => {
+    sidebar.commitScenarioChange((scenario) => {
+      scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
+      scenario.content.iconByShape[scenario.shape] = createIcon("none", "");
+      return scenario;
+    });
+    if (UI.scenarioIconUpload) UI.scenarioIconUpload.value = "";
+  });
+  UI.scenarioIconUpload?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    const dataUrl = await readAssetDataUrl(file);
+    if (!dataUrl) return void (e.target.value = "");
+    sidebar.commitScenarioChange((scenario) => {
+      scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
+      scenario.content.iconByShape[scenario.shape] = createIcon("image", dataUrl);
+      return scenario;
+    });
+    e.target.value = "";
+  });
+  UI.scenarioIconUpload?.addEventListener("click", (e) => { e.target.value = ""; });
+  const bindListChipIconUpload = (slot, uploadEl, resetEl) => {
+    resetEl?.addEventListener("click", () => {
+      commitListChipIconField(slot, createIcon("none", ""));
+      if (uploadEl) uploadEl.value = "";
+    });
+    uploadEl?.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      const dataUrl = await readAssetDataUrl(file);
+      if (!dataUrl) return void (e.target.value = "");
+      commitListChipIconField(slot, createIcon("image", dataUrl));
+      e.target.value = "";
+    });
+    uploadEl?.addEventListener("click", (e) => { e.target.value = ""; });
+  };
+  bindListChipIconUpload("primary", UI.scenarioListChipPrimaryIconUpload, UI.scenarioListChipPrimaryIconReset);
+  bindListChipIconUpload("secondary", UI.scenarioListChipSecondaryIconUpload, UI.scenarioListChipSecondaryIconReset);
+  bindListChipIconUpload("detail", UI.scenarioListChipDetailIconUpload, UI.scenarioListChipDetailIconReset);
+
   sidebar.bindTypographyInputs("icon", UI.scenarioIconSize, UI.scenarioIconColor);
   sidebar.bindTypographyInputs("primary", UI.scenarioPrimarySize, UI.scenarioPrimaryColor);
   sidebar.bindTypographyInputs("secondary", UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
   sidebar.bindTypographyInputs("detail", UI.scenarioDetailSize, UI.scenarioDetailColor);
   if (UI.scenarioIntentHeaderSize && UI.scenarioIntentHeaderColor) sidebar.bindTypographyInputs("intentHeader", UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor);
-  [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail, UI.scenarioIntentHeader, UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor, UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor, UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor].forEach((el) => { if (el) el.addEventListener("input", sidebar.updateLayerPreviews); });
+  [UI.scenarioIconInput, UI.scenarioListChipPrimaryIconInput, UI.scenarioListChipSecondaryIconInput, UI.scenarioListChipDetailIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail, UI.scenarioIntentHeader, UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor, UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor, UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor].forEach((el) => { if (el) el.addEventListener("input", sidebar.updateLayerPreviews); });
   sidebar.initSidebarTabs();
   sidebar.initLayerRowToggles();
   sidebar.initSidebarCollapsibleSections();

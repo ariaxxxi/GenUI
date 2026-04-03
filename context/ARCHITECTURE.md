@@ -24,7 +24,7 @@ Both pages set `data-page-mode` attribute to lock themselves and prevent cross-m
 ## Shape System (`src/shapes.js`)
 Single canonical ES module — do not hardcode shape params in HTML files.
 
-**Supported shapes:** `idle`, `dot`, `pill`, `card`, `card-s`, `image`, `ai`, `circle`, `magic`, `split`, `card-form`, `card-list`
+**Supported shapes:** `idle`, `dot`, `list`, `pill`, `card`, `card-s`, `image`, `ai`, `circle`, `magic`, `split`, `card-form`, `card-list`
 
 Each shape definition has `main`, `left`, `right` variants:
 ```js
@@ -34,6 +34,17 @@ Each shape definition has `main`, `left`, `right` variants:
 Key exports: `SHAPES`, `defaultTypographyForShape()`, `normalizeTypography()`, `normalizeStage()`, `normalizeIcon()`, `normalizeImagesByShape()`, `configureShapeHelpers()`
 
 Stage components toggled per-scenario per-shape: `icon`, `primary`, `secondary`, `detail`, `image`, `intent-header`
+
+Prototype `list` is a first-class stage/render shape. It reuses the AI disambiguation pill renderer and motion path:
+- main stage geometry is a reduced listening orb (`50x50`)
+- the three pills mount in `#list-pills`, outside the orb shell, so they can fan out without clipping
+- pill labels come from stage text fields:
+  - `primary` → pill 1
+  - `secondary` → pill 2
+  - `detail` → pill 3
+- stage icon is reused across all pills:
+  - image icon → avatar image
+  - emoji icon → pill media glyph
 
 `src/shapes.legacy.js` — copy for `file://` loading (no ES module support); keep in sync manually.
 

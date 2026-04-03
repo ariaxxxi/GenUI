@@ -1,4 +1,5 @@
 import {
+  layoutDisambiguationPillItems,
   renderActionRow,
   renderChipBar,
   renderCompactStatus,
@@ -234,36 +235,7 @@ export function createMessageSendRender({
   }
 
   function layoutDisambiguationContacts(contacts) {
-    const count = Math.max(0, Number(contacts?.length) || 0);
-    if (count <= 0) return { items: [] };
-    let positions;
-    if (count === 1) {
-      positions = [{ x: 0, y: -88 }];
-    } else if (count === 2) {
-      positions = [{ x: 0, y: -136 }, { x: 0, y: -72 }];
-    } else if (count === 3) {
-      positions = [{ x: 0, y: -144 }, { x: -74, y: -84 }, { x: 74, y: -84 }];
-    } else {
-      const radiusX = Math.min(122, 84 + Math.max(0, count - 4) * 8);
-      const radiusY = Math.min(116, 78 + Math.max(0, count - 4) * 6);
-      positions = Array.from({ length: count }, (_, index) => {
-        const span = Math.min(160, 88 + (count * 10));
-        const start = -90 - (span / 2);
-        const angle = (start + ((count === 1 ? 0 : span / (count - 1)) * index)) * (Math.PI / 180);
-        return {
-          x: Math.round(Math.cos(angle) * radiusX),
-          y: Math.round(Math.sin(angle) * radiusY) - 34,
-        };
-      });
-    }
-    const items = positions.map((pos, index) => ({
-      ...contacts[index],
-      x: pos.x,
-      y: pos.y,
-      rotStart: pos.x >= 0 ? 10 : -10,
-      delay: Math.max(0, (index * 42) - (index === getFlow().sel ? 28 : 0)),
-    }));
-    return { items };
+    return { items: layoutDisambiguationPillItems(contacts, getFlow().sel) };
   }
 
   function disambiguationGeo() {

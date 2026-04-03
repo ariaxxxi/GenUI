@@ -1,3 +1,4 @@
+import { layoutDisambiguationPillItems, renderDisambiguationPills } from '../flows/ui-primitives.js';
 import { SHAPES, normalizeTypography, normalizeStageImages } from '../shapes.js';
 import { clamp } from '../utils.js';
 
@@ -7,11 +8,139 @@ export function createMorphRender(ctx) {
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
   let thinkingVisualEnterTimer = null;
+  let prototypeListSettleTimer = null;
+  let prototypeListCollapseTimer = null;
+  const prototypeListRoot = document.getElementById('list-pills');
 
   function clearThinkingVisualEnterTimer() {
     if (!thinkingVisualEnterTimer) return;
     clearTimeout(thinkingVisualEnterTimer);
     thinkingVisualEnterTimer = null;
+  }
+
+  function clearPrototypeListSettleTimer() {
+    if (!prototypeListSettleTimer) return;
+    clearTimeout(prototypeListSettleTimer);
+    prototypeListSettleTimer = null;
+  }
+
+  function clearPrototypeListCollapseTimer() {
+    if (!prototypeListCollapseTimer) return;
+    clearTimeout(prototypeListCollapseTimer);
+    prototypeListCollapseTimer = null;
+  }
+
+  function derivePrototypeListInitials(label = '') {
+    const words = String(label || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '•';
+    if (words.length === 1) return words[0].slice(0, 1).toUpperCase();
+    return `${words[0].slice(0, 1)}${words[1].slice(0, 1)}`.toUpperCase();
+  }
+
+  function hexToRgbTriplet(value, fallback = '144 172 255') {
+    const raw = String(value || '').trim();
+    const full = raw.match(/^#([0-9a-f]{6})$/i);
+    if (full) {
+      const hex = full[1];
+      return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+    }
+    const short = raw.match(/^#([0-9a-f]{3})$/i);
+    if (short) {
+      const hex = short[1];
+      return `${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)}`;
+    }
+    return fallback;
+  }
+
+  function prototypeListEntriesFromContent(contentData = {}) {
+    const icon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
+    const listChipIcons = contentData?.listChipIcons || {};
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const shape = String(scenario?.shape || 'list');
+    const accentRgb = hexToRgbTriplet(callbacks.stageAccentColorForShape?.(scenario, shape), '144 172 255');
+    const accentSecondaryRgb = hexToRgbTriplet(callbacks.stageSecondaryAccentColorForShape?.(scenario, shape), '151 97 255');
+    const rawLabels = [
+      String(contentData?.primary || '').trim(),
+      String(contentData?.secondary || '').trim(),
+      String(contentData?.detail || '').trim(),
+    ];
+    const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
+    const chipSlots = ['primary', 'secondary', 'detail'];
+    const labels = rawLabels.map((value, index) => value || fallbackLabels[index]);
+    return labels.map((label, index) => {
+      const slotIcon = listChipIcons?.[chipSlots[index]] || { kind: 'none', value: '' };
+      const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim()
+        ? slotIcon
+        : icon;
+      const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
+        ? { avatar: String(resolvedIcon.value).trim(), initials: '' }
+        : resolvedIcon?.kind === 'emoji' && String(resolvedIcon?.value || '').trim()
+        ? { avatar: '', initials: String(resolvedIcon.value).trim() }
+        : null;
+      return ({
+      name: label,
+      avatar: baseEntry?.avatar || '',
+      initials: baseEntry?.initials || derivePrototypeListInitials(label),
+      accentRgb,
+      accentSecondaryRgb,
+      });
+    });
+  }
+
+  function syncPrototypeListPhase(phase = 'settled') {
+    const cluster = prototypeListRoot?.querySelector?.('.g-disambiguation-pills');
+    if (!cluster) return false;
+    cluster.classList.toggle('entering', phase === 'entering');
+    cluster.classList.toggle('settled', phase !== 'entering');
+    return true;
+  }
+
+  function showPrototypeListStage(contentData = {}, { entering = false } = {}) {
+    if (!prototypeListRoot) return;
+    clearPrototypeListCollapseTimer();
+    clearPrototypeListSettleTimer();
+    const items = layoutDisambiguationPillItems(prototypeListEntriesFromContent(contentData), 0, 'stack');
+    prototypeListRoot.dataset.collapsing = '';
+    prototypeListRoot.dataset.active = '1';
+    prototypeListRoot.innerHTML = renderDisambiguationPills({
+      items,
+      selectedIndex: 0,
+      rowDataAttr: 'data-prototype-list-pill',
+      clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
+    });
+    syncPrototypeListPhase(entering ? 'entering' : 'settled');
+    if (!entering) return;
+    prototypeListSettleTimer = setTimeout(() => {
+      prototypeListSettleTimer = null;
+      if (state.currentShape !== 'list') return;
+      syncPrototypeListPhase('settled');
+    }, 800);
+  }
+
+  function clearPrototypeListStage(immediate = false) {
+    if (!prototypeListRoot) return;
+    clearPrototypeListSettleTimer();
+    if (immediate) clearPrototypeListCollapseTimer();
+    if (!immediate && prototypeListRoot.dataset.collapsing === '1') return;
+    prototypeListRoot.dataset.collapsing = '';
+    prototypeListRoot.dataset.active = '';
+    prototypeListRoot.innerHTML = '';
+  }
+
+  function collapsePrototypeListStack(ms = 600) {
+    if (!prototypeListRoot) return;
+    const cluster = prototypeListRoot.querySelector('.g-disambiguation-pills');
+    if (!cluster) return clearPrototypeListStage(true);
+    if (prototypeListRoot.dataset.collapsing === '1') return;
+    clearPrototypeListSettleTimer();
+    clearPrototypeListCollapseTimer();
+    prototypeListRoot.dataset.collapsing = '1';
+    cluster.classList.remove('entering', 'settled');
+    cluster.classList.add('exiting-to-compose');
+    prototypeListCollapseTimer = setTimeout(() => {
+      prototypeListCollapseTimer = null;
+      clearPrototypeListStage(true);
+    }, Math.max(220, ms) + 40);
   }
 
   function setThinkingVisualState({ thinkingVisualShape = false, listeningShape = false, delayed = false } = {}) {
@@ -389,23 +518,29 @@ export function createMorphRender(ctx) {
     DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
     DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
-    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
+    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'list' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'list' || fromShape === 'magic');
     const goingHome = enteringHomeLike;
     if (goingHome) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
       DROPS.main.classList.remove('home-glow');
       void DROPS.main.offsetWidth;
-      if (shape === 'listening' || thinkingVisualShape) DROPS.main.classList.add('home-glow');
+      if (shape === 'listening' || shape === 'list' || thinkingVisualShape) DROPS.main.classList.add('home-glow');
     } else {
       DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape);
+      DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'list' || thinkingVisualShape);
     }
     DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
-    DROPS.main.classList.toggle('listening-orb', shape === 'listening');
+    DROPS.main.classList.toggle('listening-orb', shape === 'listening' || shape === 'list');
     if (contentData) applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
+    if (shape === 'list') {
+      hideRich();
+      showPrototypeListStage(contentData, { entering: fromShape !== 'list' });
+    } else if (prototypeListRoot?.dataset.collapsing !== '1') {
+      clearPrototypeListStage(true);
+    }
     if (!skipActiveUpdate) callbacks.updateActive(shape);
   }
 
-  return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, morphCore };
+  return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, showPrototypeListStage, clearPrototypeListStage, collapsePrototypeListStack, morphCore };
 }

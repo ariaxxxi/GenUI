@@ -1,4 +1,4 @@
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
 const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
 export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
@@ -88,6 +88,11 @@ export const SHAPES = {
     main: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 1 },
     left: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
     right: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
+  },
+  list: {
+    main: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 1 },
+    left: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
+    right: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
   },
   pill: {
     main: { w: 420, h: 100, br: '60px', tx: -210, ty: -50, op: 1 },

@@ -148,6 +148,7 @@ export function createSidebarRender(ctx, refs) {
   function renderScenarioEditor() {
     const scenario = ctx.selectedScenario();
     const stage = ctx.stageById(scenario?.shape, scenario);
+    const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
     const visibleTextFields = ctx.stageVisibleEditorFields(stage);
     const hasIcon = ctx.stageHasComponent(stage, 'icon');
     const hasImage = ctx.stageHasComponent(stage, 'image');
@@ -155,10 +156,27 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioName) ctx.UI.scenarioName.value = scenario?.name || '';
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
+    const listChipIcons = ctx.stageListChipIconsForShape
+      ? ctx.stageListChipIconsForShape(scenario, scenario?.shape)
+      : { primary: { kind: 'none', value: '' }, secondary: { kind: 'none', value: '' }, detail: { kind: 'none', value: '' } };
     const stageText = ctx.stageTextForShape(scenario, scenario?.shape);
     const typography = ctx.getScenarioTypography(scenario, scenario?.shape);
+    const setListChipIconField = (slot, inputEl, modeEl) => {
+      const icon = listChipIcons?.[slot] || { kind: 'none', value: '' };
+      if (inputEl) inputEl.value = icon.kind === 'emoji' ? icon.value : '';
+      if (modeEl) {
+        modeEl.textContent = icon.kind === 'image'
+          ? 'png/gif'
+          : icon.kind === 'emoji'
+          ? 'emoji'
+          : 'default';
+      }
+    };
     if (ctx.UI.scenarioIconInput) ctx.UI.scenarioIconInput.value = stageIcon.kind === 'emoji' ? stageIcon.value : '';
     if (ctx.UI.scenarioIconMode) ctx.UI.scenarioIconMode.textContent = stageIcon.kind === 'image' ? 'png/gif' : (stageIcon.kind || 'none');
+    setListChipIconField('primary', ctx.UI.scenarioListChipPrimaryIconInput, ctx.UI.scenarioListChipPrimaryIconMode);
+    setListChipIconField('secondary', ctx.UI.scenarioListChipSecondaryIconInput, ctx.UI.scenarioListChipSecondaryIconMode);
+    setListChipIconField('detail', ctx.UI.scenarioListChipDetailIconInput, ctx.UI.scenarioListChipDetailIconMode);
     if (ctx.UI.scenarioPrimary) ctx.UI.scenarioPrimary.value = stageText.primary;
     if (ctx.UI.scenarioSecondary) ctx.UI.scenarioSecondary.value = stageText.secondary;
     if (ctx.UI.scenarioDetail) ctx.UI.scenarioDetail.value = stageText.detail;
@@ -174,6 +192,7 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioIntentHeaderSize) ctx.UI.scenarioIntentHeaderSize.value = String(typography.intentHeader.size);
     if (ctx.UI.scenarioIntentHeaderColor) ctx.UI.scenarioIntentHeaderColor.value = typography.intentHeader.color;
     if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !hasIcon);
+    if (ctx.UI.scenarioListChipIcons) ctx.UI.scenarioListChipIcons.classList.toggle('hidden', !(hasIcon && renderShape === 'list'));
     if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', !visibleTextFields.has('primary'));
     if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', !visibleTextFields.has('secondary'));
     if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', !visibleTextFields.has('detail'));

@@ -48,6 +48,49 @@ export function renderAccentOrbitChrome() {
   return `<span class="g-accent-orbit" aria-hidden="true"><span class="g-accent-orbit-fill"></span><span class="g-accent-orbit-left-spot"></span><span class="g-accent-orbit-inner-glow"></span><span class="g-accent-orbit-middle"></span><span class="g-accent-orbit-ring"></span></span>`;
 }
 
+export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, variant = "fan") {
+  const count = Math.max(0, Number(items?.length) || 0);
+  if (count <= 0) return [];
+  let positions;
+  if (variant === "stack") {
+    const pillHeight = 56;
+    const gap = 8;
+    const orbTop = -45;
+    const pillHalf = pillHeight / 2;
+    const step = pillHeight + gap;
+    const bottomY = Math.round(orbTop - gap - pillHalf);
+    positions = Array.from({ length: count }, (_, index) => ({
+      x: 0,
+      y: bottomY - ((count - 1 - index) * step),
+    }));
+  } else if (count === 1) {
+    positions = [{ x: 0, y: -88 }];
+  } else if (count === 2) {
+    positions = [{ x: 0, y: -136 }, { x: 0, y: -72 }];
+  } else if (count === 3) {
+    positions = [{ x: 0, y: -144 }, { x: -74, y: -84 }, { x: 74, y: -84 }];
+  } else {
+    const radiusX = Math.min(122, 84 + Math.max(0, count - 4) * 8);
+    const radiusY = Math.min(116, 78 + Math.max(0, count - 4) * 6);
+    positions = Array.from({ length: count }, (_, index) => {
+      const span = Math.min(160, 88 + (count * 10));
+      const start = -90 - (span / 2);
+      const angle = (start + ((count === 1 ? 0 : span / (count - 1)) * index)) * (Math.PI / 180);
+      return {
+        x: Math.round(Math.cos(angle) * radiusX),
+        y: Math.round(Math.sin(angle) * radiusY) - 34,
+      };
+    });
+  }
+  return positions.map((pos, index) => ({
+    ...items[index],
+    x: pos.x,
+    y: pos.y,
+    rotStart: pos.x >= 0 ? 10 : -10,
+    delay: Math.max(0, (index * 42) - (index === selectedIndex ? 28 : 0)),
+  }));
+}
+
 export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
   return `<div data-glass-body class="${esc(clusterClass)}">${items.map((item, index) => {

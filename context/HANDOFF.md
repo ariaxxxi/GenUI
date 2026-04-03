@@ -1,6 +1,129 @@
 # Handoff
 
 ## Task title
+Prototype List Stage Reusing AI Disambiguation Pills
+
+## Completion status
+- Completed
+
+## Summary
+- Added a real built-in `list` stage on `add-visual` instead of relying on the old prototype-only demo list.
+- Reused the AI disambiguation pill renderer and motion path rather than creating a second list component:
+  - extracted the pill fan-out layout into shared `layoutDisambiguationPillItems(...)`
+  - reused `renderDisambiguationPills(...)`
+  - reused the existing `800ms` `entering -> settled` animation timing and the same selected pill shell
+- Updated the prototype `list` stage layout to a centered vertical stack:
+  - all three pills now share the same center line
+  - prototype uses the shared layout helper with a `stack` variant
+  - AI message disambiguation keeps the original fan layout
+- Added a real `list` render shape with the reduced listening-orb geometry used by message disambiguation:
+  - `50x50`
+  - `25px` radius
+  - orb remains visible at this stage
+- Wired prototype morph/render so `list` behaves like a first-class stage:
+  - stage timeline now includes `List`
+  - `#drop-main` gets `home-glow listening-orb` in this state
+  - the pill cluster mounts into `#list-pills` outside the orb shell, so it can fan out without clipping
+  - same-shape updates re-render the cluster in `settled` state instead of replaying the intro animation
+  - leaving `list` now uses the existing list bridge callback, but it collapses the AI-style pill cluster instead of the old `.list-pill` stack
+- Mapped prototype content editing into the list stage without adding new sidebar components:
+  - `primary` → pill 1 label
+  - `secondary` → pill 2 label
+  - `detail` → pill 3 label
+  - stage icon remains the shared fallback across all three pills
+    - uploaded image → avatar image
+    - emoji icon → pill media glyph
+- Added three list-only chip icon overrides in the Content tab:
+  - `Chip 1 icon`, `Chip 2 icon`, `Chip 3 icon`
+  - values are stored per scenario and per stage under `content.listChipIconsByShape`
+  - unset chip icons fall back to the shared stage icon instead of duplicating state
+- Prototype `list` now also passes the stage selected-shell accent colors into the reused selected chip shell:
+  - selected pill highlight is driven by the current stage `Accent primary` / `Accent secondary`
+  - it no longer stays on the default blue/purple when the `List` stage style colors are changed
+- Added the AI glass stylesheet to `index.html` so the prototype page uses the exact same pill/stroke/accent CSS as the AI disambiguation stage.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/ai/ai-bindings.js`
+- `src/ai/editor-bindings.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/shapes.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-actions.js`
+- `src/shared/scenario-data.js`
+- `src/shared/morph-layout.js`
+- `src/shared/morph-render.js`
+- `src/shared/sidebar-render.js`
+- `src/styles/shared.css`
+- `src/styles/editor-decorative.css`
+- `src/tool/modules/manual-bindings.js`
+- `src/tool/index-app.js`
+- `context/ARCHITECTURE.md`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shapes.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`
+  - clicked the built-in `List` stage chip
+  - early sample:
+    - `document.body.dataset.currentShape === "list"`
+    - `#drop-main.className === "drop home-glow listening-orb"`
+    - `#list-pills .g-disambiguation-pill` count: `3`
+    - cluster had `.entering`
+  - after `900ms`:
+    - cluster `.entering === false`
+    - cluster `.settled === true`
+  - direct content-edit dispatch:
+    - labels updated to `Alpha One`, `Bravo Two`, `Charlie Three`
+    - icon input `✉` updated all three pill media glyphs to `✉`
+    - cluster stayed settled and did not replay the intro animation
+  - direct list chip icon edit:
+    - `Chip 1 icon` = `A`
+    - `Chip 2 icon` = `B`
+    - `Chip 3 icon` = `C`
+    - rendered pill media updated to `A`, `B`, `C`
+    - `localStorage['genui.scenarios.v1'][0].content.listChipIconsByShape.list` persisted the three icon objects
+  - direct style color edit on `List`:
+    - `Accent primary` = `#ff6600`
+    - `Accent secondary` = `#00ff66`
+    - selected pill resolved `--g-accent-rgb: 255 102 0`
+    - selected pill resolved `--g-accent-secondary-rgb: 0 255 102`
+  - vertical stack check after settle:
+    - pill `top` values resolved in order at approximately `416.6`, `481.1`, `545.1`
+    - all three pills stayed on the centered vertical column
+- Browser validation on `http://127.0.0.1:5174/ai.html`
+  - triggered the hidden prototype stage chip for `List`
+  - early sample:
+    - `document.body.dataset.currentShape === "list"`
+    - `#drop-main.className === "drop home-glow listening-orb"`
+    - `#list-pills .g-disambiguation-pill` count: `3`
+    - cluster had `.entering`
+  - after `900ms`:
+    - cluster `.entering === false`
+    - cluster `.settled === true`
+- Reference captures:
+  - `/tmp/prototype-list-stage-index.png`
+  - `/tmp/prototype-list-stage-ai.png`
+  - `/tmp/prototype-list-stage-vertical-center.png`
+  - `/tmp/prototype-list-chip-icons-per-chip.png`
+  - `/tmp/prototype-list-stage-accent-from-style.png`
+
+## Remaining issues / caveats
+- Per-chip icon overrides currently reuse the existing stage icon as fallback. If all three chips need fully separate typography controls later, that would require a deeper list-item content model.
+- The old debug/demo `manualShape('list')` path still exists for the legacy demo controls, but the stage timeline `List` stage now uses the shared AI pill renderer instead of the old `.list-pill` DOM.
+
+## Recommended next step
+1. If each list chip later needs separate typography or subtitle/detail content, promote the prototype `list` stage to a structured item-array content model instead of continuing to map it onto `primary` / `secondary` / `detail`.
+
+## Task title
 Thinking Orb Soft Luminous Sphere Port
 
 ## Completion status

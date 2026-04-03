@@ -10,6 +10,7 @@ export function initManualBindings({
   normalizeScenarioCanvas,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
   createIcon,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
@@ -298,10 +299,24 @@ export function initManualBindings({
     scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
     scenario.content.iconByShape[scenario.shape] = value ? createIcon('emoji', value) : createIcon('none', '');
   }));
+  const commitListChipIconField = (slot, value) => commitScenarioChange((scenario) => {
+    scenario.content.listChipIconsByShape = normalizeListChipIconsByShape(scenario.content.listChipIconsByShape, scenario.shape);
+    scenario.content.listChipIconsByShape[scenario.shape][slot] = value;
+  });
+  const bindListChipIconInput = (slot, inputEl) => {
+    if (!inputEl) return;
+    inputEl.addEventListener('input', (e) => {
+      const value = String(e.target.value || '').trim();
+      commitListChipIconField(slot, value ? createIcon('emoji', value) : createIcon('none', ''));
+    });
+  };
   const commitTextField = (field, el) => el.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
     scenario.content.textByShape[scenario.shape][field] = e.target.value;
   }));
+  bindListChipIconInput('primary', UI.scenarioListChipPrimaryIconInput);
+  bindListChipIconInput('secondary', UI.scenarioListChipSecondaryIconInput);
+  bindListChipIconInput('detail', UI.scenarioListChipDetailIconInput);
   commitTextField('primary', UI.scenarioPrimary);
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
@@ -473,6 +488,31 @@ export function initManualBindings({
     e.target.value = '';
   });
   UI.scenarioIconUpload.addEventListener('click', (e) => { e.target.value = ''; });
+  const bindListChipIconUpload = (slot, uploadEl, resetEl) => {
+    if (!uploadEl || !resetEl) return;
+    resetEl.addEventListener('click', () => {
+      commitListChipIconField(slot, createIcon('none', ''));
+      uploadEl.value = '';
+    });
+    uploadEl.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!isSupportedAssetFile(file)) return void (e.target.value = '');
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      }).catch(() => '');
+      if (!dataUrl) return;
+      commitListChipIconField(slot, createIcon('image', dataUrl));
+      e.target.value = '';
+    });
+    uploadEl.addEventListener('click', (e) => { e.target.value = ''; });
+  };
+  bindListChipIconUpload('primary', UI.scenarioListChipPrimaryIconUpload, UI.scenarioListChipPrimaryIconReset);
+  bindListChipIconUpload('secondary', UI.scenarioListChipSecondaryIconUpload, UI.scenarioListChipSecondaryIconReset);
+  bindListChipIconUpload('detail', UI.scenarioListChipDetailIconUpload, UI.scenarioListChipDetailIconReset);
 
   UI.editorMedia.addEventListener('click', (e) => {
     const button = e.target.closest('[data-media-reset-index]');
@@ -531,7 +571,7 @@ export function initManualBindings({
   if (UI.scenarioIntentHeaderSize && UI.scenarioIntentHeaderColor) {
     bindTypographyInputs('intentHeader', UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor);
   }
-  [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
+  [UI.scenarioIconInput, UI.scenarioListChipPrimaryIconInput, UI.scenarioListChipSecondaryIconInput, UI.scenarioListChipDetailIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
     UI.scenarioIntentHeader,
     UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor,
     UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,

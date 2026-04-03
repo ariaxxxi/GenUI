@@ -24,6 +24,16 @@
   --thinking-entry-delay: 0ms;
 }
 
+#list-pills .prototype-disambiguation-pills {
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+
+.prototype-disambiguation-pills .g-disambiguation-pill {
+  pointer-events: none;
+}
+
 #prototype-stage-selection {
   position: absolute;
   inset: 0;

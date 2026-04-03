@@ -110,6 +110,14 @@
   left: 50%; top: 50%;
   pointer-events: none;
 }
+#list-pills .prototype-disambiguation-pills {
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+.prototype-disambiguation-pills .g-disambiguation-pill {
+  pointer-events: none;
+}
 .list-pill {
   position: absolute;
   width: 420px; height: 120px;

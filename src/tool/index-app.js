@@ -35,7 +35,7 @@ let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -240,7 +240,10 @@ selectedScenarioId = scenarioLibrary[0]?.id || '';
 const orb = initOrbController({
   document,
   C,
-  clearListPills: () => manualDemo?.clearListPills?.(),
+  clearListPills: () => {
+    morphApi?.clearPrototypeListStage?.(true);
+    manualDemo?.clearListPills?.();
+  },
   morphTo: (...args) => morphApi.morphTo(...args),
 });
 
@@ -286,10 +289,13 @@ function previewScenarioInstant(scenario) {
   morphApi.setCurrentShape(shape);
   morphApi.applyGeometry(shape, geo, scenario.shape, scenario);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
+  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'list' || shape === 'magic');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
+  DROPS.main.classList.toggle('listening-orb', shape === 'listening' || shape === 'list');
   morphApi.applyContent(content);
   morphApi.applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
+  if (shape === 'list') morphApi.showPrototypeListStage?.(content, { entering: false });
+  else morphApi.clearPrototypeListStage?.(true);
   morphApi.setLastMainGeo({ ...geo.main });
   updateActive(shape);
   morphApi.setSuppressDeformation(false);
@@ -309,7 +315,10 @@ morphApi = initMorph({
     stopSiriOrb: (...args) => orb.stopSiriOrb(...args),
     startSiriOrb: (...args) => orb.startSiriOrb(...args),
     showAiIdle: (...args) => orb.showAiIdle(...args),
-    collapseListStack: (...args) => manualDemo?.collapseListStack?.(...args),
+    collapseListStack: (...args) => {
+      if (morphApi?.collapsePrototypeListStack) return morphApi.collapsePrototypeListStack(...args);
+      return manualDemo?.collapseListStack?.(...args);
+    },
     animateSplitMetaball: (...args) => manualDemo?.animateSplitMetaball?.(...args),
     normalizeStageSizeEntry,
     scenarioStageSizeOverride,
@@ -321,6 +330,7 @@ morphApi = initMorph({
     stageComponentCounts,
     stageTextForShape,
     stageIconForShape,
+    stageListChipIconsForShape,
     stageImagesForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
@@ -367,6 +377,7 @@ const sidebar = initSidebar({
   stageHasComponent,
   stageTextForShape,
   stageIconForShape,
+  stageListChipIconsForShape,
   stageImagesForShape,
   stageRenderShapeForShape,
   stageSelectedForShape,
@@ -374,6 +385,7 @@ const sidebar = initSidebar({
   stageSecondaryAccentColorForShape,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
   createIcon,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
@@ -506,6 +518,7 @@ initManualBindings({
   normalizeScenarioCanvas,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
   createIcon,
   normalizeStageTextByShape,
   normalizeTypographyByShape,

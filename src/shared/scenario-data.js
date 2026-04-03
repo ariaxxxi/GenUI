@@ -19,13 +19,14 @@ import {
   renderShapeForStageId as shapeRenderShapeForStageId,
 } from '../shapes.js';
 
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
   { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
+  { id: 'list', name: 'List', preset: true, renderShape: 'list', cornerRadius: 25, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail'] },
   { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
   { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
   { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
@@ -171,6 +172,9 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     if (renderShape === 'pill') {
       return { primary: 'Primary text', secondary: 'Secondary text', detail: '', intentHeader: '' };
     }
+    if (renderShape === 'list') {
+      return { primary: 'Hiro Tanaka', secondary: 'Mina Park', detail: 'Sofia Chen', intentHeader: '' };
+    }
     if (renderShape === 'card' || renderShape === 'card-s') {
       return { primary: 'Primary text', secondary: 'Secondary text', detail: 'Detail text example', intentHeader: '' };
     }
@@ -279,6 +283,22 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return output;
   }
 
+  function normalizeListChipIconEntry(value = {}) {
+    return {
+      primary: normalizeIcon(value?.primary),
+      secondary: normalizeIcon(value?.secondary),
+      detail: normalizeIcon(value?.detail),
+    };
+  }
+
+  function normalizeListChipIconsByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      output[shape] = normalizeListChipIconEntry(value?.[shape]);
+    });
+    return output;
+  }
+
   function stageRenderShapeForShape(scenario, shape) {
     return renderShapeForStageId(shape, scenario);
   }
@@ -352,6 +372,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return firstDefined || createIcon('none', '');
   }
 
+  function stageListChipIconsForShape(scenario, shape) {
+    return normalizeListChipIconEntry(scenario?.content?.listChipIconsByShape?.[shape]);
+  }
+
   function stageImagesForShape(scenario, shape) {
     return normalizeStageImages(
       scenario?.content?.imagesByShape?.[shape] || scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : [])
@@ -418,6 +442,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
         secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
+        listChipIconsByShape: normalizeListChipIconsByShape(content.listChipIconsByShape, shape),
         canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
       },
       triggers: normalizeTriggers(triggers),
@@ -541,11 +566,14 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageIconLeftPadding,
     stageTextForShape,
     stageIconForShape,
+    stageListChipIconsForShape,
     stageImagesForShape,
     stageRenderShapeForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    normalizeListChipIconEntry,
+    normalizeListChipIconsByShape,
     createScenario,
     normalizeTriggers,
     normalizeScenario,
