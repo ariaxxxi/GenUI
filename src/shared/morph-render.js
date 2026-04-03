@@ -54,24 +54,22 @@ export function createMorphRender(ctx) {
 
   function prototypeListEntriesFromContent(contentData = {}) {
     const icon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
-    const listChipIcons = contentData?.listChipIcons || {};
     const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
     const shape = String(scenario?.shape || 'list');
     const accentRgb = hexToRgbTriplet(callbacks.stageAccentColorForShape?.(scenario, shape), '144 172 255');
     const accentSecondaryRgb = hexToRgbTriplet(callbacks.stageSecondaryAccentColorForShape?.(scenario, shape), '151 97 255');
-    const rawLabels = [
-      String(contentData?.primary || '').trim(),
-      String(contentData?.secondary || '').trim(),
-      String(contentData?.detail || '').trim(),
-    ];
+    const sourceItems = Array.isArray(contentData?.listItems) && contentData.listItems.length
+      ? contentData.listItems
+      : [
+        { label: String(contentData?.primary || '').trim(), icon: contentData?.listChipIcons?.primary },
+        { label: String(contentData?.secondary || '').trim(), icon: contentData?.listChipIcons?.secondary },
+        { label: String(contentData?.detail || '').trim(), icon: contentData?.listChipIcons?.detail },
+      ];
     const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
-    const chipSlots = ['primary', 'secondary', 'detail'];
-    const labels = rawLabels.map((value, index) => value || fallbackLabels[index]);
-    return labels.map((label, index) => {
-      const slotIcon = listChipIcons?.[chipSlots[index]] || { kind: 'none', value: '' };
-      const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim()
-        ? slotIcon
-        : icon;
+    return sourceItems.map((entry, index) => {
+      const label = String(entry?.label || '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
+      const slotIcon = entry?.icon || { kind: 'none', value: '' };
+      const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim() ? slotIcon : icon;
       const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
         ? { avatar: String(resolvedIcon.value).trim(), initials: '' }
         : resolvedIcon?.kind === 'emoji' && String(resolvedIcon?.value || '').trim()
@@ -99,7 +97,17 @@ export function createMorphRender(ctx) {
     if (!prototypeListRoot) return;
     clearPrototypeListCollapseTimer();
     clearPrototypeListSettleTimer();
-    const items = layoutDisambiguationPillItems(prototypeListEntriesFromContent(contentData), 0, 'stack');
+    const frameEl = document.getElementById('ui-frame') || document.getElementById('stage');
+    const frameHeight = Math.max(240, Math.round(frameEl?.getBoundingClientRect?.().height || 420));
+    const pillHeight = 56;
+    const bottomInset = 20;
+    const bottomY = Math.round((frameHeight / 2) - bottomInset - (pillHeight / 2));
+    const items = layoutDisambiguationPillItems(
+      prototypeListEntriesFromContent(contentData),
+      0,
+      'stack',
+      { bottomY, gap: 8 }
+    );
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '1';
     prototypeListRoot.innerHTML = renderDisambiguationPills({

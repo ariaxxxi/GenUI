@@ -181,6 +181,34 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return { primary: '', secondary: '', detail: '', intentHeader: '' };
   }
 
+  function defaultListLabelsForShape(shape) {
+    const fallback = normalizeStageTextEntry(defaultStageTextFallback(shape));
+    return [fallback.primary, fallback.secondary, fallback.detail].filter(Boolean);
+  }
+
+  function createDefaultListItem(label = '', icon = createIcon('none', '')) {
+    return { label: String(label || ''), icon: normalizeIcon(icon) };
+  }
+
+  function normalizeListItem(value = {}, fallback = {}) {
+    return {
+      label: String(value?.label ?? fallback?.label ?? ''),
+      icon: normalizeIcon(value?.icon ?? fallback?.icon),
+    };
+  }
+
+  function normalizeListItems(value = [], fallback = [], { min = 1, max = 8 } = {}) {
+    const source = Array.isArray(value) ? value : [];
+    const fallbackItems = Array.isArray(fallback) ? fallback : [];
+    const normalized = source.map((item, index) => normalizeListItem(item, fallbackItems[index] || {}));
+    const output = normalized.length ? normalized.slice(0, max) : fallbackItems.map((item) => normalizeListItem(item)).slice(0, max);
+    while (output.length < Math.min(max, min)) {
+      const nextIndex = output.length;
+      output.push(normalizeListItem(undefined, fallbackItems[nextIndex] || createDefaultListItem(`List item ${nextIndex + 1}`)));
+    }
+    return output;
+  }
+
   function isPlaceholderStageText(entry, shape) {
     const normalized = normalizeStageTextEntry(entry);
     const placeholder = normalizeStageTextEntry(defaultStageTextFallback(shape));
@@ -299,6 +327,33 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return output;
   }
 
+  function listFallbackItemsForShape(shape, textByShape = {}, listChipIconsByShape = {}) {
+    const text = normalizeStageTextEntry(textByShape?.[shape], defaultStageTextFallback(shape));
+    const icons = normalizeListChipIconEntry(listChipIconsByShape?.[shape]);
+    const labels = [text.primary, text.secondary, text.detail].filter((value) => String(value || '').trim());
+    const fallbackLabels = labels.length ? labels : defaultListLabelsForShape(shape);
+    return fallbackLabels.map((label, index) => createDefaultListItem(label, [icons.primary, icons.secondary, icons.detail][index] || createIcon('none', '')));
+  }
+
+  function normalizeListItemsByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
+    const stageIds = Array.from(new Set([
+      ...DEFAULT_SCENARIO_SHAPES,
+      ...availableScenarioShapes(),
+      ...Object.keys(value || {}),
+      fallbackShape,
+    ].filter(Boolean)));
+    const output = {};
+    const textByShape = legacy?.textByShape || {};
+    const listChipIconsByShape = legacy?.listChipIconsByShape || {};
+    stageIds.forEach((shape) => {
+      const renderShape = renderShapeForStageId(shape) || shape;
+      output[shape] = renderShape === 'list'
+        ? normalizeListItems(value?.[shape], listFallbackItemsForShape(shape, textByShape, listChipIconsByShape))
+        : [];
+    });
+    return output;
+  }
+
   function stageRenderShapeForShape(scenario, shape) {
     return renderShapeForStageId(shape, scenario);
   }
@@ -376,6 +431,13 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return normalizeListChipIconEntry(scenario?.content?.listChipIconsByShape?.[shape]);
   }
 
+  function stageListItemsForShape(scenario, shape) {
+    return normalizeListItems(
+      scenario?.content?.listItemsByShape?.[shape],
+      listFallbackItemsForShape(shape, scenario?.content?.textByShape, scenario?.content?.listChipIconsByShape)
+    );
+  }
+
   function stageImagesForShape(scenario, shape) {
     return normalizeStageImages(
       scenario?.content?.imagesByShape?.[shape] || scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : [])
@@ -411,6 +473,12 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     content = {},
     triggers = [],
   } = {}) {
+    const normalizedTextByShape = normalizeStageTextByShape(content.textByShape, shape, {
+      primary: String(content.primary || ''),
+      secondary: String(content.secondary || ''),
+      detail: String(content.detail || ''),
+    });
+    const normalizedListChipIconsByShape = normalizeListChipIconsByShape(content.listChipIconsByShape, shape);
     return {
       id,
       name,
@@ -421,10 +489,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         primary: String(content.primary || ''),
         secondary: String(content.secondary || ''),
         detail: String(content.detail || ''),
-        textByShape: normalizeStageTextByShape(content.textByShape, shape, {
-          primary: String(content.primary || ''),
-          secondary: String(content.secondary || ''),
-          detail: String(content.detail || ''),
+        textByShape: normalizedTextByShape,
+        listItemsByShape: normalizeListItemsByShape(content.listItemsByShape, shape, {
+          textByShape: normalizedTextByShape,
+          listChipIconsByShape: normalizedListChipIconsByShape,
         }),
         images: normalizeStageImages(content.images || (content.image ? [content.image] : [])),
         imagesByShape: normalizeImagesByShape(
@@ -442,7 +510,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
         secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
-        listChipIconsByShape: normalizeListChipIconsByShape(content.listChipIconsByShape, shape),
+        listChipIconsByShape: normalizedListChipIconsByShape,
         canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
       },
       triggers: normalizeTriggers(triggers),
@@ -567,13 +635,18 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageTextForShape,
     stageIconForShape,
     stageListChipIconsForShape,
+    stageListItemsForShape,
     stageImagesForShape,
     stageRenderShapeForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    createDefaultListItem,
+    normalizeListItem,
+    normalizeListItems,
     normalizeListChipIconEntry,
     normalizeListChipIconsByShape,
+    normalizeListItemsByShape,
     createScenario,
     normalizeTriggers,
     normalizeScenario,

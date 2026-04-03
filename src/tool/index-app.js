@@ -35,7 +35,7 @@ let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -331,6 +331,7 @@ morphApi = initMorph({
     stageTextForShape,
     stageIconForShape,
     stageListChipIconsForShape,
+    stageListItemsForShape,
     stageImagesForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
@@ -378,6 +379,7 @@ const sidebar = initSidebar({
   stageTextForShape,
   stageIconForShape,
   stageListChipIconsForShape,
+  stageListItemsForShape,
   stageImagesForShape,
   stageRenderShapeForShape,
   stageSelectedForShape,
@@ -386,7 +388,9 @@ const sidebar = initSidebar({
   normalizeTriggers,
   normalizeIconByShape,
   normalizeListChipIconsByShape,
+  normalizeListItemsByShape,
   createIcon,
+  createDefaultListItem,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
@@ -519,12 +523,15 @@ initManualBindings({
   normalizeTriggers,
   normalizeIconByShape,
   normalizeListChipIconsByShape,
+  normalizeListItemsByShape,
   createIcon,
+  createDefaultListItem,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
   canvasSettings: () => canvasSettings,

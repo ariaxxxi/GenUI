@@ -328,6 +328,7 @@ export function createMorphLayout(ctx) {
     return {
       icon: has('icon') ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
       listChipIcons: has('icon') ? callbacks.stageListChipIconsForShape?.(scenario, shape) : null,
+      listItems: callbacks.stageListItemsForShape?.(scenario, shape) || [],
       primary: has('primary') ? text.primary : '',
       secondary: has('secondary') ? text.secondary : '',
       detail: has('detail') ? text.detail : '',

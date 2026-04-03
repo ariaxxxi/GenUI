@@ -12,8 +12,9 @@ Prototype List Stage Reusing AI Disambiguation Pills
   - extracted the pill fan-out layout into shared `layoutDisambiguationPillItems(...)`
   - reused `renderDisambiguationPills(...)`
   - reused the existing `800ms` `entering -> settled` animation timing and the same selected pill shell
-- Updated the prototype `list` stage layout to a centered vertical stack:
-  - all three pills now share the same center line
+- Updated the prototype `list` stage layout to a bottom-anchored vertical stack:
+  - pills share the same center line
+  - prototype now computes the stack anchor from the full stage frame height instead of the old orb-relative position
   - prototype uses the shared layout helper with a `stack` variant
   - AI message disambiguation keeps the original fan layout
 - Added a real `list` render shape with the reduced listening-orb geometry used by message disambiguation:
@@ -39,10 +40,15 @@ Prototype List Stage Reusing AI Disambiguation Pills
   - `Chip 1 icon`, `Chip 2 icon`, `Chip 3 icon`
   - values are stored per scenario and per stage under `content.listChipIconsByShape`
   - unset chip icons fall back to the shared stage icon instead of duplicating state
+- Later retune: replaced the old fixed 3-chip content editor with a data-driven list-item editor:
+  - Stage tab now exposes `List chips` count controls for list stages only
+  - Content tab now renders one editor block per item with label, emoji/glyph, PNG upload, reset, and icon-mode badge
+  - item state lives under `content.listItemsByShape`, so chip count and chip content stay scenario-local and stage-local
 - Prototype `list` now also passes the stage selected-shell accent colors into the reused selected chip shell:
   - selected pill highlight is driven by the current stage `Accent primary` / `Accent secondary`
   - it no longer stays on the default blue/purple when the `List` stage style colors are changed
 - Added the AI glass stylesheet to `index.html` so the prototype page uses the exact same pill/stroke/accent CSS as the AI disambiguation stage.
+- Default prototype intent-header color is now `#a0a0a0`.
 
 ## Files changed
 - `index.html`
@@ -54,6 +60,7 @@ Prototype List Stage Reusing AI Disambiguation Pills
 - `src/shapes.js`
 - `src/shared/sidebar.js`
 - `src/shared/sidebar-actions.js`
+- `src/shared/sidebar-bindings.js`
 - `src/shared/scenario-data.js`
 - `src/shared/morph-layout.js`
 - `src/shared/morph-render.js`
@@ -107,9 +114,18 @@ Prototype List Stage Reusing AI Disambiguation Pills
     - `Accent secondary` = `#00ff66`
     - selected pill resolved `--g-accent-rgb: 255 102 0`
     - selected pill resolved `--g-accent-secondary-rgb: 0 255 102`
-  - vertical stack check after settle:
-    - pill `top` values resolved in order at approximately `416.6`, `481.1`, `545.1`
-    - all three pills stayed on the centered vertical column
+  - list-count control check:
+    - `#stage-list-count-row` became visible only on `List`
+    - count changed live `2 -> 3 -> 2`
+    - rendered pill count changed live `2 -> 3 -> 2`
+  - bottom stack check:
+    - stage bottom readback: `753`
+    - pill bottoms read back at `669`, `732`
+    - bottom pill stayed inset near the stage bottom instead of floating near mid-frame
+  - list editor check:
+    - Content tab rendered `2` live list item editors for the active scenario/stage state
+    - enabling `intent-header` exposed the content field and its default color input
+    - `#scenario-intent-header-color` resolved to `#a0a0a0`
 - Browser validation on `http://127.0.0.1:5174/ai.html`
   - triggered the hidden prototype stage chip for `List`
   - early sample:
@@ -130,11 +146,11 @@ Prototype List Stage Reusing AI Disambiguation Pills
   - `/tmp/prototype-list-stage-shell-hidden.png`
 
 ## Remaining issues / caveats
-- Per-chip icon overrides currently reuse the existing stage icon as fallback. If all three chips need fully separate typography controls later, that would require a deeper list-item content model.
+- List items still reuse the shared stage icon as fallback when a specific item icon is unset.
 - The old debug/demo `manualShape('list')` path still exists for the legacy demo controls, but the stage timeline `List` stage now uses the shared AI pill renderer instead of the old `.list-pill` DOM.
 
 ## Recommended next step
-1. If each list chip later needs separate typography or subtitle/detail content, promote the prototype `list` stage to a structured item-array content model instead of continuing to map it onto `primary` / `secondary` / `detail`.
+1. If each list chip later needs separate typography or subtitle/detail content, extend the new `listItemsByShape` model instead of reviving `primary` / `secondary` / `detail` mappings for list stages.
 
 ## Task title
 Thinking Orb Soft Luminous Sphere Port

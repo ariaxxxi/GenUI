@@ -11,12 +11,15 @@ export function initManualBindings({
   normalizeTriggers,
   normalizeIconByShape,
   normalizeListChipIconsByShape,
+  normalizeListItemsByShape,
   createIcon,
+  createDefaultListItem,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
   canvasSettings,
@@ -299,24 +302,31 @@ export function initManualBindings({
     scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
     scenario.content.iconByShape[scenario.shape] = value ? createIcon('emoji', value) : createIcon('none', '');
   }));
-  const commitListChipIconField = (slot, value) => commitScenarioChange((scenario) => {
+  const getDraftListItems = (scenario) => {
+    scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
     scenario.content.listChipIconsByShape = normalizeListChipIconsByShape(scenario.content.listChipIconsByShape, scenario.shape);
-    scenario.content.listChipIconsByShape[scenario.shape][slot] = value;
-  });
-  const bindListChipIconInput = (slot, inputEl) => {
-    if (!inputEl) return;
-    inputEl.addEventListener('input', (e) => {
-      const value = String(e.target.value || '').trim();
-      commitListChipIconField(slot, value ? createIcon('emoji', value) : createIcon('none', ''));
+    scenario.content.listItemsByShape = normalizeListItemsByShape(scenario.content.listItemsByShape, scenario.shape, {
+      textByShape: scenario.content.textByShape,
+      listChipIconsByShape: scenario.content.listChipIconsByShape,
     });
+    return [...(stageListItemsForShape(scenario, scenario.shape) || [])];
   };
+  const commitListItems = (mutator) => commitScenarioChange((scenario) => {
+    const items = getDraftListItems(scenario);
+    const nextItems = mutator(items.map((item) => ({
+      ...item,
+      icon: item?.icon ? { ...item.icon } : createIcon('none', ''),
+    })));
+    scenario.content.listItemsByShape = normalizeListItemsByShape(scenario.content.listItemsByShape, scenario.shape, {
+      textByShape: scenario.content.textByShape,
+      listChipIconsByShape: scenario.content.listChipIconsByShape,
+    });
+    scenario.content.listItemsByShape[scenario.shape] = Array.isArray(nextItems) ? nextItems : items;
+  });
   const commitTextField = (field, el) => el.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
     scenario.content.textByShape[scenario.shape][field] = e.target.value;
   }));
-  bindListChipIconInput('primary', UI.scenarioListChipPrimaryIconInput);
-  bindListChipIconInput('secondary', UI.scenarioListChipSecondaryIconInput);
-  bindListChipIconInput('detail', UI.scenarioListChipDetailIconInput);
   commitTextField('primary', UI.scenarioPrimary);
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
@@ -430,6 +440,19 @@ export function initManualBindings({
       draft.content.secondaryAccentColorByShape[draft.shape] = String(e.target.value || '#9761ff');
     });
   });
+  UI.stageListCountDec?.addEventListener('click', () => {
+    const scenario = selectedScenario();
+    if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== 'list') return;
+    commitListItems((items) => items.length > 1 ? items.slice(0, -1) : items);
+  });
+  UI.stageListCountInc?.addEventListener('click', () => {
+    const scenario = selectedScenario();
+    if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== 'list') return;
+    commitListItems((items) => {
+      if (items.length >= 8) return items;
+      return [...items, createDefaultListItem(`List item ${items.length + 1}`)];
+    });
+  });
 
   UI.stageComponentControls.addEventListener('click', (e) => {
     const button = e.target.closest('[data-stage-comp-action][data-stage-comp-type]');
@@ -488,31 +511,68 @@ export function initManualBindings({
     e.target.value = '';
   });
   UI.scenarioIconUpload.addEventListener('click', (e) => { e.target.value = ''; });
-  const bindListChipIconUpload = (slot, uploadEl, resetEl) => {
-    if (!uploadEl || !resetEl) return;
-    resetEl.addEventListener('click', () => {
-      commitListChipIconField(slot, createIcon('none', ''));
-      uploadEl.value = '';
+  UI.scenarioListItemsEditor?.addEventListener('input', (e) => {
+    const labelInput = e.target.closest('[data-list-item-label-index]');
+    if (labelInput) {
+      const index = parseInt(labelInput.dataset.listItemLabelIndex || '-1', 10);
+      if (index >= 0) {
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], label: labelInput.value };
+          return items;
+        });
+      }
+    }
+    const iconInput = e.target.closest('[data-list-item-icon-input-index]');
+    if (iconInput) {
+      const index = parseInt(iconInput.dataset.listItemIconInputIndex || '-1', 10);
+      if (index >= 0) {
+        const value = String(iconInput.value || '').trim();
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], icon: value ? createIcon('emoji', value) : createIcon('none', '') };
+          return items;
+        });
+      }
+    }
+  });
+  UI.scenarioListItemsEditor?.addEventListener('click', (e) => {
+    const resetBtn = e.target.closest('[data-list-item-icon-reset-index]');
+    if (!resetBtn) return;
+    const index = parseInt(resetBtn.dataset.listItemIconResetIndex || '-1', 10);
+    if (index < 0) return;
+    commitListItems((items) => {
+      if (!items[index]) return items;
+      items[index] = { ...items[index], icon: createIcon('none', '') };
+      return items;
     });
-    uploadEl.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (!isSupportedAssetFile(file)) return void (e.target.value = '');
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      }).catch(() => '');
-      if (!dataUrl) return;
-      commitListChipIconField(slot, createIcon('image', dataUrl));
-      e.target.value = '';
+  });
+  UI.scenarioListItemsEditor?.addEventListener('change', async (e) => {
+    const uploadInput = e.target.closest('[data-list-item-icon-upload-index]');
+    if (!uploadInput) return;
+    const index = parseInt(uploadInput.dataset.listItemIconUploadIndex || '-1', 10);
+    if (index < 0) return;
+    const file = uploadInput.files?.[0];
+    if (!file) return;
+    if (!isSupportedAssetFile(file)) return void (uploadInput.value = '');
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    }).catch(() => '');
+    if (!dataUrl) return void (uploadInput.value = '');
+    commitListItems((items) => {
+      if (!items[index]) return items;
+      items[index] = { ...items[index], icon: createIcon('image', dataUrl) };
+      return items;
     });
-    uploadEl.addEventListener('click', (e) => { e.target.value = ''; });
-  };
-  bindListChipIconUpload('primary', UI.scenarioListChipPrimaryIconUpload, UI.scenarioListChipPrimaryIconReset);
-  bindListChipIconUpload('secondary', UI.scenarioListChipSecondaryIconUpload, UI.scenarioListChipSecondaryIconReset);
-  bindListChipIconUpload('detail', UI.scenarioListChipDetailIconUpload, UI.scenarioListChipDetailIconReset);
+    uploadInput.value = '';
+  });
+  UI.scenarioListItemsEditor?.addEventListener('click', (e) => {
+    const uploadInput = e.target.closest('[data-list-item-icon-upload-index]');
+    if (uploadInput) uploadInput.value = '';
+  });
 
   UI.editorMedia.addEventListener('click', (e) => {
     const button = e.target.closest('[data-media-reset-index]');
@@ -571,7 +631,7 @@ export function initManualBindings({
   if (UI.scenarioIntentHeaderSize && UI.scenarioIntentHeaderColor) {
     bindTypographyInputs('intentHeader', UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor);
   }
-  [UI.scenarioIconInput, UI.scenarioListChipPrimaryIconInput, UI.scenarioListChipSecondaryIconInput, UI.scenarioListChipDetailIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
+  [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
     UI.scenarioIntentHeader,
     UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor,
     UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,

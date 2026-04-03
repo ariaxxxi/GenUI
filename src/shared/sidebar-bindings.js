@@ -76,7 +76,7 @@ export function createSidebarBindings(ctx, refs) {
     const intentColorPreview = document.getElementById('layer-preview-intent-header-color');
     if (intentPreview) intentPreview.textContent = stageText.intentHeader || '—';
     if (intentSizePreview) intentSizePreview.textContent = `${typography.intentHeader.size}px`;
-    if (intentColorPreview) intentColorPreview.style.background = typography.intentHeader.color || '#666666';
+    if (intentColorPreview) intentColorPreview.style.background = typography.intentHeader.color || '#a0a0a0';
   }
 
   function initSidebarCollapsibleSections() {

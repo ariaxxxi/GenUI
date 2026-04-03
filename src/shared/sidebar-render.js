@@ -107,6 +107,13 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
     if (ctx.UI.stagePhoneBlurToggle) ctx.UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
+    if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.toggle('hidden', renderShape !== 'list');
+    const listItemCount = renderShape === 'list' && ctx.stageListItemsForShape
+      ? ctx.stageListItemsForShape(scenario, scenario?.shape).length
+      : 0;
+    if (ctx.UI.stageListCountVal) ctx.UI.stageListCountVal.textContent = String(Math.max(0, listItemCount));
+    if (ctx.UI.stageListCountDec) ctx.UI.stageListCountDec.disabled = !stage || renderShape !== 'list' || listItemCount <= 1;
+    if (ctx.UI.stageListCountInc) ctx.UI.stageListCountInc.disabled = !stage || renderShape !== 'list' || listItemCount >= 8;
     if (ctx.UI.stageCardSToggle) {
       ctx.UI.stageCardSToggle.checked = renderShape === 'card-s';
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
@@ -145,6 +152,41 @@ export function createSidebarRender(ctx, refs) {
     });
   }
 
+  function renderScenarioListItemsEditor(scenario, renderShape) {
+    if (!ctx.UI.scenarioListItemsEditor) return;
+    ctx.UI.scenarioListItemsEditor.innerHTML = '';
+    const preview = document.getElementById('layer-preview-list-items-count');
+    if (preview) preview.textContent = '0 chips';
+    if (renderShape !== 'list') return;
+    const items = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(scenario, scenario?.shape) : [];
+    if (preview) preview.textContent = `${items.length} chip${items.length === 1 ? '' : 's'}`;
+    items.forEach((item, index) => {
+      const labelId = `scenario-list-item-label-${index}`;
+      const iconInputId = `scenario-list-item-icon-input-${index}`;
+      const iconUploadId = `scenario-list-item-icon-upload-${index}`;
+      const icon = item?.icon || ctx.createIcon('none', '');
+      const iconValue = icon.kind === 'emoji' ? icon.value : '';
+      const modeText = icon.kind === 'image'
+        ? 'png/gif'
+        : icon.kind === 'emoji'
+        ? 'emoji'
+        : 'default';
+      const row = document.createElement('div');
+      row.className = 'sb-row tight';
+      row.innerHTML = `
+        <label class="sb-lbl" for="${labelId}">Chip ${index + 1}</label>
+        <input id="${labelId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-label-index="${index}" value="${String(item?.label || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
+        <div class="icon-upload-row">
+          <input id="${iconInputId}" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph" data-list-item-icon-input-index="${index}" value="${String(iconValue || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
+          <label class="sb-mini-btn upload-btn" for="${iconUploadId}">PNG<input id="${iconUploadId}" data-list-item-icon-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>
+          <button class="sb-mini-btn" type="button" data-list-item-icon-reset-index="${index}">×</button>
+        </div>
+        <div class="icon-mode-badge" data-list-item-icon-mode-index="${index}">${modeText}</div>
+      `;
+      ctx.UI.scenarioListItemsEditor.appendChild(row);
+    });
+  }
+
   function renderScenarioEditor() {
     const scenario = ctx.selectedScenario();
     const stage = ctx.stageById(scenario?.shape, scenario);
@@ -156,27 +198,10 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioName) ctx.UI.scenarioName.value = scenario?.name || '';
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
-    const listChipIcons = ctx.stageListChipIconsForShape
-      ? ctx.stageListChipIconsForShape(scenario, scenario?.shape)
-      : { primary: { kind: 'none', value: '' }, secondary: { kind: 'none', value: '' }, detail: { kind: 'none', value: '' } };
     const stageText = ctx.stageTextForShape(scenario, scenario?.shape);
     const typography = ctx.getScenarioTypography(scenario, scenario?.shape);
-    const setListChipIconField = (slot, inputEl, modeEl) => {
-      const icon = listChipIcons?.[slot] || { kind: 'none', value: '' };
-      if (inputEl) inputEl.value = icon.kind === 'emoji' ? icon.value : '';
-      if (modeEl) {
-        modeEl.textContent = icon.kind === 'image'
-          ? 'png/gif'
-          : icon.kind === 'emoji'
-          ? 'emoji'
-          : 'default';
-      }
-    };
     if (ctx.UI.scenarioIconInput) ctx.UI.scenarioIconInput.value = stageIcon.kind === 'emoji' ? stageIcon.value : '';
     if (ctx.UI.scenarioIconMode) ctx.UI.scenarioIconMode.textContent = stageIcon.kind === 'image' ? 'png/gif' : (stageIcon.kind || 'none');
-    setListChipIconField('primary', ctx.UI.scenarioListChipPrimaryIconInput, ctx.UI.scenarioListChipPrimaryIconMode);
-    setListChipIconField('secondary', ctx.UI.scenarioListChipSecondaryIconInput, ctx.UI.scenarioListChipSecondaryIconMode);
-    setListChipIconField('detail', ctx.UI.scenarioListChipDetailIconInput, ctx.UI.scenarioListChipDetailIconMode);
     if (ctx.UI.scenarioPrimary) ctx.UI.scenarioPrimary.value = stageText.primary;
     if (ctx.UI.scenarioSecondary) ctx.UI.scenarioSecondary.value = stageText.secondary;
     if (ctx.UI.scenarioDetail) ctx.UI.scenarioDetail.value = stageText.detail;
@@ -192,12 +217,13 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioIntentHeaderSize) ctx.UI.scenarioIntentHeaderSize.value = String(typography.intentHeader.size);
     if (ctx.UI.scenarioIntentHeaderColor) ctx.UI.scenarioIntentHeaderColor.value = typography.intentHeader.color;
     if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !hasIcon);
-    if (ctx.UI.scenarioListChipIcons) ctx.UI.scenarioListChipIcons.classList.toggle('hidden', !(hasIcon && renderShape === 'list'));
-    if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', !visibleTextFields.has('primary'));
-    if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', !visibleTextFields.has('secondary'));
-    if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', !visibleTextFields.has('detail'));
+    if (ctx.UI.editorListItems) ctx.UI.editorListItems.classList.toggle('hidden', renderShape !== 'list');
+    if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('primary'));
+    if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('secondary'));
+    if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('detail'));
     if (ctx.UI.editorIntentHeader) ctx.UI.editorIntentHeader.classList.toggle('hidden', !hasIntentHeader);
     if (ctx.UI.editorMedia) ctx.UI.editorMedia.classList.toggle('hidden', !hasImage);
+    renderScenarioListItemsEditor(scenario, renderShape);
     renderScenarioStageChips();
     renderStageConfigPanel();
     renderScenarioMediaEditor(scenario, stage);

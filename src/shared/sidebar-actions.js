@@ -121,6 +121,12 @@ export function createSidebarActions(ctx, refs) {
         detail: ctx.createIcon('none', ''),
       });
 
+      draft.content.listItemsByShape = ctx.normalizeListItemsByShape(draft.content.listItemsByShape, sourceShape, {
+        textByShape: draft.content.textByShape,
+        listChipIconsByShape: draft.content.listChipIconsByShape,
+      });
+      draft.content.listItemsByShape[newStage.id] = structuredClone(draft.content.listItemsByShape[sourceShape] || []);
+
       draft.content.imagesByShape = ctx.normalizeImagesByShape(draft.content.imagesByShape, sourceShape, draft.content.images);
       draft.content.imagesByShape[newStage.id] = structuredClone(draft.content.imagesByShape[sourceShape] || []);
 

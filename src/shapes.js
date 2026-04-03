@@ -142,7 +142,7 @@ export function defaultTypographyForShape(shape = 'pill') {
     primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
-    intentHeader: { size: 18, color: '#666666' },
+    intentHeader: { size: 18, color: '#a0a0a0' },
   };
 }
 
