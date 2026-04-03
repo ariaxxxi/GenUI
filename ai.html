@@ -21,12 +21,8 @@
 
 <style id="anim-style">
   :root {
-    --spring: linear(
-      0, -0.002 5%, -0.008 10%, -0.016 16%, -0.016 20%, -0.01 24%,
-      0.16 30%, 0.64 38%, 0.9 46%, 1.0 54%,
-      1.008 62%, 1.01 70%, 1.008 78%, 1.004 85%,
-      1.004 92%, 1.001 97%, 1
-    );
+    --motion-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
+    --spring: var(--motion-ease);
     --anim-w:  450ms var(--spring);
     --anim-h:  450ms var(--spring);
     --anim-br: 450ms var(--spring);
@@ -125,7 +121,7 @@
         <div class="sb-toggle-copy">
           <strong>Background image</strong>
         </div>
-        <input id="bg-toggle" class="sb-toggle-input" type="checkbox" checked/>
+        <input id="bg-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
     </div>
   </div>
@@ -212,6 +208,20 @@
         <div id="glass-orb-label"></div>
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
+          <div id="prototype-stage-selection" aria-hidden="true">
+            <div class="g-stage-selected-accent g-stage-selected-accent-left">
+              <div class="g-stage-selected-accent-left-base"></div>
+              <div class="g-stage-selected-accent-left-white-2"></div>
+              <div class="g-stage-selected-accent-left-white-1"></div>
+            </div>
+            <div class="g-stage-selected-accent g-stage-selected-accent-right">
+              <div class="g-stage-selected-accent-right-base"></div>
+              <div class="g-stage-selected-accent-right-white-2"></div>
+              <div class="g-stage-selected-accent-right-white-1"></div>
+            </div>
+            <div class="g-stage-selected-inner-glow"></div>
+            <div class="g-stage-selected-ring"></div>
+          </div>
           <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
           <div id="c-primary"></div>
           <div id="c-secondary"></div>
@@ -219,7 +229,21 @@
           <div id="c-detail"></div>
           <img id="c-media" alt=""/>
           <div id="c-rich"></div>
-          <div id="siri-orb"><canvas id="siri-canvas"></canvas></div>
+          <div id="siri-orb">
+            <div class="thinking-orb-visual" aria-hidden="true">
+              <div class="thinking-orb-halo thinking-orb-halo-cloud"></div>
+              <div class="thinking-orb-halo thinking-orb-halo-ring"></div>
+              <div class="thinking-orb-sphere">
+                <div class="thinking-orb-layer thinking-orb-layer-base"></div>
+                <div class="thinking-orb-layer thinking-orb-layer-wash"></div>
+                <div class="thinking-orb-layer thinking-orb-layer-toplight"></div>
+                <div class="thinking-orb-layer thinking-orb-layer-bottomlobe"></div>
+                <div class="thinking-orb-layer thinking-orb-layer-rim"></div>
+                <div class="thinking-orb-layer thinking-orb-layer-grain"></div>
+              </div>
+            </div>
+            <canvas id="siri-canvas"></canvas>
+          </div>
         </div>
         <div id="glass-controls-layer"></div>
         <div class="drop" id="drop-left"></div>
@@ -258,6 +282,7 @@
 
     <div class="sb-btn-row">
       <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
+      <button id="stage-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
       <button id="stage-delete" class="sb-mini-btn" type="button">Delete</button>
       <button id="stage-reset" class="sb-mini-btn" type="button">Reset</button>
     </div>
@@ -287,6 +312,20 @@
           <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
         </div>
       </div>
+      <div id="stage-card-s-row" class="sb-row tight hidden">
+        <label class="sb-toggle" for="stage-card-s-toggle">
+          <div class="sb-toggle-copy"><strong>Card-S layout</strong></div>
+          <input id="stage-card-s-toggle" class="sb-toggle-input" type="checkbox"/>
+        </label>
+      </div>
+      <div id="stage-list-count-row" class="sb-row tight hidden">
+        <label class="sb-lbl">List chips</label>
+        <div class="sb-btn-row">
+          <button id="stage-list-count-dec" class="sb-mini-btn" type="button">−</button>
+          <div id="stage-list-count-val" class="sb-input" style="text-align:center;pointer-events:none;">3</div>
+          <button id="stage-list-count-inc" class="sb-mini-btn" type="button">+</button>
+        </div>
+      </div>
       <div id="stage-components-panel" class="sb-row tight hidden">
         <span class="sb-lbl">Components</span>
         <div id="stage-component-controls"></div>
@@ -296,6 +335,19 @@
           <div class="sb-toggle-copy"><strong>Phone scene visible</strong></div>
           <input id="phone-bg-visible-toggle" class="sb-toggle-input" type="checkbox" checked/>
         </label>
+      </div>
+    </div>
+
+    <div class="sb-section" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">AI Debug</div>
+        <span class="sb-chevron">▾</span>
+      </button>
+      <div class="sb-section-body">
+        <div class="legacy-grid prototype-ai-debug-grid">
+          <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
+          <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Thinking</button>
+        </div>
       </div>
     </div>
 
@@ -326,6 +378,19 @@
           <input id="scenario-icon-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Icon size"/>
           <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
         </div>
+      </div>
+    </div>
+
+    <div id="editor-list-items" class="layer-row editor-field hidden">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">List Items</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-list-items-count" class="layer-preview-val">3 chips</span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <div id="scenario-list-items-editor" class="sb-row tight"></div>
       </div>
     </div>
 
@@ -381,10 +446,29 @@
         <span class="layer-row-chevron">▾</span>
       </button>
       <div class="layer-row-body">
-        <input id="scenario-detail" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
+        <textarea id="scenario-detail" class="sb-textarea" rows="4" autocomplete="off" spellcheck="false" placeholder="Detail text"></textarea>
         <div class="typo-controls">
           <input id="scenario-detail-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
           <input id="scenario-detail-color" class="typo-color" type="color" value="#5a5a5a"/>
+        </div>
+      </div>
+    </div>
+
+    <div id="editor-intent-header-field" class="layer-row editor-field hidden">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Intent Header</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-intent-header-text" class="layer-preview-val"></span>
+          <span id="layer-preview-intent-header-size" class="layer-preview-size"></span>
+          <span id="layer-preview-intent-header-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <input id="scenario-intent-header" class="sb-input" type="text" autocomplete="off" spellcheck="false" placeholder="Intent header text"/>
+        <div class="typo-controls">
+          <input id="scenario-intent-header-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Size"/>
+          <input id="scenario-intent-header-color" class="typo-color" type="color" value="#a0a0a0"/>
         </div>
       </div>
     </div>
@@ -405,6 +489,23 @@
         <div class="sb-toggle-copy"><strong>Phone BG blur</strong></div>
         <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
+    </div>
+
+    <div class="sb-row tight">
+      <label class="sb-toggle" for="stage-selected-toggle">
+        <div class="sb-toggle-copy"><strong>Selected</strong></div>
+        <input id="stage-selected-toggle" class="sb-toggle-input" type="checkbox"/>
+      </label>
+    </div>
+
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="stage-accent-color">Accent primary</label>
+      <input id="stage-accent-color" class="typo-color" type="color" value="#90acff"/>
+    </div>
+
+    <div class="sb-row tight">
+      <label class="sb-lbl" for="stage-accent-secondary-color">Accent secondary</label>
+      <input id="stage-accent-secondary-color" class="typo-color" type="color" value="#9761ff"/>
     </div>
 
     <div class="sb-section" data-collapsible="1">

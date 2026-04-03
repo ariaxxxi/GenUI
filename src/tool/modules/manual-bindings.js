@@ -10,12 +10,16 @@ export function initManualBindings({
   normalizeScenarioCanvas,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
+  normalizeListItemsByShape,
   createIcon,
+  createDefaultListItem,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
   canvasSettings,
@@ -36,6 +40,7 @@ export function initManualBindings({
   deleteScenario,
   commitScenarioChange,
   addStage,
+  duplicateCurrentStage,
   deleteCurrentStage,
   resetCurrentStageToDefault,
   commitStageChange,
@@ -60,6 +65,15 @@ export function initManualBindings({
   rebuildAnim,
   initStarfield,
 }) {
+  const isEditableTarget = (target) => {
+    const el = target instanceof Element ? target : null;
+    if (!el) return false;
+    return !!el.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])");
+  };
+  const stopEditableShortcutEvent = (e) => {
+    if (!isEditableTarget(e.target)) return;
+    e.stopImmediatePropagation();
+  };
   const input = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
 
@@ -135,8 +149,11 @@ export function initManualBindings({
     e.stopPropagation();
   });
 
+  document.addEventListener('keydown', stopEditableShortcutEvent, true);
+  document.addEventListener('keypress', stopEditableShortcutEvent, true);
+
   document.addEventListener('keydown', (e) => {
-    if (document.activeElement?.matches?.('input, textarea, select')) return;
+    if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
     if (flight.handleKeyDown(e)) return;
     if (e.key === '1') manualShape('circle');
     if (e.key === '2') manualShape('dot');
@@ -155,7 +172,10 @@ export function initManualBindings({
     }
   });
 
-  document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach((inp) => inp.addEventListener('keydown', (e) => e.stopPropagation()));
+  document.querySelectorAll('.bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color').forEach((inp) => {
+    inp.addEventListener('keydown', (e) => e.stopImmediatePropagation());
+    inp.addEventListener('keypress', (e) => e.stopImmediatePropagation());
+  });
 
   if (UI.modeToggle && !PAGE_MODE_OVERRIDE) {
     UI.modeToggle.addEventListener('change', () => {
@@ -270,13 +290,39 @@ export function initManualBindings({
   UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
   UI.scenarioDuplicate.addEventListener('click', duplicateScenario);
   UI.scenarioDelete.addEventListener('click', deleteScenario);
-  UI.scenarioName.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.name = e.target.value.trim() || 'Untitled Scenario'; }));
+  UI.scenarioName.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.name = String(e.target.value || ''); }));
+  UI.scenarioName.addEventListener('blur', (e) => {
+    const value = String(e.target.value || '');
+    if (value.trim()) return;
+    commitScenarioChange((scenario) => { scenario.name = 'Untitled Scenario'; });
+  });
   UI.scenarioTriggers.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.triggers = normalizeTriggers(e.target.value); }));
   UI.scenarioIconInput.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     const value = String(e.target.value || '').trim();
     scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
     scenario.content.iconByShape[scenario.shape] = value ? createIcon('emoji', value) : createIcon('none', '');
   }));
+  const getDraftListItems = (scenario) => {
+    scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
+    scenario.content.listChipIconsByShape = normalizeListChipIconsByShape(scenario.content.listChipIconsByShape, scenario.shape);
+    scenario.content.listItemsByShape = normalizeListItemsByShape(scenario.content.listItemsByShape, scenario.shape, {
+      textByShape: scenario.content.textByShape,
+      listChipIconsByShape: scenario.content.listChipIconsByShape,
+    });
+    return [...(stageListItemsForShape(scenario, scenario.shape) || [])];
+  };
+  const commitListItems = (mutator) => commitScenarioChange((scenario) => {
+    const items = getDraftListItems(scenario);
+    const nextItems = mutator(items.map((item) => ({
+      ...item,
+      icon: item?.icon ? { ...item.icon } : createIcon('none', ''),
+    })));
+    scenario.content.listItemsByShape = normalizeListItemsByShape(scenario.content.listItemsByShape, scenario.shape, {
+      textByShape: scenario.content.textByShape,
+      listChipIconsByShape: scenario.content.listChipIconsByShape,
+    });
+    scenario.content.listItemsByShape[scenario.shape] = Array.isArray(nextItems) ? nextItems : items;
+  });
   const commitTextField = (field, el) => el.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, scenario.shape, scenario.content);
     scenario.content.textByShape[scenario.shape][field] = e.target.value;
@@ -284,6 +330,7 @@ export function initManualBindings({
   commitTextField('primary', UI.scenarioPrimary);
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
+  if (UI.scenarioIntentHeader) commitTextField('intentHeader', UI.scenarioIntentHeader);
   UI.scenarioShapeRow.addEventListener('click', (e) => {
     const button = e.target.closest('[data-scenario-shape]');
     if (!button) return;
@@ -301,12 +348,19 @@ export function initManualBindings({
     const kind = String(UI.stageAddKind?.value || 'card');
     addStage(kind);
   });
+  UI.stageDuplicate?.addEventListener('click', () => duplicateCurrentStage());
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());
   UI.stageReset.addEventListener('click', () => resetCurrentStageToDefault());
   UI.stageNameInput.addEventListener('input', (e) => {
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
-    commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || '').trim() || 'Untitled Stage'; });
+    commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || ''); });
+  });
+  UI.stageNameInput.addEventListener('blur', (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    if (String(e.target.value || '').trim()) return;
+    commitStageChange(stage.id, (draft) => { draft.name = 'Untitled Stage'; });
   });
   UI.stageRadiusInput.addEventListener('change', (e) => commitStageRadius(e.target.value));
   UI.stageRadiusInput.addEventListener('blur', (e) => {
@@ -348,10 +402,56 @@ export function initManualBindings({
     if (!value) return void (e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '');
     commitStageIconPadOverride(value);
   });
+  UI.stageCardSToggle?.addEventListener('change', (e) => {
+    const scenario = selectedScenario();
+    const stage = stageById(scenario?.shape, scenario);
+    if (!scenario || !stage) return;
+    commitScenarioChange((draft) => {
+      draft.content.stageRenderShapeById = { ...(draft.content.stageRenderShapeById || {}) };
+      draft.content.stageRenderShapeById[stage.id] = e.target.checked ? 'card-s' : 'card';
+    });
+  });
   UI.stagePhoneBlurToggle.addEventListener('change', (e) => {
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
     commitStageChange(stage.id, (draft) => { draft.phoneBgBlur = e.target.checked; });
+  });
+  UI.stageSelectedToggle?.addEventListener('change', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
+      draft.content.selectedByShape[draft.shape] = e.target.checked;
+    });
+  });
+  UI.stageAccentColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.accentColorByShape = { ...(draft.content.accentColorByShape || {}) };
+      draft.content.accentColorByShape[draft.shape] = String(e.target.value || '#90acff');
+    });
+  });
+  UI.stageAccentSecondaryColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
+      draft.content.secondaryAccentColorByShape[draft.shape] = String(e.target.value || '#9761ff');
+    });
+  });
+  UI.stageListCountDec?.addEventListener('click', () => {
+    const scenario = selectedScenario();
+    if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== 'list') return;
+    commitListItems((items) => items.length > 1 ? items.slice(0, -1) : items);
+  });
+  UI.stageListCountInc?.addEventListener('click', () => {
+    const scenario = selectedScenario();
+    if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== 'list') return;
+    commitListItems((items) => {
+      if (items.length >= 8) return items;
+      return [...items, createDefaultListItem(`List item ${items.length + 1}`)];
+    });
   });
 
   UI.stageComponentControls.addEventListener('click', (e) => {
@@ -376,7 +476,7 @@ export function initManualBindings({
     const checkbox = e.target.closest('[data-stage-comp-toggle]');
     if (!checkbox) return;
     const type = String(checkbox.dataset.stageCompToggle || '');
-    if (!['icon', 'primary', 'secondary', 'detail'].includes(type)) return;
+    if (!['icon', 'primary', 'secondary', 'detail', 'intent-header'].includes(type)) return;
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
     commitStageChange(stage.id, (draft) => {
@@ -411,6 +511,68 @@ export function initManualBindings({
     e.target.value = '';
   });
   UI.scenarioIconUpload.addEventListener('click', (e) => { e.target.value = ''; });
+  UI.scenarioListItemsEditor?.addEventListener('input', (e) => {
+    const labelInput = e.target.closest('[data-list-item-label-index]');
+    if (labelInput) {
+      const index = parseInt(labelInput.dataset.listItemLabelIndex || '-1', 10);
+      if (index >= 0) {
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], label: labelInput.value };
+          return items;
+        });
+      }
+    }
+    const iconInput = e.target.closest('[data-list-item-icon-input-index]');
+    if (iconInput) {
+      const index = parseInt(iconInput.dataset.listItemIconInputIndex || '-1', 10);
+      if (index >= 0) {
+        const value = String(iconInput.value || '').trim();
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], icon: value ? createIcon('emoji', value) : createIcon('none', '') };
+          return items;
+        });
+      }
+    }
+  });
+  UI.scenarioListItemsEditor?.addEventListener('click', (e) => {
+    const resetBtn = e.target.closest('[data-list-item-icon-reset-index]');
+    if (!resetBtn) return;
+    const index = parseInt(resetBtn.dataset.listItemIconResetIndex || '-1', 10);
+    if (index < 0) return;
+    commitListItems((items) => {
+      if (!items[index]) return items;
+      items[index] = { ...items[index], icon: createIcon('none', '') };
+      return items;
+    });
+  });
+  UI.scenarioListItemsEditor?.addEventListener('change', async (e) => {
+    const uploadInput = e.target.closest('[data-list-item-icon-upload-index]');
+    if (!uploadInput) return;
+    const index = parseInt(uploadInput.dataset.listItemIconUploadIndex || '-1', 10);
+    if (index < 0) return;
+    const file = uploadInput.files?.[0];
+    if (!file) return;
+    if (!isSupportedAssetFile(file)) return void (uploadInput.value = '');
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    }).catch(() => '');
+    if (!dataUrl) return void (uploadInput.value = '');
+    commitListItems((items) => {
+      if (!items[index]) return items;
+      items[index] = { ...items[index], icon: createIcon('image', dataUrl) };
+      return items;
+    });
+    uploadInput.value = '';
+  });
+  UI.scenarioListItemsEditor?.addEventListener('click', (e) => {
+    const uploadInput = e.target.closest('[data-list-item-icon-upload-index]');
+    if (uploadInput) uploadInput.value = '';
+  });
 
   UI.editorMedia.addEventListener('click', (e) => {
     const button = e.target.closest('[data-media-reset-index]');
@@ -466,9 +628,14 @@ export function initManualBindings({
   bindTypographyInputs('primary', UI.scenarioPrimarySize, UI.scenarioPrimaryColor);
   bindTypographyInputs('secondary', UI.scenarioSecondarySize, UI.scenarioSecondaryColor);
   bindTypographyInputs('detail', UI.scenarioDetailSize, UI.scenarioDetailColor);
+  if (UI.scenarioIntentHeaderSize && UI.scenarioIntentHeaderColor) {
+    bindTypographyInputs('intentHeader', UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor);
+  }
   [UI.scenarioIconInput, UI.scenarioPrimary, UI.scenarioSecondary, UI.scenarioDetail,
+    UI.scenarioIntentHeader,
     UI.scenarioIconSize, UI.scenarioIconColor, UI.scenarioPrimarySize, UI.scenarioPrimaryColor,
     UI.scenarioSecondarySize, UI.scenarioSecondaryColor, UI.scenarioDetailSize, UI.scenarioDetailColor,
+    UI.scenarioIntentHeaderSize, UI.scenarioIntentHeaderColor,
   ].forEach((el) => { if (el) el.addEventListener('input', updateLayerPreviews); });
 
   initSidebarTabs();

@@ -90,7 +90,7 @@ body[data-page-mode="ai"] #sidebar {
   font-size: 12px;
   letter-spacing: .04em;
   text-decoration: none;
-  transition: background .18s, border-color .18s, transform .1s;
+  transition: background .18s var(--motion-ease), border-color .18s var(--motion-ease), transform .1s var(--motion-ease);
 }
 .entry-point-btn:hover {
   border-color: rgba(255,255,255,0.52);

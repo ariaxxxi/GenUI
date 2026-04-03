@@ -1,6 +1,6 @@
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'pill', 'card', 'card-s', 'image'];
-const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image'];
-export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const shapeHelperConfig = {
   clampFn: (v, lo, hi) => Math.max(lo, Math.min(hi, v)),
@@ -89,6 +89,11 @@ export const SHAPES = {
     left: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
     right: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
   },
+  list: {
+    main: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
+    left: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
+    right: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
+  },
   pill: {
     main: { w: 420, h: 100, br: '60px', tx: -210, ty: -50, op: 1 },
     left: { w: 100, h: 100, br: '50px', tx: -210, ty: -50, op: 0 },
@@ -137,7 +142,19 @@ export function defaultTypographyForShape(shape = 'pill') {
     primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
+    intentHeader: { size: 18, color: '#a0a0a0' },
   };
+}
+
+export function normalizeHexColor(value, fallback = '#90acff') {
+  const raw = String(value || fallback || '').trim();
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+  const short = raw.match(/^#([0-9a-f]{3})$/i);
+  if (short) {
+    const [, hex] = short;
+    return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`.toLowerCase();
+  }
+  return String(fallback || '#90acff').toLowerCase();
 }
 
 export function normalizeTypography(value = {}, shape = 'pill') {
@@ -193,10 +210,15 @@ export function normalizeStage(raw, fallback) {
   const phoneBgBlur = raw?.phoneBgBlur === undefined
     ? !!fallbackStage.phoneBgBlur
     : raw?.phoneBgBlur === true;
+  const selected = raw?.selected === undefined
+    ? !!fallbackStage.selected
+    : raw?.selected === true;
+  const accentColor = normalizeHexColor(raw?.accentColor, fallbackStage.accentColor || '#90acff');
+  const secondaryAccentColor = normalizeHexColor(raw?.secondaryAccentColor, fallbackStage.secondaryAccentColor || '#9761ff');
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => stageComponentTypes().includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, selected, accentColor, secondaryAccentColor, components };
 }
 
 export function normalizeStageImage(value) {

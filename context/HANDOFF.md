@@ -1,6 +1,2687 @@
 # Handoff
 
 ## Task title
+Prototype List Stage Reusing AI Disambiguation Pills
+
+## Completion status
+- Completed
+
+## Summary
+- Added a real built-in `list` stage on `add-visual` instead of relying on the old prototype-only demo list.
+- Reused the AI disambiguation pill renderer and motion path rather than creating a second list component:
+  - extracted the pill fan-out layout into shared `layoutDisambiguationPillItems(...)`
+  - reused `renderDisambiguationPills(...)`
+  - reused the existing `800ms` `entering -> settled` animation timing and the same selected pill shell
+- Updated the prototype `list` stage layout to a bottom-anchored vertical stack:
+  - pills share the same center line
+  - prototype now computes the stack anchor from the full stage frame height instead of the old orb-relative position
+  - prototype uses the shared layout helper with a `stack` variant
+  - AI message disambiguation keeps the original fan layout
+- Added a real `list` render shape with the reduced listening-orb geometry used by message disambiguation:
+  - `50x50`
+  - `25px` radius
+  - geometry is still used as the hidden anchor for the pill stack, but the final prototype `List` stage now hides the shell completely
+- Wired prototype morph/render so `list` behaves like a first-class stage:
+  - stage timeline now includes `List`
+  - `#drop-main` gets `home-glow listening-orb` in this state
+  - the pill cluster mounts into `#list-pills` outside the orb shell, so it can fan out without clipping
+  - same-shape updates re-render the cluster in `settled` state instead of replaying the intro animation
+  - leaving `list` now uses the existing list bridge callback, but it collapses the AI-style pill cluster instead of the old `.list-pill` stack
+  - later retune: the prototype `List` stage no longer applies `home-glow` or `listening-orb`, so only the pill stack remains visible
+  - later retune: the underlying `list` shell opacity is `0`, so the pills now sit on their own with no visible container
+- Mapped prototype content editing into the list stage without adding new sidebar components:
+  - `primary` → pill 1 label
+  - `secondary` → pill 2 label
+  - `detail` → pill 3 label
+  - stage icon remains the shared fallback across all three pills
+    - uploaded image → avatar image
+    - emoji icon → pill media glyph
+- Added three list-only chip icon overrides in the Content tab:
+  - `Chip 1 icon`, `Chip 2 icon`, `Chip 3 icon`
+  - values are stored per scenario and per stage under `content.listChipIconsByShape`
+  - unset chip icons fall back to the shared stage icon instead of duplicating state
+- Later retune: replaced the old fixed 3-chip content editor with a data-driven list-item editor:
+  - Stage tab now exposes `List chips` count controls for list stages only
+  - Content tab now renders one editor block per item with label, emoji/glyph, PNG upload, reset, and icon-mode badge
+  - item state lives under `content.listItemsByShape`, so chip count and chip content stay scenario-local and stage-local
+- Prototype `list` now also passes the stage selected-shell accent colors into the reused selected chip shell:
+  - selected pill highlight is driven by the current stage `Accent primary` / `Accent secondary`
+  - it no longer stays on the default blue/purple when the `List` stage style colors are changed
+- Added the AI glass stylesheet to `index.html` so the prototype page uses the exact same pill/stroke/accent CSS as the AI disambiguation stage.
+- Default prototype intent-header color is now `#a0a0a0`.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/ai/ai-bindings.js`
+- `src/ai/editor-bindings.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/shapes.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-actions.js`
+- `src/shared/sidebar-bindings.js`
+- `src/shared/scenario-data.js`
+- `src/shared/morph-layout.js`
+- `src/shared/morph-render.js`
+- `src/shared/sidebar-render.js`
+- `src/styles/shared.css`
+- `src/styles/editor-decorative.css`
+- `src/tool/modules/manual-bindings.js`
+- `src/tool/index-app.js`
+- `context/ARCHITECTURE.md`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shapes.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`
+  - clicked the built-in `List` stage chip
+  - early sample:
+    - `document.body.dataset.currentShape === "list"`
+    - `#drop-main.className === "drop home-glow listening-orb"`
+    - `#list-pills .g-disambiguation-pill` count: `3`
+    - cluster had `.entering`
+  - after `900ms`:
+    - cluster `.entering === false`
+    - cluster `.settled === true`
+  - list orb hidden check:
+    - `#drop-main.className === "drop"`
+    - `#siri-orb` opacity = `0`
+    - `#home-glow-layer` opacity = `0`
+  - list shell hidden check:
+    - `#drop-main` opacity = `0`
+    - `#drop-main` pointer-events = `none`
+    - pill count remained `3`
+    - cluster stayed `.settled === true`
+  - direct content-edit dispatch:
+    - labels updated to `Alpha One`, `Bravo Two`, `Charlie Three`
+    - icon input `✉` updated all three pill media glyphs to `✉`
+    - cluster stayed settled and did not replay the intro animation
+  - direct list chip icon edit:
+    - `Chip 1 icon` = `A`
+    - `Chip 2 icon` = `B`
+    - `Chip 3 icon` = `C`
+    - rendered pill media updated to `A`, `B`, `C`
+    - `localStorage['genui.scenarios.v1'][0].content.listChipIconsByShape.list` persisted the three icon objects
+  - direct style color edit on `List`:
+    - `Accent primary` = `#ff6600`
+    - `Accent secondary` = `#00ff66`
+    - selected pill resolved `--g-accent-rgb: 255 102 0`
+    - selected pill resolved `--g-accent-secondary-rgb: 0 255 102`
+  - list-count control check:
+    - `#stage-list-count-row` became visible only on `List`
+    - count changed live `2 -> 3 -> 2`
+    - rendered pill count changed live `2 -> 3 -> 2`
+  - bottom stack check:
+    - stage bottom readback: `753`
+    - pill bottoms read back at `669`, `732`
+    - bottom pill stayed inset near the stage bottom instead of floating near mid-frame
+  - list editor check:
+    - Content tab rendered `2` live list item editors for the active scenario/stage state
+    - enabling `intent-header` exposed the content field and its default color input
+    - `#scenario-intent-header-color` resolved to `#a0a0a0`
+- Browser validation on `http://127.0.0.1:5174/ai.html`
+  - triggered the hidden prototype stage chip for `List`
+  - early sample:
+    - `document.body.dataset.currentShape === "list"`
+    - `#drop-main.className === "drop home-glow listening-orb"`
+    - `#list-pills .g-disambiguation-pill` count: `3`
+    - cluster had `.entering`
+  - after `900ms`:
+    - cluster `.entering === false`
+    - cluster `.settled === true`
+- Reference captures:
+  - `/tmp/prototype-list-stage-index.png`
+  - `/tmp/prototype-list-stage-ai.png`
+  - `/tmp/prototype-list-stage-vertical-center.png`
+  - `/tmp/prototype-list-chip-icons-per-chip.png`
+  - `/tmp/prototype-list-stage-accent-from-style.png`
+  - `/tmp/prototype-list-stage-orb-hidden.png`
+  - `/tmp/prototype-list-stage-shell-hidden.png`
+
+## Remaining issues / caveats
+- List items still reuse the shared stage icon as fallback when a specific item icon is unset.
+- The old debug/demo `manualShape('list')` path still exists for the legacy demo controls, but the stage timeline `List` stage now uses the shared AI pill renderer instead of the old `.list-pill` DOM.
+
+## Recommended next step
+1. If each list chip later needs separate typography or subtitle/detail content, extend the new `listItemsByShape` model instead of reviving `primary` / `secondary` / `detail` mappings for list stages.
+
+## Task title
+Thinking Orb Soft Luminous Sphere Port
+
+## Completion status
+- Completed
+
+## Summary
+- Ported the latest thinking-orb visual change from the detached worktree into `add-visual`.
+- Replaced the older eclipse-style thinking orb markup with the newer soft luminous sphere stack in both entry points:
+  - diffuse cloud halo
+  - ring halo
+  - softened sphere body
+  - white/cyan top wash
+  - blue/violet lower lobe
+  - subtle grain
+- Updated the thinking-state decorative rules so `magic` now suppresses the old shell glow treatment while the new sphere is active:
+  - no container `box-shadow`
+  - no `home-glow-layer`
+  - no listening canvas visible over the thinking state
+- Kept listening behavior unchanged; only the thinking state switched visual families.
+- Retuned the motion model so the orb reads as a continuous loop instead of a one-time reveal:
+  - halo ring now counter-orbits continuously
+  - top highlight and wash now orbit continuously
+  - lower lobe counter-orbits continuously
+  - grain layer now drifts continuously
+- Retuned the thinking-orb palette separation so the rotation reads more clearly:
+  - white top light is brighter and tighter
+  - cyan/blue body reads cleaner against the purple lower lobe
+  - lower lobe purple is stronger and less blended into the blue shell
+  - halo ring now carries a clearer white-blue-purple split
+- Made the thinking motion more dramatic:
+  - orbit paths now include irregular scale wobble instead of purely smooth rotation
+  - top light, wash, and lower lobe all rotate faster
+  - counter-motion between blue and purple layers is easier to read at a glance
+- Fixed the prototype debug `Thinking` size regression:
+  - prototype `magic` now uses explicit `80x80` geometry in the manual-demo path
+  - this avoids the smaller shared `SHAPES.magic` fallback on the prototype page
+  - prototype `magic` now also forces `#siri-orb` to `transform: scale(1)` in the manual-page decorative CSS, matching listening instead of staying at the base `scale(0.2)`
+- Restored the visible thinking-orb scale to `0.7` in both entry points:
+  - `#drop-main.magic-glow #siri-orb .thinking-orb-visual` now resolves to `transform: scale(0.7)` in AI mode and prototype mode
+- Changed non-thinking -> thinking entry timing from a class-delay to a visual-delay:
+  - the stage now morphs into `magic` immediately
+  - `--thinking-entry-delay: 300ms` is applied only when entering thinking from a non-thinking shape
+  - all visible thinking layers now inherit `--thinking-entry-progress`, so white/blue/purple color stays at `0` during the first `300ms` and then fades in smoothly
+- Added a matching shell fade delay for non-thinking -> thinking entry:
+  - `--thinking-shell-delay: 300ms` is now applied on the same transition
+  - the old container stroke/inner shell hold for the first `300ms`
+  - after that delay, the shell fades out while the thinking orb color ramp fades in
+- Smoothed the listening -> thinking bridge itself:
+  - added a short `orb-thinking-bridge` state during the bridge window before `magic` activates
+  - the listening orb now starts softening immediately instead of holding at full brightness until the magic swap
+  - tuned the bridge so it stays visibly alive instead of dipping dark:
+    - bridge orb now stays brighter (`~0.92` target instead of `~0.82`)
+    - bridge canvas now only fades to `0.68` instead of dropping to `0.46`
+    - bridge shell glow holds near `0.72`
+  - tuned the listening -> thinking timing to overlap earlier:
+    - `--thinking-entry-delay` is `140ms` for listening -> thinking
+    - `--thinking-shell-delay` is `180ms` for listening -> thinking
+    - non-listening -> thinking still uses the existing `300ms` delays
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/morph-bridges.js`
+- `src/styles/shared.css`
+- `src/styles/ai-drop.css`
+- `src/styles/editor-layout.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-decorative.css`
+- `src/tool/modules/manual-demo.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html` with a forced `magic` state:
+  - `#drop-main` classes: `drop home-blur home-glow magic-glow`
+  - `.thinking-orb-visual` opacity: `1`
+  - `#siri-orb canvas` opacity: `0`
+  - `#drop-main` box-shadow: `none`
+  - `#home-glow-layer` opacity: `0`
+- Browser validation on both entry points with Playwright:
+  - `index.html` and `ai.html` both kept `animation-play-state: running`
+  - sampled transforms changed across three time slices on:
+    - `.thinking-orb-halo-ring`
+    - `.thinking-orb-layer-wash`
+    - `.thinking-orb-layer-toplight`
+    - `.thinking-orb-layer-bottomlobe`
+- Browser validation on `http://127.0.0.1:5174/index.html` after the prototype size fix:
+  - clicked the prototype `Thinking` debug button
+  - `#drop-main` resolved to `80px x 80px`
+  - border radius resolved to `40px`
+  - `#siri-orb` resolved to full size instead of the scaled-down `16px` bug:
+    - listening `#siri-orb`: `80.41px x 80.41px`
+    - magic `#siri-orb`: `80.03px x 80.03px`
+  - `.thinking-orb-visual` opacity remained `1`
+- Browser validation after the color-separation retune:
+  - `index.html` and `ai.html` both resolved:
+    - top light opacity `1`, blur `8px`
+    - bottom lobe opacity `0.96`, blur `7px`
+    - rim opacity `0.8`
+- Browser validation after the motion-dramatic retune:
+  - `index.html` and `ai.html` both resolved faster animation durations:
+    - top light `4.8s`
+    - wash `6.8s`
+    - bottom lobe `7.4s`
+  - sampled transforms changed significantly over a `1.2s` interval on all three layers
+- Browser validation on the real `card -> magic` path after the `0.7` scale + `300ms` visual-delay update:
+  - `index.html` and `ai.html` both resolved `--thinking-entry-delay: 300ms`
+  - early sample:
+    - `.thinking-orb-visual` opacity `0`
+    - `--thinking-entry-progress: 0`
+    - halo/sphere/top/bottom opacity all `0`
+  - mid sample at `220ms`:
+    - stage already in `drop home-blur home-glow magic-glow`
+    - `.thinking-orb-visual` already at the target geometry (`~0.703` scale)
+    - `--thinking-entry-progress: 0`
+    - halo/sphere/top/bottom opacity all still `0`
+  - later sample:
+    - `--thinking-entry-progress` rose to `~0.62`
+    - halo opacity `~0.546`
+    - sphere/top/bottom opacity `~0.621`
+  - full sample:
+    - `.thinking-orb-visual` transform `matrix(0.7, 0, 0, 0.7, 0, 0)`
+    - `--thinking-entry-progress` `~0.99`
+  - shell timing check:
+    - early and mid samples still had `::before` / `::after` opacity `1`
+    - late sample showed shell fade underway:
+      - with the `300ms` shell delay, `::before` / `::after` opacity dropped to about `~0.235` while orb progress was `~0.774`
+    - full sample:
+      - `::before` / `::after` opacity fell near `0`
+- Browser validation on the real `listening -> magic` path in `index.html` after the bridge smoothing:
+  - at `t0`, `#drop-main` carried `orb-thinking-bridge`
+  - tuned pass:
+    - `t240` during the bridge:
+      - listening shell glow `~0.695`
+      - orb opacity `~0.908`
+      - canvas opacity `0.68`
+    - `t320` just after `magic` activation:
+      - `--thinking-entry-delay: 140ms`
+      - `--thinking-shell-delay: 180ms`
+      - shell glow still `~0.666`
+      - canvas still `~0.574`
+      - thinking wrapper already visible at `~0.121`
+    - `t400`:
+      - shell glow `~0.429`
+      - thinking wrapper `~0.705`
+      - canvas `~0.144`
+    - `t520`:
+      - thinking progress already `~0.628`
+      - thinking wrapper `~0.983`
+      - canvas effectively gone
+  - this removes the previous dark beat between listening and thinking
+- Reference capture:
+  - `/tmp/add-visual-thinking-orb-soft-sphere.png`
+  - `/tmp/thinking-loop-index.png`
+  - `/tmp/thinking-loop-ai.png`
+  - `/tmp/prototype-thinking-size-fixed.png`
+  - `/tmp/thinking-color-separation-index.png`
+  - `/tmp/thinking-color-separation-ai.png`
+  - `/tmp/thinking-dramatic-index.png`
+  - `/tmp/thinking-dramatic-ai.png`
+  - `/tmp/thinking-delay300-index-final.png`
+  - `/tmp/thinking-delay300-ai-final.png`
+  - `/tmp/thinking-shell-delay-index.png`
+  - `/tmp/thinking-shell-delay-ai.png`
+  - `/tmp/listening-thinking-smooth-index.png`
+  - `/tmp/listening-thinking-smooth-fixed-index.png`
+
+## Remaining issues / caveats
+- This was a direct port of the latest detached-worktree thinking orb, not a broader refactor of the older AI/prototype debug flow.
+- The visual was validated by forcing the `magic` state rather than through the full debug interaction.
+
+## Recommended next step
+1. Open the normal thinking trigger on `add-visual` and confirm the live interaction path matches the forced-state visual.
+
+## Task title
+Prototype Text Inputs Accept Space
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the prototype-mode global keyboard guards so sidebar text fields are always treated as editable targets before any page-level shortcuts run.
+- Manual prototype page:
+  - added a local editable-target check in `manual-bindings`
+  - the document-level shortcut handler now exits if the event target or active element is inside an `input`, `textarea`, `select`, or editable element
+- AI editor page in prototype mode:
+  - reused the shared `isEditableTarget(...)` helper from stage capture
+  - the global AI shortcut handler now checks the actual event target, not just `document.activeElement`
+- This is intended to keep `Space` available in all prototype text fields:
+  - primary
+  - secondary
+  - detail
+  - intent header
+  - other sidebar text inputs using the same editable path
+
+## Files changed
+- `src/tool/modules/manual-bindings.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser verification was attempted against `index.html` and `ai.html` with Playwright keypress simulation, but the long-running field probe did not return in this environment. The actual code-path change is limited to the editable-target guards.
+
+## Remaining issues / caveats
+- A direct automated readback of sidebar field values after `Space` keypress was inconclusive in this headless environment.
+- If you still see a specific field swallowing spaces, point to the exact page and field and I’ll target that handler directly.
+
+## Recommended next step
+1. Spot-check `primary`, `secondary`, `detail`, and `intent header` in prototype mode on both `index.html` and `ai.html`.
+
+## Task title
+Scenario Reload Persistence Hardening
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining reload-loss path for scenario-scoped edits like text content and uploaded icon images.
+- Root cause:
+  - scenario edits were still persisted through a single `localStorage` JSON blob
+  - once icon/image data URLs made that blob large enough, local `setItem(...)` could fail and later edits appeared to disappear on reload
+- Kept the existing localStorage snapshot path for fast synchronous bootstrap, but added a durable IndexedDB mirror for scenarios.
+- Added a scenario revision key so reload can choose the newest scenario library instead of trusting whichever storage source responds first.
+- Preserved the existing stage morph behavior:
+  - no transition changes were added to `#drop-main`
+  - the durable restore only updates scenario data and rerenders after boot if IndexedDB has a newer copy
+- Applied the same persistence hardening to both entry points:
+  - manual prototype page
+  - AI editor page
+
+## Files changed
+- `src/app-state.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/app-state.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html` with Playwright:
+  - cleared localStorage and IndexedDB
+  - edited scenario primary text to `Persistent Reload Proof`
+  - uploaded a PNG icon into the current scenario/stage
+  - confirmed local saved state before reload:
+    - primary text: `Persistent Reload Proof`
+    - icon mode: `png/gif`
+    - scenario revision: `1775090386874`
+  - manually corrupted localStorage back to a stale scenario copy and reset the local revision to `0`
+  - reloaded the page
+  - confirmed the newer IndexedDB copy rehydrated correctly:
+    - primary text restored to `Persistent Reload Proof`
+    - icon mode restored to `png/gif`
+    - local revision restored to `1775090386874`
+
+## Remaining issues / caveats
+- This hardening is currently scoped to scenario data because that is where the large uploaded icon/image payloads live.
+- Stage-library persistence still uses localStorage only. The earlier stage-library key fix remains in place.
+
+## Recommended next step
+1. If stage-library edits also start failing under heavy local asset usage, mirror `STORAGE_KEYS.stages` into the same durable IndexedDB path as a follow-up.
+
+## Task title
+Thinking Orb Eclipse Visual Replacement
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the old prototype/AI thinking glow treatment with a dedicated eclipse-style orb visual inspired by the provided reference clip.
+- Added a real thinking-orb layer stack inside `#siri-orb` in both entry points:
+  - ambient nebula
+  - dark core disk
+  - thin rim
+  - two rotating flare groups
+  - halo and spark layers tied to those flare groups
+- Moved the thinking effect away from the old `box-shadow`-only glow model:
+  - when thinking is active, the old `magic-glow` halo, `home-blur`, and `home-glow-layer` treatment are suppressed
+  - the new orb now owns the visual instead
+- Updated the shared render hook so both thinking shapes use the same visual:
+  - `magic`
+  - legacy `ai`
+- Kept listening untouched apart from the shared `#siri-orb` markup.
+- Also corrected the remaining prototype-only `ai-mode` override that was forcing the old white shell and hiding `#siri-orb`.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/morph-render.js`
+- `src/styles/shared.css`
+- `src/styles/editor-layout.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-render.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - `manualShape('magic')` resolved to:
+    - `shape: magic`
+    - classes: `drop home-blur home-glow magic-glow`
+    - `#siri-orb` opacity: `1`
+    - `.thinking-orb-visual` opacity: `1`
+    - `#home-glow-layer` opacity: `0`
+    - `#drop-main` box-shadow: `none`
+    - `#drop-main` filter: `none`
+  - `manualShape('ai')` resolved to:
+    - `shape: ai`
+    - classes: `drop home-glow magic-glow ai-mode`
+    - `#siri-orb` opacity: `1`
+    - `.thinking-orb-visual` opacity: `1`
+    - `#home-glow-layer` opacity: `0`
+    - `#drop-main` box-shadow: `none`
+- Browser validation on `http://127.0.0.1:5174/ai.html` by forcing the `magic-glow` state:
+  - `#siri-orb` opacity: `0.998844`
+  - `.thinking-orb-visual` opacity: `1`
+  - `#home-glow-layer` opacity: `0`
+- Reference captures:
+  - `/tmp/thinking-orb-magic-pass.png`
+  - `/tmp/thinking-orb-ai-pass-2.png`
+  - `/tmp/thinking-orb-ai-page-pass.png`
+  - close crop: `/tmp/thinking-orb-magic-crop-3.png`
+
+## Remaining issues / caveats
+- This is a first-pass approximation of the reference clip, not a frame-perfect particle simulation.
+- The flare crescents are intentionally CSS-driven and lightweight; if a closer match is needed later, the next step should be an SVG-path or canvas-based flare system.
+
+## Recommended next step
+1. If you want the reference matched more tightly, the next tuning pass should focus on flare length, orb size, and particle density rather than returning to box-shadow-based glows.
+
+## Task title
+Prototype Stage AI Debug Buttons
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new `AI Debug` section directly below the stage section in both prototype entry points.
+- The section contains two prototype-only debug buttons:
+  - `Listening`
+  - `Thinking`
+- Corrected the buttons so they now drive the same orb states as the AI page:
+  - `Listening` -> `manualShape('listening')`
+  - `Thinking` -> `manualShape('magic')`
+- Updated the prototype stage styles so these debug states render with the same listening/thinking orb treatment as AI mode:
+  - listening uses the AI-style `home-glow` + `listening-orb` stack
+  - thinking uses the AI-style `home-glow` + `home-blur` + `magic-glow` stack
+- Later retuned the prototype `thinking` (`magic`) state to be whiter and less blue by adjusting only the prototype-side `magic-glow` aura and `magic`-specific `#home-glow-layer` inset stack.
+- Later tightened the prototype `thinking` (`magic`) state further by:
+  - reducing `#drop-main.home-blur` from `4px` to `2px`
+  - reducing the prototype `magic-glow` halo blur from `22.1px` to `15px`
+- Kept the look consistent with the AI-mode debug buttons by reusing `sb-shape-btn`, but added a prototype-only style override so the buttons render in pure white.
+- Scoped the white styling to `.prototype-ai-debug-grid` so the other sidebar/debug buttons keep their current look.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/editor-layout.css`
+- `src/styles/editor-sidebar.css`
+- `src/styles/ai-sidebar.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed the stage tab now includes `AI Debug`
+  - confirmed it renders `Listening` and `Thinking`
+  - confirmed both buttons resolve to prototype-white styling:
+    - `color: rgba(255, 255, 255, 0.96)`
+    - `borderColor: rgba(255, 255, 255, 0.42)`
+- Browser validation on `http://127.0.0.1:5174/index.html` by driving the debug actions directly:
+  - `manualShape('listening')` resolved to:
+    - `shape: listening`
+    - `#drop-main` classes: `drop home-glow listening-orb`
+    - `#home-glow-layer` opacity: `0.974597`
+    - `#siri-orb` opacity: `0.999236`
+  - `manualShape('magic')` resolved to:
+    - `shape: magic`
+    - `#drop-main` classes: `drop home-glow home-blur magic-glow`
+    - animated glow box-shadow: `rgb(123, 194, 255) 0px 0px 22.1px 9.46738px`
+- Browser validation after the white retune on `http://127.0.0.1:5174/index.html`:
+  - `manualShape('magic')` resolved to:
+    - `shape: magic`
+    - `#drop-main` classes: `drop home-blur home-glow magic-glow`
+    - `#home-glow-layer` box-shadow:
+      - `rgba(188, 212, 255, 0.1) 0px 6px 8px -2px inset`
+      - `rgba(228, 235, 255, 0.66) 0px -20px 24px -8px inset`
+      - `rgba(255, 255, 255, 0.6) 0px -18px 24px -6px inset`
+      - `rgba(10, 18, 38, 0.84) 0px -70px 60px -30px inset`
+    - `#drop-main` outer glow box-shadow: `rgba(232, 240, 255, 0.855) 0px 0px 22.1px 8.53061px`
+- Browser validation after the tighter blur pass on `http://127.0.0.1:5174/index.html`:
+  - `manualShape('magic')` resolved to:
+    - `#drop-main` classes: `drop home-blur home-glow magic-glow`
+    - `#drop-main` box-shadow: `rgba(232, 240, 255, 0.86) 0px 0px 15px 8.64404px`
+    - `#drop-main` filter: `blur(2px)`
+- Verified the same mirrored section and button markup was added to `ai.html`
+
+## Remaining issues / caveats
+- None. The section is still UI-only and does not persist stage/scenario state.
+
+## Recommended next step
+1. If more prototype-only AI debug shapes are needed later, add them inside the same `AI Debug` section and keep the white override scoped to `.prototype-ai-debug-grid`.
+
+## Task title
+Stage Capture Includes Prototype Intent Header
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed prototype stage capture so the intent header is included in copied PNGs and exported SVGs.
+- The bug was that capture was using `#stage`, which excludes the prototype `#intent-header` because the header is rendered as a sibling above the container.
+- Updated both prototype entry points to capture `#stage-wrap` instead of `#stage`.
+- Updated the shared capture sizing so it respects the real capture root height instead of forcing a square crop:
+  - PNG blob capture now uses the root's measured `width` and `height`
+  - SVG export now uses the root's measured `width` and `height`
+- Result: when the prototype intent header is visible, it is now part of the copied/exported image.
+
+## Files changed
+- `src/shared/stage-capture.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/stage-capture.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - forced a visible prototype intent header
+  - rendered the old root (`#stage`) and new root (`#stage-wrap`) through `modernScreenshot.domToCanvas(...)`
+  - sampled the top strip where the header sits and confirmed:
+    - old root: `opaqueTopStrip = 0`
+    - new root: `opaqueTopStrip = 940`
+  - this confirms the new capture root includes header pixels while the old one did not
+
+## Remaining issues / caveats
+- None for the prototype capture path. This is scoped to stage capture only.
+
+## Recommended next step
+1. If future prototype elements are intentionally rendered outside `#drop-main`, keep them inside `#stage-wrap` so the capture path continues to include them without special cases.
+
+## Task title
+Prototype Text Input Space-Key Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed AI-page prototype/editor text inputs so `Space` is no longer swallowed by the document-level shortcut handler.
+- Broadened the focused-text-editor detection in `src/ai/ai-bindings.js` from only the main sim input to any focused:
+  - `input`
+  - `textarea`
+  - `select`
+  - `contenteditable`
+- Kept the message-flow shortcuts active for the main sim input only, so the prototype/editor fields can now accept normal typing while the flow still preserves its intended keyboard behavior.
+- Result: text entry with spaces now works across the editable sidebar fields on the AI prototype page, including multiline detail editing.
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/ai-bindings.js`
+- Verified the keydown gate now returns early for any focused text editor other than the main sim input:
+  - `const focusedInTextInput = activeEl?.matches?.("input, textarea, select") || activeEl?.isContentEditable`
+  - `if (focusedInTextInput && !focusedInMainInput) return;`
+
+## Remaining issues / caveats
+- None in the editor shortcut path. This change is scoped to the AI-page document key handler.
+
+## Recommended next step
+1. If additional global shortcuts are added later, keep them behind the same focused-text-editor guard so typing behavior does not regress.
+
+## Task title
+Prototype Stage Duplication And Persistence Hardening
+
+## Completion status
+- Completed
+
+## Summary
+- Added a `Duplicate` stage action to the prototype stage toolbar in both prototype entry points.
+- Duplicating a stage now:
+  - creates a new non-preset stage in the shared stage library
+  - copies the current stage's effective render shape
+  - copies the current scenario's stage-scoped content and styling into the new stage:
+    - text
+    - icon
+    - images
+    - typography
+    - size override
+    - selected state
+    - primary accent color
+    - secondary accent color
+  - switches the current scenario to the new duplicated stage
+- Fixed the manual prototype page stage-library persistence bug:
+  - it was saving to `STORAGE_KEYS.stageLibrary`, which does not exist
+  - it now correctly saves to `STORAGE_KEYS.stages`
+- Added a legacy load fallback so stage edits written by the buggy manual build under `localStorage['undefined']` can still be recovered by the current branch.
+- Result: scenario and stage edits now persist reliably across refresh, and because they are stored in browser localStorage rather than the git checkout, they also survive pulling new code unless browser storage is explicitly cleared.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-actions.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/scenario-data.js`
+- `src/tool/index-app.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/ai/editor-bindings.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/sidebar-actions.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/ai/editor-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - duplicated the `card` stage and confirmed stage chip count changed `6 -> 7`
+  - renamed the scenario to `Persistence Check`
+  - renamed the duplicated stage to `Card Copy Alpha`
+  - refreshed the page and confirmed:
+    - selected scenario shape remained the duplicated stage id
+    - scenario name remained `Persistence Check`
+    - stage name remained `Card Copy Alpha`
+    - active stage chip still matched the duplicated stage id
+  - screenshot: `/tmp/add-visual-stage-duplicate-persist.png`
+
+## Remaining issues / caveats
+- The durability guarantee here is browser-storage based. If localStorage is manually cleared, stage/scenario edits will still be lost.
+
+## Recommended next step
+1. If explicit export/import of prototype edits is needed later, add a user-facing backup action on top of the existing localStorage persistence rather than replacing it.
+
+## Task title
+Prototype Detail Multiline Editing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the prototype detail editor in both prototype entry points from a single-line input to a multiline textarea.
+- Detail text now supports:
+  - spaces
+  - explicit line breaks via `Enter`
+- Updated the prototype stage preview so detail text preserves newline characters instead of collapsing them into one wrapped paragraph.
+- Kept the same per-scenario/per-stage `textByShape[shape].detail` storage contract; only the editor and display behavior changed.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/editor-layout.css`
+- `src/styles/ai-drop.css`
+- `src/shared/morph-layout.js`
+- `src/shared/morph-render.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/morph-layout.js`
+- `node --check src/shared/morph-render.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed `#scenario-detail` is now a `TEXTAREA`
+  - entered `Line 1 with space` + `Enter` + `Line 2`
+  - confirmed stored value:
+    - `localStorage['genui.scenarios.v1'][0].content.textByShape.card.detail === 'Line 1 with space\\nLine 2'`
+  - confirmed rendered detail text preserves the newline
+  - confirmed rendered `#c-detail` resolves to `white-space: pre-wrap`
+  - confirmed textarea min height is `78px`
+  - screenshot: `/tmp/add-visual-detail-multiline.png`
+
+## Remaining issues / caveats
+- None for the prototype editor path. The change is scoped to prototype detail editing/rendering only.
+
+## Recommended next step
+1. If other editable text layers later need multiline behavior, reuse the same `textarea + pre-wrap` path instead of introducing per-layer newline hacks.
+
+## Task title
+Prototype Intent Header Content Field
+
+## Completion status
+- Completed
+
+## Summary
+- Added a prototype Content-tab edit field for the `intent-header` stage component in both prototype entry points.
+- Kept the header text in the same per-scenario/per-stage `textByShape` model as the other text layers by extending each entry to:
+  - `primary`
+  - `secondary`
+  - `detail`
+  - `intentHeader`
+- Extended the same per-stage typography model so the prototype intent header now has editable:
+  - `font size`
+  - `color`
+- The Content row now includes:
+  - header text input
+  - size input
+  - color input
+- The new field only appears when the current stage has the `intent-header` component enabled.
+- Prototype preview now renders the intent header label from `textByShape[shape].intentHeader` and falls back to the scenario name when the field is blank.
+- Prototype preview applies the header typography from `typographyByShape[shape].intentHeader`.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/shared/scenario-data.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/sidebar-bindings.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/tool/index-app.js`
+- `src/ai/editor-bindings.js`
+- `src/ai/ai-shell.js`
+- `src/ai/ai-bindings.js`
+- `context/architecture.md`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/shared/sidebar-bindings.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/editor-bindings.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed `#editor-intent-header-field` starts hidden
+  - enabled `intent-header` on the `card` stage and confirmed the field becomes visible in the Content tab
+  - entered `WEATHER ALERT` and confirmed:
+    - rendered header text updated to `WEATHER ALERT`
+    - `localStorage['genui.scenarios.v1'][0].content.textByShape.card.intentHeader === 'WEATHER ALERT'`
+  - changed the header typography and confirmed:
+    - rendered font size updated to `26px`
+    - rendered color updated to `rgb(255, 102, 0)`
+    - `localStorage['genui.scenarios.v1'][0].content.typographyByShape.card.intentHeader.size === 26`
+    - `localStorage['genui.scenarios.v1'][0].content.typographyByShape.card.intentHeader.color === '#ff6600'`
+  - screenshot: `/tmp/add-visual-intent-header-content-tab.png`
+  - screenshot: `/tmp/add-visual-intent-header-typography.png`
+
+## Remaining issues / caveats
+- The prototype header still falls back to the scenario name if `intentHeader` is blank. This is intentional so existing scenarios with the component enabled do not render an empty label.
+
+## Recommended next step
+1. If the prototype editor later needs separate typography controls for the intent header, add them as a dedicated header layer instead of reusing primary/detail typography.
+
+## Task title
+Prototype Selected Shell Bottom-Right Highlight Rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Rebuilt the prototype selected-shell bottom-right highlight to match the mirrored 3-layer Figma structure from node `349:10`.
+- Updated both prototype entry points so the right highlight now mounts:
+  - `g-stage-selected-accent-right-base`
+  - `g-stage-selected-accent-right-white-2`
+  - `g-stage-selected-accent-right-white-1`
+- Translated the Figma right-side geometry directly into CSS pixel positioning:
+  - accent circle: `166px` at `right -51px`, `bottom -139px`
+  - white spotlight 2: `59.463px` at `right 2.27px`, `bottom -85.73px`
+  - white spotlight 1: `32px` at `right 16px`, `bottom -72px`
+- Kept the same selected accent color contract:
+  - the accent circle is driven by `--g-stage-selected-rgb` / `--g-stage-selected-secondary-rgb`
+  - both white spotlights stay white with `mix-blend-mode: plus-lighter`
+- Left the host morph transition stack unchanged.
+- Later reduced the bottom inner shadow slightly from `57%` to `48%` while leaving the rest of the inner glow unchanged.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed the selected shell now contains `3` right highlight layers
+  - confirmed the right white spotlights stay white while the accent circle is color-driven
+  - confirmed `#drop-main` still resolves to:
+    - `width, height, border-radius, transform, opacity, background, box-shadow, filter`
+- Browser validation on `http://127.0.0.1:5174/ai.html`:
+  - confirmed the same `3` right highlight layers are present there as well
+
+## Task title
+Prototype Selected Shell Top-Left Highlight Rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Rebuilt the prototype selected-shell top-left highlight to match Figma node `349:10` as an explicit 3-layer stack instead of a single blurred gradient.
+- Updated both prototype entry points so `#prototype-stage-selection` now mounts a left highlight group with:
+  - `g-stage-selected-accent-left-base`
+  - `g-stage-selected-accent-left-white-2`
+  - `g-stage-selected-accent-left-white-1`
+- Translated the Figma layer geometry directly into CSS pixel positioning:
+  - accent circle: `166px` at `left -52px`, `top -98px`
+  - white spotlight 2: `59.463px` at `left 1.27px`, `top -44.73px`
+  - white spotlight 1: `32px` at `left 15px`, `top -31px`
+- Kept the existing bottom-right highlight, inner glow, selected-state logic, per-stage accent colors, and color-transition system unchanged.
+- Preserved the recent morph regression fix:
+  - no new transition was added to `#drop-main`
+  - the selected color interpolation remains owned by `#prototype-stage-selection`
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed the selected shell now contains the 3 left highlight nodes
+  - confirmed the accent color updates only the base accent circle while both white spotlights remain white
+  - confirmed `#drop-main` still resolves to the original morph transition stack:
+    - `width, height, border-radius, transform, opacity, background, box-shadow, filter`
+- Browser validation on `http://127.0.0.1:5174/ai.html`:
+  - confirmed the same 3-layer left highlight stack is present there as well
+
+## Remaining issues / caveats
+- The rebuilt left highlight is a CSS translation of the Figma frame, not a direct asset import, so any later parity tuning should happen in `src/styles/shared.css`.
+
+## Recommended next step
+1. If the top-left stack needs more Figma parity, tune only the three left-layer gradients and blur radii in `src/styles/shared.css`.
+
+## Task title
+Prototype Selected Color Stage Transition Smoothing
+
+## Completion status
+- Completed
+
+## Summary
+- Smoothed prototype selected-shell accent color changes when moving between stages on `add-visual`.
+- Converted the two selected-shell accent vars into typed color custom properties so the browser can interpolate them instead of snapping:
+  - `--g-stage-selected-rgb`
+  - `--g-stage-selected-secondary-rgb`
+- Updated the prototype selected-shell gradients and inner glow to consume those vars as colors via `color-mix(...)`, preserving the existing visual while allowing animated color blending.
+- Added a `320ms var(--motion-ease)` transition for both selected-shell color vars on `#prototype-stage-selection`, not on `#drop-main`, so the stage geometry morph stack stays intact.
+- Updated the morph renderer to write the selected accent values as real CSS colors (`rgb(...)`) instead of raw channel strings, and to mirror them onto `#prototype-stage-selection`, which is required for typed custom-property interpolation without breaking host morphing.
+
+## Files changed
+- `src/styles/shared.css`
+- `src/shared/morph-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-render.js`
+- Browser validation on `http://127.0.0.1:5174/index.html`:
+  - confirmed `#drop-main` still resolves to the original geometry transition stack:
+    - `width, height, border-radius, transform, opacity, background, box-shadow, filter`
+  - confirmed the selected-shell colors still blend during transition on the overlay:
+    - start: `rgb(144, 172, 255)` / `rgb(151, 97, 255)`
+    - mid at `160ms`: `rgb(29, 202, 149)` / `rgb(31, 98, 255)`
+    - end: `rgb(0, 210, 122)` / `rgb(0, 98, 255)`
+
+## Remaining issues / caveats
+- The smooth interpolation applies to prototype selected-shell color changes on `#drop-main`. Geometry changes for stage shape/size are unchanged.
+
+## Recommended next step
+1. If the color ramp still feels too quick or too slow in-browser, tune only the `320ms` custom-property transition in `src/styles/shared.css`.
+
+## Task title
+Prototype Stage Selected Highlight Shell
+
+## Completion status
+- Completed
+
+## Summary
+- Applied the reusable name-chip highlight treatment to prototype-mode stage containers without replacing each stage's existing base appearance.
+- Kept stage-level `selected`, `accentColor`, and `secondaryAccentColor` on normalized stage records only as legacy/default fallback for migration and new-stage seeding.
+- Moved prototype selected-shell state out of the shared stage library and into scenario content so it is now independent per scenario and per stage:
+  - `content.selectedByShape`
+  - `content.accentColorByShape`
+  - `content.secondaryAccentColorByShape`
+- The right-panel `Selected`, `Accent primary`, and `Accent secondary` controls now edit the active scenario's current stage entry instead of mutating the shared stage definition.
+- Added a `Selected` toggle plus `Accent primary` / `Accent secondary` controls to the right-panel Style tab in both prototype entry points:
+  - `index.html`
+  - `ai.html`
+- Implemented a shared overlay inside `#drop-main` that only turns on when the current prototype stage has `selected: true`.
+- The selected overlay includes only the requested chip-highlight pieces:
+  - top-left accent highlight ball
+  - bottom-right accent highlight ball
+  - accent-colored inner shadow
+- Added the missing white inset outline so prototype selected mode now includes the brighter selected ring used by the AI name chip:
+  - `.g-stage-selected-ring`
+  - `box-shadow: none`
+- Later retuned the bottom-right highlight ball to read softer by increasing its blur from `10px` to `40px`.
+- Added a card-only softening pass so rectangular card stages blend the highlight more like the pill:
+  - bottom-right highlight moved lower, enlarged slightly, reduced in opacity, and increased to `blur(40px)`
+- Later removed the card-only top-left override so card now uses the exact same top-left highlight as pill:
+  - same gradient anchor: `58% 176% at 13% -10%`
+  - same blur: `5px`
+- Later moved the prototype selected-shell highlight geometry to pixel-based values so pill and card keep visual parity instead of drifting with aspect ratio:
+  - top-left highlight: `244px 176px at 55px -10px`, `blur(5px)`
+  - bottom-right highlight: `width 126px`, `height 88px`, `right -25px`, `bottom -18px`, `blur(40px)`
+- This also removed the remaining card-only bottom-right override so both pill and card now use the same highlight geometry.
+- Retuned the selected-shell color application to match the AI disambiguation name chip:
+  - top-left highlight now uses the same secondary-primary-secondary-primary stop pattern as the AI chip highlight
+  - bottom-right highlight stays primary-led
+  - inner glow now mixes primary and secondary accent colors with the same split left/right weighting as the AI chip
+- Added the second prototype selected-shell color to the live preview contract:
+  - `--g-stage-selected-rgb`
+  - `--g-stage-selected-secondary-rgb`
+- Increased the prototype selected-shell top-left highlight blur from `5px` to `15px` so the left accent reads softer while keeping the same pixel anchor and gradient stops.
+- Removed the extra selected-only inset ring so selected mode now reuses the same base container outline as non-selected, with only the accent highlights and inner glow changing.
+- When `Selected` is off, the stage keeps its current container look with no added shell effect.
+
+## Files changed
+- `index.html`
+- `ai.html`
+- `src/styles/shared.css`
+- `src/shapes.js`
+- `src/shared/scenario-data.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/sidebar-actions.js`
+- `src/shared/morph-render.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `src/ai/editor-bindings.js`
+- `src/tool/modules/manual-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shapes.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/shared/sidebar-actions.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/ai/editor-bindings.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- Browser validation via Playwright on `add-visual`:
+  - opened `http://127.0.0.1:5174/index.html`
+  - captured `/tmp/prototype-stage-selected-off.png`
+  - toggled `Selected` on for the current stage and captured `/tmp/prototype-stage-selected-on.png`
+  - changed the right-panel accent color to `#ff6600` and captured `/tmp/prototype-stage-selected-orange.png`
+  - confirmed state transitions:
+    - initial: `checked=false`, `selectedClass=false`, overlay opacity `0`
+    - selected: `checked=true`, `selectedClass=true`, overlay opacity `1`
+    - recolored: CSS var `--g-stage-selected-rgb` resolved from `144 172 255` to `255 102 0`
+  - after right-bottom blur retune:
+    - captured `/tmp/prototype-stage-selected-blur40.png`
+    - confirmed `.g-stage-selected-accent-right` resolves to `filter: blur(40px)`
+  - after missing-outline fix:
+    - captured `/tmp/prototype-stage-pill-ring.png`
+    - captured `/tmp/prototype-stage-card-ring.png`
+    - confirmed the prototype selected shell now resolves with the same inset outline on both shapes:
+      - pill: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.5px inset`
+      - card: `rgba(255, 255, 255, 0.78) 0px 0px 2px 0.5px inset`
+  - after card-only softening pass:
+    - switched prototype stage to `Card`
+    - captured `/tmp/prototype-stage-card-selected-softened.png`
+    - confirmed card-specific selected-shell values:
+      - `body[data-current-shape="card"]`
+      - right highlight `filter: blur(40px)`
+      - right highlight `bottom: -67.4688px`
+      - right highlight size `142.797px x 243.953px`
+  - after card-left parity retune:
+    - captured `/tmp/prototype-stage-pill-left-reference.png`
+    - captured `/tmp/prototype-stage-card-left-matched-to-pill.png`
+    - confirmed pill and card now resolve to identical top-left highlight values:
+      - `filter: blur(5px)`
+      - `radial-gradient(58% 176% at 13% -10%, rgb(144, 172, 255) 0%, rgba(144, 172, 255, 0.92) 12%, rgba(144, 172, 255, 0.54) 24%, rgba(144, 172, 255, 0.16) 36%, rgba(144, 172, 255, 0) 50%)`
+  - after pixel-based parity retune:
+    - captured `/tmp/prototype-stage-pill-pixel-parity.png`
+    - captured `/tmp/prototype-stage-card-pixel-parity.png`
+    - confirmed pill and card now resolve to identical highlight geometry on both accents:
+      - left: `radial-gradient(244px 176px at 55px -10px, rgb(144, 172, 255) 0%, rgba(144, 172, 255, 0.92) 12%, rgba(144, 172, 255, 0.54) 24%, rgba(144, 172, 255, 0.16) 36%, rgba(144, 172, 255, 0) 50%)`, `filter: blur(5px)`
+      - right: `width 126px`, `height 88px`, `right -25px`, `bottom -18px`, `filter: blur(40px)`
+  - after per-scenario/per-stage state migration:
+    - captured `/tmp/prototype-stage-scenario-independent.png`
+    - confirmed stage independence inside one scenario:
+      - `Weather Snapshot` pill set to `selected=true`, color `#ff6600`
+      - switching `Weather Snapshot` to card showed `selected=false`, color `#90acff`
+      - after setting `Weather Snapshot` card to `selected=true`, color `#00ff66`, switching back to pill restored the original pill state unchanged
+    - confirmed scenario independence for the same stage:
+      - `Incoming Message` card started at `selected=false`, color `#90acff`
+      - after setting it to `selected=true`, color `#3366ff`, `QR Access Pass` card still remained `selected=false`, color `#90acff`
+      - switching back to `Incoming Message` restored its own card state unchanged
+  - after two-color selected-shell gradient wiring:
+    - captured `/tmp/prototype-stage-two-color-gradient.png`
+    - confirmed the live selected-shell CSS vars resolve independently:
+      - primary `--g-stage-selected-rgb`: `255 102 0`
+      - secondary `--g-stage-selected-secondary-rgb`: `91 46 255`
+    - confirmed the prototype left highlight now uses the AI chip stop pattern:
+      - `radial-gradient(244px 176px at 55px -10px, rgb(91, 46, 255) 0%, rgba(255, 102, 0, 0.98) 11%, rgba(91, 46, 255, 0.74) 22%, rgba(255, 102, 0, 0.22) 34%, rgba(255, 102, 0, 0) 50%)`
+    - confirmed the prototype inner glow now mixes both colors instead of a single accent:
+      - `rgba(91, 46, 255, 0.23) 0px 0px 24px 0px inset`
+      - `rgba(255, 102, 0, 0.57) 0px -9px 20px 0px inset`
+      - `rgba(255, 102, 0, 0.25) -7px 0px 12px 0px inset`
+      - `rgba(91, 46, 255, 0.2) 7px 0px 13px 0px inset`
+
+## Remaining issues / caveats
+- The selected-shell overlay is currently scoped to `#drop-main`, which matches the current prototype-stage preview architecture. If preview rendering later moves to other stage containers, the same overlay pattern can be mounted there with the same `prototype-stage-selected` class plus the `--g-stage-selected-rgb` and `--g-stage-selected-secondary-rgb` variables.
+
+## Recommended next step
+1. If more selected-state polish is needed, tune only the overlay layers in `src/styles/shared.css` so the underlying stage visuals stay untouched.
+2. If this selected shell needs to appear in more preview surfaces, reuse the same markup and `--g-stage-selected-rgb` contract rather than creating a second highlight system.
+
+## Task title
+Traveling Hotspot And Linked Accent Orbit Retune
+
+## Completion status
+- Completed
+
+## Summary
+- Consolidated the traveling-spot work into the final selected-chip motion behavior.
+- The reusable traveling hotspot layers are currently hidden for now:
+  - `g-accent-orbit-middle` remains configured as a `24px x 24px`, `border-radius: 50%`, `filter: blur(15px)` hotspot with the attached accent-colored blurred `::before` layer
+  - `g-accent-orbit-left-spot` remains configured as the linked companion aura
+  - both moving layers now resolve with `opacity: 0` and `animation: none`, so the selected pill keeps only the static shell treatment
+- The shared orbit path is now pushed well outside the capsule with:
+  - `--g-accent-hotspot-inset: -28px`
+  - `--g-accent-hotspot-corner: 16px`
+- Result: the hotspot system is preserved for reuse, but no traveling light is visible on the selected disambiguation pill.
+- Fixed the first-load hotspot jump by stopping the `entering -> settled` phase change from rebuilding the disambiguation pill DOM:
+  - `renderDisambiguationPills(...)` no longer bakes the phase class into the HTML string
+  - `message-send-render.js` now toggles the `entering/settled` class in place on the existing cluster node
+  - this preserves hotspot node identity across the `800ms` phase boundary, so the orbit animation no longer restarts
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- Browser validation via Playwright on `add-visual`:
+  - opened `http://127.0.0.1:5174/ai.html`
+  - triggered the Hiro disambiguation state through the real quick-chip path
+  - captured `/tmp/disambiguation-chip-hotspot-removed.png`
+  - confirmed hidden hotspot computed styles:
+    - `g-accent-orbit-left-spot`
+      - `opacity: 0`
+      - `animation-name: none`
+      - `animation-duration: 0s`
+    - `g-accent-orbit-middle`
+      - `opacity: 0`
+      - `animation-name: none`
+      - `animation-duration: 0s`
+  - confirmed final resolved orbit geometry on the selected pill:
+    - `--g-accent-hotspot-inset: -28px`
+    - `--g-accent-hotspot-corner: 16px`
+  - confirmed first-load no-jump fix across the old phase boundary:
+    - first sample during entry: `left 20.5781px`, `top -28px`, cluster `g-disambiguation-pills entering`
+    - later sample after `950ms`: same hotspot node persisted, `left 107.438px`, `top -28px`, cluster `g-disambiguation-pills settled`
+  - confirmed the selected chip now renders with only the static shell treatment and no visible traveling hotspot
+
+## Remaining issues / caveats
+- The hotspot system is hidden, not deleted. Re-enabling motion later only requires restoring non-zero opacity and the orbit animation on the existing moving layers.
+
+## Recommended next step
+1. Leave the static shell in place unless motion is intentionally reintroduced.
+2. If motion comes back later, start by re-enabling only `g-accent-orbit-middle` before bringing back the linked aura.
+
+## Task title
+Reduce Left Accent Fill On Selected Disambiguation Pill
+
+## Completion status
+- Completed
+
+## Summary
+- Tightened the selected pill's left-side accent so the capsule keeps more dark empty space and less of the left half reads as filled color.
+- Reduced the accent sweep area in `src/styles/ai-glass.css` by:
+  - shrinking the top-left purple/blue `g-accent-orbit-fill` radial
+  - shrinking and softening the white/cool `g-accent-orbit-left-spot`
+  - easing back the left-biased inset glow inside `g-accent-orbit-inner-glow`
+- Left the moving hotspot, inset ring, and overall shell structure unchanged.
+
+## Files changed
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- Browser validation via Playwright on `add-visual`:
+  - opened `http://127.0.0.1:5174/ai.html`
+  - triggered Hiro disambiguation through the real quick-chip path
+  - captured `/tmp/disambiguation-chip-left-accent-reduced.png`
+  - confirmed the selected pill now renders with a narrower left accent region and more dark negative space across the pill body
+
+## Remaining issues / caveats
+- This pass only reduced the left-side accent footprint. If further tuning is needed, the next safe knobs are the first radial in `g-accent-orbit-fill` and the size of `g-accent-orbit-left-spot`.
+
+## Recommended next step
+1. Open the Hiro disambiguation state on `add-visual`.
+2. Compare the left third of the pill against the Figma target.
+3. If it still feels too full, reduce only the left spotlight width before changing the rest of the shell.
+
+## Task title
+Disambiguation Pill Pixel-Parity Layer Rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- The previous reusable selected-chip shell was missing key Figma layers and the traveling spotlight was too subtle.
+- Rebuilt the selected pill highlight stack to match the Figma node more closely using distinct internal layers:
+  - `g-accent-orbit-fill`
+    - top-left purple/blue sweep split into a separate blurred layer, anchored directly at `13% -10%`, `blur(5px)`, and brightened with stronger leading gradient stops
+    - stronger blue accent now split into a separate blurred layer and anchored lower so it reads from the bottom-right edge
+    - darker black-right base fill
+  - `g-accent-orbit-left-spot`
+    - large white/cool spotlight on the left
+  - `g-accent-orbit-inner-glow`
+    - accent-colored inner glow inside the capsule
+  - `g-accent-orbit-ring`
+    - white inset ring matching the Figma `Highlight` layer
+  - `g-accent-orbit-middle`
+    - brighter masked edge hotspot that travels clockwise around the container
+- Kept the effect reusable by leaving color and timing controlled through:
+  - `--g-accent-rgb`
+  - `--g-accent-secondary-rgb`
+  - `--g-accent-orbit-ms`
+- Reused the same accent-shell treatment on the compose-field suggestion chips:
+  - `renderComposeChipStack(...)` now mounts `renderAccentOrbitChrome()` inside each compose chip host
+  - compose suggestion chips default their accent vars to white: `--g-accent-rgb: 255 255 255`, `--g-accent-secondary-rgb: 255 255 255`
+  - the selected compose chip suppresses the old border/glass highlight so the reusable shell owns the highlighted state
+  - a later compose-only retune softened the white shell, then nudged it slightly brighter again with:
+    - `.g-accent-orbit-fill::before` opacity `0.70`
+    - `.g-accent-orbit-fill::before` `filter: blur(10px)`
+    - `.g-accent-orbit-fill::after` opacity `0.40`
+    - a reduced compose-only inner glow and ring so the chip stays calmer than the disambiguation pill
+- Later visual tuning thinned the highlighted pill edge by reducing the inset ring weight, easing back the inner glow, and softening the selected pill inset shadows so the border reads closer to the thinner reference treatment.
+- A later pass increased the reusable inner-shadow alpha values by `0.1` so the selected pill depth reads more clearly without restoring the thicker edge look.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma MCP review:
+  - node `288:6`
+  - `Middle Highlight` node `288:21`
+  - white left spotlight node `288:17`
+  - inset ring node `288:35`
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- Browser validation via Playwright on `add-visual`:
+  - triggered Hiro disambiguation
+  - captured updated selected pill still to `/tmp/disambiguation-chip-pixel-pass-2.png`
+  - verified the moving highlight is active by sampling `background-position` twice:
+    - first sample: `37.3127% 10%`
+    - later sample: `95% 64.6617%`
+- Browser validation via Playwright after edge-thinning retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-thinner-edge.png`
+  - confirmed slimmer edge treatment on the selected pill:
+    - ring: `inset 0 0 3px 1px rgba(255,255,255,0.82)`
+- Browser validation via Playwright after right-accent position retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-right-accent-bottom-right.png`
+  - confirmed the static right-side blue radial now reads from the bottom-right instead of the mid-right edge
+- Browser validation via Playwright after lower blurred right-accent retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-right-accent-lower-blur10.png`
+  - confirmed the right accent now sits farther down and is softened with a `10px` blur
+- Browser validation via Playwright after left-accent alignment retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-left-accent-shifted-level.png`
+  - confirmed the top-left accent now sits farther left and lower, reading closer to the same horizontal line as the bottom-right accent
+- Browser validation via Playwright after top-left blur retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-blur10.png`
+  - confirmed the top-left accent is now rendered via a separate `::before` layer with `filter: blur(10px)`
+- Browser validation via Playwright after top-left position nudge on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-up.png`
+  - confirmed the isolated top-left accent now resolves higher with `top: -5.59375px` while keeping `filter: blur(10px)`
+- Browser validation via Playwright after exact top-left anchor retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-13-neg10.png`
+  - confirmed the isolated top-left accent now resolves from `radial-gradient(58% 176% at 13% -10%, ...)`
+- Browser validation via Playwright after top-left blur reduction on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-blur5.png`
+  - confirmed the isolated top-left accent now resolves with `filter: blur(5px)` while keeping the same `13% -10%` gradient anchor
+- Browser validation via Playwright after top-left brightness retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-top-left-brighter.png`
+  - confirmed the isolated top-left accent now resolves from `radial-gradient(58% 176% at 13% -10%, rgb(151, 97, 255) 0%, rgba(145, 172, 255, 0.98) 11%, rgba(151, 97, 255, 0.74) 22%, rgba(145, 172, 255, 0.22) 34%, rgba(145, 172, 255, 0) 48%)` with `filter: blur(5px)`
+- Browser validation via Playwright after inner-shadow retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-inner-shadow-stronger.png`
+  - confirmed slightly stronger inner depth on the live selected pill:
+    - orbit glow: `rgba(151, 97, 255, 0.13) 0px 0px 24px 0px inset, rgba(145, 172, 255, 0.47) 0px -9px 20px 0px inset, rgba(145, 172, 255, 0.15) -7px 0px 12px 0px inset, rgba(151, 97, 255, 0.1) 7px 0px 13px 0px inset, rgba(255, 255, 255, 0.06) 0px 1px 9px 0px inset`
+    - selected pill inset shadow: `rgba(255, 255, 255, 0.043) 0px 12px 18px 0px inset, rgba(0, 0, 0, 0.52) 0px -18px 24px 0px inset`
+- Browser validation via Playwright after `+0.1` inner-shadow alpha retune on `add-visual`:
+  - captured `/tmp/disambiguation-chip-inner-shadow-alpha-plus-point1.png`
+  - confirmed updated live selected-pill inset values:
+    - orbit glow: `rgba(151, 97, 255, 0.23) 0px 0px 24px 0px inset, rgba(145, 172, 255, 0.57) 0px -9px 20px 0px inset, rgba(145, 172, 255, 0.25) -7px 0px 12px 0px inset, rgba(151, 97, 255, 0.2) 7px 0px 13px 0px inset, rgba(255, 255, 255, 0.16) 0px 1px 9px 0px inset`
+    - selected pill inset shadow: `rgba(255, 255, 255, 0.145) 0px 12px 18px 0px inset, rgba(0, 0, 0, 0.62) 0px -18px 24px 0px inset`
+    - reduced inner glow intensity across `g-accent-orbit-inner-glow`
+    - softer selected-pill inset shell shadow
+- Browser validation via Playwright after compose-chip shell reuse on `add-visual`:
+  - entered compose through the real flow, opened the suggestion-chip hold menu, and captured `/tmp/compose-chip-selected-white-accent.png`
+  - confirmed the highlighted visible compose suggestion chip resolves with:
+    - classes: `g-compose-chip g-accent-orbit-host is-visible selected`
+    - `--g-accent-rgb: 255 255 255`
+    - `--g-accent-secondary-rgb: 255 255 255`
+    - `.g-accent-orbit` opacity: `1`
+- Browser validation via Playwright after compose-chip brightness retune on `add-visual`:
+  - captured `/tmp/compose-chip-selected-white-accent-brighter-again.png`
+  - confirmed the current highlighted visible compose suggestion chip resolves with:
+    - `.g-accent-orbit-fill::before` opacity: `0.7`
+    - `.g-accent-orbit-fill::after` opacity: `0.4`
+    - compose-only inner glow: `rgba(255, 255, 255, 0.12) 0px 0px 16px 0px inset, rgba(255, 255, 255, 0.22) 0px -7px 14px 0px inset, rgba(255, 255, 255, 0.08) -5px 0px 8px 0px inset, rgba(255, 255, 255, 0.07) 5px 0px 9px 0px inset, rgba(255, 255, 255, 0.06) 0px 1px 6px 0px inset`
+    - compose-only ring: `rgba(255, 255, 255, 0.58) 0px 0px 2px 1px inset`
+- Browser validation via Playwright after compose-chip top-left blur retune on `add-visual`:
+  - captured `/tmp/compose-chip-top-left-blur10.png`
+  - confirmed the highlighted visible compose suggestion chip now resolves with:
+    - `.g-accent-orbit-fill::before` opacity: `0.7`
+    - `.g-accent-orbit-fill::before` filter: `blur(10px)`
+
+## Remaining issues / caveats
+- Final sign-off still depends on your eye against the Figma target at presentation scale. If the edge still feels too heavy, the next safe tuning knob is the inset ring strength before changing the shell gradients.
+
+## Recommended next step
+1. Open the Hiro disambiguation state in `ai.html` on `add-visual`.
+2. Compare the selected chip directly against Figma.
+3. If it still needs tuning, only adjust the reusable `g-accent-orbit-*` layer stack in `src/styles/ai-glass.css`.
+
+## Task title
+Clip Selected Chip Highlight Inside Container
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the external glow spill from the reusable disambiguation chip highlight.
+- Root cause: the reusable orbit shell was still drawing visual energy outside the capsule through:
+  - `.g-accent-orbit-halo` using `inset: -2px` plus blur
+  - `.g-accent-orbit-ring` using outer box shadows
+- Fixed in `src/styles/ai-glass.css` by:
+  - setting `.g-accent-orbit` to `overflow: hidden`
+  - moving the halo back to `inset: 0`
+  - replacing the ring’s outer blue glows with inset-only lighting
+- Result: the selected chip keeps the animated edge treatment, but no shadow or glow escapes outside the container bounds.
+
+## Files changed
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- Browser validation via Playwright on the `add-visual` worktree:
+  - triggered the Hiro disambiguation state
+  - captured `/tmp/disambiguation-chip-selected-add-visual-clipped.png`
+  - confirmed computed styles:
+    - `.g-accent-orbit { overflow: hidden; }`
+    - `.g-accent-orbit-halo` inset resolved to `0px`
+    - `.g-accent-orbit-ring` uses inset-only shadow values
+
+## Remaining issues / caveats
+- The moving highlight remains active, so normal live element screenshots still need `animations: 'disabled'` when captured headlessly.
+
+## Recommended next step
+1. Do a quick live visual pass in `ai.html`.
+2. Confirm there is no light, blur, or shadow visible outside the selected chip capsule at rest or during the moving edge animation.
+
+## Task title
+Disambiguation Selected Chip Figma Highlight Rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Rebuilt the selected disambiguation name chip shell to match the Figma treatment more closely: darker capsule fill, bright edge stroke, blue/purple halo, and a moving edge highlight.
+- Added a reusable accent-edge effect scaffold in `src/flows/ui-primitives.js`:
+  - `renderAccentOrbitChrome()`
+  - host class `g-accent-orbit-host`
+  - customizable CSS vars:
+    - `--g-accent-rgb`
+    - `--g-accent-secondary-rgb`
+    - `--g-accent-orbit-ms`
+- Wired every disambiguation pill to mount that reusable chrome so the selected state can light up without a special one-off DOM path.
+- Updated `src/styles/ai-glass.css` so the selected pill now uses:
+  - Figma-style dark shell fill
+  - reusable accent halo + ring layers
+  - looping `g-accent-orbit-middle-loop` animation that moves the middle highlight clockwise around the pill edge
+- The effect is now reusable for other containers by mounting `renderAccentOrbitChrome()` inside the container and setting the accent vars on the host.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send-render.js`
+- Browser validation via Playwright:
+  - woke AI through `window.armAiWakeListening(...)`
+  - triggered `Send message to Hiro`
+  - waited through the message-flow thinking delay into disambiguation
+  - verified `.g-disambiguation-pill.selected` rendered with the new shell classes
+  - captured selected pill still to `/tmp/disambiguation-chip-selected.png`
+- Observed that a normal element screenshot without disabled animations fails because the selected pill is continuously animating, which confirms the moving edge highlight is active.
+
+## Remaining issues / caveats
+- The repo’s existing `test/smoke.mjs` still fails before flow entry because the `ai-legacy-debug` toggle overlay intercepts the quick-chip click. That is unrelated to this selected-chip restyle.
+- The reusable effect assumes the host container can contain the injected accent chrome as an absolutely positioned child and that its content sits above that layer.
+
+## Recommended next step
+1. Open the Hiro disambiguation state in `ai.html`.
+2. Verify the selected chip matches the new shell in motion, especially the clockwise edge-travel highlight.
+3. For any future container, mount `renderAccentOrbitChrome()` inside it and set `--g-accent-rgb` / `--g-accent-secondary-rgb` on the host to recolor the effect.
+
+## Task title
+Apply Figma Selected Pill Styling To Disambiguation Chip
+
+## Completion status
+- Completed
+
+## Summary
+- Implemented the selected disambiguation chip container styling from Figma node `288:6` in file `LTNbsRqNkyLeo81OSL1X7J`.
+- Kept the existing disambiguation pill layout, avatar, text, and interactions unchanged; only the highlighted chip surface was restyled.
+- Added a selected-only dark pill background, layered inset shell glow, and a left-biased purple/blue highlight overlay to match the Figma node’s visual treatment.
+- Left the unselected pill styling as-is so only the highlighted contact gets the new design.
+
+## Files changed
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- Figma MCP:
+  - `get_design_context` on file `LTNbsRqNkyLeo81OSL1X7J`, node `288:6`
+  - `get_screenshot` on file `LTNbsRqNkyLeo81OSL1X7J`, node `288:6`
+- `git diff --check`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html`
+- Verified the live disambiguation state after `send message to hiro`:
+  - selected pill had the new dark gradient background
+  - selected pill had the new inset glow stack
+  - selected `::after` highlight overlay was active
+  - unselected pill background remained `rgba(255, 255, 255, 0.06)`
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium plus Figma screenshot/context review. I did not do a manual fullscreen/device visual pass after the styling change.
+
+## Recommended next step
+1. Do a quick visual pass against the Figma screenshot at presentation scale and tune the purple-left highlight intensity if you want even tighter parity.
+
+## Task title
+Restore Confirm-Step Listening Orb Voice Reactivity
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm-step mini listening orb so it reacts to command listening again.
+- Root cause: confirm mode had diverged onto a separate simplified outer-glow path on `#siri-orb`, while disambiguation/listening mode uses the real reactive shell shadow values. The mic loop was still active, but the visible confirm orb was no longer using the same reactive layer, so it appeared static.
+- Switched the confirm-await-orb command visualization back to the same `shadow(level)` path used by the listening/disambiguation orb, applied on the confirm orb’s `#home-glow-layer`.
+- Kept `drop-main` shell shadow cleared in confirm so only the docked orb reacts.
+- Later changed the deepest blue stop inside `shadow(level)` and `buttonShadow(level)` from the old bright blue family to `rgba(0,22,67,1)`, so confirm-step listening and the compose-field voice-viz pulse share the same darker base blue as the listening/magic shell.
+- Aligned the confirm-step mini listening orb back to the same shell treatment used by the disambiguation/listening orb:
+  - docked orb fill is transparent again, matching the disambiguation/listening orb shell
+  - docked orb stroke uses the shared glass-shell gradient
+  - docked orb inset lighting uses the same `inset 0 0 20px rgba(255,255,255,0.25)` family instead of the custom spherical treatment
+  - shared listening orb geometry now resolves to `50px x 50px` with `25px` radius in both disambiguation and confirm
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `src/flows/message-send-render.js`
+- `src/shapes.js`
+- `src/shapes.legacy.js`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- Headless flow validation on `http://127.0.0.1:5174/ai.html`
+- Verified real confirm state after `send message to hiro` -> select Hiro -> dictate message:
+  - `state` reached `GS.CONFIRM`
+  - `drop-main` had `confirm-await-orb listening-orb home-glow`
+  - `sim-mic-label` remained `Listening…`
+  - `#home-glow-layer` carried the reactive listening shadow values instead of staying blank
+  - `#siri-orb` kept its stable base shell shadow
+- Code-level validation after blue-token retune:
+  - `node --check src/ai/voice-engine.js`
+  - confirmed `shadow(level)` and `buttonShadow(level)` now end with `rgba(0,22,67,1)` instead of the previous brighter blue
+- Browser validation after confirm-orb brightness retune on `add-visual`:
+  - captured the disambiguation orb reference to `/tmp/disambiguation-orb-50.png`
+  - reached confirm via the real message flow and captured `/tmp/confirm-orb-50.png`
+  - confirmed the docked confirm orb now resolves with the same shell language as the disambiguation/listening orb:
+    - fill: transparent
+    - shell shadow: `rgba(255, 255, 255, 0.02) 0px 0px 40px 0px`
+    - stroke: shared glass-shell gradient
+    - inset lighting: `rgba(255, 255, 255, 0.25) 0px 0px 20px 0px inset`
+    - deepest listening glow stop: `rgb(0, 22, 67) 0px -70px 60px -30px inset`
+    - measured disambiguation orb size: `50px x 50px`
+    - measured confirm orb size: `50px x 50px`
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium, so I verified the confirm branch and live style targets but did not synthesize real microphone amplitude in-browser.
+
+## Recommended next step
+1. Do a quick manual confirm-step voice pass to confirm the mini orb now visibly reacts while saying `send`, `edit`, or `cancel`.
+
+## Task title
+Keep Expanded Long Chips Pinned To Shell During Insert
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining double-container glitch on the expanded chip path, specifically `Need your input`.
+- Root cause: after the hidden-text reveal began, the live compose field dropped its pending-height lock too early. At intermediate shell widths, `Need your input` temporarily rewrapped to a taller multi-line layout than the shell, so the inner field visibly outgrew the morphing container.
+- The pending-height lock now stays on the compose field for the full chip-magic transition instead of being removed at the reveal point.
+- The reveal still starts on time, but the field remains pinned to the shell and cropped until the chip-magic beat completes.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real expanded `Need your input` chip path
+- Re-ran the full flow 3 times: wake with `L` -> `send message to hiro` -> choose default Hiro -> long-hold stage for expanded chip menu -> release on `Need your input`
+- Sampled the transition at `0ms`, `40ms`, `80ms`, `120ms`, `180ms`, `260ms`, `400ms`, `600ms`, and `780ms`
+- Confirmed field height matched shell height exactly at every sampled frame on all 3 runs, with the field background remaining transparent throughout the chip-magic beat
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+
+## Recommended next step
+1. Do one manual fullscreen pass on `Need your input` and `Share a file` to confirm both long-chip variants now read as a single shell at presentation scale.
+
+## Task title
+Stabilize Long-Text Chip Insert Shell During Transition
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining double-container glitch on long chip inserts such as `Share a file`.
+- Root cause: during `composeChipMagicPending`, the live compose field was auto-sizing to the full multi-line text height while the outer shell was still morphing from the smaller `Speak your message...` geometry.
+- Added a dedicated pending-field class so the live compose field stays locked to the current shell height while the inserted text is still hidden.
+- Updated the compose-height measurement path to ignore that pending-only class, so the outer shell still animates toward the real final long-text height instead of measuring the temporary locked state.
+- Removed the pending-field class at reveal time before the text magic animation starts.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Re-ran the full flow 3 times: wake with `L` -> `send message to hiro` -> choose default Hiro -> long-press stage -> release on `Share a file`
+- Verified the critical first half of the transition stayed aligned on every run:
+  - at `0ms`, `40ms`, `80ms`, `120ms`, and `180ms`, compose field height matched shell height exactly
+  - while the field/shell mismatch briefly reappears after the reveal starts, the field background remains transparent during that interval, so the second black container no longer renders
+  - by `600ms`, shell and field were effectively aligned again at final long-text size
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+- There is still a small geometry delta right after the text reveal starts (`~5px` at around `260ms` on the sampled runs), but the field remains transparent during that moment, so it does not produce the visible double-container artifact.
+
+## Recommended next step
+1. Do one manual fullscreen pass on the `Share a file` chip to confirm the long-text insert now reads as a single shell at presentation scale.
+
+## Task title
+Standardize Animation Easing To `0.35, 0.23, 0.13, 0.98`
+
+## Completion status
+- Completed
+
+## Summary
+- Standardized the shared motion curve across both `ai.html` and `index.html` to `cubic-bezier(0.35, 0.23, 0.13, 0.98)`.
+- Added a shared root token `--motion-ease` and made the generated animation style block emit that token instead of the old spring curve.
+- Updated the shared morph/render path so shell geometry, content movement, and deformation fallback all use the same easing value.
+- Replaced the remaining hardcoded AI and prototype/editor motion easings with the shared token, including shell transitions, orb transitions, chip motion, toast motion, sidebar controls, and mirrored editor motion styles.
+- Kept the sidebar easing controls in place, but all presets now resolve to the same shared bezier so the motion system no longer diverges by preset.
+
+## Files changed
+- `ai.html`
+- `index.html`
+- `src/shared/anim-controls.js`
+- `src/shared/morph-render.js`
+- `src/shared/morph-bridges.js`
+- `src/shared/list-demo.js`
+- `src/ai/demo-controls.js`
+- `src/ai/voice-engine.js`
+- `src/styles/ai-layout.css`
+- `src/styles/ai-drop.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/ai-frame.css`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-sidebar.css`
+- `src/styles/ai-stage.css`
+- `src/styles/editor-layout.css`
+- `src/styles/editor-decorative.css`
+- `src/styles/editor-sidebar.css`
+
+## Validation performed
+- `node --check src/shared/anim-controls.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/shared/morph-bridges.js`
+- `node --check src/shared/list-demo.js`
+- `node --check src/ai/demo-controls.js`
+- `node --check src/ai/voice-engine.js`
+- `git diff --check`
+- Searched the AI and editor motion styles to confirm the old hardcoded easing values (`0.22,1,0.36,1`, `0.42,0,0.2,1`, `ease`, `ease-in-out`) were removed from the motion stack and replaced by `var(--motion-ease)`
+
+## Remaining issues / caveats
+- I did not run a fresh fullscreen/manual browser review after this motion sweep, so this is validated by syntax/diff checks and source audit rather than a new visual pass.
+- The sidebar easing dropdown still shows legacy option labels like `Ease` and `Liquid feeling`, but those presets now resolve to the same shared curve.
+
+## Recommended next step
+1. Do one quick visual sweep of the AI message flow and prototype page to make sure the unified easing feels correct in motion at presentation scale.
+
+## Task title
+Stabilize Chip Insert Listening Orb Appearance
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the mini listening orb during chip insert so it no longer flashes through multiple visual looks.
+- Root cause: the orb was borrowing `#home-glow-layer` as its fill while that same layer was also being animated for the chip shell pulse, and later the confirm voice visualization reused that layer again. That made the orb appear as a bright flat circle first, then shift to a different blue fill, then darken again.
+- The mini orb now carries its own shell background and shell shadow using the same base values as the listening shell, so its fill is stable throughout the transition.
+- The chip shell pulse no longer animates the docked orb glow layer, and confirm command-mode voice visualization now reacts on the orb’s own outer glow instead of recoloring the orb fill.
+
+## Files changed
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Sampled the real chip-insert timeline at `60ms`, `180ms`, `360ms`, `720ms`, `880ms`, and `1040ms`
+- Confirmed the orb styling stayed consistent across the transition:
+  - orb background stayed `rgba(255, 255, 255, 0.05)`
+  - orb box shadow stayed `0 0 40px rgba(255,255,255,0.02)`
+  - the docked glow layer no longer changed to a separate bright pulse behind the orb
+- Saved and inspected a headless screenshot showing a single consistent orb treatment during the chip-insert beat
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+
+## Recommended next step
+1. Recheck the chip-insert transition in the fullscreen review setup to confirm the orb no longer flashes through multiple looks at presentation scale.
+
+## Task title
+Restore Chip Insert Shell Blink While Orb Is Docked
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the visible blue blink/glow on the compose field after a chip is selected.
+- Root cause: during chip insert, `confirm-await-orb` is active immediately, which relocates `#home-glow-layer` down to the mini listening orb. The old chip-magic animation was still targeting that layer, so the orb glowed but the compose shell no longer did.
+- The chip-magic glow on `#home-glow-layer` is now aligned to `800ms`, and the compose shell itself now gets a dedicated `::after` inset-pulse animation during `compose-chip-magic`.
+
+## Files changed
+- `src/styles/ai-drop.css`
+
+## Validation performed
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Confirmed `drop-main` had `compose-chip-magic` active during the chip insert beat
+- Confirmed the compose shell `::after` pseudo-element was animating a strong inset blue/white pulse while the orb glow animation was also active
+- Saved and inspected a headless screenshot showing the compose shell visibly blue during the chip-insert blink
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this fix.
+
+## Recommended next step
+1. Recheck one real chip flow in the fullscreen review setup to confirm the restored compose-field blink reads correctly at presentation scale.
+
+## Task title
+Stretch Chip Shell Morph And Orb Entry To 800ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the chip-hit transition so both the compose shell morph and the listening orb appearance now take `800ms`.
+- The chip transition clock in the message flow is now `800ms`, the chip-specific shell geometry transition is `800ms`, and the chip-specific confirm-await orb entry transition is also `800ms`.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-decorative.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Confirmed the shell and orb are still mid-transition well past the halfway point:
+  - `t=120ms`: shell about `368x104`, orb opacity about `0.10`
+  - `t=240ms`: shell about `400x108`, orb opacity about `0.35`
+  - `t=400ms`: shell about `416x110`, orb opacity about `0.74`
+  - `t=620ms`: shell about `420x111`, orb opacity about `0.95`
+  - `t=780ms`: shell settled near `420x111`, orb opacity about `1.00`
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. I did not do a manual fullscreen/device pass after this timing update.
+
+## Recommended next step
+1. Recheck one real chip flow in the fullscreen review setup to confirm the `800ms` shell/orb beat feels right at presentation scale.
+
+## Task title
+Restore Smooth Placeholder-To-Chip Shell Morph
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the chip-insert transition so the compose shell now grows from the small `Speak your message...` placeholder state instead of visually jumping into the larger chip-filled state.
+- Root cause: the chip-insert path had regressed to a normal text-active compose layout. During `composeChipMagicPending`, the render logic was no longer using the confirm-await orb geometry, and `syncDropMainOrbClasses()` was stripping the orb/lift classes back off after the morph call.
+- The compose geometry now treats chip-magic pending as the same lifted/orb-aware layout used by the confirm-await beat, and the orb-class sync keeps `confirm-await-orb`, `listening-orb`, and `home-glow` active throughout the chip-insert morph.
+- The `compose-chip-magic` shell class is now applied on the same synchronous beat as the chip insert instead of one frame later, so the outer shell is the only visible container from the first frame of the transition.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Repeated headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Confirmed `Share a file` was the selected chip before release
+- Across 3 repeated runs, first-frame chip-insert geometry stayed at the small placeholder shell size and then smoothly expanded:
+  - `t=0ms`: shell about `307x96`
+  - `t=30ms`: shell about `338x100`
+  - `t=60ms`: shell about `381x106`
+  - `t=120ms`: shell about `413x110`
+  - `t=240ms`: shell about `420x111`
+- Confirmed the lift/orb path now starts on the same beat:
+  - `confirm-await-orb`, `listening-orb`, and `home-glow` classes were present from `t=0ms`
+  - orb opacity rose from `0` to about `0.62` by `240ms` and about `0.96` by `420ms`
+- Saved and inspected a headless screenshot on the real `Share a file` path showing the shell still small while growing, with the orb already entering below it
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium and with saved screenshots. I did not do a manual fullscreen/device pass after this patch.
+
+## Recommended next step
+1. Recheck `Share a file` once in the fullscreen review setup to confirm the small-shell-to-large-shell morph feels correct at presentation scale.
+
+## Task title
+Pre-Expand Long Chip Insert Geometry Before Magic Pulse
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the remaining long-chip transition glitch on `Share a file`.
+- Root cause: the inserted long sentence made the compose field reflow to its final multi-line size immediately, but the outer shell was still animating from the short empty-compose geometry. That created a brief oversized inner field during the chip-magic beat.
+- The compose render path now snaps shell geometry with transitions disabled whenever chip-magic pending content is being inserted, so the container is already at the final long-message size before the glow/text sequence starts.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Repeated headless runtime validation on `http://127.0.0.1:5174/ai.html` using the real `Share a file` chip path
+- Before fix, first-frame chip-magic geometry was approximately:
+  - shell: `307x97`
+  - field: `420x143`
+- After fix, first-frame chip-magic geometry is approximately:
+  - shell: `420x112`
+  - field: `420x112`
+- Confirmed the fixed geometry holds through the chip-magic timeline and into confirm
+
+## Remaining issues / caveats
+- Validation was repeated in headless Chromium and with saved screenshots. I did not do a manual headset/fullscreen check after this pass.
+
+## Recommended next step
+1. Recheck the `Share a file` chip once in the exact fullscreen review setup to confirm the long-string transition now reads cleanly end-to-end.
+
+## Task title
+Remove Duplicate Shell During Chip-Select Transition
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the first-run chip-selection glitch where the outgoing disambiguation layer could stay mounted while the compose chip menu was being updated in place.
+- Added a guard so the compose-menu UI-only update path falls back to a full re-render whenever the disambiguation-to-compose handoff is still active or multiple glass-body layers are present.
+- Removed the inner compose field fill during the chip magic pulse so the outer shell remains the only visible container during the blue transition.
+- Added a separate delayed chip-select orb/lift path in `message-send.js` / `message-send-render.js`:
+  - compose-chip text/magic state still starts immediately on selection
+  - the listening orb and compose-field upward shift now wait `300ms` before activating
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send.js`
+- Headless runtime validation on `http://127.0.0.1:5174/ai.html`
+- Fast first-run chip selection path:
+  - during chip-menu hold, `#c-rich [data-glass-body]` count stayed at `1`
+  - outgoing disambiguation layer was absent
+  - during chip magic, compose field background resolved to `rgba(0, 0, 0, 0)` with no box shadow
+- Later timing retune:
+  - chip-select orb/lift delay reduced from `400ms` to `300ms`
+- Settled chip selection path:
+  - same single-layer result
+  - same transparent inner field during chip magic
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium against the real page flow. I did not do a manual visual pass on-device after this patch.
+
+## Recommended next step
+1. Recheck the chip-select transition in the full-screen stage view to confirm the duplicate-shell artifact is gone in the exact presentation mode used for review.
+
+## Task title
+Center Message Sent Toast Vertically In Message Flow
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the message-flow sent toast so the row is vertically centered inside the sent pill instead of sitting slightly low.
+- Removed the message-flow-only upward translate on the sent state and centered the message-flow `glass-sent` layout directly in CSS.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless runtime measurement on `http://127.0.0.1:5174/ai.html` in the sent state:
+  - toast center offset from pill center: about `-0.008px`
+  - text center offset from pill center: about `0.036px`
+
+## Remaining issues / caveats
+- This alignment fix is scoped to the message flow sent state only.
+
+## Recommended next step
+1. If needed, review coffee/flight success toasts separately; they still keep their own previous sent positioning.
+
+## Task title
+Mute Thinking And Sending AI Speech
+
+## Completion status
+- Completed
+
+## Summary
+- Stopped the message flow from announcing AI copy during `GS.THINKING` and `GS.SENDING`.
+- Kept the interim text available for the orb label by still updating `flow.aiVoice`, but suppressed the sim voice/TTS path for those states.
+
+## Files changed
+- `src/flows/message-send.js`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` after starting the message flow:
+  - `glassState === "1"` (`GS.THINKING`)
+  - sim voice output not visible
+  - sim voice text empty
+  - orb label still showed `Searching contact...`
+
+## Remaining issues / caveats
+- This change is scoped to the message flow only.
+
+## Recommended next step
+1. If you want the same behavior in other flows, apply the same silent-announce pattern there instead of changing global TTS behavior.
+
+## Task title
+Sending Stage Holds For 1s With Label Above Orb
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the confirm -> magic transition at `600ms`, then added a separate `1000ms` pure sending/magic hold before the final sent toast.
+- Added a dedicated `sending...` status label for `GS.SENDING`, positioned above the orb instead of using the generic centered loading row.
+- Restored the `sentTransitionActive` cutoff timer so the confirm overlay drops away after `600ms` while the shell remains in the real magic state.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - `320ms`: `magic`, confirm-exit overlay still active, `sending...` present
+  - `700ms`: `magic`, confirm-exit overlay gone, `sending...` still present
+  - `1450ms`: still `magic` with `sending...`
+  - `1750ms`: final `pill` sent toast visible, `sending...` removed
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium only.
+
+## Recommended next step
+1. Manual visual pass if you want to tune the vertical offset of the `sending...` label relative to the orb.
+
+## Task title
+Confirm To Thinking Duration Reduced To 600ms
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the confirm -> thinking/send handoff from `1000ms` to `600ms`.
+- Kept the timing aligned across the flow timer, the `card-form -> magic` morph bridge, and the confirm-exit CSS so the shell and fading confirm content still resolve together.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/shared/morph-bridges.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - `80ms`, `320ms`, and `560ms` after `send`: still in `magic` / `GS.SENDING`
+  - `760ms` after `send`: already in `pill` / `GS.SENT` with the sent toast visible
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium only.
+
+## Recommended next step
+1. Manual visual pass if you want to tune the split between the `magic` hold and the final toast further.
+
+## Task title
+Confirm To Send Uses Real Thinking Stage Before Toast
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the confirm -> send handoff so it no longer forces a sent-pill shell during the transition window.
+- The send flow now stays in the real `GS.SENDING` / `magic` stage for the full `1000ms` beat, with the loading state rendered underneath the fading confirm overlay.
+- The flow only switches to `GS.SENT` after that beat completes, so the final `Message sent` toast becomes a second phase instead of replacing a fake blue sent shell mid-transition.
+- Removed the confirm-await orb/sent-shell override during the sending beat so the transition uses the normal thinking-stage styling instead of the previous over-blue intermediate shell.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/shared/morph-bridges.js`
+- `src/styles/ai-glass.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - `80ms`, `520ms`, and `920ms` after `send`: `currentShape === "magic"`, `state === "5"` (`GS.SENDING`), loading UI present, no sent toast present
+  - `1200ms` after `send`: `currentShape === "pill"`, `state === "6"` (`GS.SENT`), single settled sent toast visible
+
+## Remaining issues / caveats
+- Validation was done in headless Chromium. Live mic-driven orb behavior was not exercised in this pass.
+
+## Recommended next step
+1. Manual visual pass on-device to confirm the `magic -> sent toast` handoff feels right with real voice input timing.
+
+## Task title
+Confirm To Send Text Freeze And Fast Fade
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the confirm-to-send text exit so the message no longer rewraps while the container shrinks.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to inject a frozen confirm-text width for the transition layer using the pre-shrink compose width.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so the transition text block keeps that fixed width, gets cropped by the shrinking field, and fades out over the first `400ms` of the `1000ms` send transition instead of staying visible long enough to reflow.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless Playwright run on `http://127.0.0.1:5174/ai.html` through the real message send path.
+- Measured transition values after `send`:
+  - `80ms`: text width `392px`, field width about `398.6px`, text opacity about `0.235`
+  - `260ms`: text width `392px`, field width about `287.1px`, text opacity about `0.0017`
+  - `520ms`: text width `392px`, field width about `217.4px`, text opacity `0`
+- Visual frame review of `/tmp/genui-send-t080.png`, `/tmp/genui-send-t260.png`, `/tmp/genui-send-t520.png` confirmed the text is cropped by the shrinking field rather than reflowing into new line breaks.
+
+## Remaining issues / caveats
+- None for this specific text-exit behavior.
+
+## Recommended next step
+1. Check one manual send in `ai.html`.
+2. If needed, tune only the fade timing, not the text layout behavior.
+
+## Task title
+Confirm To Send Transition Fix On Real Sending Path
+
+## Completion status
+- Completed
+
+## Summary
+- Corrected the message send handoff so the animation starts on `CONFIRM -> SENDING`, not only after `SENT`, which was the real reason the contact header and orb appeared to jump away.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to treat `SENDING` and `SENT` as one shared confirm-to-send transition window while `flow.sentTransitionActive` is true.
+- During that window, the outer shell now morphs immediately to the sent pill while the confirm layer stays mounted, so the contact header can fade/float down, the orb can fade out, and the compose text can remain visible inside the shrinking field.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so:
+  - the contact header exits downward with opacity fade
+  - the compose text stays visible until late in the transition
+  - the inner blue field glow ramps in progressively instead of appearing in one frame
+  - the sent toast only takes over after the transition has substantially finished
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm orb now fades/scales out in place instead of lifting away.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Headless Playwright run on `http://127.0.0.1:5174/ai.html` through the real message path:
+  - wake via `window.armAiWakeListening({ source: "keyboard-l" })`
+  - start flow with `send message to hiro`
+  - disambiguate with `Tanaka`
+  - compose `Hey, do you have time for a design review sometime?`
+  - issue `send`
+- Captured transition frames at `80ms`, `260ms`, `520ms`, and `920ms` after `send`:
+  - `80ms`: shape already `pill`, header opacity about `0.60`, orb opacity about `0.60`, text opacity `1`, blue inset shadow already partially ramped in
+  - `260ms`: header opacity about `0.15`, orb opacity about `0.15`, text opacity still `1`, blue inset shadow stronger
+  - `520ms`: header effectively gone, text still visible inside the shrinking field, blue inset glow near full
+  - `920ms`: toast visible as `Message sent`, orb gone
+- Visual frame review of `/tmp/genui-send-before.png`, `/tmp/genui-send-t080.png`, `/tmp/genui-send-t260.png`, `/tmp/genui-send-t520.png`, `/tmp/genui-send-t920.png`
+
+## Remaining issues / caveats
+- This validation used the real browser flow and screenshots, but it still does not synthesize live microphone amplitude during the confirm orb fade. The orb fade itself is verified; live-volume behavior still needs an on-device mic glance if that matters.
+
+## Recommended next step
+1. Run one manual send in `ai.html`.
+2. Check whether you want the text to hold even longer before fading, now that the jump itself is gone.
+
+## Task title
+Confirm To Sent Transition Smoothing
+
+## Completion status
+- Completed
+
+## Summary
+- Smoothed the message flow handoff from confirm to the sent toast by giving the shell morph, confirm content exit, sent toast entry, and confirm orb fade a shared `1000ms` transition window.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) to track a dedicated confirm-to-sent transition state for `1000ms` before dropping the confirm orb classes.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so the sent state can temporarily render both layers at once: the confirm card exits while the sent toast enters, instead of replacing the DOM in one frame.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) with `1000ms` confirm-header, confirm-field, and sent-toast animations.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm listening orb and glow animate out over the same `1000ms` window.
+- Updated [morph-bridges.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js) so the confirm card-form to sent pill shell morph also uses `1000ms` during this specific message-flow handoff.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `src/shared/morph-bridges.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/shared/morph-bridges.js`
+- Source verification:
+  - confirm-to-sent transition constant set to `1000ms`
+  - confirm header, field, toast, orb, and glow all use `1000ms` transition/animation rules
+  - confirm-to-sent shell morph override set to `1000ms`
+
+## Remaining issues / caveats
+- I attempted a headless end-to-end browser check on `ai.html`, but the side-panel input path did not reliably advance into the auto-confirm/send path in that environment, so this change was validated by syntax checks plus direct source verification rather than a full recorded browser send sequence.
+
+## Recommended next step
+1. Run the real confirm -> sent flow on-device.
+2. Verify the contact header, compose field, orb, and shell all hand off together over about one second with no visible pop.
+
+## Task title
+Confirm Orb Inner Highlight Blur Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the confirm-stage mini listening orb’s inner inset highlight blur by `10px`.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm-specific `#siri-orb::after` inset shadow now uses `10px` blur instead of `20px`, tightening the inner glow without changing the rest of the copied disambiguation-shell treatment.
+
+## Files changed
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) now sets `box-shadow: inset 0 0 10px rgba(255,255,255,0.25)` for the confirm-stage mini orb highlight
+
+## Remaining issues / caveats
+- This was a targeted visual adjustment only. I did not rerun a live browser flow for this single-value change.
+
+## Recommended next step
+1. Check the confirm stage visually.
+2. Verify the mini orb’s center highlight feels tighter and less washed out.
+
+## Task title
+Confirm Orb Exact Disambiguation Shell Match
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the remaining confirm-only orb substitute styling that was causing the mini orb to read like a dark disk instead of the disambiguation orb.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm mini orb now reuses the same shell recipe as the disambiguation orb: transparent orb body, the exact shell stroke gradient, and the same inset shell highlight copied from the base `.drop` treatment.
+- Kept the confirm glow on [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) aligned with the same blue listening-family shadow path instead of introducing a separate confirm-only tint.
+
+## Files changed
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- Headless browser screenshot comparison in `ai.html`:
+  - captured the disambiguation orb as the reference baseline
+  - captured the confirm-stage orb after the exact shell-layer copy
+  - verified the confirm orb no longer renders as a black/dark disk and now matches the same blue glass orb family as disambiguation
+
+## Remaining issues / caveats
+- The headless check verifies the settled confirm render path and the copied shell values. It does not synthesize real microphone amplitude, so live-volume response still needs an on-device mic check.
+
+## Recommended next step
+1. Check the confirm stage on-device while command listening is active.
+2. Verify the mini orb stays visually aligned with the disambiguation orb while the outer glow reacts to voice volume.
+
+## Task title
+Prototype Background Toggle Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the prototype-mode startup crash that prevented sidebar bindings from registering, which is why the `Background image` toggle appeared to do nothing.
+- Updated [manual-demo.js](/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-demo.js) to import `selectListItem` from the shared list-demo module before returning it from `initManualDemo()`.
+- With that runtime error removed, the existing prototype canvas-setting bindings now run correctly again, so toggling `Background image` updates `canvasSettings.backgroundEnabled`, persists the setting, and applies `body.bg-off` as intended.
+
+## Files changed
+- `src/tool/modules/manual-demo.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-demo.js`
+- Headless browser check on `index.html`:
+  - verified no page-load `ReferenceError`
+  - toggled `#bg-toggle`
+  - confirmed `body` class changed to include/exclude `bg-off`
+  - confirmed `.bg-blur-image` opacity changed with the toggle
+  - confirmed `genui.settings.v1` persisted `backgroundEnabled`
+
+## Remaining issues / caveats
+- Existing stored settings still override the new default-off behavior on subsequent loads, by design.
+
+## Recommended next step
+1. Toggle `Background image` on and off in prototype mode.
+2. Verify the blurred background visibly hides/shows and the setting persists across refresh.
+
+## Task title
+Background Image Default Off
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the global canvas-settings default so the stage background image is off unless it has been explicitly enabled and persisted by the user.
+- Updated [app-state.js](/Users/ariax/Documents/GitHub/GenUI/src/app-state.js) so `loadCanvasSettings()` now defaults `backgroundEnabled` to `false` on a fresh load.
+- Removed the static `checked` attribute from the `Background image` toggle in [ai.html](/Users/ariax/Documents/GitHub/GenUI/ai.html) and [index.html](/Users/ariax/Documents/GitHub/GenUI/index.html) so the initial checkbox markup matches the runtime default.
+
+## Files changed
+- `src/app-state.js`
+- `ai.html`
+- `index.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/app-state.js`
+- Source verification:
+  - `bg-toggle` is no longer statically checked in `ai.html`
+  - `bg-toggle` is no longer statically checked in `index.html`
+
+## Remaining issues / caveats
+- Existing localStorage settings still win. If this browser already has `genui.settings.v1.backgroundEnabled: true`, the toggle will still come up enabled until that stored setting is changed or cleared.
+
+## Recommended next step
+1. Load the page in a fresh browser profile or clear `genui.settings.v1`.
+2. Verify the background image starts off and the toggle appears unchecked on first load.
+
+## Task title
+Confirm Stage Orb Outside Recolor And Downsize
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the real listening orb in confirm mode, but moved it fully outside the compose card again and reduced it from `52px` to `44px` so it reads like the reference rather than a second container element.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so confirm mode lifts the compose card by a smaller `60px` offset (`44px` orb + `16px` gap), leaving the orb below the card while still inside the overall stage bounds.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm orb and glow dock below the shell at the smaller size and the confirm-specific glow layer uses a soft outer aura instead of the large shell’s inset blue-white fill.
+- Updated [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so confirm mode no longer stacks both the glow-layer shadow and the orb shadow at once; confirm now drives the live command-volume response through the orb itself, which keeps the orb color much closer to the listening reference.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/ai/voice-engine.js`
+- Headless Playwright UI check on `ai.html` using the real message flow path:
+  - woke listening
+  - started `Send message to Hiro`
+  - selected Hiro
+  - typed `Hello there`
+  - waited for confirm to settle
+  - verified `#drop-main` carried `confirm-await-orb listening-orb home-glow`
+  - verified the compose card stayed above the orb
+  - verified the orb settled outside the card with a positive gap
+  - verified the orb measured about `44px x 44px`
+
+## Remaining issues / caveats
+- The headless pass verifies geometry and styling hooks. It does not synthesize real microphone amplitude, so the confirm orb’s live volume response is validated by sharing the same orb-driven visualization path rather than by fake audio input.
+
+## Recommended next step
+1. Check confirm mode on-device with normal room noise and a spoken follow-up command.
+2. Verify the orb now reads darker/bluer like the listening reference and no longer looks like a pale container badge.
+
+## Task title
+Confirm Stage Real Listening Orb Dock
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the fake confirm-stage orb badge with the real listening-orb surface used by the disambiguation stage.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so confirm mode now reserves an internal orb dock in the shell, removes the fake `.g-confirm-await-orb` markup, and keeps `#drop-main` synchronized with `confirm-await-orb`, `listening-orb`, and `home-glow` classes even through the post-render geometry settle pass.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so confirm mode shortens the field wrap by `96px`, leaving room for the orb inside the confirm shell.
+- Updated [ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the real `#siri-orb` and `#home-glow-layer` dock at the bottom-center of confirm mode as a `64px` orb, matching the disambiguation orb size and glass treatment.
+- Updated [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so command-mode voice visualization now targets the docked confirm orb using the same live shadow/glow path as disambiguation instead of trying to pulse confirm buttons.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `src/ai/voice-engine.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/ai/voice-engine.js`
+- Headless Playwright UI check on `ai.html` using the real message flow path:
+  - woke listening
+  - started `Send message to Hiro`
+  - selected the default Hiro contact
+  - typed `Hello there`
+  - waited for confirm to fully settle
+  - verified `#drop-main` carried `confirm-await-orb listening-orb home-glow`
+  - verified the fake confirm orb markup was gone
+  - verified the confirm shell settled at `190px` height
+  - verified the real orb settled at about `64.26px x 64.26px`
+  - verified the orb sat inside the confirm shell below the field with a positive gap of about `13.25px`
+
+## Remaining issues / caveats
+- The headless pass verified the real orb dock, size, and settled geometry. It did not simulate real microphone amplitude, so the exact live volume response was verified by wiring confirm to the same voice-visualization path as disambiguation rather than by synthetic audio input.
+
+## Recommended next step
+1. Speak a confirm-stage command on-device.
+2. Verify the orb responds to live mic volume exactly like disambiguation while staying docked inside the confirm shell.
+
+## Task title
+Confirm Stage Mini Listening Orb
+
+## Completion status
+- Completed
+
+## Summary
+- Added a mini listening-style orb to the confirm stage to indicate the system is waiting for the user’s next command.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so confirm mode renders a dedicated `.g-confirm-await-orb` below the compose field.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) with a `32px` orb treatment that matches the listening orb language at `0.4x` scale, including a short entry animation and a subtle ambient breathe.
+- Kept the confirm shell at its stable compose height and positioned the mini orb just below the shell with `overflow: visible`, which proved more reliable than trying to grow the confirm shell itself.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- Headless Playwright UI check on `ai.html` using the real message flow path:
+  - woke the listening orb
+  - started `Send message to Hiro`
+  - selected the default Hiro contact
+  - typed `Hello there` and waited for auto-confirm
+  - verified the confirm-stage mini orb rendered at about `32.15px x 32.15px`
+  - verified the orb sat below the compose field with a positive measured gap of about `13.21px`
+
+## Remaining issues / caveats
+- The confirm shell itself does not currently grow to contain the orb; the orb is intentionally rendered just below the shell instead. This matches the requested visual while avoiding overlap.
+
+## Recommended next step
+1. Check the confirm stage with a longer wrapped message.
+2. Verify the mini orb still reads clearly below the field on-device and does not compete with any future confirm controls.
+
+## Task title
+Thinking Orb Inner Spinner Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the rotating inner spinner from the thinking/loading visual.
+- Updated [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) so `renderCompactStatus({ type: "loading" })` now renders only the loading text/dots and no spinner element.
+- Removed the unused `.g-spinner` style and `spin` keyframes from [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css).
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- Searched source for removed spinner hooks:
+  - no remaining `g-spinner`
+  - no remaining `@keyframes spin`
+
+## Remaining issues / caveats
+- I did not run a fresh browser pass after removing the spinner, but the loading primitive no longer emits any rotating element.
+
+## Recommended next step
+1. Trigger a listening -> thinking transition.
+2. Verify the orb/loading state now shows only the orb plus loading text, with no rotating inner spinner.
+
+## Task title
+Listening To Thinking Orb Bridge Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the listening -> thinking handoff so it no longer jumps straight into the magic visual.
+- Updated [morph.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js) so `circle/listening -> magic/ai/idle` now routes through the home-to-thinking bridge instead of going directly through `morphCore`.
+- Updated [morph-bridges.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js) so the bridge can carry real target content/geometry and, for `magic`, hold the listening orb briefly before handing off into the thinking shell.
+- Updated [morph-render.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js) so home-like shapes (`circle`, `listening`) and thinking-like shapes (`magic`, `ai`) use the softer motion profile.
+
+## Files changed
+- `src/shared/morph.js`
+- `src/shared/morph-bridges.js`
+- `src/shared/morph-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-bridges.js`
+- `node --check src/shared/morph.js`
+- `node --check src/shared/morph-render.js`
+- Headless Playwright UI check on `ai.html` using the real wake -> quick chip -> message flow path:
+  - before fix: at `120ms` after request start, shape was already `magic` and orb opacity had dropped to `0`
+  - after fix: at `120ms`, shape remained `listening` with orb opacity ~`1`
+  - at `360ms`, shape had transitioned into `magic` while orb opacity was still mid-fade (~`0.42`), confirming a continuous handoff instead of an instant switch
+
+## Remaining issues / caveats
+- Validation was targeted to the listening -> message thinking path. Other thinking entries should now use the same bridge route, but I did not run separate UI passes for every flow.
+
+## Recommended next step
+1. Trigger a fresh request from the listening orb.
+2. Verify the orb lingers briefly and fades into the thinking shell instead of snapping directly to the magic state.
+3. Spot-check flight and coffee request starts, since they share the same listening/circle -> thinking bridge path.
+
+## Task title
+Fresh Compose Chip First-Run Double Layer Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the first-run message-compose glitch where selecting a prompted chip during the initial disambiguation-to-compose handoff could leave an extra outgoing layer active and produce a duplicate-container look.
+- Root cause: fresh compose entry temporarily rendered the outgoing disambiguation stage alongside the compose stage, and that overlay was still allowed even after chip interaction or compose text started.
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so the outgoing disambiguation layer is now shown only while compose is still passive and empty.
+- As soon as compose text exists, chip magic is pending, or the chip menu is being held/opened/closed, the renderer falls back to a single compose stage.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after tightening the fresh-entry overlay gate.
+
+## Recommended next step
+1. Start a brand-new message flow.
+2. Immediately choose `Share a file` or `Design review`.
+3. Verify the chip magic now stays on a single compose shell even on the first selection of a fresh flow.
+
+## Task title
+Disambiguation To Compose Inner Timing Retune
+
+## Completion status
+- Completed
+
+## Summary
+- Retimed the inner disambiguation-to-compose animations in [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css).
+- Increased disambiguation pill exit duration from `400ms` to `600ms`.
+- Increased compose header enter duration from `300ms` to `600ms` and moved its delay from `200ms` to `400ms`.
+- Moved the empty compose placeholder enter delay from `100ms` to `400ms`.
+
+## Files changed
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS timing values updated in source
+
+## Remaining issues / caveats
+- No live browser verification was run after retiming the inner transition elements.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation flow.
+2. Verify the pills linger longer on exit and the compose header/placeholder enter later.
+3. Confirm the slower overlap still feels clean inside the existing `1000ms` handoff window.
+
+## Task title
+Chip Magic Text Reveal Width Sync Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the prompted-chip magic case where the inserted sentence became visible before the compose shell had widened enough to contain it.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so chip commit now enters a short pending phase:
+  - the target sentence is rendered immediately for sizing
+  - the text stays hidden for the first `260ms`
+  - the shell glow starts right away
+  - the text then reveals with the existing magic animation after the shell has had time to expand
+- Updated [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) and [ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) to pass through a `magicPending` render state for the compose field text.
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) with a hidden pending-text class so layout still measures against the real sentence while the early reveal is suppressed.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after delaying the text reveal.
+
+## Recommended next step
+1. Commit a prompted chip with a longer sentence.
+2. Verify the shell widens first, then the text reveals inside bounds.
+3. Verify the magic glow timing still feels correct and the flow still auto-advances to confirm.
+
+## Task title
+Chip Magic Slower + Stronger Glow
+
+## Completion status
+- Completed
+
+## Summary
+- Slowed the prompted-chip magic beat slightly so the one-shot insert effect has more time to read before confirm.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) to increase `COMPOSE_CHIP_MAGIC_MS` from `760ms` to `920ms`.
+- Strengthened the peak shell glow in [ai-drop.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-drop.css) by increasing the inset blue/white highlight intensity and spread during the pulse.
+- Kept the effect on the outer shell glow layer, so this retime does not reintroduce the duplicate-container glitch.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-drop.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after retiming and strengthening the chip magic glow.
+
+## Recommended next step
+1. Commit a prompted chip in the message flow.
+2. Verify the shell glow lingers a bit longer and reads more clearly.
+3. Verify the effect still stays on a single shell with no duplicate-container artifact.
+
+## Task title
+Chip Magic Duplicate Container Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the duplicate-container glitch during the prompted-chip magic effect.
+- Root cause: the one-shot glow was being applied to the inner compose field, which rendered like a second glowing pill inside the outer compose shell.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so chip insertion now triggers the one-shot magic class on `#drop-main` instead of the inner field.
+- Updated [ai-drop.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-drop.css) with a shell-level `#home-glow-layer` animation for that one-shot pulse.
+- Removed the inner compose-field pulse hook so the effect no longer produces a stacked shell look.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-drop.css`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after moving the effect to the shell glow layer.
+
+## Recommended next step
+1. Trigger the chip picker and commit a prompted chip.
+2. Verify the inserted sentence still gets the one-shot magic treatment.
+3. Verify the glow now stays on a single shell with no duplicate container underneath.
+
+## Task title
+Prompted Chip Magic Glow Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the one-shot “magic” insert effect when a prompted chip is committed in the message compose flow.
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so chip commit now:
+  - writes the predefined sentence into the compose field
+  - renders one beat in compose
+  - applies a one-shot field glow and text-magic animation
+  - then auto-advances to confirm after the effect
+- Updated [ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so the compose field can reuse the existing `g-field-pulse` animation via `.g-compose-field.magic-arriving`.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after restoring the chip-insert animation.
+
+## Recommended next step
+1. Open the message compose flow.
+2. Trigger the chip picker and commit a prompted chip.
+3. Verify the sentence appears in the compose field, the field glows once, and the flow then advances to confirm automatically.
+
+## Task title
+Compose Chip Release Commit Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the mouse-release commit bug in [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js).
+- Root cause: the release path checked for a selected chip while `flow.composeMenuHolding` was still `true`, so a highlighted chip was not being committed on mouse-up.
+- Updated the release path to clear the holding state before checking the selected chip.
+- Result: releasing the mouse with a highlighted chip now commits that chip’s predefined sentence and advances to confirm as intended.
+
+## Files changed
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this fix.
+
+## Recommended next step
+1. Enter the message compose screen.
+2. Long press anywhere on the stage to open the chip stack.
+3. Highlight a chip, release, and verify the predefined sentence is committed and the flow advances to confirm.
+
+## Task title
+Compose Chip Gesture Full-Screen Trigger
+
+## Completion status
+- Completed
+
+## Summary
+- Expanded the compose chip long-press trigger from the compose shell to the full screen outside the left-side panels in [ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js).
+- The gesture can now start anywhere except inside `#left-sidebar` or `#sim-panel` while the message flow is in compose.
+- No change was needed to the chip commit path:
+  - selecting a chip still writes its predefined `chip.message` into the compose field
+  - the flow still advances immediately to confirm after selection
+
+## Files changed
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after widening the pointer hit area.
+
+## Recommended next step
+1. Enter the message compose screen.
+2. Long press in empty screen space outside the left-side panels.
+3. Verify the chip stack still opens, scrubs, and commits exactly the same way as pressing on the shell itself.
+
+## Task title
+Compose Chip Mouse Hold + Vertical Scrub
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the compose-state chip picker trigger with a pointer gesture:
+  - long press on the compose surface opens the chip stack
+  - vertical drag while holding scrubs the highlight
+  - release commits the highlighted chip only if one is selected
+- Updated [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so the compose chip stack now supports a true `no selection` state (`sel = -1`) while open.
+- Implemented bottom-up scrub mapping:
+  - no upward drag: nothing highlighted
+  - first upward step: bottom visible chip
+  - further upward steps: chips above it
+  - dragging back down steps the highlight back toward none
+- Updated [ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) to drive the interaction from `pointerdown` / `pointermove` / `pointerup` instead of compose-state `L` hold.
+- Updated the compose simulator hint in [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so the gesture is discoverable.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/ai/ai-bindings.js`
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after the new pointer gesture was added.
+- Keyboard arrow navigation still exists as a fallback path; this change only replaced the compose-state `L` hold gesture.
+
+## Recommended next step
+1. Enter the message compose screen.
+2. Long press on the compose surface until the chip stack opens.
+3. Drag upward and confirm the first highlight lands on the bottom visible chip.
+4. Drag back down and confirm the highlight clears before release.
+5. Release once with a highlighted chip and once with no highlight to verify the commit/no-op behavior.
+
+## Task title
+Compose Handoff 1000ms Retiming
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the message-flow disambiguation -> compose handoff duration from `600ms` to `1000ms`.
+- Updated the single source-of-truth constant in [message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js#L26), which controls when the manual compose-entry overlap ends and when input focus is restored.
+- Kept the narrower child animation timings unchanged in this pass.
+
+## Files changed
+- `src/flows/message-send.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this retime.
+- The inner pill/header/placeholder animation durations were not changed, so only the overall handoff timing is now `1000ms`.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path.
+2. Select a contact.
+3. Verify the compose handoff now holds for about `1000ms` before fully settling.
+
+## Task title
+Compose Dictation Oversized Shell Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the compose-screen geometry bug that could show a second dark container behind the dictated message after speech finished.
+- Root cause was in [message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js): compose height was measured from the current DOM field width before the shell finished widening, so long wrapped text could produce an oversized outer shell for a frame and make the compose field appear pushed upward inside it.
+- Updated compose measurement so height is now measured against the target compose width before morphing.
+- Result: the shell height and final wrapped text layout are derived from the same width, which removes the transient double-container state.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this layout-measurement fix.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path.
+2. Dictate a long multi-line message.
+3. Verify the compose shell no longer grows taller than the text field during or after the final dictation update.
+
+## Task title
+Compose Entry Single Blue Shadow Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the disambiguation -> compose transition so the message compose entry keeps a single blue dictation glow instead of briefly showing both the outer shell glow and the inner compose-field glow.
+- Root cause was in [voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js): switching from command listening to dictation while speech recognition was already active changed `voiceEngine.mode`, but it did not reset the active visualization state or restart the dictation delay clock.
+- Updated the voice engine so active mode switches now:
+  - clear the previous visualization immediately
+  - reset `dictationStart` when entering dictation mid-session
+  - apply dictation glow only to the real compose field, not the fallback outer shell
+
+## Files changed
+- `src/ai/voice-engine.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- No live browser verification was run after this voice-visualization fix, so the final visual result is based on code-path inspection plus JS syntax validation.
+
+## Recommended next step
+1. Trigger the Hiro disambiguation path.
+2. Choose a contact and watch the disambiguation -> compose transition.
+3. Verify the blue glow appears on only one layer throughout the handoff and after the compose field settles.
+
+## Task title
 Message Confirm Action Row Removal
 
 ## Completion status
@@ -1262,6 +3943,42 @@ AI home-state rebuild from reference: `sleep` / `home-still` / `home-context` + 
 ## Blockers
 - None
 
+## Task title
+Confirm To Send Single Shell And Single Toast
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm -> send transition so the transition layer stays stable through the full `1000ms` handoff instead of remounting at the `SENDING -> SENT` boundary.
+- Removed the transition-layer sent toast; the final settled `Message sent` toast now enters once after the transition window ends.
+- Removed the inner compose field shell during the transition and moved the blue send fill onto the outer `#drop-main::after` shell, which eliminates the nested/double-container look.
+- Prevented the confirm header and message text from reappearing after the blue fade by preserving identical transition markup until the handoff completes.
+- Hard-froze the transition DOM after the first send frame so later renders during `sentTransitionActive` cannot remount the confirm layer.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/ui-primitives.js`
+- Headless runtime check on `http://127.0.0.1:5174/ai.html` through the real send-message flow:
+  - The confirm transition DOM stayed identity-stable through `920ms` (`sameHeader: true`, `sameText: true`, `sameLayer: true`).
+  - At `80ms`, `260ms`, `520ms`, and `920ms` after `send`, the confirm header/text only continued fading out and did not reappear.
+  - During the transition window, no sent toast node was present.
+  - After the `1000ms` handoff, a single settled `Message sent` toast appeared and remained visible.
+
+## Remaining issues / caveats
+- Validation covered the actual send flow path in Chromium, but not live microphone amplitude during the orb fade.
+
+## Recommended next step
+1. Manual visual pass on-device for confirm -> send with real speech input, mainly to confirm the orb fade still feels correct under live volume changes.
+
 ---
 
 ## Task title
@@ -1868,11 +4585,15 @@ AI parity pass: disambiguate→compose choreography + chip-select motion + liste
   - Changed `home-glow` toggle from `shape === 'circle'` to `shape === 'listening' || shape === 'magic'`.
   - Added `magic-glow` toggle for `shape === 'magic'`.
   - This aligns with `main` class behavior and restores vivid listening/thinking blue-layer glow visibility.
+- Later retuned the deepest shared blue stop used by the listening/magic shell glow from `#0042CB` to `#001643` in the base home-glow stack so both states carry the darker blue in their bottom inset bloom.
 
 ## Files changed
 - `src/flows/message-send.js`
 - `src/flows/message-send-render.js`
 - `src/tool/index-app.js`
+- `src/styles/ai-drop.css`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
 
 ## Validation performed
 - `node test/smoke.mjs` -> pass (`SHAPE:magic`, `LOGS:[]`).
@@ -1881,6 +4602,10 @@ AI parity pass: disambiguate→compose choreography + chip-select motion + liste
   - `glassChipSelect` timing path
   - compose-entry suppression behavior
   - home/thinking glow class toggles
+- Browser validation after listening/magic blue-token retune on `add-visual`:
+  - listening capture: `/tmp/orb-listening-001643.png`
+  - magic capture: `/tmp/orb-magic-001643.png`
+  - confirmed both listening and magic `#home-glow-layer` shadows now end with `rgb(0, 22, 67) 0px -70px 60px -30px inset`
 
 ## Remaining issues / caveats
 - Exact frame-by-frame browser pixel diff against served `main:ai.html` baseline not run in this pass.
@@ -2442,3 +5167,85 @@ Message Compose Timing Update
 ## Recommended next step
 1. Verify disambiguation -> compose now visually resolves over `600ms`.
 2. Verify both chip appear and dismiss motions now run for `1000ms`.
+
+---
+
+## Task title
+Prototype Text Inputs Accept Space
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed prototype-mode text editing so page-level keyboard shortcuts no longer steal `Space` from editable fields.
+- Removed live trimming from prototype scenario/stage name fields so typed spaces are preserved during rerender instead of collapsing `A B` into `AB`.
+- Kept the default fallback labels by restoring `Untitled Scenario` / `Untitled Stage` on blur only when the field is left blank.
+- Hardened the editable-field path further by stopping `keydown` and `keypress` with `stopImmediatePropagation()` for prototype editor inputs, so same-path page shortcuts cannot still win in later listeners.
+- Fixed the underlying rerender bug by preserving focus and caret position for sidebar text inputs across `renderScenarioUi()`. This keeps `primary` / `secondary` focused after the first character so `Space` stays in the field instead of jumping to page controls.
+
+## Files changed
+- `src/tool/modules/manual-bindings.js`
+- `src/ai/ai-bindings.js`
+- `src/ai/editor-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/ai/editor-bindings.js`
+- `node --check src/shared/sidebar-render.js`
+- Browser verification on `http://127.0.0.1:5174/index.html`
+  - `#scenario-name` preserved a typed space: `WeatherA B`
+  - `#stage-name-input` preserved a typed space: `PillC D`
+  - Content tab `#scenario-primary` preserved a typed space: `A B`
+  - Content tab `#scenario-secondary` preserved a typed space: `C D`
+  - Slow typing path kept focus during rerender:
+    - after `A`: `document.activeElement.id === "scenario-primary"`
+    - after `Space`: `document.activeElement.id === "scenario-primary"`
+
+## Remaining issues / caveats
+- The direct browser proof was completed on the manual prototype page (`index.html`). The mirrored AI editor page was not directly validated because its prototype sidebar controls were hidden in the current page state during automation.
+
+## Recommended next step
+1. Manual smoke on the AI-page prototype sidebar to confirm `primary`, `secondary`, `detail`, and `intent header` accept spaces exactly like the manual prototype page.
+
+---
+
+## Task title
+Fix add-visual review findings
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the message compose exit transition so the delayed `COMPOSE -> next state` handoff is tracked in the flow timer map and cancelled on reset or superseding transitions instead of leaving an untracked `setTimeout`.
+- Fixed durable storage retry behavior so a transient IndexedDB open failure no longer poisons the session by caching `null` forever; later calls can retry opening the durable store.
+- Removed the five-chip compose-menu hardcode:
+  - compose-menu expansion now reveals all available chips after the hold delay
+  - compose chip motion variables are now generated per chip in `ui-primitives.js`
+  - the CSS no longer depends on `nth-child(1..5)` motion assignments
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `src/app-state.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/app-state.js`
+- `git diff --check`
+- `node test/smoke.mjs`
+  - failed in existing smoke interaction path because a debug overlay label (`.ai-legacy-debug .sb-toggle`) intercepted a Playwright click before the scenario interaction step completed
+
+## Remaining issues / caveats
+- The repository smoke test is not currently green due to the existing debug-overlay click interception above, so this pass does not include a clean automated browser success signal.
+- Compose-chip overflow for very large chip counts still depends on available stage space; this fix removes the five-item code limit, but visual fit for unusually large chip sets should still be verified in-browser.
+
+## Recommended next step
+1. Manual verify the message flow on `ai.html`:
+   - exit/reset during compose no longer snaps back into a stale delayed transition
+   - long-press compose chip menu can reveal and navigate all chips provided by contact data
+2. Fix or harden `test/smoke.mjs` against the debug overlay so automated browser validation is reliable again.

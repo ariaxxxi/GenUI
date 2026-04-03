@@ -1,4 +1,5 @@
 import {
+  layoutDisambiguationPillItems,
   renderActionRow,
   renderChipBar,
   renderCompactStatus,
@@ -8,6 +9,7 @@ import {
   renderContactHeader,
   renderDisambiguationPills,
   renderInputField,
+  renderSendingStatus,
   renderTextBubble,
 } from "./ui-primitives.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
@@ -20,6 +22,7 @@ export function createMessageSendRender({
   GS,
   getFlow,
   morphTo,
+  applyGeometry,
   getCurrentMainGeometry,
   setIntentHeader,
   hideIntentHeader,
@@ -41,10 +44,14 @@ export function createMessageSendRender({
   const COMPOSE_FIELD_ACTIVE_H = 94;
   const COMPOSE_FIELD_MAX_H = 220;
   const COMPOSE_FIELD_SIDE_PADDING = 28;
+  const CONFIRM_TO_SENDING_MS = 600;
+  const CONFIRM_AWAIT_ORB_SIZE = 44;
+  const CONFIRM_AWAIT_ORB_GAP = 16;
+  const CONFIRM_AWAIT_ORB_SHIFT = CONFIRM_AWAIT_ORB_SIZE + CONFIRM_AWAIT_ORB_GAP;
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
   const DISAMBIGUATION_ENTER_MS = 800;
-  const DISAMBIGUATION_ORB_SCALE = 0.8;
+  const DISAMBIGUATION_ORB_SCALE = 0.625;
   const heightByState = { [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
   let measureRaf = null;
   let settleTimer = null;
@@ -52,10 +59,12 @@ export function createMessageSendRender({
   let renderToken = 0;
   let prevState = GS.IDLE;
   let prevComposeHasText = false;
+  let prevSendTransitionActive = false;
   let manualComposeEntry = false;
   let disambiguationPhase = "settled";
   let composeRevealTimer = null;
   let composePlaceholderDelayActive = false;
+  let confirmTransitionFrozenTextWidth = null;
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
@@ -65,6 +74,10 @@ export function createMessageSendRender({
     if (state === GS.CONFIRM) return "card-form";
     if (state === GS.SENT) return "pill";
     return "circle";
+  }
+
+  function isConfirmToSendTransition(flow = getFlow()) {
+    return !!(flow?.active && flow.sentTransitionActive && flow.state === GS.SENDING);
   }
 
   function isCardState(state = getFlow().state) {
@@ -81,12 +94,13 @@ export function createMessageSendRender({
 
   function composeGeo() {
     const flow = getFlow();
+    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
     const hasText = flow.state === GS.CONFIRM
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
     const w = measureComposeFieldWidth(hasText);
-    const h = measureComposeFieldHeight(hasText);
-    const bottom = COMPOSE_FIELD_BOTTOM;
+    const h = measureComposeFieldHeight(hasText, w);
+    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? CONFIRM_AWAIT_ORB_SHIFT : 0);
     return {
       ...SHAPES["card-form"],
       main: {
@@ -134,15 +148,22 @@ export function createMessageSendRender({
     );
   }
 
-  function measureComposeFieldHeight(hasText) {
+  function measureComposeFieldHeight(hasText, targetWidth = COMPOSE_FIELD_W) {
     const baseMin = hasText ? COMPOSE_FIELD_ACTIVE_H : COMPOSE_FIELD_H;
     const field = C.rich.querySelector("[data-compose-field]");
     if (!field) return baseMin;
-    const measured = Math.ceil(Math.max(
-      field.getBoundingClientRect().height || 0,
-      field.offsetHeight || 0,
-      field.scrollHeight || 0,
+    const measure = (node) => Math.ceil(Math.max(
+      node?.getBoundingClientRect?.().height || 0,
+      node?.offsetHeight || 0,
+      node?.scrollHeight || 0,
     ));
+    const measureWidth = clamp(Math.round(targetWidth || COMPOSE_FIELD_W), COMPOSE_FIELD_W, COMPOSE_FIELD_MAX_W);
+    const layer = ensureMeasureLayer("glass-compose-field-measure");
+    layer.style.width = `${measureWidth}px`;
+    layer.innerHTML = field.outerHTML;
+    const probe = layer.querySelector("[data-compose-field]");
+    probe?.classList.remove("g-compose-field-magic-pending");
+    const measured = measure(probe) || measure(field);
     if (!measured) return baseMin;
     return clamp(measured, baseMin, COMPOSE_FIELD_MAX_H);
   }
@@ -153,6 +174,36 @@ export function createMessageSendRender({
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: "Message sent",
     });
+  }
+
+  function measureConfirmTransitionTextWidthPx() {
+    const liveText = C.rich.querySelector("[data-compose-field-text]");
+    const liveTextWidth = Math.round(liveText?.getBoundingClientRect?.().width || 0);
+    if (liveTextWidth > 0) return liveTextWidth;
+    const liveField = C.rich.querySelector("[data-compose-field]");
+    const liveFieldWidth = Math.round(liveField?.getBoundingClientRect?.().width || 0);
+    if (liveFieldWidth > 28) return Math.max(0, liveFieldWidth - 28);
+    const value = String(getFlow().msg || getFlow().composeText || "").trim();
+    if (!value) return Math.max(0, COMPOSE_FIELD_W - 28);
+    const fieldWidth = measureComposeFieldWidth(true);
+    return Math.max(0, Math.round(fieldWidth - 28));
+  }
+
+  function confirmTransitionTextWidthPx() {
+    return confirmTransitionFrozenTextWidth ?? measureConfirmTransitionTextWidthPx();
+  }
+
+  function syncDropMainOrbClasses(shape) {
+    const flow = getFlow();
+    const dropMain = document.getElementById("drop-main");
+    if (!dropMain) return;
+    const confirmAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
+    const showListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrb);
+    const showHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrb);
+    dropMain.classList.toggle("confirm-await-orb", confirmAwaitOrb);
+    dropMain.classList.remove("sent-transition");
+    dropMain.classList.toggle("listening-orb", showListeningOrb);
+    dropMain.classList.toggle("home-glow", showHomeGlow);
   }
 
   function cancelMeasure() {
@@ -170,42 +221,21 @@ export function createMessageSendRender({
     disambiguationTimer = null;
   }
 
+  function syncDisambiguationPhaseUi() {
+    const cluster = C.rich.querySelector(".g-disambiguation-pills:not(.exiting-to-compose)");
+    if (!cluster) return false;
+    cluster.classList.toggle("entering", disambiguationPhase === "entering");
+    cluster.classList.toggle("settled", disambiguationPhase !== "entering");
+    return true;
+  }
+
   function cancelComposeRevealTimer() {
     if (composeRevealTimer) clearTimeout(composeRevealTimer);
     composeRevealTimer = null;
   }
 
   function layoutDisambiguationContacts(contacts) {
-    const count = Math.max(0, Number(contacts?.length) || 0);
-    if (count <= 0) return { items: [] };
-    let positions;
-    if (count === 1) {
-      positions = [{ x: 0, y: -88 }];
-    } else if (count === 2) {
-      positions = [{ x: 0, y: -136 }, { x: 0, y: -72 }];
-    } else if (count === 3) {
-      positions = [{ x: 0, y: -144 }, { x: -74, y: -84 }, { x: 74, y: -84 }];
-    } else {
-      const radiusX = Math.min(122, 84 + Math.max(0, count - 4) * 8);
-      const radiusY = Math.min(116, 78 + Math.max(0, count - 4) * 6);
-      positions = Array.from({ length: count }, (_, index) => {
-        const span = Math.min(160, 88 + (count * 10));
-        const start = -90 - (span / 2);
-        const angle = (start + ((count === 1 ? 0 : span / (count - 1)) * index)) * (Math.PI / 180);
-        return {
-          x: Math.round(Math.cos(angle) * radiusX),
-          y: Math.round(Math.sin(angle) * radiusY) - 34,
-        };
-      });
-    }
-    const items = positions.map((pos, index) => ({
-      ...contacts[index],
-      x: pos.x,
-      y: pos.y,
-      rotStart: pos.x >= 0 ? 10 : -10,
-      delay: Math.max(0, (index * 42) - (index === getFlow().sel ? 28 : 0)),
-    }));
-    return { items };
+    return { items: layoutDisambiguationPillItems(contacts, getFlow().sel) };
   }
 
   function disambiguationGeo() {
@@ -254,6 +284,15 @@ export function createMessageSendRender({
 
   function buildContent() {
     const flow = getFlow();
+    const sendTransitionActive = isConfirmToSendTransition(flow);
+    const buildConfirmStage = (extraClass = "") => {
+      const contact = flow.contact;
+      const classes = ["g-compose-stage", "has-text", "confirm-mode", extraClass].filter(Boolean).join(" ");
+      const styleAttr = extraClass === "confirm-exit-to-sent"
+        ? ` style="--g-confirm-text-freeze-w:${confirmTransitionTextWidthPx()}px;"`
+        : "";
+      return `<div data-glass-body class="${classes}"${styleAttr}>${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: true })}<div class="g-compose-field-wrap">${renderComposeField({ text: flow.msg || "", active: true })}</div></div>`;
+    };
     const buildComposeStage = () => {
       const contact = flow.contact;
       const hasText = !!String(flow.composeText || "").trim();
@@ -264,7 +303,7 @@ export function createMessageSendRender({
         closing: !!flow.composeMenuClosing,
         visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
       });
-      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText });
+      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText, magicPending: !!flow.composeChipMagicPending });
       const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
       return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
     };
@@ -287,7 +326,9 @@ export function createMessageSendRender({
       });
     };
     if (flow.state === GS.IDLE) return "";
-    if (flow.state === GS.THINKING || flow.state === GS.SENDING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
+    if (sendTransitionActive) return `${renderSendingStatus({ label: "sending..." })}<div class="g-confirm-to-sent-layer">${buildConfirmStage("confirm-exit-to-sent")}</div>`;
+    if (flow.state === GS.THINKING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
+    if (flow.state === GS.SENDING) return renderSendingStatus({ label: "sending..." });
     if (flow.state === GS.DISAMBIGUATE) {
       const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
       return renderDisambiguationPills({
@@ -306,14 +347,18 @@ export function createMessageSendRender({
       });
     }
     if (flow.state === GS.COMPOSE) {
-      if (manualComposeEntry) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
+      const hasComposeText = !!String(flow.composeText || "").trim();
+      const shouldShowOutgoingDisambiguation = manualComposeEntry
+        && !hasComposeText
+        && !flow.composeChipMagicPending
+        && !flow.composeMenuOpen
+        && !flow.composeMenuHolding
+        && !flow.composeMenuClosing;
+      if (shouldShowOutgoingDisambiguation) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
       return buildComposeStage();
     }
-    if (flow.state === GS.CONFIRM) {
-      const contact = flow.contact;
-      return `<div data-glass-body class="g-compose-stage has-text confirm-mode">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: true })}<div class="g-compose-field-wrap">${renderComposeField({ text: flow.msg || "", active: true })}</div></div>`;
-    }
-    if (flow.state === GS.SENT) return renderCompactStatus({ type: "success", label: "Message sent" });
+    if (flow.state === GS.CONFIRM) return buildConfirmStage();
+    if (flow.state === GS.SENT) return renderCompactStatus({ type: "success", label: "Message sent", enter: !!flow.sentToastEnterPending });
     return "";
   }
 
@@ -321,7 +366,13 @@ export function createMessageSendRender({
     const flow = getFlow();
     renderToken += 1;
     const token = renderToken;
-    const shape = glassStateShape(flow.state);
+    const sendTransitionActive = isConfirmToSendTransition(flow);
+    if (sendTransitionActive && !prevSendTransitionActive) confirmTransitionFrozenTextWidth = measureConfirmTransitionTextWidthPx();
+    else if (!sendTransitionActive) confirmTransitionFrozenTextWidth = null;
+    const shape = sendTransitionActive ? "magic" : glassStateShape(flow.state);
+    const confirmAwaitOrbActive = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
+    const shouldShowListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrbActive);
+    const shouldShowHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrbActive);
     const screenSpec = buildScreenSpec();
     const dropMain = document.getElementById("drop-main");
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
@@ -338,27 +389,39 @@ export function createMessageSendRender({
         disambiguationTimer = null;
         if (!getFlow().active || getFlow().state !== GS.DISAMBIGUATE) return;
         disambiguationPhase = "settled";
-        render(false);
+        syncDisambiguationPhaseUi();
       }, DISAMBIGUATION_ENTER_MS);
     } else if (flow.state !== GS.DISAMBIGUATE) {
       disambiguationPhase = "settled";
       cancelDisambiguationTimer();
     }
-    C.rich.innerHTML = buildContent();
+    const preserveSentTransitionLayer = sendTransitionActive && prevSendTransitionActive;
+    if (!preserveSentTransitionLayer) {
+      const nextContent = buildContent();
+      if (C.rich.innerHTML !== nextContent) C.rich.innerHTML = nextContent;
+    }
+    if (flow.state === GS.DISAMBIGUATE) syncDisambiguationPhaseUi();
+    if (flow.sentToastEnterPending && flow.state === GS.SENT && !sendTransitionActive) flow.sentToastEnterPending = false;
     prevState = flow.state;
     prevComposeHasText = composeHasText;
     dropMain?.classList.toggle("disambiguation-surface", flow.active && flow.state === GS.DISAMBIGUATE);
     dropMain?.classList.toggle("compose-surface", flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM));
-    dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM);
+    dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM && !sendTransitionActive);
     dropMain?.classList.toggle("compose-text-active", flow.active && composeVoiceVizActive);
+    dropMain?.classList.toggle("compose-chip-sizing", flow.active && flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
+    dropMain?.classList.toggle("confirm-await-orb", confirmAwaitOrbActive);
+    dropMain?.classList.toggle("listening-orb", shouldShowListeningOrb);
+    dropMain?.classList.toggle("home-glow", shouldShowHomeGlow);
     C.rich.classList.toggle("visible", flow.active);
-    const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM);
+    const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM || sendTransitionActive);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);
-    C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT);
+    C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT && !sendTransitionActive);
     C.rich.classList.toggle("glass-disambiguation", flow.active && flow.state === GS.DISAMBIGUATE);
     C.rich.classList.toggle("glass-compose", isComposeSurface);
+    C.rich.classList.toggle("sent-transition", sendTransitionActive);
     C.rich.classList.toggle("compose-entering", enteringComposeFromDisambiguation);
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
+    document.body.classList.toggle("message-confirm-to-sent", sendTransitionActive);
     cancelComposeRevealTimer();
     if (enteringComposeText) {
       C.rich.style.opacity = "0";
@@ -371,12 +434,12 @@ export function createMessageSendRender({
     } else {
       C.rich.style.opacity = flow.active ? "1" : "";
     }
-    C.rich.style.transform = (flow.active && flow.state === GS.SENT) ? "translateY(-18px)" : "";
+    C.rich.style.transform = "";
     renderControls(screenSpec);
     cancelMeasure();
     cancelSettle();
 
-    if (flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM)) {
+    if (flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM) && !sendTransitionActive) {
       const apply = (force = false) => {
         const geo = composeGeo();
         const currentGeo = getCurrentMainGeometry() || {};
@@ -388,6 +451,7 @@ export function createMessageSendRender({
         ) {
           morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
         }
+        syncDropMainOrbClasses(shape);
         renderControls(screenSpec);
       };
       apply(shouldMorph);
@@ -406,10 +470,25 @@ export function createMessageSendRender({
           apply(false);
         }, 80);
       }
+    } else if (flow.active && sendTransitionActive) {
+      const geo = SHAPES[shape] || SHAPES.magic;
+      const current = getCurrentMainGeometry() || {};
+      if (
+        shouldMorph
+        || Math.abs(geo.main.w - (current.w || 0)) > 1
+        || Math.abs(geo.main.h - (current.h || 0)) > 1
+        || Math.abs(geo.main.ty - (current.ty || 0)) > 1
+      ) {
+        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
+      }
+      trackIntentHeaderForTransition(CONFIRM_TO_SENDING_MS);
+      syncDropMainOrbClasses(shape);
+      renderControls(screenSpec);
     } else if (flow.active && flow.state === GS.DISAMBIGUATE) {
       if (shouldMorph || enteringDisambiguation) {
         morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, disambiguationGeo());
       }
+      syncDropMainOrbClasses(shape);
     } else if (flow.active) {
       if (flow.state === GS.SENT) {
         const geo = sentGeo();
@@ -425,15 +504,18 @@ export function createMessageSendRender({
       } else if (shouldMorph) {
         morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
       }
+      syncDropMainOrbClasses(shape);
       renderControls(screenSpec);
     } else if (shouldMorph) {
       morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
+      syncDropMainOrbClasses(shape);
       renderControls(screenSpec);
     }
     applyFlowChromeVisibility({ C, active: flow.active, richSent: flow.state === GS.SENT });
     const glow = document.getElementById("home-glow-layer");
     if (glow) glow.style.opacity = "";
     updateOrbLabel();
+    prevSendTransitionActive = sendTransitionActive;
 
     hideIntentHeader();
 
@@ -444,7 +526,7 @@ export function createMessageSendRender({
     } else if (flow.state === GS.DISAMBIGUATE) {
       setSimInputState({ label: "Voice Command", placeholder: 'Say a name, e.g. "Tanaka"', hint: "", dictating: false });
     } else if (flow.state === GS.COMPOSE) {
-      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: "Auto confirm after 2s silence", dictating: true });
+      setSimInputState({ label: "🎤 Voice Dictation", placeholder: "Speak (type to simulate)…", hint: "Hold click + drag to browse chips · Auto confirm after 2s silence", dictating: true });
     } else if (flow.state === GS.CONFIRM) {
       setSimInputState({ label: "Voice Command", placeholder: '"send", "edit", or "cancel"', hint: "", dictating: false });
     }
@@ -469,6 +551,7 @@ export function createMessageSendRender({
     clearDisambiguationMotion() {
       disambiguationPhase = "settled";
       cancelDisambiguationTimer();
+      syncDisambiguationPhaseUi();
     },
     updateSelectionUiOnly() {
       const flow = getFlow();
@@ -492,6 +575,9 @@ export function createMessageSendRender({
     updateComposeMenuUiOnly() {
       const flow = getFlow();
       if (!flow.active || flow.state !== GS.COMPOSE) return false;
+      const glassBodies = C.rich.querySelectorAll("[data-glass-body]");
+      const hasOutgoingDisambiguationLayer = glassBodies.length > 1 || !!C.rich.querySelector(".g-disambiguation-pills.exiting-to-compose");
+      if (manualComposeEntry || hasOutgoingDisambiguationLayer) return false;
       const stack = C.rich.querySelector(".g-compose-chip-stack");
       if (!stack) return false;
       const previousStackRect = stack.getBoundingClientRect();

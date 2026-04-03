@@ -17,10 +17,12 @@ export function createMorphBridges(ctx) {
   function transitionAnimMs(fromShape, toShape, baseMs = callbacks.getAnimDuration(), fromGeo = null, toGeo = null) {
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
+    const isMessageConfirmToSent = document.body?.classList.contains('message-confirm-to-sent') === true;
     const isDotPillPair = (fromShape === 'dot' && toShape === 'pill') || (fromShape === 'pill' && toShape === 'dot');
     const isPillCardPair = (fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill');
     const isDotCardPair = (fromShape === 'dot' && toCardLike) || (fromCardLike && toShape === 'dot');
     const cardBonus = cardDurationBonusMs(cardHeightForTransition(fromShape, toShape, fromGeo, toGeo));
+    if (isMessageConfirmToSent && fromShape === 'card-form' && toShape === 'magic') return 600;
     if (isDotPillPair) return clamp(baseMs, 100, 1800);
     if (isPillCardPair) return clamp(baseMs + Math.round(cardBonus * 0.5), 100, 1800);
     if (isDotCardPair) return clamp(baseMs + cardBonus, 100, 1800);
@@ -107,23 +109,37 @@ export function createMorphBridges(ctx) {
     }, thinkingBridgeMs());
   }
 
-  function bridgeHomeToThinking(targetShape) {
+  function bridgeHomeToThinking(targetShape, contentData = EMPTY_CONTENT, customGeo = null, stageId = null) {
     if (state.thinkingBridgeTimer) { clearTimeout(state.thinkingBridgeTimer); state.thinkingBridgeTimer = null; }
-    callbacks.stopSiriOrb();
-    runtime.morphCore('circle', EMPTY_CONTENT, null, true, 0);
+    const currentShape = state.currentShape === 'listening' ? 'listening' : 'circle';
+    const bridgeMs = homeThinkingBridgeMs();
+    runtime.morphCore(currentShape, EMPTY_CONTENT, null, true, 0);
+    DROPS.main.classList.add('orb-thinking-bridge');
     C.thumb.style.opacity = '0';
     callbacks.updateActive(targetShape);
     state.thinkingBridgeTimer = setTimeout(() => {
       state.thinkingBridgeTimer = null;
-      runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
-      if (targetShape === 'idle') { callbacks.showAiIdle(); callbacks.updateActive('idle'); return; }
-      callbacks.startSiriOrb(true);
-      callbacks.updateActive('ai');
-    }, homeThinkingBridgeMs());
+      DROPS.main.classList.remove('orb-thinking-bridge');
+      if (targetShape === 'idle') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.showAiIdle();
+        callbacks.updateActive('idle');
+        return;
+      }
+      if (targetShape === 'ai') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.startSiriOrb(true);
+        callbacks.updateActive('ai');
+        return;
+      }
+      callbacks.stopSiriOrb({ keepAiMode: true });
+      runtime.morphCore(targetShape, contentData, customGeo, false, 0, stageId);
+    }, bridgeMs);
   }
 
   function bridgeThinkingToHome(contentData = null, customGeo = null, stageId = null) {
     if (state.thinkingBridgeTimer) { clearTimeout(state.thinkingBridgeTimer); state.thinkingBridgeTimer = null; }
+    DROPS.main.classList.remove('orb-thinking-bridge');
     callbacks.stopSiriOrb();
     runtime.morphCore('circle', contentData, customGeo, true, Math.round(homeThinkingBridgeMs() * 0.2), stageId);
     callbacks.updateActive('circle');
@@ -132,7 +148,7 @@ export function createMorphBridges(ctx) {
   function getActiveEasing() {
     const sel = document.getElementById('ease-select-left') || document.getElementById('ease-select');
     const pick = sel ? callbacks.getEasingFns()?.[sel.value] : null;
-    return pick ? pick() : 'cubic-bezier(0.22,1,0.36,1)';
+    return pick ? pick() : 'cubic-bezier(0.35,0.23,0.13,0.98)';
   }
 
   function getCurrentMainGeometry() {

@@ -24,16 +24,15 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (!lastTtsTextNorm) return true;
     return normalized.includes(lastTtsTextNorm) || lastTtsTextNorm.includes(normalized);
   }
-  const glowShadow = (t) => `0 0 ${(t * 12).toFixed(1)}px ${(t * 3).toFixed(1)}px rgba(34,105,245,${(t * 0.45).toFixed(3)})`;
   const shadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
     const lc = (r0,g0,b0,a0, r1,g1,b1,a1) => `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
-    return [`inset 0 ${lr(-22,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`, `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`, `inset 0 ${lr(-3,-56)}px 60px -30px rgba(19,75,192,1)`].join(', ');
+    return [`inset 0 ${lr(-22,6)}px ${lr(29.8,6)}px -2px ${lc(192,213,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-7,-11)}px 20px -6px ${lc(225,231,255,0.60, 255,255,255,0.40)}`, `inset 0 ${lr(6,-20)}px ${lr(18.4,30)}px ${lr(-10,-8)}px ${lc(255,255,255,0.20, 172,188,247,0.50)}`, `inset 0 ${lr(-3,-56)}px 60px -30px rgba(0,22,67,1)`].join(', ');
   };
   const buttonShadow = (t) => {
     const lr = (a, b) => (a + (b - a) * t).toFixed(2);
     const lc = (r0,g0,b0,a0, r1,g1,b1,a1) => `rgba(${Math.round(r0+(r1-r0)*t)},${Math.round(g0+(g1-g0)*t)},${Math.round(b0+(b1-b0)*t)},${(a0+(a1-a0)*t).toFixed(3)})`;
-    return [`inset 0 ${lr(-5,6)}px ${lr(6,6)}px -2px ${lc(70,132,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-6,-11)}px ${lr(7.8,20)}px -8px ${lc(172,188,247,0.50, 255,255,255,0.40)}`, `inset 0 ${lr(-1,10)}px ${lr(14.4,30)}px -6px ${lc(255,255,255,0.40, 172,188,247,0.50)}`, `inset 0 ${lr(-6,-56)}px ${lr(47.4,60)}px -30px rgba(19,75,192,1)`].join(', ');
+    return [`inset 0 ${lr(-5,6)}px ${lr(6,6)}px -2px ${lc(70,132,255,0.15, 34,105,245,0.15)}`, `inset 0 ${lr(-6,-11)}px ${lr(7.8,20)}px -8px ${lc(172,188,247,0.50, 255,255,255,0.40)}`, `inset 0 ${lr(-1,10)}px ${lr(14.4,30)}px -6px ${lc(255,255,255,0.40, 172,188,247,0.50)}`, `inset 0 ${lr(-6,-56)}px ${lr(47.4,60)}px -30px rgba(0,22,67,1)`].join(', ');
   };
 
   async function initVoiceAnalyser() {
@@ -51,48 +50,60 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     } catch {}
   }
 
+  function getComposePulseField() {
+    return document.querySelector('[data-compose-field]');
+  }
+
   function applyVoiceVisualization(level, actionBtns) {
     const glassUi = getGlassUi();
     const GS = getGlassState();
     const state = glassUi?.state;
     const glowEl = document.getElementById('home-glow-layer');
     const dropMain = document.getElementById('drop-main');
+    const siriOrb = document.getElementById('siri-orb');
+    const confirmAwaitOrb = dropMain?.classList.contains('confirm-await-orb') === true;
     const clearActionBtns = () => actionBtns.forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
+    const clearSiriOrb = () => {
+      if (siriOrb) siriOrb.style.boxShadow = '';
+    };
     if (voiceEngine.mode === 'command') {
       const allowCommandViz = shouldShowCommandViz?.() !== false;
       if (!allowCommandViz) {
         if (glowEl) glowEl.style.boxShadow = '';
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
+        clearSiriOrb();
         clearActionBtns();
         return;
       }
       const flightContainerViz = document.getElementById('stage')?.classList.contains('flight-voice-viz') === true;
-      if (glowEl) glowEl.style.boxShadow = shadow(level);
       if (state === GS.DISAMBIGUATE || flightContainerViz) {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
         if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
-      } else {
+        clearSiriOrb();
+      } else if (state === GS.CONFIRM && confirmAwaitOrb) {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
         if (dropMain) dropMain.style.setProperty('box-shadow', '');
-      }
-      if (state === GS.CONFIRM) {
-        actionBtns.forEach((btn) => {
-          btn.style.transition = 'transform 240ms cubic-bezier(0.22,1,0.36,1), background 240ms cubic-bezier(0.22,1,0.36,1)';
-          btn.style.boxShadow = buttonShadow(level);
-        });
+        clearSiriOrb();
+        clearActionBtns();
       } else {
+        if (glowEl) glowEl.style.boxShadow = shadow(level);
+        if (dropMain) dropMain.style.setProperty('box-shadow', '');
+        clearSiriOrb();
+      }
+      if (state !== GS.CONFIRM || !confirmAwaitOrb) {
         clearActionBtns();
       }
     }
     if (voiceEngine.mode === 'dictation') {
       if (glowEl) glowEl.style.boxShadow = '';
       if (dropMain) dropMain.style.removeProperty('box-shadow');
+      clearSiriOrb();
       clearActionBtns();
     }
     if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
-      const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
+      const field = getComposePulseField();
       if (field && field.dataset.pulseLock !== '1') {
-        if (field.id !== 'drop-main') {
-          field.style.transition = 'min-height 400ms ease, background 400ms ease, border-color 400ms ease, box-shadow 180ms ease';
-        }
+        field.style.transition = 'min-height 400ms var(--motion-ease), background 400ms var(--motion-ease), border-color 400ms var(--motion-ease), box-shadow 180ms var(--motion-ease)';
         field.style.setProperty('box-shadow', shadow(level), 'important');
       }
     }
@@ -121,12 +132,13 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   function resetVizStyles({ clearDropMain = true } = {}) {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
-    const field = document.querySelector('[data-compose-field]') || document.querySelector('#drop-main.compose-surface:not(.confirm-surface)');
+    document.getElementById('siri-orb')?.style.setProperty('box-shadow', '');
+    const field = getComposePulseField();
     if (field) {
-      if (field.id !== 'drop-main') field.style.transition = '';
+      field.style.transition = '';
       field.style.removeProperty('box-shadow');
     }
-    if (clearDropMain) document.getElementById('drop-main')?.style.setProperty('box-shadow', '');
+    if (clearDropMain) document.getElementById('drop-main')?.style.removeProperty('box-shadow');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
@@ -215,10 +227,18 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   voiceEngine.start = function(mode) {
     if (!voiceEngine.supported || !voiceEngine.recognition) return;
+    const previousMode = voiceEngine.mode;
     voiceEngine.mode = mode;
     if (mode === 'off') return void voiceEngine.stop();
     voiceEngine.restartOnEnd = true;
-    if (voiceEngine.active) return;
+    if (voiceEngine.active) {
+      if (previousMode !== mode) {
+        if (mode === 'dictation') dictationStart = Date.now();
+        resetVizStyles({ clearDropMain: true });
+      }
+      updateMicIndicator();
+      return;
+    }
     try {
       voiceEngine.recognition.start();
       voiceEngine.active = true;

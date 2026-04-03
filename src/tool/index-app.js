@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage } from '../app-state.js';
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage, persistDurableJson, readDurableJsonRecord } from '../app-state.js';
 import { clamp } from '../utils.js';
 import { initMorph } from '../shared/morph.js';
 import { initScenarioData } from '../shared/scenario-data.js';
@@ -23,6 +23,7 @@ const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: 
 let canvasSettings = loadCanvasSettings();
 let responseMode = loadResponseMode();
 let aiStageOverride = loadAiStageOverride();
+let scenarioRevision = Number(readStoredJson(STORAGE_KEYS.scenarioRevision, 0)) || 0;
 let stageLibrary = [];
 let scenarioLibrary = [];
 let selectedScenarioId = '';
@@ -31,26 +32,43 @@ let manualDemo = null;
 let flight = null;
 let actions = null;
 let splitAnimStyleBackup = null;
+let prototypeIntentHeaderTrackRaf = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageImagesForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
-function loadScenarioLibrary() {
-  const stored = readStoredJson(STORAGE_KEYS.scenarios, null);
-  const scenarios = Array.isArray(stored) ? stored.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
+function normalizeScenarioLibrarySet(source) {
+  const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
   scenarios.forEach((scenario) => {
     scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || 'none' });
   });
   return scenarios.length ? scenarios : defaultScenarioLibrary();
 }
 
-function persistScenarios() { persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, 'scenarios'); }
+function loadScenarioLibrary() {
+  return normalizeScenarioLibrarySet(readStoredJson(STORAGE_KEYS.scenarios, null));
+}
+
+function persistScenarios() {
+  const revision = Date.now();
+  const localScenarioOk = persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, 'scenarios');
+  if (localScenarioOk) persistToStorage(STORAGE_KEYS.scenarioRevision, revision, 'scenario revision');
+  scenarioRevision = revision;
+  void persistDurableJson(STORAGE_KEYS.scenarios, scenarioLibrary, { revision, label: 'scenarios' });
+}
 function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, 'canvas settings'); }
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
 function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
 
 function selectedScenario() {
   return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
+}
+
+function setScenarioLibraryState(nextLibrary) {
+  scenarioLibrary = nextLibrary;
+  if (!scenarioLibrary.some((item) => item.id === selectedScenarioId)) {
+    selectedScenarioId = scenarioLibrary[0]?.id || '';
+  }
 }
 
 function currentScenarioFrameMode() {
@@ -97,7 +115,7 @@ function applyCanvasSettings() {
 function applyStagePhoneBlur(shape) {
   const frame = document.getElementById('ui-frame');
   if (!frame) return;
-  const stage = stageById(shape);
+  const stage = stageById(shape, selectedScenario());
   const shouldBlur = currentScenarioFrameMode() === 'phone' && !!canvasSettings.phoneFrameBackground?.src && !!stage?.phoneBgBlur;
   frame.classList.toggle('stage-blur', shouldBlur);
 }
@@ -114,6 +132,14 @@ function setIntentHeader(label, step) {
   const lbl = document.getElementById('intent-label');
   const dot = document.getElementById('intent-step-dot');
   const slbl = document.getElementById('intent-step-lbl');
+  if (!hdr || !lbl || !dot || !slbl) return;
+  cancelPrototypeIntentHeaderTracking();
+  hdr.classList.remove('glass-intent');
+  hdr.style.display = 'flex';
+  hdr.style.left = '';
+  hdr.style.top = '';
+  lbl.style.fontSize = '';
+  lbl.style.color = '';
   lbl.textContent = label;
   if (step) {
     slbl.textContent = step;
@@ -126,7 +152,80 @@ function setIntentHeader(label, step) {
 }
 
 function hideIntentHeader() {
-  document.getElementById('intent-header').classList.remove('visible');
+  const hdr = document.getElementById('intent-header');
+  if (!hdr) return;
+  cancelPrototypeIntentHeaderTracking();
+  hdr.classList.remove('visible', 'glass-intent');
+  hdr.style.display = 'none';
+  hdr.style.left = '';
+  hdr.style.top = '';
+  const lbl = document.getElementById('intent-label');
+  if (lbl) {
+    lbl.style.fontSize = '';
+    lbl.style.color = '';
+  }
+}
+
+function cancelPrototypeIntentHeaderTracking() {
+  if (!prototypeIntentHeaderTrackRaf) return;
+  cancelAnimationFrame(prototypeIntentHeaderTrackRaf);
+  prototypeIntentHeaderTrackRaf = null;
+}
+
+function positionPrototypeIntentHeaderAboveMain() {
+  const hdr = document.getElementById('intent-header');
+  const wrap = document.getElementById('stage-wrap');
+  const main = document.getElementById('drop-main');
+  if (!hdr || !wrap || !main) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  const mainRect = main.getBoundingClientRect();
+  const hdrRect = hdr.getBoundingClientRect();
+  const headerH = Math.ceil(hdrRect.height || hdr.offsetHeight || 0);
+  const centerX = Math.round((mainRect.left + (mainRect.width / 2)) - wrapRect.left);
+  const top = Math.max(8, Math.round(mainRect.top - wrapRect.top - headerH - 12));
+  const headerW = Math.ceil(hdrRect.width || hdr.offsetWidth || 0);
+  const left = Math.round(centerX - (headerW / 2));
+  hdr.style.left = `${left}px`;
+  hdr.style.top = `${top}px`;
+}
+
+function trackPrototypeIntentHeader(ms = anim.getAnimDuration() + 120) {
+  cancelPrototypeIntentHeaderTracking();
+  const end = performance.now() + Math.max(120, ms);
+  const tick = () => {
+    const hdr = document.getElementById('intent-header');
+    if (!hdr || !hdr.classList.contains('glass-intent') || !hdr.classList.contains('visible')) return;
+    positionPrototypeIntentHeaderAboveMain();
+    if (performance.now() < end) prototypeIntentHeaderTrackRaf = requestAnimationFrame(tick);
+    else prototypeIntentHeaderTrackRaf = null;
+  };
+  prototypeIntentHeaderTrackRaf = requestAnimationFrame(tick);
+}
+
+function syncPrototypeIntentHeader(scenario) {
+  const stage = stageById(scenario?.shape, scenario);
+  if (!scenario || !stageHasComponent(stage, 'intent-header')) {
+    hideIntentHeader();
+    return;
+  }
+  const stageText = stageTextForShape(scenario, scenario.shape);
+  const typography = morphApi.getScenarioTypography(scenario, scenario.shape);
+  const label = String(stageText.intentHeader || scenario.name || '').trim();
+  const hdr = document.getElementById('intent-header');
+  const lbl = document.getElementById('intent-label');
+  const dot = document.getElementById('intent-step-dot');
+  const slbl = document.getElementById('intent-step-lbl');
+  if (!hdr || !lbl || !dot || !slbl) return;
+  cancelPrototypeIntentHeaderTracking();
+  lbl.textContent = label;
+  lbl.style.fontSize = `${typography.intentHeader.size}px`;
+  lbl.style.color = typography.intentHeader.color;
+  slbl.textContent = '';
+  dot.classList.remove('visible');
+  hdr.style.display = 'flex';
+  hdr.classList.add('glass-intent', 'visible');
+  positionPrototypeIntentHeaderAboveMain();
+  trackPrototypeIntentHeader();
 }
 
 function updateActive(shape) {
@@ -141,7 +240,10 @@ selectedScenarioId = scenarioLibrary[0]?.id || '';
 const orb = initOrbController({
   document,
   C,
-  clearListPills: () => manualDemo?.clearListPills?.(),
+  clearListPills: () => {
+    morphApi?.clearPrototypeListStage?.(true);
+    manualDemo?.clearListPills?.();
+  },
   morphTo: (...args) => morphApi.morphTo(...args),
 });
 
@@ -154,7 +256,8 @@ function previewScenario(scenario) {
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-  morphApi.morphTo(renderShapeForStageId(scenario.shape), morphApi.scenarioToRenderContent(scenario), null, scenario.shape);
+  morphApi.morphTo(renderShapeForStageId(scenario.shape, scenario), morphApi.scenarioToRenderContent(scenario), null, scenario.shape);
+  syncPrototypeIntentHeader(scenario);
 }
 
 function previewScenarioInstant(scenario) {
@@ -166,7 +269,7 @@ function previewScenarioInstant(scenario) {
   document.getElementById('stage').classList.remove('flow-active');
   updateActive('');
   applyStagePhoneBlur(scenario.shape);
-  const shape = renderShapeForStageId(scenario.shape);
+  const shape = renderShapeForStageId(scenario.shape, scenario);
   const content = morphApi.scenarioToRenderContent(scenario);
   const geo = morphApi.resolveGeometryForContent(shape, content, null, scenario.shape);
   const root = document.documentElement;
@@ -184,15 +287,19 @@ function previewScenarioInstant(scenario) {
   morphApi.clearUiFadeTimers();
   morphApi.setSuppressDeformation(true);
   morphApi.setCurrentShape(shape);
-  morphApi.applyGeometry(shape, geo, scenario.shape);
+  morphApi.applyGeometry(shape, geo, scenario.shape, scenario);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
+  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'list' || shape === 'magic');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
+  DROPS.main.classList.toggle('listening-orb', shape === 'listening' || shape === 'list');
   morphApi.applyContent(content);
   morphApi.applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
+  if (shape === 'list') morphApi.showPrototypeListStage?.(content, { entering: false });
+  else morphApi.clearPrototypeListStage?.(true);
   morphApi.setLastMainGeo({ ...geo.main });
   updateActive(shape);
   morphApi.setSuppressDeformation(false);
+  syncPrototypeIntentHeader(scenario);
   ['--anim-w','--anim-h','--anim-br','--anim-tx','--anim-t','--content-fade-ms','--detail-fade-ms','--media-fade-ms','--content-move-t','--primary-size-anim-ms','--text-size-anim-ms'].forEach((key) => root.style.removeProperty(key));
 }
 
@@ -203,24 +310,32 @@ morphApi = initMorph({
   callbacks: {
     clamp,
     selectedScenario,
-    stageById,
+    stageById: (id, scenario = selectedScenario()) => stageById(id, scenario),
     updateActive,
     stopSiriOrb: (...args) => orb.stopSiriOrb(...args),
     startSiriOrb: (...args) => orb.startSiriOrb(...args),
     showAiIdle: (...args) => orb.showAiIdle(...args),
-    collapseListStack: (...args) => manualDemo?.collapseListStack?.(...args),
+    collapseListStack: (...args) => {
+      if (morphApi?.collapsePrototypeListStack) return morphApi.collapsePrototypeListStack(...args);
+      return manualDemo?.collapseListStack?.(...args);
+    },
     animateSplitMetaball: (...args) => manualDemo?.animateSplitMetaball?.(...args),
     normalizeStageSizeEntry,
     scenarioStageSizeOverride,
     stageMainSize,
     stageIconTextGap,
     stageIconLeftPadding,
-    renderShapeForStageId,
+    renderShapeForStageId: (id) => renderShapeForStageId(id, selectedScenario()),
     getCanvasSettings: () => canvasSettings,
     stageComponentCounts,
     stageTextForShape,
     stageIconForShape,
+    stageListChipIconsForShape,
+    stageListItemsForShape,
     stageImagesForShape,
+    stageSelectedForShape,
+    stageAccentColorForShape,
+    stageSecondaryAccentColorForShape,
     createIcon,
     getAnimDuration: anim.getAnimDuration,
     getEasingFns: anim.getEasingFns,
@@ -235,10 +350,11 @@ const sidebar = initSidebar({
   selectedScenario,
   stageById,
   availableScenarioShapes,
+  visibleScenarioStages,
   persistScenarios,
   persistStageLibrary: () => {
     try {
-      localStorage.setItem(STORAGE_KEYS.stageLibrary, JSON.stringify(stageLibrary));
+      localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(stageLibrary));
     } catch (err) {
       console.warn('Unable to persist stage library', err);
     }
@@ -262,10 +378,19 @@ const sidebar = initSidebar({
   stageHasComponent,
   stageTextForShape,
   stageIconForShape,
+  stageListChipIconsForShape,
+  stageListItemsForShape,
   stageImagesForShape,
+  stageRenderShapeForShape,
+  stageSelectedForShape,
+  stageAccentColorForShape,
+  stageSecondaryAccentColorForShape,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
+  normalizeListItemsByShape,
   createIcon,
+  createDefaultListItem,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
@@ -274,7 +399,7 @@ const sidebar = initSidebar({
   normalizeStage,
   stageId,
   getScenarioLibrary: () => scenarioLibrary,
-  setScenarioLibrary: (value) => { scenarioLibrary = value; },
+  setScenarioLibrary: (value) => { setScenarioLibraryState(value); },
   getStageLibrary: () => stageLibrary,
   setStageLibrary: (value) => { stageLibrary = value; },
   getSelectedScenarioId: () => selectedScenarioId,
@@ -316,7 +441,7 @@ manualDemo = initManualDemo({
   C,
 });
 
-const { renderAiStageOverrideUi, previewAiStageOverride, renderScenarioUi, updateLayerPreviews, initSidebarTabs, initLayerRowToggles, initSidebarCollapsibleSections, bindTypographyInputs, isSupportedAssetFile, commitScenarioChange, commitStageChange, addStage, deleteCurrentStage, resetCurrentStageToDefault, addScenario, duplicateScenario, deleteScenario, getScenarioImagesForStage } = sidebar;
+const { renderAiStageOverrideUi, previewAiStageOverride, renderScenarioUi, updateLayerPreviews, initSidebarTabs, initLayerRowToggles, initSidebarCollapsibleSections, bindTypographyInputs, isSupportedAssetFile, commitScenarioChange, commitStageChange, addStage, duplicateCurrentStage, deleteCurrentStage, resetCurrentStageToDefault, addScenario, duplicateScenario, deleteScenario, getScenarioImagesForStage } = sidebar;
 
 const scenarioMatchesText = (scenario, text) => {
   const haystack = String(text || '').toLowerCase();
@@ -355,9 +480,25 @@ const input = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 actions = initManualActions({ input, sendBtn, flight, resolveScenario, previewScenario, renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; } });
 
+async function hydrateDurableScenarios() {
+  const record = await readDurableJsonRecord(STORAGE_KEYS.scenarios);
+  if (!Array.isArray(record?.value)) return;
+  const durableRevision = Number(record.revision) || 0;
+  if (durableRevision <= scenarioRevision) return;
+  setScenarioLibraryState(normalizeScenarioLibrarySet(record.value));
+  scenarioRevision = durableRevision;
+  persistToStorage(STORAGE_KEYS.scenarioRevision, durableRevision, 'scenario revision');
+  renderScenarioUi();
+  applyCanvasSettings();
+  applyStagePhoneBlur(selectedScenario()?.shape);
+  if (document.getElementById('stage')?.classList.contains('flow-active')) return;
+  if (responseMode === RESPONSE_MODE.AI) previewAiStageOverride();
+  else previewScenario(selectedScenario());
+}
+
 async function copyStagePng() {
   try {
-    const ok = await copyStagePngToClipboard({ root: document.getElementById('stage'), documentRef: document });
+    const ok = await copyStagePngToClipboard({ root: document.getElementById('stage-wrap'), documentRef: document });
     if (!ok) console.warn('[stage-capture] PNG copy did not complete.');
   } catch (err) {
     console.warn('[stage-capture] PNG copy failed:', err);
@@ -365,7 +506,7 @@ async function copyStagePng() {
 }
 
 async function exportStageSvg() {
-  const ok = await exportStageSvgFile({ root: document.getElementById('stage'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
+  const ok = await exportStageSvgFile({ root: document.getElementById('stage-wrap'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
   if (!ok) console.warn('[stage-capture] SVG export did not complete.');
 }
 
@@ -381,12 +522,16 @@ initManualBindings({
   normalizeScenarioCanvas,
   normalizeTriggers,
   normalizeIconByShape,
+  normalizeListChipIconsByShape,
+  normalizeListItemsByShape,
   createIcon,
+  createDefaultListItem,
   normalizeStageTextByShape,
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
   canvasSettings: () => canvasSettings,
@@ -407,6 +552,7 @@ initManualBindings({
   deleteScenario,
   commitScenarioChange,
   addStage,
+  duplicateCurrentStage,
   deleteCurrentStage,
   resetCurrentStageToDefault,
   commitStageChange,
@@ -450,3 +596,5 @@ Object.assign(window, {
   copyStagePng,
   exportStageSvg,
 });
+
+void hydrateDurableScenarios();

@@ -1,4 +1,36 @@
 export function createSidebarRender(ctx, refs) {
+  function captureFocusedEditableState() {
+    const active = document.activeElement;
+    const isTextInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
+    if (!isTextInput) return null;
+    if (!active.closest('#sidebar, #left-sidebar')) return null;
+    return {
+      id: active.id,
+      selectionStart: typeof active.selectionStart === 'number' ? active.selectionStart : null,
+      selectionEnd: typeof active.selectionEnd === 'number' ? active.selectionEnd : null,
+      selectionDirection: active.selectionDirection || 'none',
+      scrollTop: typeof active.scrollTop === 'number' ? active.scrollTop : null,
+    };
+  }
+
+  function restoreFocusedEditableState(state) {
+    if (!state?.id) return;
+    const next = document.getElementById(state.id);
+    const isTextInput = next instanceof HTMLInputElement || next instanceof HTMLTextAreaElement;
+    if (!isTextInput || next.disabled) return;
+    next.focus({ preventScroll: true });
+    if (typeof next.setSelectionRange === 'function' && state.selectionStart !== null && state.selectionEnd !== null) {
+      try {
+        next.setSelectionRange(state.selectionStart, state.selectionEnd, state.selectionDirection);
+      } catch {}
+    }
+    if (state.scrollTop !== null) next.scrollTop = state.scrollTop;
+  }
+
+  function stageComponentLabel(type) {
+    return type === 'intent-header' ? 'intent header' : type;
+  }
+
   function renderScenarioList() {
     const scenario = ctx.selectedScenario();
     if (!ctx.UI.scenarioList) return;
@@ -20,7 +52,10 @@ export function createSidebarRender(ctx, refs) {
     const scenario = ctx.selectedScenario();
     if (!ctx.UI.scenarioShapeRow) return;
     ctx.UI.scenarioShapeRow.innerHTML = '';
-    ctx.getStageLibrary().forEach((stage) => {
+    const stages = typeof ctx.visibleScenarioStages === 'function'
+      ? ctx.visibleScenarioStages(scenario)
+      : ctx.getStageLibrary();
+    stages.forEach((stage) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'shape-chip' + (scenario?.shape === stage.id ? ' active' : '');
@@ -40,12 +75,12 @@ export function createSidebarRender(ctx, refs) {
     const counts = ctx.stageComponentCounts(stage);
     ctx.STAGE_COMPONENT_TYPES.forEach((type) => {
       const row = document.createElement('div');
-      const isSingleToggle = ['icon', 'primary', 'secondary', 'detail'].includes(type);
+      const isSingleToggle = ['icon', 'primary', 'secondary', 'detail', 'intent-header'].includes(type);
       row.className = 'stage-comp-row' + (isSingleToggle ? ' toggle' : '');
       if (isSingleToggle) {
-        row.innerHTML = `<span class="stage-comp-label">${type}</span><input class="stage-comp-check" type="checkbox" data-stage-comp-toggle="${type}" ${counts[type] > 0 ? 'checked' : ''}/>`;
+        row.innerHTML = `<span class="stage-comp-label">${stageComponentLabel(type)}</span><input class="stage-comp-check" type="checkbox" data-stage-comp-toggle="${type}" ${counts[type] > 0 ? 'checked' : ''}/>`;
       } else {
-        row.innerHTML = `<span class="stage-comp-label">${type}</span><button type="button" class="stage-comp-btn" data-stage-comp-action="remove" data-stage-comp-type="${type}">-</button><span class="stage-comp-count">${counts[type]}</span><button type="button" class="stage-comp-btn" data-stage-comp-action="add" data-stage-comp-type="${type}">+</button>`;
+        row.innerHTML = `<span class="stage-comp-label">${stageComponentLabel(type)}</span><button type="button" class="stage-comp-btn" data-stage-comp-action="remove" data-stage-comp-type="${type}">-</button><span class="stage-comp-count">${counts[type]}</span><button type="button" class="stage-comp-btn" data-stage-comp-action="add" data-stage-comp-type="${type}">+</button>`;
         const removeBtn = row.querySelector('[data-stage-comp-action="remove"]');
         if (removeBtn) removeBtn.disabled = counts[type] <= 0;
       }
@@ -56,9 +91,14 @@ export function createSidebarRender(ctx, refs) {
 
   function renderStageConfigPanel() {
     const scenario = ctx.selectedScenario();
-    const stage = ctx.stageById(scenario?.shape);
+    const stage = ctx.stageById(scenario?.shape, scenario);
     const builtin = ctx.builtinStageById(stage?.id);
     const sizeOverride = ctx.scenarioStageSizeOverride(scenario, scenario?.shape);
+    const stageSelected = ctx.stageSelectedForShape ? ctx.stageSelectedForShape(scenario, scenario?.shape) : !!stage?.selected;
+    const stageAccentColor = ctx.stageAccentColorForShape ? ctx.stageAccentColorForShape(scenario, scenario?.shape) : String(stage?.accentColor || '#90acff');
+    const stageAccentSecondaryColor = ctx.stageSecondaryAccentColorForShape ? ctx.stageSecondaryAccentColorForShape(scenario, scenario?.shape) : String(stage?.secondaryAccentColor || '#9761ff');
+    const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
+    const isCardLike = renderShape === 'card' || renderShape === 'card-s';
     if (ctx.UI.stageNameInput) ctx.UI.stageNameInput.value = stage?.name || '';
     if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
     if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
@@ -66,8 +106,30 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
     if (ctx.UI.stagePhoneBlurToggle) ctx.UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
+    if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
+    if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.toggle('hidden', renderShape !== 'list');
+    const listItemCount = renderShape === 'list' && ctx.stageListItemsForShape
+      ? ctx.stageListItemsForShape(scenario, scenario?.shape).length
+      : 0;
+    if (ctx.UI.stageListCountVal) ctx.UI.stageListCountVal.textContent = String(Math.max(0, listItemCount));
+    if (ctx.UI.stageListCountDec) ctx.UI.stageListCountDec.disabled = !stage || renderShape !== 'list' || listItemCount <= 1;
+    if (ctx.UI.stageListCountInc) ctx.UI.stageListCountInc.disabled = !stage || renderShape !== 'list' || listItemCount >= 8;
+    if (ctx.UI.stageCardSToggle) {
+      ctx.UI.stageCardSToggle.checked = renderShape === 'card-s';
+      ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
+    }
+    if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
+    if (ctx.UI.stageAccentColor) {
+      ctx.UI.stageAccentColor.value = String(stageAccentColor || '#90acff');
+      ctx.UI.stageAccentColor.disabled = !stage;
+    }
+    if (ctx.UI.stageAccentSecondaryColor) {
+      ctx.UI.stageAccentSecondaryColor.value = String(stageAccentSecondaryColor || '#9761ff');
+      ctx.UI.stageAccentSecondaryColor.disabled = !stage;
+    }
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
-    if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage || !!stage.preset;
+    if (ctx.UI.stageDuplicate) ctx.UI.stageDuplicate.disabled = !stage;
+    if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage;
     if (ctx.UI.stageReset) ctx.UI.stageReset.disabled = !stage || !builtin;
     renderStageComponentControls(stage);
   }
@@ -90,12 +152,49 @@ export function createSidebarRender(ctx, refs) {
     });
   }
 
+  function renderScenarioListItemsEditor(scenario, renderShape) {
+    if (!ctx.UI.scenarioListItemsEditor) return;
+    ctx.UI.scenarioListItemsEditor.innerHTML = '';
+    const preview = document.getElementById('layer-preview-list-items-count');
+    if (preview) preview.textContent = '0 chips';
+    if (renderShape !== 'list') return;
+    const items = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(scenario, scenario?.shape) : [];
+    if (preview) preview.textContent = `${items.length} chip${items.length === 1 ? '' : 's'}`;
+    items.forEach((item, index) => {
+      const labelId = `scenario-list-item-label-${index}`;
+      const iconInputId = `scenario-list-item-icon-input-${index}`;
+      const iconUploadId = `scenario-list-item-icon-upload-${index}`;
+      const icon = item?.icon || ctx.createIcon('none', '');
+      const iconValue = icon.kind === 'emoji' ? icon.value : '';
+      const modeText = icon.kind === 'image'
+        ? 'png/gif'
+        : icon.kind === 'emoji'
+        ? 'emoji'
+        : 'default';
+      const row = document.createElement('div');
+      row.className = 'sb-row tight';
+      row.innerHTML = `
+        <label class="sb-lbl" for="${labelId}">Chip ${index + 1}</label>
+        <input id="${labelId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-label-index="${index}" value="${String(item?.label || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
+        <div class="icon-upload-row">
+          <input id="${iconInputId}" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph" data-list-item-icon-input-index="${index}" value="${String(iconValue || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
+          <label class="sb-mini-btn upload-btn" for="${iconUploadId}">PNG<input id="${iconUploadId}" data-list-item-icon-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>
+          <button class="sb-mini-btn" type="button" data-list-item-icon-reset-index="${index}">×</button>
+        </div>
+        <div class="icon-mode-badge" data-list-item-icon-mode-index="${index}">${modeText}</div>
+      `;
+      ctx.UI.scenarioListItemsEditor.appendChild(row);
+    });
+  }
+
   function renderScenarioEditor() {
     const scenario = ctx.selectedScenario();
-    const stage = ctx.stageById(scenario?.shape);
+    const stage = ctx.stageById(scenario?.shape, scenario);
+    const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
     const visibleTextFields = ctx.stageVisibleEditorFields(stage);
     const hasIcon = ctx.stageHasComponent(stage, 'icon');
     const hasImage = ctx.stageHasComponent(stage, 'image');
+    const hasIntentHeader = ctx.stageHasComponent(stage, 'intent-header');
     if (ctx.UI.scenarioName) ctx.UI.scenarioName.value = scenario?.name || '';
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
@@ -106,6 +205,7 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioPrimary) ctx.UI.scenarioPrimary.value = stageText.primary;
     if (ctx.UI.scenarioSecondary) ctx.UI.scenarioSecondary.value = stageText.secondary;
     if (ctx.UI.scenarioDetail) ctx.UI.scenarioDetail.value = stageText.detail;
+    if (ctx.UI.scenarioIntentHeader) ctx.UI.scenarioIntentHeader.value = stageText.intentHeader || '';
     if (ctx.UI.scenarioIconSize) ctx.UI.scenarioIconSize.value = String(typography.icon.size);
     if (ctx.UI.scenarioIconColor) ctx.UI.scenarioIconColor.value = typography.icon.color;
     if (ctx.UI.scenarioPrimarySize) ctx.UI.scenarioPrimarySize.value = String(typography.primary.size);
@@ -114,21 +214,28 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioSecondaryColor) ctx.UI.scenarioSecondaryColor.value = typography.secondary.color;
     if (ctx.UI.scenarioDetailSize) ctx.UI.scenarioDetailSize.value = String(typography.detail.size);
     if (ctx.UI.scenarioDetailColor) ctx.UI.scenarioDetailColor.value = typography.detail.color;
+    if (ctx.UI.scenarioIntentHeaderSize) ctx.UI.scenarioIntentHeaderSize.value = String(typography.intentHeader.size);
+    if (ctx.UI.scenarioIntentHeaderColor) ctx.UI.scenarioIntentHeaderColor.value = typography.intentHeader.color;
     if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !hasIcon);
-    if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', !visibleTextFields.has('primary'));
-    if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', !visibleTextFields.has('secondary'));
-    if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', !visibleTextFields.has('detail'));
+    if (ctx.UI.editorListItems) ctx.UI.editorListItems.classList.toggle('hidden', renderShape !== 'list');
+    if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('primary'));
+    if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('secondary'));
+    if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('detail'));
+    if (ctx.UI.editorIntentHeader) ctx.UI.editorIntentHeader.classList.toggle('hidden', !hasIntentHeader);
     if (ctx.UI.editorMedia) ctx.UI.editorMedia.classList.toggle('hidden', !hasImage);
+    renderScenarioListItemsEditor(scenario, renderShape);
     renderScenarioStageChips();
     renderStageConfigPanel();
     renderScenarioMediaEditor(scenario, stage);
   }
 
   function renderScenarioUi() {
+    const focusedEditableState = captureFocusedEditableState();
     refs.actions.renderAiStageOverrideUi();
     renderScenarioList();
     renderScenarioEditor();
     refs.bindings.updateLayerPreviews();
+    restoreFocusedEditableState(focusedEditableState);
   }
 
   return {

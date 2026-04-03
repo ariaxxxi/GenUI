@@ -1,5 +1,6 @@
 export const STORAGE_KEYS = {
   scenarios: 'genui.scenarios.v1',
+  scenarioRevision: 'genui.scenarios-revision.v1',
   stages: 'genui.stages.v1',
   settings: 'genui.settings.v1',
   mode: 'genui.mode.v1',
@@ -7,6 +8,10 @@ export const STORAGE_KEYS = {
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
 };
+
+const DURABLE_DB_NAME = 'genui-durable.v1';
+const DURABLE_STORE_NAME = 'records';
+let durableDbPromise = null;
 
 export const RESPONSE_MODE = Object.freeze({
   MANUAL: 'manual',
@@ -28,7 +33,13 @@ export const AI_STAGE_OVERRIDE = Object.freeze({
 });
 
 export function persistToStorage(key, value, label) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch (err) { console.warn(`Unable to persist ${label}`, err); }
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (err) {
+    console.warn(`Unable to persist ${label}`, err);
+    return false;
+  }
 }
 
 export function readStoredJson(key, fallback) {
@@ -44,7 +55,7 @@ export function readStoredJson(key, fallback) {
 export function loadCanvasSettings() {
   const stored = readStoredJson(STORAGE_KEYS.settings, null);
   return {
-    backgroundEnabled: stored?.backgroundEnabled !== false,
+    backgroundEnabled: stored?.backgroundEnabled === true,
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
@@ -75,4 +86,86 @@ export function loadAiVoiceEnabled() {
 export function loadDisableTextInput() {
   const stored = readStoredJson(STORAGE_KEYS.disableTextInput, null);
   return stored === true;
+}
+
+function openDurableDb() {
+  if (durableDbPromise) return durableDbPromise;
+  if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+  durableDbPromise = new Promise((resolve) => {
+    const finish = (value) => {
+      if (value === null) durableDbPromise = null;
+      resolve(value);
+    };
+    try {
+      const request = indexedDB.open(DURABLE_DB_NAME, 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(DURABLE_STORE_NAME)) {
+          db.createObjectStore(DURABLE_STORE_NAME, { keyPath: 'key' });
+        }
+      };
+      request.onsuccess = () => finish(request.result);
+      request.onerror = () => {
+        console.warn('Unable to open durable storage', request.error);
+        finish(null);
+      };
+      request.onblocked = () => {
+        console.warn('Unable to open durable storage: blocked');
+        finish(null);
+      };
+    } catch (err) {
+      console.warn('Unable to open durable storage', err);
+      finish(null);
+    }
+  });
+  return durableDbPromise;
+}
+
+export async function persistDurableJson(key, value, { revision = Date.now(), label = 'data' } = {}) {
+  const db = await openDurableDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(DURABLE_STORE_NAME, 'readwrite');
+      tx.objectStore(DURABLE_STORE_NAME).put({
+        key,
+        value,
+        revision,
+        savedAt: Date.now(),
+      });
+      tx.oncomplete = () => resolve(true);
+      tx.onabort = () => {
+        console.warn(`Unable to persist durable ${label}`, tx.error);
+        resolve(false);
+      };
+      tx.onerror = () => {
+        console.warn(`Unable to persist durable ${label}`, tx.error);
+        resolve(false);
+      };
+    } catch (err) {
+      console.warn(`Unable to persist durable ${label}`, err);
+      resolve(false);
+    }
+  });
+}
+
+export async function readDurableJsonRecord(key) {
+  const db = await openDurableDb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(DURABLE_STORE_NAME, 'readonly');
+      const request = tx.objectStore(DURABLE_STORE_NAME).get(key);
+      request.onsuccess = () => {
+        const record = request.result;
+        resolve(record && typeof record === 'object' ? record : null);
+      };
+      request.onerror = () => resolve(null);
+      tx.onabort = () => resolve(null);
+      tx.onerror = () => resolve(null);
+    } catch (err) {
+      console.warn('Unable to read durable data', err);
+      resolve(null);
+    }
+  });
 }

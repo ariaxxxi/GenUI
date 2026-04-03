@@ -17,6 +17,7 @@ export function createMorphLayout(ctx) {
 
   function contentPos(shape, w, h) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'list') return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (['circle', 'magic', 'listening', 'dot'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (shape === 'pill') {
       const isAiHomeContext = document.body?.dataset?.pageMode === 'ai' && document.body?.dataset?.aiHomeState === 'context';
@@ -160,12 +161,12 @@ export function createMorphLayout(ctx) {
   const mediaStackHeight = (mediaHeights) => !Array.isArray(mediaHeights) || !mediaHeights.length ? 0 : mediaHeights.reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * Math.max(0, mediaHeights.length - 1);
 
   function measureCardDetailHeight(detailText, typography, cardWidth) {
-    const text = String(detailText || '').trim();
-    if (!text) return 0;
+    const text = String(detailText || '');
+    if (!text.trim()) return 0;
     detailMeasureEl.style.width = `${cardDetailTextWidth(cardWidth)}px`;
     detailMeasureEl.style.fontSize = `${typography.detail.size}px`;
     detailMeasureEl.style.lineHeight = '1.2';
-    detailMeasureEl.style.whiteSpace = 'normal';
+    detailMeasureEl.style.whiteSpace = 'pre-wrap';
     detailMeasureEl.style.wordBreak = 'break-word';
     detailMeasureEl.textContent = text;
     return Math.ceil(detailMeasureEl.getBoundingClientRect().height);
@@ -326,12 +327,15 @@ export function createMorphLayout(ctx) {
     const text = callbacks.stageTextForShape(scenario, shape);
     return {
       icon: has('icon') ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
+      listChipIcons: has('icon') ? callbacks.stageListChipIconsForShape?.(scenario, shape) : null,
+      listItems: callbacks.stageListItemsForShape?.(scenario, shape) || [],
       primary: has('primary') ? text.primary : '',
       secondary: has('secondary') ? text.secondary : '',
       detail: has('detail') ? text.detail : '',
       images: has('image') ? callbacks.stageImagesForShape(scenario, shape) : [],
       typography: getScenarioTypography(scenario, shape),
       sizeOverride: callbacks.scenarioStageSizeOverride(scenario, shape),
+      scenario,
     };
   }
 

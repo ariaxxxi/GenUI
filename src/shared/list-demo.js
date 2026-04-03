@@ -34,7 +34,7 @@ export function collapseListStack(ms = 220) {
   if (wrap.dataset.collapsing === "1") return;
   wrap.dataset.collapsing = "1";
   wrap.style.pointerEvents = "none";
-  wrap.style.transition = `opacity ${ms}ms ease`;
+  wrap.style.transition = `opacity ${ms}ms var(--motion-ease)`;
   wrap.style.opacity = "0";
   setTimeout(clearListPills, ms + 30);
 }

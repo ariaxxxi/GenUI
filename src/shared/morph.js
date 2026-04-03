@@ -37,6 +37,11 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     if (state.listBridgeTimer) { clearTimeout(state.listBridgeTimer); state.listBridgeTimer = null; }
     if (state.thinkingBridgeTimer) { clearTimeout(state.thinkingBridgeTimer); state.thinkingBridgeTimer = null; }
     const inAiIdleState = state.currentShape === 'idle' && document.getElementById('drop-main')?.classList.contains('ai-mode');
+    const homeLikeShape = state.currentShape === 'circle' || state.currentShape === 'listening';
+    const thinkingLikeTarget = shape === 'magic' || shape === 'ai' || shape === 'idle';
+    if (homeLikeShape && thinkingLikeTarget) {
+      return void bridges.bridgeHomeToThinking(shape, contentData, customGeo, stageId);
+    }
     if ((state.currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {
       if (shape === 'circle' || shape === 'listening') return void bridges.bridgeThinkingToHome(contentData, customGeo, stageId);
       return void bridges.bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId);

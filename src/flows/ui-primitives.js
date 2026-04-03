@@ -42,16 +42,79 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
   }).join("")}</div>`;
 }
 
+// Reusable edge-light scaffold. Host containers can recolor it with
+// --g-accent-rgb / --g-accent-secondary-rgb and toggle .selected / .is-accented.
+export function renderAccentOrbitChrome() {
+  return `<span class="g-accent-orbit" aria-hidden="true"><span class="g-accent-orbit-fill"></span><span class="g-accent-orbit-left-spot"></span><span class="g-accent-orbit-inner-glow"></span><span class="g-accent-orbit-middle"></span><span class="g-accent-orbit-ring"></span></span>`;
+}
+
+export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, variant = "fan", options = {}) {
+  const count = Math.max(0, Number(items?.length) || 0);
+  if (count <= 0) return [];
+  let positions;
+  if (variant === "stack") {
+    const pillHeight = 56;
+    const gap = Number.isFinite(Number(options?.gap)) ? Math.max(0, Math.round(Number(options.gap))) : 8;
+    const pillHalf = pillHeight / 2;
+    const step = pillHeight + gap;
+    const bottomY = Number.isFinite(Number(options?.bottomY))
+      ? Math.round(Number(options.bottomY))
+      : Math.round(-45 - gap - pillHalf);
+    positions = Array.from({ length: count }, (_, index) => ({
+      x: 0,
+      y: bottomY - ((count - 1 - index) * step),
+    }));
+  } else if (count === 1) {
+    positions = [{ x: 0, y: -88 }];
+  } else if (count === 2) {
+    positions = [{ x: 0, y: -136 }, { x: 0, y: -72 }];
+  } else if (count === 3) {
+    positions = [{ x: 0, y: -144 }, { x: -74, y: -84 }, { x: 74, y: -84 }];
+  } else {
+    const radiusX = Math.min(122, 84 + Math.max(0, count - 4) * 8);
+    const radiusY = Math.min(116, 78 + Math.max(0, count - 4) * 6);
+    positions = Array.from({ length: count }, (_, index) => {
+      const span = Math.min(160, 88 + (count * 10));
+      const start = -90 - (span / 2);
+      const angle = (start + ((count === 1 ? 0 : span / (count - 1)) * index)) * (Math.PI / 180);
+      return {
+        x: Math.round(Math.cos(angle) * radiusX),
+        y: Math.round(Math.sin(angle) * radiusY) - 34,
+      };
+    });
+  }
+  return positions.map((pos, index) => ({
+    ...items[index],
+    x: pos.x,
+    y: pos.y,
+    rotStart: pos.x >= 0 ? 10 : -10,
+    delay: Math.max(0, (index * 42) - (index === selectedIndex ? 28 : 0)),
+  }));
+}
+
 export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
-  return `<div data-glass-body class="${esc(clusterClass)} ${phase === "entering" ? "entering" : "settled"}">${items.map((item, index) => {
+  return `<div data-glass-body class="${esc(clusterClass)}">${items.map((item, index) => {
     const selected = index === selectedIndex;
     const title = String(item?.name || item?.title || "").trim();
     const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-pill-media" });
     const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
     const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
     const finalScale = selected ? 1 : 0.98;
-    return `<div class="g-disambiguation-pill ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="--pill-x:${Math.round(Number(item?.x) || 0)}px;--pill-y:${Math.round(Number(item?.y) || 0)}px;--pill-rot-start:${rotStart}deg;--pill-delay:${delay}ms;--pill-scale-final:${finalScale};">${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
+    const accentRgb = String(item?.accentRgb || "").trim();
+    const accentSecondaryRgb = String(item?.accentSecondaryRgb || "").trim();
+    const orbitMs = Number.isFinite(Number(item?.orbitMs)) ? Math.max(600, Math.round(Number(item.orbitMs))) : null;
+    const styleVars = [
+      `--pill-x:${Math.round(Number(item?.x) || 0)}px`,
+      `--pill-y:${Math.round(Number(item?.y) || 0)}px`,
+      `--pill-rot-start:${rotStart}deg`,
+      `--pill-delay:${delay}ms`,
+      `--pill-scale-final:${finalScale}`,
+    ];
+    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
+    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    return `<div class="g-disambiguation-pill g-accent-orbit-host ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
   }).join("")}</div>`;
 }
 
@@ -59,9 +122,48 @@ export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true,
   return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
 }
 
+const COMPOSE_CHIP_MOTION_PRESETS = [
+  { rotStart: -12, rotEnd: -8, travelStart: 138, travelEnd: 108 },
+  { rotStart: 8, rotEnd: 6, travelStart: 118, travelEnd: 92 },
+  { rotStart: -6, rotEnd: -5, travelStart: 98, travelEnd: 78 },
+  { rotStart: 10, rotEnd: 7, travelStart: 156, travelEnd: 122 },
+  { rotStart: -10, rotEnd: -7, travelStart: 174, travelEnd: 136 },
+];
+
+function composeChipMotionVars(index) {
+  const preset = COMPOSE_CHIP_MOTION_PRESETS[index];
+  if (preset) return { order: index, ...preset };
+  const overflowIndex = index - COMPOSE_CHIP_MOTION_PRESETS.length;
+  const direction = index % 2 === 0 ? -1 : 1;
+  return {
+    order: index,
+    rotStart: direction * (10 + ((overflowIndex % 3) * 2)),
+    rotEnd: direction * (7 + (overflowIndex % 2)),
+    travelStart: 174 + ((overflowIndex + 1) * 18),
+    travelEnd: 136 + ((overflowIndex + 1) * 14),
+  };
+}
+
 export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
-  return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => `<div class="g-compose-chip ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div>`;
+  return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
+    const accentRgb = String(chip?.accentRgb || "255 255 255").trim();
+    const accentSecondaryRgb = String(chip?.accentSecondaryRgb || accentRgb).trim();
+    const orbitMs = Number.isFinite(Number(chip?.orbitMs)) ? Math.max(600, Math.round(Number(chip.orbitMs))) : null;
+    const motion = composeChipMotionVars(index);
+    const styleVars = [
+      `--chip-order:${motion.order}`,
+      `--chip-rot-start:${motion.rotStart}deg`,
+      `--chip-rot-end:${motion.rotEnd}deg`,
+      `--chip-travel-start:${motion.travelStart}px`,
+      `--chip-travel-end:${motion.travelEnd}px`,
+    ];
+    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
+    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
+    return `<div class="g-compose-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}"${styleAttr}>${renderAccentOrbitChrome()}<span class="g-compose-chip-label">${esc(chip.label || "")}</span></div>`;
+  }).join("")}</div>`;
 }
 
 export function renderTextBubble({ text = "", placeholder = "", mode = "static", hasText = false } = {}) {
@@ -77,11 +179,11 @@ export function renderInputField({ text = "", placeholder = "Listening...", hasT
   return renderTextBubble({ text, placeholder, mode: "listening", hasText });
 }
 
-export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false } = {}) {
+export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false, magicPending = false } = {}) {
   const value = String(text || "").trim();
-  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}`;
+  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}${magicPending ? " g-compose-field-magic-pending" : ""}`;
   if (value) {
-    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text" data-compose-field-text>${esc(text)}</div></div>`;
+    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text${magicPending ? " g-compose-text-pending" : ""}" data-compose-field-text>${esc(text)}</div></div>`;
   }
   return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
 }
@@ -146,10 +248,14 @@ export function renderActionRow({ actions = [], selectedIndex = 0 } = {}) {
   return `<div class="g-action-row enter">${actions.map((action, idx) => `<div class="g-action-btn ${idx === selectedIndex ? "selected" : ""}" data-action-id="${esc(action.id || idx)}">${action.iconHtml || esc(action.emoji || "")}</div>`).join("")}</div>`;
 }
 
-export function renderCompactStatus({ type = "loading", label = "", icon = "", dotsId = "g-thinking-dots" } = {}) {
+export function renderCompactStatus({ type = "loading", label = "", icon = "", dotsId = "g-thinking-dots", enter = false } = {}) {
   if (type === "loading") {
-    return `<div class="g-center-row"><div class="g-spinner"></div><span id="${esc(dotsId)}">${esc(label || "·")}</span></div>`;
+    return `<div class="g-center-row"><span id="${esc(dotsId)}">${esc(label || "·")}</span></div>`;
   }
   const finalIcon = icon || (type === "error" ? "⚠️" : "✅");
-  return `<div data-glass-sent class="g-sent-toast"><span class="g-sent-emoji">${esc(finalIcon)}</span><span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;
+  return `<div data-glass-sent class="g-sent-toast${enter ? " sent-toast-enter" : ""}"><span class="g-sent-emoji">${esc(finalIcon)}</span><span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;
+}
+
+export function renderSendingStatus({ label = "sending..." } = {}) {
+  return `<div class="g-sending-status"><div class="g-sending-label">${esc(label)}</div></div>`;
 }

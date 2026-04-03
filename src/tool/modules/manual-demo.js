@@ -1,4 +1,4 @@
-import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill } from '../../shared/list-demo.js';
+import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill, selectListItem } from '../../shared/list-demo.js';
 
 export function initManualDemo({
   document,
@@ -36,6 +36,11 @@ export function initManualDemo({
     circle: { icon: '', primary: '', secondary: '', detail: '' },
     split: { icon: '', primary: '', secondary: '', detail: '' },
     ai: { icon: '', primary: '', secondary: '', detail: '' },
+  };
+  const PROTOTYPE_THINKING_GEO = {
+    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 1 },
+    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
+    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   };
   const LIST_PILL_W = 420;
   function resetSplitState() {
@@ -281,6 +286,10 @@ export function initManualDemo({
       document.getElementById('drop-main').classList.add('ai-mode');
       showAiIdle();
       updateActive('idle');
+      return;
+    }
+    if (shape === 'magic') {
+      morphTo('magic', DEMO[shape] || {}, PROTOTYPE_THINKING_GEO);
       return;
     }
     stopSiriOrb();

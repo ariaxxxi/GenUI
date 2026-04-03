@@ -1,3 +1,4 @@
+import { layoutDisambiguationPillItems, renderDisambiguationPills } from '../flows/ui-primitives.js';
 import { SHAPES, normalizeTypography, normalizeStageImages } from '../shapes.js';
 import { clamp } from '../utils.js';
 
@@ -6,8 +7,215 @@ export function createMorphRender(ctx) {
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
+  let thinkingVisualEnterTimer = null;
+  let prototypeListSettleTimer = null;
+  let prototypeListCollapseTimer = null;
+  const prototypeListRoot = document.getElementById('list-pills');
 
-  function applyGeometry(shape, resolvedGeo, stageId = null) {
+  function clearThinkingVisualEnterTimer() {
+    if (!thinkingVisualEnterTimer) return;
+    clearTimeout(thinkingVisualEnterTimer);
+    thinkingVisualEnterTimer = null;
+  }
+
+  function clearPrototypeListSettleTimer() {
+    if (!prototypeListSettleTimer) return;
+    clearTimeout(prototypeListSettleTimer);
+    prototypeListSettleTimer = null;
+  }
+
+  function clearPrototypeListCollapseTimer() {
+    if (!prototypeListCollapseTimer) return;
+    clearTimeout(prototypeListCollapseTimer);
+    prototypeListCollapseTimer = null;
+  }
+
+  function derivePrototypeListInitials(label = '') {
+    const words = String(label || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '•';
+    if (words.length === 1) return words[0].slice(0, 1).toUpperCase();
+    return `${words[0].slice(0, 1)}${words[1].slice(0, 1)}`.toUpperCase();
+  }
+
+  function hexToRgbTriplet(value, fallback = '144 172 255') {
+    const raw = String(value || '').trim();
+    const full = raw.match(/^#([0-9a-f]{6})$/i);
+    if (full) {
+      const hex = full[1];
+      return `${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)}`;
+    }
+    const short = raw.match(/^#([0-9a-f]{3})$/i);
+    if (short) {
+      const hex = short[1];
+      return `${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)}`;
+    }
+    return fallback;
+  }
+
+  function prototypeListEntriesFromContent(contentData = {}) {
+    const icon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const shape = String(scenario?.shape || 'list');
+    const accentRgb = hexToRgbTriplet(callbacks.stageAccentColorForShape?.(scenario, shape), '144 172 255');
+    const accentSecondaryRgb = hexToRgbTriplet(callbacks.stageSecondaryAccentColorForShape?.(scenario, shape), '151 97 255');
+    const sourceItems = Array.isArray(contentData?.listItems) && contentData.listItems.length
+      ? contentData.listItems
+      : [
+        { label: String(contentData?.primary || '').trim(), icon: contentData?.listChipIcons?.primary },
+        { label: String(contentData?.secondary || '').trim(), icon: contentData?.listChipIcons?.secondary },
+        { label: String(contentData?.detail || '').trim(), icon: contentData?.listChipIcons?.detail },
+      ];
+    const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
+    return sourceItems.map((entry, index) => {
+      const label = String(entry?.label || '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
+      const slotIcon = entry?.icon || { kind: 'none', value: '' };
+      const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim() ? slotIcon : icon;
+      const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
+        ? { avatar: String(resolvedIcon.value).trim(), initials: '' }
+        : resolvedIcon?.kind === 'emoji' && String(resolvedIcon?.value || '').trim()
+        ? { avatar: '', initials: String(resolvedIcon.value).trim() }
+        : null;
+      return ({
+      name: label,
+      avatar: baseEntry?.avatar || '',
+      initials: baseEntry?.initials || derivePrototypeListInitials(label),
+      accentRgb,
+      accentSecondaryRgb,
+      });
+    });
+  }
+
+  function syncPrototypeListPhase(phase = 'settled') {
+    const cluster = prototypeListRoot?.querySelector?.('.g-disambiguation-pills');
+    if (!cluster) return false;
+    cluster.classList.toggle('entering', phase === 'entering');
+    cluster.classList.toggle('settled', phase !== 'entering');
+    return true;
+  }
+
+  function showPrototypeListStage(contentData = {}, { entering = false } = {}) {
+    if (!prototypeListRoot) return;
+    clearPrototypeListCollapseTimer();
+    clearPrototypeListSettleTimer();
+    const frameEl = document.getElementById('ui-frame') || document.getElementById('stage');
+    const frameHeight = Math.max(240, Math.round(frameEl?.getBoundingClientRect?.().height || 420));
+    const pillHeight = 56;
+    const bottomInset = 20;
+    const bottomY = Math.round((frameHeight / 2) - bottomInset - (pillHeight / 2));
+    const items = layoutDisambiguationPillItems(
+      prototypeListEntriesFromContent(contentData),
+      0,
+      'stack',
+      { bottomY, gap: 8 }
+    );
+    prototypeListRoot.dataset.collapsing = '';
+    prototypeListRoot.dataset.active = '1';
+    prototypeListRoot.innerHTML = renderDisambiguationPills({
+      items,
+      selectedIndex: 0,
+      rowDataAttr: 'data-prototype-list-pill',
+      clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
+    });
+    syncPrototypeListPhase(entering ? 'entering' : 'settled');
+    if (!entering) return;
+    prototypeListSettleTimer = setTimeout(() => {
+      prototypeListSettleTimer = null;
+      if (state.currentShape !== 'list') return;
+      syncPrototypeListPhase('settled');
+    }, 800);
+  }
+
+  function clearPrototypeListStage(immediate = false) {
+    if (!prototypeListRoot) return;
+    clearPrototypeListSettleTimer();
+    if (immediate) clearPrototypeListCollapseTimer();
+    if (!immediate && prototypeListRoot.dataset.collapsing === '1') return;
+    prototypeListRoot.dataset.collapsing = '';
+    prototypeListRoot.dataset.active = '';
+    prototypeListRoot.innerHTML = '';
+  }
+
+  function collapsePrototypeListStack(ms = 600) {
+    if (!prototypeListRoot) return;
+    const cluster = prototypeListRoot.querySelector('.g-disambiguation-pills');
+    if (!cluster) return clearPrototypeListStage(true);
+    if (prototypeListRoot.dataset.collapsing === '1') return;
+    clearPrototypeListSettleTimer();
+    clearPrototypeListCollapseTimer();
+    prototypeListRoot.dataset.collapsing = '1';
+    cluster.classList.remove('entering', 'settled');
+    cluster.classList.add('exiting-to-compose');
+    prototypeListCollapseTimer = setTimeout(() => {
+      prototypeListCollapseTimer = null;
+      clearPrototypeListStage(true);
+    }, Math.max(220, ms) + 40);
+  }
+
+  function setThinkingVisualState({ thinkingVisualShape = false, listeningShape = false, delayed = false } = {}) {
+    clearThinkingVisualEnterTimer();
+    DROPS.main.classList.toggle('listening-orb', listeningShape);
+    if (delayed) {
+      DROPS.main.classList.remove('home-blur', 'home-glow', 'magic-glow');
+      thinkingVisualEnterTimer = setTimeout(() => {
+        thinkingVisualEnterTimer = null;
+        if (state.currentShape !== 'magic' && state.currentShape !== 'ai') return;
+        DROPS.main.classList.add('home-glow', 'magic-glow');
+        DROPS.main.classList.toggle('home-blur', state.currentShape === 'magic');
+      }, 300);
+      return;
+    }
+    DROPS.main.classList.toggle('home-blur', state.currentShape === 'magic');
+    DROPS.main.classList.toggle('home-glow', listeningShape || thinkingVisualShape);
+    DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
+  }
+
+  function hexToCssColor(value, fallback = 'rgb(144 172 255)') {
+    const raw = String(value || '').trim();
+    const full = raw.match(/^#([0-9a-f]{6})$/i);
+    if (full) {
+      const hex = full[1];
+      return `rgb(${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)})`;
+    }
+    const short = raw.match(/^#([0-9a-f]{3})$/i);
+    if (short) {
+      const hex = short[1];
+      return `rgb(${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)})`;
+    }
+    return fallback;
+  }
+
+  function syncPrototypeStageSelection(stageId = null, scenario = null) {
+    const main = DROPS.main;
+    const selectionOverlay = document.getElementById('prototype-stage-selection');
+    if (!main) return;
+    const activeScenario = scenario || callbacks.selectedScenario?.() || null;
+    const stage = stageId ? callbacks.stageById?.(stageId) : null;
+    const selected = stageId
+      ? (callbacks.stageSelectedForShape?.(activeScenario, stageId) ?? !!stage?.selected)
+      : false;
+    main.classList.toggle('prototype-stage-selected', selected);
+    if (!selected) {
+      main.style.removeProperty('--g-stage-selected-rgb');
+      main.style.removeProperty('--g-stage-selected-secondary-rgb');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-rgb');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-secondary-rgb');
+      return;
+    }
+    const accentColor = stageId
+      ? (callbacks.stageAccentColorForShape?.(activeScenario, stageId) || stage?.accentColor)
+      : null;
+    const accentSecondaryColor = stageId
+      ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
+      : null;
+    const primary = hexToCssColor(accentColor, 'rgb(144 172 255)');
+    const secondary = hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)');
+    main.style.setProperty('--g-stage-selected-rgb', primary);
+    main.style.setProperty('--g-stage-selected-secondary-rgb', secondary);
+    selectionOverlay?.style.setProperty('--g-stage-selected-rgb', primary);
+    selectionOverlay?.style.setProperty('--g-stage-selected-secondary-rgb', secondary);
+  }
+
+  function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
     const mainRadius = stageId ? layout.stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
     const bottomAlignRef = callbacks.getBottomAlignRefHeight?.() || BOTTOM_ALIGN_REF_H;
@@ -27,13 +235,14 @@ export function createMorphRender(ctx) {
     const stage = document.getElementById('stage');
     if (stage) stage.style.height = `${alignedStageHeight}px`;
     state.lastMainGeo = { ...geo.main };
+    syncPrototypeStageSelection(stageId, scenario);
   }
 
   const clearUiFadeTimers = () => { while (uiFadeTimers.length) clearTimeout(uiFadeTimers.pop()); };
   const applyCardDetailLayout = (cardWidth) => {
     C.det.style.width = `${layout.cardDetailTextWidth(cardWidth)}px`;
     C.det.style.maxWidth = `${layout.cardDetailTextWidth(cardWidth)}px`;
-    C.det.style.whiteSpace = 'normal';
+    C.det.style.whiteSpace = 'pre-wrap';
     C.det.style.wordBreak = 'break-word';
   };
   const resetDetailInlineLayout = () => {
@@ -147,16 +356,13 @@ export function createMorphRender(ctx) {
   function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
     const root = document.documentElement;
     let transitionMs = bridges.transitionAnimMs(fromShape, toShape, callbacks.getAnimDuration(), fromGeo, toGeo);
-    const isHomeThinkingPair = (
-      (fromShape === 'circle' && toShape === 'ai') ||
-      (fromShape === 'ai' && toShape === 'circle') ||
-      (fromShape === 'magic' && toShape === 'ai') ||
-      (fromShape === 'ai' && toShape === 'magic')
-    );
+    const homeLikeShape = fromShape === 'circle' || fromShape === 'listening' || toShape === 'circle' || toShape === 'listening';
+    const thinkingLikeShape = fromShape === 'ai' || fromShape === 'magic' || toShape === 'ai' || toShape === 'magic';
+    const isHomeThinkingPair = homeLikeShape && thinkingLikeShape;
     if (isHomeThinkingPair) {
       transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
     }
-    const geometryEase = isHomeThinkingPair ? 'cubic-bezier(0.42,0,0.2,1)' : 'var(--spring)';
+    const geometryEase = 'var(--motion-ease)';
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
@@ -290,6 +496,7 @@ export function createMorphRender(ctx) {
 
   function morphCore(shape, contentData, customGeo, skipActiveUpdate = false, uiFadeDelayMs = null, stageId = null) {
     clearUiFadeTimers();
+    DROPS.main.classList.remove('orb-thinking-bridge');
     const fromShape = state.currentShape;
     const prevStageMedia = Array.isArray(state.stageMediaState) ? state.stageMediaState.map((item) => ({ ...item })) : [];
     const prevCardTypography = fromShape === 'card' ? normalizeTypography(state.contentTypographyState, 'card') : null;
@@ -312,7 +519,12 @@ export function createMorphRender(ctx) {
     const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
     state.currentShape = shape;
     document.body.dataset.currentShape = shape;
-    applyGeometry(shape, nextGeo, stageId);
+    applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
+    const thinkingVisualShape = shape === 'magic' || shape === 'ai';
+    const enteringThinking = thinkingVisualShape && fromShape !== 'magic' && fromShape !== 'ai';
+    const listeningToThinking = enteringThinking && fromShape === 'listening';
+    DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
+    DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
     const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;
@@ -320,17 +532,23 @@ export function createMorphRender(ctx) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
       DROPS.main.classList.remove('home-glow');
       void DROPS.main.offsetWidth;
-      if (shape === 'listening' || shape === 'magic') DROPS.main.classList.add('home-glow');
+      if (shape === 'listening' || thinkingVisualShape) DROPS.main.classList.add('home-glow');
     } else {
       DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-      DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
+      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape);
     }
-    DROPS.main.classList.toggle('magic-glow', shape === 'magic');
+    DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
     DROPS.main.classList.toggle('listening-orb', shape === 'listening');
     if (contentData) applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
+    if (shape === 'list') {
+      hideRich();
+      showPrototypeListStage(contentData, { entering: fromShape !== 'list' });
+    } else if (prototypeListRoot?.dataset.collapsing !== '1') {
+      clearPrototypeListStage(true);
+    }
     if (!skipActiveUpdate) callbacks.updateActive(shape);
   }
 
-  return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, morphCore };
+  return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, showPrototypeListStage, clearPrototypeListStage, collapsePrototypeListStack, morphCore };
 }
