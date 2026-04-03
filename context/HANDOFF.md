@@ -19,13 +19,15 @@ Prototype List Stage Reusing AI Disambiguation Pills
 - Added a real `list` render shape with the reduced listening-orb geometry used by message disambiguation:
   - `50x50`
   - `25px` radius
-  - orb remains visible at this stage
+  - geometry is still used as the hidden anchor for the pill stack, but the final prototype `List` stage now hides the shell completely
 - Wired prototype morph/render so `list` behaves like a first-class stage:
   - stage timeline now includes `List`
   - `#drop-main` gets `home-glow listening-orb` in this state
   - the pill cluster mounts into `#list-pills` outside the orb shell, so it can fan out without clipping
   - same-shape updates re-render the cluster in `settled` state instead of replaying the intro animation
   - leaving `list` now uses the existing list bridge callback, but it collapses the AI-style pill cluster instead of the old `.list-pill` stack
+  - later retune: the prototype `List` stage no longer applies `home-glow` or `listening-orb`, so only the pill stack remains visible
+  - later retune: the underlying `list` shell opacity is `0`, so the pills now sit on their own with no visible container
 - Mapped prototype content editing into the list stage without adding new sidebar components:
   - `primary` → pill 1 label
   - `secondary` → pill 2 label
@@ -81,6 +83,15 @@ Prototype List Stage Reusing AI Disambiguation Pills
   - after `900ms`:
     - cluster `.entering === false`
     - cluster `.settled === true`
+  - list orb hidden check:
+    - `#drop-main.className === "drop"`
+    - `#siri-orb` opacity = `0`
+    - `#home-glow-layer` opacity = `0`
+  - list shell hidden check:
+    - `#drop-main` opacity = `0`
+    - `#drop-main` pointer-events = `none`
+    - pill count remained `3`
+    - cluster stayed `.settled === true`
   - direct content-edit dispatch:
     - labels updated to `Alpha One`, `Bravo Two`, `Charlie Three`
     - icon input `✉` updated all three pill media glyphs to `✉`
@@ -115,6 +126,8 @@ Prototype List Stage Reusing AI Disambiguation Pills
   - `/tmp/prototype-list-stage-vertical-center.png`
   - `/tmp/prototype-list-chip-icons-per-chip.png`
   - `/tmp/prototype-list-stage-accent-from-style.png`
+  - `/tmp/prototype-list-stage-orb-hidden.png`
+  - `/tmp/prototype-list-stage-shell-hidden.png`
 
 ## Remaining issues / caveats
 - Per-chip icon overrides currently reuse the existing stage icon as fallback. If all three chips need fully separate typography controls later, that would require a deeper list-item content model.
