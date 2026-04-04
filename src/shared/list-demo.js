@@ -4,20 +4,37 @@ export const DEMO_LIST = [
   { icon: "⏱", primary: "Timer", secondary: "10 minutes remaining" },
 ];
 
-export const LIST_PILL_H = 120;
-export const LIST_GAP = 12;
-export const LIST_STEP = LIST_PILL_H + LIST_GAP;
+function demoIcon(value = "") {
+  const text = String(value || "").trim();
+  return text ? { kind: "emoji", value: text } : { kind: "none", value: "" };
+}
 
-let _selectedPill = null;
+export function demoListToRenderContent(items = DEMO_LIST) {
+  const resolvedItems = Array.isArray(items) && items.length ? items : DEMO_LIST;
+  const firstItem = resolvedItems[0] || {};
+  return {
+    icon: demoIcon(firstItem.icon),
+    primary: String(firstItem.primary || "").trim(),
+    secondary: String(firstItem.secondary || "").trim(),
+    detail: "",
+    listItems: resolvedItems.map((item) => ({
+      label: String(item?.primary || "").trim(),
+      subtitle: String(item?.secondary || "").trim(),
+      icon: demoIcon(item?.icon),
+    })),
+  };
+}
 
-export function selectListItem(el) {
-  _selectedPill?.classList.remove("selected");
-  el.classList.add("selected");
-  _selectedPill = el;
+export function selectListItem(target) {
+  const pills = Array.from(document.querySelectorAll("#list-pills .g-disambiguation-pill"));
+  if (!pills.length) return;
+  const next = typeof target === "number"
+    ? pills[target] || null
+    : target?.closest?.(".g-disambiguation-pill") || null;
+  pills.forEach((pill) => pill.classList.toggle("selected", pill === next));
 }
 
 export function clearListPills() {
-  _selectedPill = null;
   const wrap = document.getElementById("list-pills");
   if (!wrap) return;
   wrap.innerHTML = "";
@@ -25,25 +42,22 @@ export function clearListPills() {
   wrap.style.opacity = "";
   wrap.style.transition = "";
   wrap.dataset.collapsing = "";
+  wrap.dataset.active = "";
 }
 
-export function collapseListStack(ms = 220) {
+export function collapseListStack(ms = 600) {
   const wrap = document.getElementById("list-pills");
   if (!wrap) return;
-  if (!wrap.children.length) return void clearListPills();
+  const cluster = wrap.querySelector(".g-disambiguation-pills");
+  if (!cluster) {
+    clearListPills();
+    return;
+  }
   if (wrap.dataset.collapsing === "1") return;
   wrap.dataset.collapsing = "1";
-  wrap.style.pointerEvents = "none";
-  wrap.style.transition = `opacity ${ms}ms var(--motion-ease)`;
-  wrap.style.opacity = "0";
-  setTimeout(clearListPills, ms + 30);
-}
-
-export function buildListPill(item, idx, items) {
-  const el = document.createElement("div");
-  el.className = "list-pill";
-  el.style.zIndex = String(Math.max(1, items.length - idx));
-  el.innerHTML = `<div class="list-pill-thumb">${item.icon || "◉"}</div><div class="list-pill-text"><div class="list-pill-primary">${item.primary || ""}</div><div class="list-pill-secondary">${item.secondary || ""}</div></div>`;
-  el.addEventListener("click", () => selectListItem(el));
-  return el;
+  cluster.classList.remove("entering", "settled");
+  cluster.classList.add("exiting-to-compose");
+  setTimeout(() => {
+    clearListPills();
+  }, Math.max(220, ms) + 40);
 }

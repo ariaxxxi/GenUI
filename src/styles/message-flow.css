@@ -1,3 +1,4 @@
-/* Intentionally empty for parity with main:ai.html.
-   Message flow styles are sourced from src/styles/ai.css to preserve
-   original single-stylesheet cascade and timing behavior. */
+/* Intentionally empty.
+   Message flow styles currently live in the shared AI stylesheet split
+   (`ai-layout.css`, `ai-glass.css`, `ai-frame.css`, `ai-stage.css`,
+   `ai-drop.css`, `ai-sidebar.css`, `ai-decorative.css`). */

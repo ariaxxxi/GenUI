@@ -1,6 +1,7 @@
 import { layoutDisambiguationPillItems, renderDisambiguationPills } from '../flows/ui-primitives.js';
 import { SHAPES, normalizeTypography, normalizeStageImages } from '../shapes.js';
 import { clamp } from '../utils.js';
+import { defaultListPlaceholderLabel } from './list-placeholders.js';
 
 export function createMorphRender(ctx) {
   const { DROPS, C, constants, callbacks, state, layout, bridges } = ctx;
@@ -65,9 +66,9 @@ export function createMorphRender(ctx) {
         { label: String(contentData?.secondary || '').trim(), icon: contentData?.listChipIcons?.secondary },
         { label: String(contentData?.detail || '').trim(), icon: contentData?.listChipIcons?.detail },
       ];
-    const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
     return sourceItems.map((entry, index) => {
-      const label = String(entry?.label || '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
+      const label = String(entry?.label || '').trim() || defaultListPlaceholderLabel(index);
+      const subtitle = String(entry?.subtitle || entry?.secondary || '').trim();
       const slotIcon = entry?.icon || { kind: 'none', value: '' };
       const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim() ? slotIcon : icon;
       const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
@@ -76,11 +77,12 @@ export function createMorphRender(ctx) {
         ? { avatar: '', initials: String(resolvedIcon.value).trim() }
         : null;
       return ({
-      name: label,
-      avatar: baseEntry?.avatar || '',
-      initials: baseEntry?.initials || derivePrototypeListInitials(label),
-      accentRgb,
-      accentSecondaryRgb,
+        name: label,
+        subtitle,
+        avatar: baseEntry?.avatar || '',
+        initials: baseEntry?.initials || derivePrototypeListInitials(label),
+        accentRgb,
+        accentSecondaryRgb,
       });
     });
   }
@@ -115,6 +117,7 @@ export function createMorphRender(ctx) {
       selectedIndex: 0,
       rowDataAttr: 'data-prototype-list-pill',
       clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
+      pillVariant: 'prototype',
     });
     syncPrototypeListPhase(entering ? 'entering' : 'settled');
     if (!entering) return;

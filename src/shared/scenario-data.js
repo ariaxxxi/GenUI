@@ -18,6 +18,7 @@ import {
   availableScenarioShapes as shapeAvailableScenarioShapes,
   renderShapeForStageId as shapeRenderShapeForStageId,
 } from '../shapes.js';
+import { defaultListPlaceholderLabel, defaultListPlaceholderLabels } from './list-placeholders.js';
 
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
@@ -173,7 +174,8 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       return { primary: 'Primary text', secondary: 'Secondary text', detail: '', intentHeader: '' };
     }
     if (renderShape === 'list') {
-      return { primary: 'Hiro Tanaka', secondary: 'Mina Park', detail: 'Sofia Chen', intentHeader: '' };
+      const [primary, secondary, detail] = defaultListPlaceholderLabels(3);
+      return { primary, secondary, detail, intentHeader: '' };
     }
     if (renderShape === 'card' || renderShape === 'card-s') {
       return { primary: 'Primary text', secondary: 'Secondary text', detail: 'Detail text example', intentHeader: '' };
@@ -204,7 +206,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const output = normalized.length ? normalized.slice(0, max) : fallbackItems.map((item) => normalizeListItem(item)).slice(0, max);
     while (output.length < Math.min(max, min)) {
       const nextIndex = output.length;
-      output.push(normalizeListItem(undefined, fallbackItems[nextIndex] || createDefaultListItem(`List item ${nextIndex + 1}`)));
+      output.push(normalizeListItem(undefined, fallbackItems[nextIndex] || createDefaultListItem(defaultListPlaceholderLabel(nextIndex))));
     }
     return output;
   }

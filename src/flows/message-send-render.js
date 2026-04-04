@@ -1,19 +1,6 @@
-import {
-  layoutDisambiguationPillItems,
-  renderActionRow,
-  renderChipBar,
-  renderCompactStatus,
-  renderComposeChipStack,
-  renderComposeField,
-  renderComposeHeader,
-  renderContactHeader,
-  renderDisambiguationPills,
-  renderInputField,
-  renderSendingStatus,
-  renderTextBubble,
-} from "./ui-primitives.js";
-import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
-import { clamp } from "../utils.js";
+import { applyFlowChromeVisibility } from "../shared/flow-toast.js";
+import { createMessageSendRenderContent } from "./message-send-render-content.js";
+import { createMessageSendRenderLayout } from "./message-send-render-layout.js";
 
 export function createMessageSendRender({
   document,
@@ -22,37 +9,16 @@ export function createMessageSendRender({
   GS,
   getFlow,
   morphTo,
-  applyGeometry,
   getCurrentMainGeometry,
-  setIntentHeader,
   hideIntentHeader,
-  positionIntentHeaderAboveMain,
   trackIntentHeaderForTransition,
   renderControls,
   updateOrbLabel,
   setSimInputState,
 }) {
-  const TOP = 10;
-  const BOTTOM = 10;
-  const CONTROLS_LIFT = 78;
-  const MIN_H = 100;
-  const MAX_H = 400;
-  const COMPOSE_FIELD_BOTTOM = 408;
-  const COMPOSE_FIELD_W = 307;
-  const COMPOSE_FIELD_H = 96;
-  const COMPOSE_FIELD_MAX_W = 420;
-  const COMPOSE_FIELD_ACTIVE_H = 94;
-  const COMPOSE_FIELD_MAX_H = 220;
-  const COMPOSE_FIELD_SIDE_PADDING = 28;
-  const CONFIRM_TO_SENDING_MS = 600;
-  const CONFIRM_AWAIT_ORB_SIZE = 44;
-  const CONFIRM_AWAIT_ORB_GAP = 16;
-  const CONFIRM_AWAIT_ORB_SHIFT = CONFIRM_AWAIT_ORB_SIZE + CONFIRM_AWAIT_ORB_GAP;
-  const BOTTOM_ALIGN_STAGE_H = 420;
-  let lastContentHeight = 180;
-  const DISAMBIGUATION_ENTER_MS = 800;
-  const DISAMBIGUATION_ORB_SCALE = 0.625;
-  const heightByState = { [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
+  const EMPTY_STAGE_CONTENT = { icon: "", primary: "", secondary: "", detail: "" };
+  const EMPTY_SCREEN_SPEC = { actions: [], actionSelectedIndex: 0 };
+  const layout = createMessageSendRenderLayout({ document, SHAPES, C, GS, getFlow });
   let measureRaf = null;
   let settleTimer = null;
   let disambiguationTimer = null;
@@ -66,116 +32,6 @@ export function createMessageSendRender({
   let composePlaceholderDelayActive = false;
   let confirmTransitionFrozenTextWidth = null;
 
-  function glassStateShape(state) {
-    if (state === GS.IDLE) return "listening";
-    if (state === GS.THINKING || state === GS.SENDING) return "magic";
-    if (state === GS.DISAMBIGUATE) return "listening";
-    if (state === GS.COMPOSE) return "card-form";
-    if (state === GS.CONFIRM) return "card-form";
-    if (state === GS.SENT) return "pill";
-    return "circle";
-  }
-
-  function isConfirmToSendTransition(flow = getFlow()) {
-    return !!(flow?.active && flow.sentTransitionActive && flow.state === GS.SENDING);
-  }
-
-  function isCardState(state = getFlow().state) {
-    return state === GS.CONFIRM;
-  }
-
-  function dynamicGeo(shape, contentHeightPx) {
-    const flow = getFlow();
-    const base = SHAPES[shape] || SHAPES.card;
-    const shellHeight = clamp(Math.round(contentHeightPx + TOP + BOTTOM), MIN_H, MAX_H);
-    const controlsLift = shape === "card" ? CONTROLS_LIFT : 0;
-    return { ...base, main: { ...base.main, h: shellHeight, ty: -(shellHeight / 2) - controlsLift } };
-  }
-
-  function composeGeo() {
-    const flow = getFlow();
-    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
-    const hasText = flow.state === GS.CONFIRM
-      ? !!String(flow.msg || "").trim()
-      : !!String(flow.composeText || "").trim();
-    const w = measureComposeFieldWidth(hasText);
-    const h = measureComposeFieldHeight(hasText, w);
-    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? CONFIRM_AWAIT_ORB_SHIFT : 0);
-    return {
-      ...SHAPES["card-form"],
-      main: {
-        ...(SHAPES["card-form"]?.main || {}),
-        w,
-        h,
-        br: "30px",
-        tx: -Math.round(w / 2),
-        // Keep the compose field bottom edge locked and let extra height grow upward.
-        // applyGeometry() adds a bottom-align yOffset in AI mode, so compensate here.
-        ty: Math.round(bottom - BOTTOM_ALIGN_STAGE_H - (h / 2)),
-        op: 1,
-      },
-      left: { ...(SHAPES["card-form"]?.left || {}), op: 0 },
-      right: { ...(SHAPES["card-form"]?.right || {}), op: 0 },
-    };
-  }
-
-  function measureComposeFieldWidth(hasText) {
-    const flow = getFlow();
-    const value = flow.state === GS.CONFIRM
-      ? String(flow.msg || "").trim()
-      : String(flow.composeText || "").trim();
-    if (!hasText) return COMPOSE_FIELD_W;
-
-    const sample = value || "Speak your message...";
-    const lines = sample.split(/\r?\n/).filter(Boolean);
-    if (!measureComposeFieldWidth._ctx) {
-      const canvas = document.createElement("canvas");
-      const ctx2d = canvas.getContext("2d");
-      if (!ctx2d) return COMPOSE_FIELD_W;
-      ctx2d.font = "500 24px 'DM Sans'";
-      measureComposeFieldWidth._canvas = canvas;
-      measureComposeFieldWidth._ctx = ctx2d;
-    }
-    const ctx2d = measureComposeFieldWidth._ctx;
-    const widestLine = Math.max(
-      ...lines.map((line) => Math.ceil(ctx2d.measureText(line).width)),
-      0,
-    );
-    return clamp(
-      Math.ceil(widestLine + COMPOSE_FIELD_SIDE_PADDING),
-      COMPOSE_FIELD_W,
-      COMPOSE_FIELD_MAX_W,
-    );
-  }
-
-  function measureComposeFieldHeight(hasText, targetWidth = COMPOSE_FIELD_W) {
-    const baseMin = hasText ? COMPOSE_FIELD_ACTIVE_H : COMPOSE_FIELD_H;
-    const field = C.rich.querySelector("[data-compose-field]");
-    if (!field) return baseMin;
-    const measure = (node) => Math.ceil(Math.max(
-      node?.getBoundingClientRect?.().height || 0,
-      node?.offsetHeight || 0,
-      node?.scrollHeight || 0,
-    ));
-    const measureWidth = clamp(Math.round(targetWidth || COMPOSE_FIELD_W), COMPOSE_FIELD_W, COMPOSE_FIELD_MAX_W);
-    const layer = ensureMeasureLayer("glass-compose-field-measure");
-    layer.style.width = `${measureWidth}px`;
-    layer.innerHTML = field.outerHTML;
-    const probe = layer.querySelector("[data-compose-field]");
-    probe?.classList.remove("g-compose-field-magic-pending");
-    const measured = measure(probe) || measure(field);
-    if (!measured) return baseMin;
-    return clamp(measured, baseMin, COMPOSE_FIELD_MAX_H);
-  }
-
-  function sentGeo() {
-    return measureSuccessToastGeometry({
-      richRoot: C.rich,
-      pillShape: SHAPES.pill || SHAPES.card,
-      fallbackLabel: "Message sent",
-    });
-  }
-
   function measureConfirmTransitionTextWidthPx() {
     const liveText = C.rich.querySelector("[data-compose-field-text]");
     const liveTextWidth = Math.round(liveText?.getBoundingClientRect?.().width || 0);
@@ -184,13 +40,29 @@ export function createMessageSendRender({
     const liveFieldWidth = Math.round(liveField?.getBoundingClientRect?.().width || 0);
     if (liveFieldWidth > 28) return Math.max(0, liveFieldWidth - 28);
     const value = String(getFlow().msg || getFlow().composeText || "").trim();
-    if (!value) return Math.max(0, COMPOSE_FIELD_W - 28);
-    const fieldWidth = measureComposeFieldWidth(true);
+    if (!value) return Math.max(0, layout.COMPOSE_FIELD_W - 28);
+    const fieldWidth = layout.measureComposeFieldWidth(true);
     return Math.max(0, Math.round(fieldWidth - 28));
   }
 
   function confirmTransitionTextWidthPx() {
     return confirmTransitionFrozenTextWidth ?? measureConfirmTransitionTextWidthPx();
+  }
+
+  const content = createMessageSendRenderContent({
+    C,
+    GS,
+    getFlow,
+    getConfirmTransitionTextWidthPx: confirmTransitionTextWidthPx,
+    isConfirmToSendTransition: layout.isConfirmToSendTransition,
+  });
+
+  function buildContent() {
+    return content.buildContent({
+      composePlaceholderDelayActive,
+      disambiguationPhase,
+      manualComposeEntry,
+    });
   }
 
   function syncDropMainOrbClasses(shape) {
@@ -234,146 +106,18 @@ export function createMessageSendRender({
     composeRevealTimer = null;
   }
 
-  function layoutDisambiguationContacts(contacts) {
-    return { items: layoutDisambiguationPillItems(contacts, getFlow().sel) };
-  }
-
-  function disambiguationGeo() {
-    const base = SHAPES.listening?.main || SHAPES.circle?.main || {};
-    const baseW = Number(base.w) || 80;
-    const baseH = Number(base.h) || 80;
-    const nextW = Math.round(baseW * DISAMBIGUATION_ORB_SCALE);
-    const nextH = Math.round(baseH * DISAMBIGUATION_ORB_SCALE);
-    const baseTx = Number(base.tx) || -(baseW / 2);
-    const baseTy = Number(base.ty) || -(baseH / 2);
-    return {
-      ...SHAPES.listening,
-      main: {
-        ...(SHAPES.listening?.main || {}),
-        w: nextW,
-        h: nextH,
-        br: `${Math.round(nextW / 2)}px`,
-        tx: Math.round(baseTx + ((baseW - nextW) / 2)),
-        ty: Math.round(baseTy + ((baseH - nextH) / 2)),
-        op: 1,
-      },
-      left: { ...(SHAPES.listening?.left || {}), op: 0 },
-      right: { ...(SHAPES.listening?.right || {}), op: 0 },
-    };
-  }
-
-  function contentHeightPx() {
-    const measure = (node) => node ? Math.ceil(Math.max(node.getBoundingClientRect().height || 0, node.offsetHeight || 0, node.scrollHeight || 0)) : 0;
-    const layer = ensureMeasureLayer("glass-measure-layer");
-    layer.innerHTML = C.rich.innerHTML;
-    let raw = measure(layer.querySelector("[data-glass-body]"));
-    if (raw <= 0) raw = measure(C.rich.querySelector("[data-glass-body]"));
-    const flow = getFlow();
-    if (raw > 0) {
-      const resolved = clamp(raw, 60, MAX_H - TOP - BOTTOM);
-      lastContentHeight = resolved;
-      if (isCardState(flow.state)) heightByState[flow.state] = resolved;
-      return resolved;
-    }
-    if (isCardState(flow.state) && Number.isFinite(heightByState[flow.state])) return clamp(heightByState[flow.state], 60, MAX_H - TOP - BOTTOM);
-    return clamp(lastContentHeight, 60, MAX_H - TOP - BOTTOM);
-  }
-
-  const EMPTY_SCREEN_SPEC = { actions: [], actionSelectedIndex: 0 };
-  function buildScreenSpec() { return EMPTY_SCREEN_SPEC; }
-
-  function buildContent() {
-    const flow = getFlow();
-    const sendTransitionActive = isConfirmToSendTransition(flow);
-    const buildConfirmStage = (extraClass = "") => {
-      const contact = flow.contact;
-      const classes = ["g-compose-stage", "has-text", "confirm-mode", extraClass].filter(Boolean).join(" ");
-      const styleAttr = extraClass === "confirm-exit-to-sent"
-        ? ` style="--g-confirm-text-freeze-w:${confirmTransitionTextWidthPx()}px;"`
-        : "";
-      return `<div data-glass-body class="${classes}"${styleAttr}>${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: true })}<div class="g-compose-field-wrap">${renderComposeField({ text: flow.msg || "", active: true })}</div></div>`;
-    };
-    const buildComposeStage = () => {
-      const contact = flow.contact;
-      const hasText = !!String(flow.composeText || "").trim();
-      const chipsHtml = renderComposeChipStack({
-        chips: (flow.composeVisualChips || []).map((chip, idx) => ({ id: String(chip.originalIndex ?? idx), label: chip.label })),
-        selectedIndex: flow.sel,
-        open: !!flow.composeMenuOpen,
-        closing: !!flow.composeMenuClosing,
-        visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
-      });
-      const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText, magicPending: !!flow.composeChipMagicPending });
-      const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
-      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
-    };
-    const buildOutgoingDisambiguationStage = () => {
-      const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
-      return renderDisambiguationPills({
-        phase: "settled",
-        selectedIndex: flow.sel,
-        items: layout.items.map((contact) => ({
-          avatar: contact.avatar,
-          initials: contact.initials,
-          name: contact.name,
-          x: contact.x,
-          y: contact.y,
-          rotStart: contact.rotStart,
-          delay: contact.delay,
-        })),
-        rowDataAttr: "data-g-contact",
-        clusterClass: "g-disambiguation-pills exiting-to-compose",
-      });
-    };
-    if (flow.state === GS.IDLE) return "";
-    if (sendTransitionActive) return `${renderSendingStatus({ label: "sending..." })}<div class="g-confirm-to-sent-layer">${buildConfirmStage("confirm-exit-to-sent")}</div>`;
-    if (flow.state === GS.THINKING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
-    if (flow.state === GS.SENDING) return renderSendingStatus({ label: "sending..." });
-    if (flow.state === GS.DISAMBIGUATE) {
-      const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
-      return renderDisambiguationPills({
-        phase: disambiguationPhase,
-        selectedIndex: flow.sel,
-        items: layout.items.map((contact) => ({
-          avatar: contact.avatar,
-          initials: contact.initials,
-          name: contact.name,
-          x: contact.x,
-          y: contact.y,
-          rotStart: contact.rotStart,
-          delay: contact.delay,
-        })),
-        rowDataAttr: "data-g-contact",
-      });
-    }
-    if (flow.state === GS.COMPOSE) {
-      const hasComposeText = !!String(flow.composeText || "").trim();
-      const shouldShowOutgoingDisambiguation = manualComposeEntry
-        && !hasComposeText
-        && !flow.composeChipMagicPending
-        && !flow.composeMenuOpen
-        && !flow.composeMenuHolding
-        && !flow.composeMenuClosing;
-      if (shouldShowOutgoingDisambiguation) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
-      return buildComposeStage();
-    }
-    if (flow.state === GS.CONFIRM) return buildConfirmStage();
-    if (flow.state === GS.SENT) return renderCompactStatus({ type: "success", label: "Message sent", enter: !!flow.sentToastEnterPending });
-    return "";
-  }
-
   function render(shouldMorph = true) {
     const flow = getFlow();
     renderToken += 1;
     const token = renderToken;
-    const sendTransitionActive = isConfirmToSendTransition(flow);
+    const sendTransitionActive = layout.isConfirmToSendTransition(flow);
     if (sendTransitionActive && !prevSendTransitionActive) confirmTransitionFrozenTextWidth = measureConfirmTransitionTextWidthPx();
     else if (!sendTransitionActive) confirmTransitionFrozenTextWidth = null;
-    const shape = sendTransitionActive ? "magic" : glassStateShape(flow.state);
+    const shape = sendTransitionActive ? "magic" : layout.glassStateShape(flow.state);
     const confirmAwaitOrbActive = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
     const shouldShowListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrbActive);
     const shouldShowHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrbActive);
-    const screenSpec = buildScreenSpec();
+    const screenSpec = EMPTY_SCREEN_SPEC;
     const dropMain = document.getElementById("drop-main");
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
     const composeVoiceVizActive = flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim() && !flow.composeMenuOpen;
@@ -390,7 +134,7 @@ export function createMessageSendRender({
         if (!getFlow().active || getFlow().state !== GS.DISAMBIGUATE) return;
         disambiguationPhase = "settled";
         syncDisambiguationPhaseUi();
-      }, DISAMBIGUATION_ENTER_MS);
+      }, layout.DISAMBIGUATION_ENTER_MS);
     } else if (flow.state !== GS.DISAMBIGUATE) {
       disambiguationPhase = "settled";
       cancelDisambiguationTimer();
@@ -441,7 +185,7 @@ export function createMessageSendRender({
 
     if (flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM) && !sendTransitionActive) {
       const apply = (force = false) => {
-        const geo = composeGeo();
+        const geo = layout.composeGeo();
         const currentGeo = getCurrentMainGeometry() || {};
         if (
           force
@@ -449,7 +193,7 @@ export function createMessageSendRender({
           || Math.abs(geo.main.h - (Number(currentGeo.h) || 0)) > 1
           || Math.abs(geo.main.ty - (Number(currentGeo.ty) || 0)) > 1
         ) {
-          morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
+          morphTo(shape, EMPTY_STAGE_CONTENT, geo);
         }
         syncDropMainOrbClasses(shape);
         renderControls(screenSpec);
@@ -479,19 +223,19 @@ export function createMessageSendRender({
         || Math.abs(geo.main.h - (current.h || 0)) > 1
         || Math.abs(geo.main.ty - (current.ty || 0)) > 1
       ) {
-        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
+        morphTo(shape, EMPTY_STAGE_CONTENT);
       }
-      trackIntentHeaderForTransition(CONFIRM_TO_SENDING_MS);
+      trackIntentHeaderForTransition(layout.CONFIRM_TO_SENDING_MS);
       syncDropMainOrbClasses(shape);
       renderControls(screenSpec);
     } else if (flow.active && flow.state === GS.DISAMBIGUATE) {
       if (shouldMorph || enteringDisambiguation) {
-        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, disambiguationGeo());
+        morphTo(shape, EMPTY_STAGE_CONTENT, layout.disambiguationGeo());
       }
       syncDropMainOrbClasses(shape);
     } else if (flow.active) {
       if (flow.state === GS.SENT) {
-        const geo = sentGeo();
+        const geo = layout.sentGeo();
         const current = getCurrentMainGeometry() || {};
         if (
           shouldMorph
@@ -499,15 +243,15 @@ export function createMessageSendRender({
           || Math.abs(geo.main.h - (current.h || 0)) > 1
           || Math.abs(geo.main.ty - (current.ty || 0)) > 1
         ) {
-          morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
+          morphTo(shape, EMPTY_STAGE_CONTENT, geo);
         }
       } else if (shouldMorph) {
-        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
+        morphTo(shape, EMPTY_STAGE_CONTENT);
       }
       syncDropMainOrbClasses(shape);
       renderControls(screenSpec);
     } else if (shouldMorph) {
-      morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
+      morphTo(shape, EMPTY_STAGE_CONTENT);
       syncDropMainOrbClasses(shape);
       renderControls(screenSpec);
     }
@@ -534,12 +278,11 @@ export function createMessageSendRender({
 
   return {
     GS,
-    glassStateShape,
-    dynamicGeo,
-    sentGeo,
-    contentHeightPx,
-    composeGeo,
-    buildScreenSpec,
+    glassStateShape: layout.glassStateShape,
+    dynamicGeo: layout.dynamicGeo,
+    sentGeo: layout.sentGeo,
+    contentHeightPx: layout.contentHeightPx,
+    composeGeo: layout.composeGeo,
     buildContent,
     render,
     setManualComposeEntry(flag) {
@@ -567,7 +310,7 @@ export function createMessageSendRender({
         return chips.length > 0;
       }
       if (flow.state === GS.CONFIRM) {
-        renderControls(buildScreenSpec());
+        renderControls(EMPTY_SCREEN_SPEC);
         return true;
       }
       return false;

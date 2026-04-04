@@ -1,6 +1,59 @@
 # Handoff
 
 ## Task title
+Editable Figma SVG Export From Stage
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the old SVG export path that wrapped a raster PNG in `<svg>` with a real DOM-to-SVG serializer in `src/shared/stage-capture.js`.
+- The new export now emits actual SVG layers from the live stage DOM:
+  - `<text>` for stage copy
+  - `<rect>` for shells, fills, borders, and gradient-backed blocks
+  - `<image>` for real bitmap assets when the source is already raster
+  - copied inline `<svg>` nodes for vector icons already present in the stage
+- Added Figma-oriented export handling:
+  - no `foreignObject`
+  - no single full-stage PNG fallback in the exported SVG
+  - inlined image assets so imported SVG files do not depend on local relative paths
+- Enabled the existing `Export SVG` buttons in both `index.html` and `ai.html` so the feature is reachable from the UI as well as the existing `Cmd/Ctrl + Shift + E` hotkey.
+
+## Files changed
+- `src/shared/stage-capture.js`
+- `index.html`
+- `ai.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/stage-capture.js`
+- Browser validation on `http://127.0.0.1:5185/index.html`
+  - default visible stage text was `🌤 / 21° Sunny / San Francisco`
+  - calling `window.exportStageSvg()` downloaded `/tmp/genui-index-stage-export.svg`
+  - exported SVG contained real editable layers:
+    - `hasText === true`
+    - `textCount === 3`
+    - `hasRect === true`
+    - `foreignObject === false`
+- Browser validation on `http://127.0.0.1:5185/index.html`
+  - `button[onclick="exportStageSvg()"]` resolved `disabled === false`
+  - button title resolved `Exports an editable SVG for Figma`
+- Browser validation on `http://127.0.0.1:5185/ai.html`
+  - export function completed and downloaded `/tmp/genui-stage-export.svg`
+  - exported SVG remained structural SVG (`<rect>` / defs / no `foreignObject`) instead of the old raster-in-SVG wrapper
+
+## Remaining issues / caveats
+- Canvas-backed visuals are still exported as raster `<image>` layers inside the SVG because the source stage content is already a `<canvas>` with no vector scene graph to recover.
+- Exact text fidelity in Figma still depends on the target machine having compatible fonts for `DM Sans` / `DM Mono`; the SVG now preserves editable text instead of outlining it.
+- The deepest glass/shadow effects are approximated from computed DOM styles. The exported SVG is structurally editable and visually close, but some blur-heavy decorative effects may not be 1:1 with the browser compositor in every stage state.
+
+## Recommended next step
+1. Import `/tmp/genui-index-stage-export.svg` into Figma and inspect the specific stage states you care about most, especially any states that rely on canvas or heavy blur/glow effects.
+2. If you need full editability for currently canvas-backed visuals, replace those stage sublayers with vector DOM/SVG sources before export instead of drawing them only to `<canvas>`.
+
+---
+
+## Task title
 Prototype List Stage Reusing AI Disambiguation Pills
 
 ## Completion status
@@ -5249,3 +5302,279 @@ Fix add-visual review findings
    - exit/reset during compose no longer snaps back into a stale delayed transition
    - long-press compose chip menu can reveal and navigate all chips provided by contact data
 2. Fix or harden `test/smoke.mjs` against the debug overlay so automated browser validation is reliable again.
+
+---
+
+## Task title
+Fix P1 review findings: overlay interception and duplicate list implementations
+
+## Completion status
+- Completed
+
+## Summary
+- Moved the AI debug overlay to the right side of the viewport so it no longer blocks the simulator quick chips on `ai.html`.
+- Removed the legacy `.list-pill` DOM path and routed both manual/demo list entrypoints through the shared morph list stage.
+- Consolidated the list rendering path onto the shared disambiguation-pill renderer and added a prototype list variant with optional subtitle support.
+- Removed the duplicated list CSS blocks from the AI and prototype decorative stylesheets and moved the shared `#list-pills` shell styling into `shared.css`.
+
+## Files changed
+- `src/shared/list-demo.js`
+- `src/tool/modules/manual-demo.js`
+- `src/ai/demo-controls.js`
+- `src/shared/morph-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/shared.css`
+- `src/styles/ai-layout.css`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/tool/modules/manual-demo.js`
+- `node --check src/ai/demo-controls.js`
+- `node --check src/shared/list-demo.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/flows/ui-primitives.js`
+- `node test/smoke.mjs`
+  - no longer fails on the AI quick-chip click; now fails later in the prototype editor on an existing hidden sidebar row interaction
+- Focused Playwright validation:
+  - clicking `Send message to Hiro` on `ai.html` completes without overlay interception
+  - `window.manualShape('list')` on `index.html` renders 3 shared prototype pills and 0 legacy `.list-pill` nodes
+
+## Remaining issues / caveats
+- `test/smoke.mjs` still does not pass end-to-end because the later `index.html` step tries to click `#editor-primary-field .layer-row-header` while that row is not visible. This appears unrelated to the P1 fixes.
+- The prototype list variant now uses the shared disambiguation-pill renderer, so future list visual changes should be made in `ui-primitives.js` / `ai-glass.css` instead of reintroducing page-specific CSS.
+
+## Recommended next step
+1. Fix the remaining prototype-editor smoke failure so browser validation is green again.
+2. After that, move on to the P2 findings:
+   - remove hardcoded list fallback names from shared data/render code
+   - extract shared bootstrap/store logic from `index-app.js` and `ai-bindings.js`
+   - break up `message-send-render.js`
+
+---
+
+## Task title
+Fix P2 list defaults and stabilize smoke validation
+
+## Completion status
+- Completed
+
+## Summary
+- Removed product-specific fallback contact names from shared list data/render code and replaced them with generic list placeholders.
+- Added a small shared helper so list placeholder labels come from one source of truth instead of being duplicated across the data and render layers.
+- Hardened the smoke test so it prefers a stage with editable text fields and edits whichever visible content row exists for the selected stage instead of assuming `Primary` is always available.
+
+## Files changed
+- `src/shared/list-placeholders.js`
+- `src/shared/scenario-data.js`
+- `src/shared/morph-render.js`
+- `test/smoke.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/list-placeholders.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/morph-render.js`
+- `node --check test/smoke.mjs`
+- `rg -n "Hiro Tanaka|Mina Park|Sofia Chen" src/shared/scenario-data.js src/shared/morph-render.js test/smoke.mjs`
+  - no matches
+- `node test/smoke.mjs`
+  - passed
+
+## Remaining issues / caveats
+- Shared list defaults are now generic, but the actual message-send flow still intentionally contains Hiro-specific contact data in `src/flows/message-send.js`; that is demo content, not a shared fallback anymore.
+- The larger P2/P3 refactors are still open:
+  - duplicate bootstrap/store logic between `index-app.js` and `ai-bindings.js`
+  - the size and mixed responsibilities of `message-send-render.js`
+  - manual drift risk in `src/shapes.legacy.js`
+
+## Recommended next step
+1. Extract the duplicated scenario/bootstrap persistence helpers shared by `src/tool/index-app.js` and `src/ai/ai-bindings.js`.
+2. After that, split `src/flows/message-send-render.js` by concern:
+   - content builders
+   - geometry/measurement
+   - transition timers
+   - UI-only patch updates
+
+---
+
+## Task title
+Extract shared scenario session/bootstrap state
+
+## Completion status
+- Completed
+
+## Summary
+- Extracted the duplicated scenario-library bootstrap and persistence logic from the manual shell and AI shell into a shared helper module.
+- The new shared module owns:
+  - scenario-library normalization against the current canvas frame mode
+  - scenario-library load from localStorage
+  - scenario persistence to localStorage + durable storage
+  - canvas settings / response mode / AI stage override persistence
+  - selected-scenario coercion when the library changes
+  - durable scenario rehydration when IndexedDB has a newer revision
+- Kept page-specific UI behavior local:
+  - `applyCanvasSettings()`
+  - stage preview/render logic
+  - flow-specific reset/selection behavior
+- This reduces duplicated bootstrap code without forcing the two shells into the same UI lifecycle, which would be a riskier refactor.
+
+## Files changed
+- `src/shared/scenario-session.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/scenario-session.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- `node test/smoke.mjs`
+  - passed
+
+## Remaining issues / caveats
+- The duplicated `detailMeasureEl` setup still exists in both entrypoints. It is small and behaviorally stable, so it was left out of this batch.
+- Canvas/frame UI helpers still diverge between manual and AI mode by design. They are not yet good candidates for extraction because the AI page intentionally forces bottom alignment and has different control syncing.
+- The larger structural refactor is still open in `src/flows/message-send-render.js`.
+
+## Recommended next step
+1. Split `src/flows/message-send-render.js` into smaller modules with clear ownership:
+   - geometry/measurement
+   - content/spec building
+   - transition timers
+   - DOM patch/update helpers
+2. After that, decide whether the remaining small shared setup (for example `detailMeasureEl`) is worth extracting or should stay duplicated for clarity.
+
+---
+
+## Task title
+Split message-send render orchestration from content and geometry helpers
+
+## Completion status
+- Completed
+
+## Summary
+- Split the `message-send` glass renderer into focused modules instead of keeping geometry, DOM generation, and orchestration in one file.
+- New ownership split:
+  - `src/flows/message-send-render.js`
+    - render orchestration
+    - transition timers
+    - DOM class toggles
+    - UI-only incremental updates
+  - `src/flows/message-send-render-layout.js`
+    - compose/disambiguation/sent geometry
+    - compose field measurement
+    - content-height measurement state
+    - shared render timing constants used by layout transitions
+  - `src/flows/message-send-render-content.js`
+    - compose/confirm/disambiguation/sending/sent markup generation
+    - disambiguation pill item layout mapping
+    - empty screen-spec builder
+- This reduced the main renderer file from one mixed-responsibility module to a smaller coordinator that is easier to extend without mixing layout math and DOM string generation in the same edit.
+
+## Files changed
+- `src/flows/message-send-render.js`
+- `src/flows/message-send-render-layout.js`
+- `src/flows/message-send-render-content.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send-render-layout.js`
+- `node --check src/flows/message-send-render-content.js`
+- `node test/smoke.mjs`
+  - passed
+  - browser console still includes the existing `502 Bad Gateway` AI fallback log from `ai.html`
+
+## Remaining issues / caveats
+- The exposed browser hooks are still weak for cold-start message-flow automation. A focused script using the public AI wake/input path did not reliably enter the message flow from a blank page, so the validation gate for this batch remains syntax checks plus the existing smoke test.
+- `src/flows/message-send-render.js` is smaller, but the message flow still has separate responsibilities in `src/flows/message-send.js` that could be split further if this area keeps growing.
+- The duplicated `detailMeasureEl` setup in the two page entrypoints is still open.
+
+## Recommended next step
+1. Improve message-flow automation by exposing a deterministic test hook or adding a dedicated Playwright scenario that can enter the message flow without depending on shell wake state.
+2. After that, decide whether the remaining shared setup duplication in `index-app.js` and `ai-bindings.js` is worth extracting further, or whether the current split is the right maintenance boundary.
+
+---
+
+## Task title
+Finish cleanup of legacy drift, duplicated measure setup, and message-flow smoke coverage
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the duplicated hidden detail-measure DOM setup in both app entrypoints with a shared helper:
+  - `src/shared/detail-measure.js`
+- Fixed the AI quick-chip availability bug:
+  - `Send message to Hiro` and other quick chips were incorrectly blocked from the cold home state by `canProcessRequest`
+  - `fireChip(...)` now bypasses that gate while preserving the normal typed-input gate
+- Simplified the message-send renderer one step further:
+  - removed the dead `buildScreenSpec()` placeholder abstraction
+  - removed unused renderer parameters from the `createMessageSendRender(...)` seam
+- Removed dead legacy/runtime drift:
+  - deleted `src/shapes.legacy.js`
+  - removed the misleading `file://` fallback loader from `ai.html`
+  - updated repo context docs to reflect HTTP-served-only boot
+- Removed the dead disabled canvas-orb path:
+  - deleted the `USE_THINKING_ORB = false` branches from `src/shared/orb-controller.js` and `src/ai/ai-shell.js`
+  - removed the orphaned `siri-canvas` markup and canvas-only CSS selectors
+- Removed the unused duplicate CommonJS smoke file:
+  - deleted `test/smoke.js`
+- Strengthened `test/smoke.mjs` so it now validates the real Hiro message path:
+  - click quick chip
+  - wait for recipient disambiguation
+  - confirm the selected recipient with keyboard `Space`
+  - wait for compose field
+  - continue into the existing `index.html` edit check
+
+## Files changed
+- `src/shared/detail-measure.js`
+- `src/tool/index-app.js`
+- `src/ai/ai-bindings.js`
+- `src/ai/input-actions.js`
+- `src/ai/ai-shell.js`
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/flows/message-send-render-content.js`
+- `src/shared/orb-controller.js`
+- `test/smoke.mjs`
+- `ai.html`
+- `index.html`
+- `context/DECISIONS.md`
+- `context/ARCHITECTURE.md`
+- `context/project_status.md`
+- `context/todos.md`
+- `context/HANDOFF.md`
+
+## Files deleted
+- `src/shapes.legacy.js`
+- `test/smoke.js`
+
+## Validation performed
+- `node --check src/shared/detail-measure.js`
+- `node --check src/tool/index-app.js`
+- `node --check src/ai/ai-bindings.js`
+- `node --check src/ai/input-actions.js`
+- `node --check src/ai/ai-shell.js`
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- `node --check src/flows/message-send-render-content.js`
+- `node --check src/shared/orb-controller.js`
+- `node --check test/smoke.mjs`
+- `node test/smoke.mjs`
+  - passed
+  - output included:
+    - `SHAPE:card-form`
+    - `MESSAGE_FLOW:3`
+    - `LOGS:[]`
+
+## Remaining issues / caveats
+- There is still no user-visible storage failure boundary.
+- Flight and coffee flows still need deeper automated coverage.
+
+## Recommended next step
+1. Add a visible localStorage / IndexedDB failure boundary so storage errors are not silent.
+2. Expand smoke coverage for the flight and coffee flows, not just the Hiro message path.

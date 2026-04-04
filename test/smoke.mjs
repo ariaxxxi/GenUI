@@ -97,17 +97,21 @@ async function createTarget() {
     await page.goto(aiUrl, {waitUntil:'domcontentloaded', timeout: 15000});
     await page.waitForTimeout(400);
 
-    const chip = await page.$('//button[contains(translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "hiro")]');
+    const chip = await page.$('//button[contains(translate(normalize-space(.), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz"), "send message to hiro")]');
     if (!chip) {
       console.log('MISSING_CHIP');
       console.log(JSON.stringify({ logs, serverLogs }, null, 2));
       process.exit(2);
     }
     await chip.click();
-    await page.waitForTimeout(700);
+    await page.waitForFunction(() => document.querySelectorAll('.g-disambiguation-pill').length === 2, null, { timeout: 5000 });
+    await page.keyboard.press('Space');
+    await page.waitForFunction(() => !!document.querySelector('[data-compose-field]'), null, { timeout: 5000 });
 
     const currentShape = await page.evaluate(()=>window.currentShape || document.body.dataset.currentShape || '');
     console.log('SHAPE:'+currentShape);
+    const messageFlowState = await page.evaluate(() => document.querySelector('#c-rich')?.dataset?.glassState || '');
+    console.log('MESSAGE_FLOW:'+messageFlowState);
 
     await page.goto(indexUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
     await page.waitForTimeout(300);
@@ -115,7 +119,11 @@ async function createTarget() {
     const timelineButtons = await page.$$eval('#scenario-shape-row [data-scenario-shape]', (els) =>
       els.map((el) => ({ id: String(el.getAttribute('data-scenario-shape') || ''), active: el.classList.contains('active') }))
     );
-    const target = timelineButtons.find((btn) => btn.id && !btn.active);
+    const preferredStageIds = ['pill', 'card', 'card-s', 'dot', 'list'];
+    const target = preferredStageIds
+      .map((id) => timelineButtons.find((btn) => btn.id === id && !btn.active))
+      .find(Boolean)
+      || timelineButtons.find((btn) => btn.id && !btn.active);
     if (!target) {
       throw new Error('No non-active stage timeline button available to test');
     }
@@ -129,11 +137,45 @@ async function createTarget() {
     }
 
     await page.click('#sb-tab-bar [data-tab="content"]');
-    await page.click('#editor-primary-field .layer-row-header');
+    const editableField = await page.evaluate(() => {
+      const candidates = [
+        {
+          row: '#editor-primary-field',
+          input: '#scenario-primary',
+          value: 'Smoke primary',
+        },
+        {
+          row: '#editor-list-items',
+          input: '#scenario-list-items-editor [data-list-item-label-index="0"]',
+          value: 'Smoke list item',
+        },
+        {
+          row: '#editor-secondary-field',
+          input: '#scenario-secondary',
+          value: 'Smoke secondary',
+        },
+        {
+          row: '#editor-detail-field',
+          input: '#scenario-detail',
+          value: 'Smoke detail',
+        },
+      ];
+      const isVisible = (el) => !!(el && !el.classList.contains('hidden') && el.getBoundingClientRect().height > 0);
+      for (const candidate of candidates) {
+        const row = document.querySelector(candidate.row);
+        if (!isVisible(row)) continue;
+        return candidate;
+      }
+      return null;
+    });
+    if (!editableField) {
+      throw new Error(`No visible editable content field found for stage "${target.id}"`);
+    }
+    await page.click(`${editableField.row} .layer-row-header`);
     const typedValue = `Smoke-${Date.now()}`;
-    await page.fill('#scenario-primary', typedValue);
+    await page.fill(editableField.input, typedValue);
     await page.waitForTimeout(120);
-    const persistedValue = await page.$eval('#scenario-primary', (el) => el.value);
+    const persistedValue = await page.$eval(editableField.input, (el) => el.value);
     if (persistedValue !== typedValue) {
       throw new Error(`Content input did not persist edit. expected="${typedValue}" actual="${persistedValue}"`);
     }

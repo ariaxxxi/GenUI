@@ -1,7 +1,9 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, loadAiVoiceEnabled, loadDisableTextInput, persistToStorage, persistDurableJson, readDurableJsonRecord } from "../app-state.js";
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, loadAiVoiceEnabled, loadDisableTextInput, persistToStorage } from "../app-state.js";
 import { clamp } from "../utils.js";
 import { initMorph } from "../shared/morph.js";
 import { initScenarioData } from "../shared/scenario-data.js";
+import { initScenarioSession } from "../shared/scenario-session.js";
+import { createDetailMeasureEl } from "../shared/detail-measure.js";
 import { buildUiRefs, initSidebar } from "../shared/sidebar.js";
 import { initAnimControls } from "../shared/anim-controls.js";
 import { addSimLog, setSimVoice, setSimInputState, addChatBubble, showTypingBubble, hideTypingBubble, playSimEarcon } from "../sim-panel.js";
@@ -22,9 +24,7 @@ const DROPS = { main: document.getElementById("drop-main"), left: document.getEl
 const C = { thumb: document.getElementById("c-thumb"), thumbLabel: document.getElementById("c-thumb-label"), thumbImg: document.getElementById("c-thumb-img"), prim: document.getElementById("c-primary"), sec: document.getElementById("c-secondary"), div: document.getElementById("c-divider"), det: document.getElementById("c-detail"), media: document.getElementById("c-media"), rich: document.getElementById("c-rich"), glassControlsLayer: document.getElementById("glass-controls-layer") };
 const UI = buildUiRefs(document);
 const input = document.getElementById("sim-input");
-const detailMeasureEl = document.createElement("div");
-detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";
-document.body.appendChild(detailMeasureEl);
+const detailMeasureEl = createDetailMeasureEl(document);
 
 const FULLSCREEN_STAGE_OUTLINE_STORAGE_KEY = "genui_ai_fullscreen_stage_outline_visible";
 let canvasSettings = loadCanvasSettings();
@@ -55,33 +55,23 @@ const stripWakeWord = (text) => String(text || "").replace(/\bhey\s+bixby\b/ig, 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const anim = initAnimControls({ document, clamp });
 const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, createScenario, createIcon, createDefaultListItem, loadStageLibrary, normalizeScenario, normalizeScenarioCanvas, normalizeTriggers, normalizeStageTextByShape, normalizeTypographyByShape, normalizeStageSizeByShape, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageId, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, normalizeStageSizeEntry, defaultScenarioLibrary, normalizeStage } = scenarioData;
-
-function normalizeScenarioLibrarySet(source) {
-  const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
-  scenarios.forEach((scenario) => { scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || "none" }); });
-  return scenarios.length ? scenarios : defaultScenarioLibrary();
-}
-function loadScenarioLibrary() {
-  return normalizeScenarioLibrarySet(readStoredJson(STORAGE_KEYS.scenarios, null));
-}
+const scenarioSession = initScenarioSession({
+  defaultScenarioLibrary,
+  getCanvasSettings: () => canvasSettings,
+  normalizeScenario,
+  normalizeScenarioCanvas,
+});
 function persistScenarios() {
-  const revision = Date.now();
-  const localScenarioOk = persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, "scenarios");
-  if (localScenarioOk) persistToStorage(STORAGE_KEYS.scenarioRevision, revision, "scenario revision");
-  scenarioRevision = revision;
-  void persistDurableJson(STORAGE_KEYS.scenarios, scenarioLibrary, { revision, label: "scenarios" });
+  scenarioRevision = scenarioSession.persistScenarios(scenarioLibrary);
 }
-function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, "canvas settings"); }
-function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, "response mode"); }
-function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, "AI stage override"); }
+function persistCanvasSettings() { scenarioSession.persistCanvasSettings(canvasSettings); }
+function persistResponseMode() { scenarioSession.persistResponseMode(responseMode); }
+function persistAiStageOverride() { scenarioSession.persistAiStageOverride(aiStageOverride); }
 function persistAiVoiceEnabled(enabled) { persistToStorage(STORAGE_KEYS.aiVoiceEnabled, enabled !== false, "AI voice toggle"); }
 function persistStageLibrary() { persistToStorage(STORAGE_KEYS.stages, stageLibrary, "stage library"); }
-function selectedScenario() { return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null; }
+function selectedScenario() { return scenarioSession.selectedScenario(scenarioLibrary, selectedScenarioId); }
 function setScenarioLibraryState(nextLibrary) {
-  scenarioLibrary = nextLibrary;
-  if (!scenarioLibrary.some((item) => item.id === selectedScenarioId)) {
-    selectedScenarioId = scenarioLibrary[0]?.id || "";
-  }
+  ({ scenarioLibrary, selectedScenarioId } = scenarioSession.applyScenarioLibrary(nextLibrary, selectedScenarioId));
 }
 
 const shell = initAiShell({
@@ -354,8 +344,7 @@ function updateActive(shape) {
 }
 
 stageLibrary = loadStageLibrary();
-scenarioLibrary = loadScenarioLibrary();
-selectedScenarioId = scenarioLibrary[0]?.id || "";
+({ scenarioLibrary, selectedScenarioId } = scenarioSession.applyScenarioLibrary(scenarioSession.loadScenarioLibrary(), selectedScenarioId));
 
 const morph = initMorph({
   DROPS,
@@ -447,13 +436,11 @@ function previewScenario(scenario) { if (!scenario) return; if (flightFlow.isAct
 function previewAiStageOverride() { if (responseMode !== RESPONSE_MODE.AI) return; const scenario = selectedScenario(); if (!scenario) return; if (aiStageOverride === AI_STAGE_OVERRIDE.AUTO) return previewScenario(scenario); const overrideShape = availableScenarioShapes().includes(aiStageOverride) ? aiStageOverride : scenario.shape; previewScenario(createScenario({ ...scenario, shape: overrideShape, content: scenario.content, triggers: scenario.triggers })); }
 
 async function hydrateDurableScenarios() {
-  const record = await readDurableJsonRecord(STORAGE_KEYS.scenarios);
-  if (!Array.isArray(record?.value)) return;
-  const durableRevision = Number(record.revision) || 0;
-  if (durableRevision <= scenarioRevision) return;
-  setScenarioLibraryState(normalizeScenarioLibrarySet(record.value));
-  scenarioRevision = durableRevision;
-  persistToStorage(STORAGE_KEYS.scenarioRevision, durableRevision, "scenario revision");
+  const hydrated = await scenarioSession.hydrateDurableScenarios(scenarioRevision);
+  if (!hydrated) return;
+  setScenarioLibraryState(hydrated.scenarioLibrary);
+  scenarioRevision = hydrated.scenarioRevision;
+  persistToStorage(STORAGE_KEYS.scenarioRevision, hydrated.scenarioRevision, "scenario revision");
   sidebar.renderScenarioUi();
   applyCanvasSettings();
   if (responseMode !== RESPONSE_MODE.AI && !document.getElementById("stage")?.classList.contains("flow-active")) {

@@ -92,11 +92,12 @@ export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, var
   }));
 }
 
-export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
+export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills", pillVariant = "" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
   return `<div data-glass-body class="${esc(clusterClass)}">${items.map((item, index) => {
     const selected = index === selectedIndex;
     const title = String(item?.name || item?.title || "").trim();
+    const subtitle = String(item?.subtitle || item?.secondary || "").trim();
     const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-pill-media" });
     const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
     const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
@@ -114,7 +115,11 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
     if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
     if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
-    return `<div class="g-disambiguation-pill g-accent-orbit-host ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
+    const variantClass = pillVariant ? ` g-disambiguation-pill--${esc(pillVariant)}` : "";
+    const textHtml = subtitle
+      ? `<div class="g-disambiguation-pill-text-wrap"><div class="g-disambiguation-pill-text">${esc(title)}</div><div class="g-disambiguation-pill-subtext">${esc(subtitle)}</div></div>`
+      : `<div class="g-disambiguation-pill-text">${esc(title)}</div>`;
+    return `<div class="g-disambiguation-pill g-accent-orbit-host${variantClass} ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}${textHtml}</div>`;
   }).join("")}</div>`;
 }
 

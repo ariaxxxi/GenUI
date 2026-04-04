@@ -74,8 +74,8 @@ export function initInputActions({
     }));
   }
 
-  async function processRequest(userText) {
-    if (typeof canProcessRequest === "function" && !canProcessRequest()) return false;
+  async function processRequest(userText, options = {}) {
+    if (!options.bypassAvailability && typeof canProcessRequest === "function" && !canProcessRequest()) return false;
     if (messageFlow.isActive()) return messageFlow.processRequest?.(userText);
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
     if (coffeeFlow?.isActive?.()) return coffeeFlow.handleInputSubmit?.(userText);
@@ -120,7 +120,6 @@ export function initInputActions({
 
   function fireChip(el) {
     const text = String(el?.textContent || "").trim();
-    if (typeof canProcessRequest === "function" && !canProcessRequest()) return;
     clearActiveFlows();
     input.value = text;
     setTimeout(() => {
@@ -133,7 +132,7 @@ export function initInputActions({
       }
       input.value = "";
       if (handleChipQuickAction(text)) return;
-      void processRequest(text);
+      void processRequest(text, { bypassAvailability: true });
     }, 120);
   }
 

@@ -1,124 +1,96 @@
 # PROJECT_STATUS.md
-> Last updated: 2026-03-22 | Branch: refractor-to-2-pages
+> Last updated: 2026-04-03 | Branch: ai-to-app
 
 ## Current Phase
-**Refactor in progress: page asset extraction after send message flow parity work.** `ai.html` and `index.html` have been reduced to thin entrypoint HTML files with externalized CSS and JS entrypoints, but the deeper shared-module split is still incomplete.
+**Refactor stabilization after the list/render cleanup.** The shared list path, shared scenario session state, and message-send renderer split are landed. Current work is mostly reliability and remaining debt reduction, not large structural moves.
 
 ---
 
 ## What Is Working
-- `index.html`: Scenario editor fully functional — create, duplicate, delete, rename, shape/icon/text/typography/stage per scenario
-- `ai.html`: send message flow is wired and operational:
-  - `THINKING -> DISAMBIGUATE -> COMPOSE -> CONFIRM -> SENDING -> SENT -> RESET`
-  - phrase `send msg to hiro` and chip `Send a message to Hiro` both trigger flow
-- `src/shapes.js` extracted and shared between both pages
-- Thin HTML entrypoints are now in place:
-  - `ai.html` loads external CSS plus `src/ai-app.js`
-  - `index.html` loads external CSS plus `src/index-app.js`
-- External page assets now exist:
-  - `src/styles/ai.css`
-  - `src/styles/editor.css`
-  - `src/styles/shared.css`
-  - `src/styles/message-flow.css`
-  - `src/styles/flight-flow.css`
-  - `src/ai-app.js`
-  - `src/index-app.js`
-  - `src/app-state.js`
-  - `src/sim-panel.js`
-- Smoke test (`test/smoke.mjs`) validates `ai.html` loads, chip exists, and shape animates on click
-- Smoke test can self-host `server.mjs` on a free local port or target `SMOKE_BASE_URL` env var
-- `server.mjs` routes AI requests to OpenAI / Anthropic / Gemini with per-provider retry and auth logic
-- Per-scenario stage independence: editing Stage X in Scenario A does not affect Scenario B
-- send message flow overlay architecture now uses:
-  - direct content mount in `#c-rich` (no nested shell chrome wrapper)
-  - external controls layer `#glass-controls-layer` for checkmark / action row
-- Visual/motion updates landed in `ai.html`:
-  - gradient strokes for selected controls and shell
-  - dynamic card sizing from measured body content
-  - in-place selection updates (no remount on Arrow) to smooth highlight transitions
-  - DISAMBIGUATE `Which Hiro?` intent header anchored above container
-  - controls tracking/clamping to remain inside stage during transitions
+- `index.html` is functional as the manual editor:
+  - scenario selection
+  - stage switching
+  - content editing
+  - per-scenario stage independence
+- `ai.html` is functional as the AI/demo surface:
+  - home state
+  - message send flow
+  - flight flow
+  - coffee flow
+- The prototype `list` stage now uses the shared AI disambiguation-pill renderer instead of a separate legacy implementation.
+- Shared scenario/bootstrap persistence is centralized in `src/shared/scenario-session.js`.
+- Message-send rendering is split by concern:
+  - `src/flows/message-send-render.js`
+  - `src/flows/message-send-render-layout.js`
+  - `src/flows/message-send-render-content.js`
+- The app now assumes an HTTP-served environment only. The dead `file://` shapes fallback was removed.
+- `test/smoke.mjs` passes and now covers:
+  - `ai.html` load
+  - quick-chip entry into the Hiro message flow
+  - keyboard confirmation from recipient disambiguation into compose
+  - `index.html` stage switch
+  - `index.html` content edit persistence
+- `server.mjs` still self-hosts static files and AI proxy routes for OpenAI / Anthropic / Gemini.
 
 ---
 
 ## What Is Incomplete / Known Issues
-- No smoke test coverage for `index.html` (manual mode); only `ai.html` is tested
-- The task-defined shared modules are not fully landed yet:
-  - `src/morph.js`
-  - `src/sidebar.js`
-  - `src/voice-engine.js`
-  - `src/flows/message-send.js`
-  - `src/flows/flight-booking.js`
-  - `src/scenario-data.js`
-  - `src/ui-actions.js`
-  - `src/demo-ui.js`
-  - `src/anim-controls.js`
-- No error boundary for full or corrupted localStorage — silent failures
-- Pixel-perfect visual parity to Figma is still iterative (manual visual checks required for animation timing/placement nuances)
-- AI trigger phrases in `ai.html` are still implicit in code (not documented for new devs)
-- `ref/FluidUI.html` is stale (6,426 lines); decision on archive vs delete pending
+- No user-visible localStorage error boundary yet. Storage failures still degrade silently.
+- Automated coverage is still shallow for the flight and coffee flows. Only the Hiro message path plus one manual-editor path are covered by smoke.
+- Figma export is structurally editable now, but pixel-perfect parity for blur-heavy/glass effects is still iterative and requires manual visual validation.
+- `ref/FluidUI.html` is still stale and kept only as a reference file.
+- The AI/demo surface still contains a visible legacy/debug panel in `ai.html`.
 
 ---
 
 ## Active Risks
-- **Refactor parity risk**: the HTML files are now thin, but behavior is still carried by large page-level modules (`src/ai-app.js`, `src/index-app.js`) until the shared-module split is completed
-- **Visual regression risk in `ai.html`**: ongoing CSS/animation iteration can reintroduce spacing/stacking issues across states
-- **Glasses overflow edge cases**: dynamic height + external controls must keep all visible content inside 420×420 stage under all transitions
-- **localStorage silent failure**: corruption or quota exceeded will cause data loss with no user feedback
+- **UI regression risk in `ai.html`**: the AI surface still has dense interaction/state logic across message, flight, and coffee flows.
+- **Glasses-frame fit risk**: dynamic surfaces must continue to self-constrain inside the `420x420` glasses frame because the frame is visual-only, not a clip.
+- **Storage reliability risk**: corrupted or quota-limited localStorage/IndexedDB can still cause silent failure.
+- **Backend-noise risk in smoke**: the smoke can pass while still logging expected AI-provider `502`/TTS fallback noise, so visual/app-state checks matter more than a clean console.
 
 ---
 
 ## Repo Layout
 ```
 /
-├── index.html          # Manual editor page (6,165 lines)
-├── ai.html             # AI interaction page (actively iterated for send message flow parity)
-├── server.mjs          # Node HTTP server + AI proxy (367 lines)
-├── package.json        # type:module; only runtime dep = playwright
-├── .env.example        # PORT, AI_PROVIDER, AI_API_KEY, AI_MODEL
-├── BUILD_RULES.md      # Hard constraints — READ BEFORE TOUCHING UI
-├── AGENTS.md           # Planner/Implementer agent workflow
+├── index.html
+├── ai.html
+├── server.mjs
 ├── src/
-│   ├── ai-app.js       # Extracted AI page module (still large; next split target)
-│   ├── index-app.js    # Extracted manual page module (still large; next split target)
-│   ├── events.js       # Small event-date stub used by flight flow
-│   ├── shapes.js       # Canonical shape/stage definitions (ES module)
-│   ├── shapes.legacy.js# file:// fallback — keep in sync with shapes.js
-│   └── styles/
-│       ├── ai.css
-│       ├── editor.css
-│       ├── shared.css
-│       ├── message-flow.css
-│       └── flight-flow.css
+│   ├── ai-app.js
+│   ├── app-state.js
+│   ├── shapes.js
+│   ├── sim-panel.js
+│   ├── ai/
+│   ├── flows/
+│   ├── shared/
+│   ├── styles/
+│   └── tool/
 ├── test/
-│   ├── smoke.mjs       # Playwright E2E smoke test (primary)
-│   └── smoke.js        # CJS copy of smoke test
+│   └── smoke.mjs
 ├── ref/
-│   ├── FluidUI.html    # Stale legacy reference — do not edit or import
-│   └── genui-affordance-v3.html  # Earlier design reference
-└── context/            # Agent handoff docs (you are here)
+└── context/
 ```
 
 ---
 
 ## How to Run
 ```bash
-cp .env.example .env    # fill in AI_PROVIDER + AI_API_KEY (Gemini configured in current .env)
-npm run start           # serves on http://localhost:5173 (or configured PORT)
+npm run start
 # Manual mode: http://localhost:5173/
 # AI mode:     http://localhost:5173/ai.html
 ```
 
 ## How to Test
 ```bash
-node test/smoke.mjs     # requires server running, or smoke.mjs self-hosts
+node test/smoke.mjs
 ```
 
 ---
 
 ## Likely Next Priorities
-1. Complete the shared-module split from `src/ai-app.js` / `src/index-app.js` into `src/morph.js`, `src/sidebar.js`, `src/sim-panel.js`, `src/voice-engine.js`, and `src/flows/*`
-2. Deduplicate `src/styles/ai.css` / `src/styles/editor.css` into a real `src/styles/shared.css`
-3. Add smoke test coverage for `index.html`
-4. Add targeted UI regression checks for `ai.html`
-5. Add localStorage error boundary
+1. Add a user-visible storage failure boundary for localStorage / IndexedDB errors.
+2. Expand automated coverage for flight and coffee flows, not just the Hiro message path.
+3. Decide whether the AI legacy/debug panel should stay, move behind a dev-only gate, or be removed.
+4. Continue trimming stale reference/debt files such as `ref/FluidUI.html` if they are no longer used.

@@ -46,7 +46,7 @@ Prototype `list` is a first-class stage/render shape. It reuses the AI disambigu
   - image icon → avatar image
   - emoji icon → pill media glyph
 
-`src/shapes.legacy.js` — copy for `file://` loading (no ES module support); keep in sync manually.
+There is no `file://` runtime fallback anymore. Both pages assume an HTTP-served environment so the ES-module app entrypoints are the only supported boot path.
 
 ---
 
@@ -168,6 +168,9 @@ Fallback: `localFlightFallback()` renders deterministic flight UI when AI unavai
 ---
 
 ## Testing
-- `test/smoke.mjs` — Playwright E2E; validates `ai.html` loads, chip exists, shape animates on click
+- `test/smoke.mjs` — Playwright E2E; validates:
+  - `ai.html` loads
+  - Hiro quick-chip entry reaches message compose via disambiguation
+  - `index.html` stage switching and content editing still persist
 - Can self-host `server.mjs` on a free port or target `SMOKE_BASE_URL` env var
-- No smoke test for `index.html` yet (known gap)
+- No dedicated `index.html` smoke exists yet; current coverage is folded into `test/smoke.mjs`

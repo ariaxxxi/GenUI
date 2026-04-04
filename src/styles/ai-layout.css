@@ -22,7 +22,7 @@ body[data-page-mode="ai"] #sidebar {
 }
 .ai-legacy-debug {
   position: fixed;
-  left: 16px;
+  right: 16px;
   bottom: 60px;
   transform: none;
   width: 180px;

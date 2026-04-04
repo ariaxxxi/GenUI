@@ -13,7 +13,7 @@
 
 ## Medium Priority
 
-- [ ] **Add smoke test for `index.html`** — cover scenario create, duplicate, delete, shape change, typography edit; currently only `ai.html` is tested
+- [ ] **Expand `index.html` smoke coverage** — current smoke covers stage switch + one content edit; add scenario create/duplicate/delete and typography edits
 - [ ] **Document AI trigger phrases** — add comments or a section in `context/` listing what user text maps to each flight flow step; critical for new developers
 - [ ] **Decide fate of `ref/FluidUI.html`** — 6,426-line stale reference; options: delete, keep in `ref/` with clear warning header, or archive outside repo
 
@@ -21,9 +21,7 @@
 
 ## Cleanup / Debt / Polish
 
-- [ ] Confirm `src/shapes.legacy.js` is in sync with `src/shapes.js` — easy to drift since it's a manual copy
 - [ ] Audit `ai.html` for any leftover console.log or debug code before main merge
-- [ ] Check if `test/smoke.js` (CJS copy) is still needed or can be deleted in favor of `test/smoke.mjs`
 - [ ] Review `server.mjs` route `/api/ai` vs `/api/gemini` — clarify to devs which endpoint is preferred and when
 
 ---

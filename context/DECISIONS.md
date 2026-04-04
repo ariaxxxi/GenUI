@@ -28,7 +28,7 @@
 
 **When introduced:** Commit `87dca3d` — `refractor-to-2-pages` branch.
 
-**Note:** `src/shapes.legacy.js` is a non-module copy for `file://` loading. Keep in sync manually if shapes change.
+**Note:** The app now assumes an HTTP-served environment. The old `file://` fallback was removed because only patching `window.SHAPES` did not make the module boot path work and created drift risk.
 
 ---
 

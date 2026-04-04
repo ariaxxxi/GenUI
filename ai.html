@@ -242,7 +242,6 @@
                 <div class="thinking-orb-layer thinking-orb-layer-grain"></div>
               </div>
             </div>
-            <canvas id="siri-canvas"></canvas>
           </div>
         </div>
         <div id="glass-controls-layer"></div>
@@ -617,12 +616,6 @@
 
 <a class="entry-point-btn" href="./index.html">prototype mode</a>
 
-<script>
-if (location.protocol === 'file:') {
-  // When opened from file://, browsers block module imports. Use a legacy non-module fallback.
-  const s = document.createElement('script'); s.src = 'src/shapes.legacy.js'; document.head.appendChild(s);
-} 
-</script>
 <script src="src/shared/modern-screenshot.min.js"></script>
 <script type="module" src="src/ai-app.js"></script>
 </body>

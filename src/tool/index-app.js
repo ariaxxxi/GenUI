@@ -1,7 +1,9 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage, persistDurableJson, readDurableJsonRecord } from '../app-state.js';
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage } from '../app-state.js';
 import { clamp } from '../utils.js';
 import { initMorph } from '../shared/morph.js';
 import { initScenarioData } from '../shared/scenario-data.js';
+import { initScenarioSession } from '../shared/scenario-session.js';
+import { createDetailMeasureEl } from '../shared/detail-measure.js';
 import { buildUiRefs, initSidebar } from '../shared/sidebar.js';
 import { initAnimControls } from '../shared/anim-controls.js';
 import { initOrbController } from '../shared/orb-controller.js';
@@ -14,9 +16,7 @@ import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptu
 const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
 const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
 const UI = buildUiRefs(document);
-const detailMeasureEl = document.createElement('div');
-detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";
-document.body.appendChild(detailMeasureEl);
+const detailMeasureEl = createDetailMeasureEl(document);
 
 const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: '' });
 
@@ -36,39 +36,26 @@ let prototypeIntentHeaderTrackRaf = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
-
-function normalizeScenarioLibrarySet(source) {
-  const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
-  scenarios.forEach((scenario) => {
-    scenario.content.canvas = normalizeScenarioCanvas(scenario?.content?.canvas, { frameMode: canvasSettings?.frameMode || 'none' });
-  });
-  return scenarios.length ? scenarios : defaultScenarioLibrary();
-}
-
-function loadScenarioLibrary() {
-  return normalizeScenarioLibrarySet(readStoredJson(STORAGE_KEYS.scenarios, null));
-}
+const scenarioSession = initScenarioSession({
+  defaultScenarioLibrary,
+  getCanvasSettings: () => canvasSettings,
+  normalizeScenario,
+  normalizeScenarioCanvas,
+});
 
 function persistScenarios() {
-  const revision = Date.now();
-  const localScenarioOk = persistToStorage(STORAGE_KEYS.scenarios, scenarioLibrary, 'scenarios');
-  if (localScenarioOk) persistToStorage(STORAGE_KEYS.scenarioRevision, revision, 'scenario revision');
-  scenarioRevision = revision;
-  void persistDurableJson(STORAGE_KEYS.scenarios, scenarioLibrary, { revision, label: 'scenarios' });
+  scenarioRevision = scenarioSession.persistScenarios(scenarioLibrary);
 }
-function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, 'canvas settings'); }
-function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
-function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
+function persistCanvasSettings() { scenarioSession.persistCanvasSettings(canvasSettings); }
+function persistResponseMode() { scenarioSession.persistResponseMode(responseMode); }
+function persistAiStageOverride() { scenarioSession.persistAiStageOverride(aiStageOverride); }
 
 function selectedScenario() {
-  return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
+  return scenarioSession.selectedScenario(scenarioLibrary, selectedScenarioId);
 }
 
 function setScenarioLibraryState(nextLibrary) {
-  scenarioLibrary = nextLibrary;
-  if (!scenarioLibrary.some((item) => item.id === selectedScenarioId)) {
-    selectedScenarioId = scenarioLibrary[0]?.id || '';
-  }
+  ({ scenarioLibrary, selectedScenarioId } = scenarioSession.applyScenarioLibrary(nextLibrary, selectedScenarioId));
 }
 
 function currentScenarioFrameMode() {
@@ -234,8 +221,7 @@ function updateActive(shape) {
 
 const anim = initAnimControls({ document, clamp });
 stageLibrary = loadStageLibrary();
-scenarioLibrary = loadScenarioLibrary();
-selectedScenarioId = scenarioLibrary[0]?.id || '';
+({ scenarioLibrary, selectedScenarioId } = scenarioSession.applyScenarioLibrary(scenarioSession.loadScenarioLibrary(), selectedScenarioId));
 
 const orb = initOrbController({
   document,
@@ -481,13 +467,11 @@ const sendBtn = document.getElementById('send-btn');
 actions = initManualActions({ input, sendBtn, flight, resolveScenario, previewScenario, renderScenarioUi, setSelectedScenarioId: (value) => { selectedScenarioId = value; } });
 
 async function hydrateDurableScenarios() {
-  const record = await readDurableJsonRecord(STORAGE_KEYS.scenarios);
-  if (!Array.isArray(record?.value)) return;
-  const durableRevision = Number(record.revision) || 0;
-  if (durableRevision <= scenarioRevision) return;
-  setScenarioLibraryState(normalizeScenarioLibrarySet(record.value));
-  scenarioRevision = durableRevision;
-  persistToStorage(STORAGE_KEYS.scenarioRevision, durableRevision, 'scenario revision');
+  const hydrated = await scenarioSession.hydrateDurableScenarios(scenarioRevision);
+  if (!hydrated) return;
+  setScenarioLibraryState(hydrated.scenarioLibrary);
+  scenarioRevision = hydrated.scenarioRevision;
+  persistToStorage(STORAGE_KEYS.scenarioRevision, hydrated.scenarioRevision, 'scenario revision');
   renderScenarioUi();
   applyCanvasSettings();
   applyStagePhoneBlur(selectedScenario()?.shape);

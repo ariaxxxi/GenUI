@@ -4,22 +4,7 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
   let aiBridgeTimer = null;
   let aiBreathingTimer = null;
   let homePromptExitTimer = null;
-  let siriRaf = null;
-  let orbT = 0;
-  let orbRamp = 0;
-  let orbTarget = 0;
-  let orbCY = 0.5;
-  let orbCYTarget = 0.5;
   let orbLabelOverride = '';
-  const ORB_SPEED = 1 / 180;
-  const USE_THINKING_ORB = false;
-  const BLOBS = [
-    { r:0.32, speed:0.022, phase:0.00, ax:0.10, ay:0.08, freq:1.00 },
-    { r:0.28, speed:0.027, phase:2.10, ax:0.09, ay:0.11, freq:1.31 },
-    { r:0.26, speed:0.032, phase:4.20, ax:0.11, ay:0.07, freq:0.77 },
-    { r:0.24, speed:0.022, phase:1.05, ax:0.08, ay:0.09, freq:1.61 },
-  ];
-  const ss = (t) => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 
   function enterAiModeVisual() {
     const main = document.getElementById('drop-main');
@@ -184,58 +169,14 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     cancelIntentHeaderTracking();
   }
 
-  function ensureOrbLoop() {
-    if (!USE_THINKING_ORB || siriRaf) return;
-    const orb = document.getElementById('siri-orb');
-    const canvas = document.getElementById('siri-canvas');
-    if (!orb || !canvas) return;
-    orb.classList.add('visible');
-    const ctx = canvas.getContext('2d');
-    const draw = () => {
-      orbT += 1;
-      if (orbRamp < orbTarget) orbRamp = Math.min(orbTarget, orbRamp + ORB_SPEED);
-      if (orbRamp > orbTarget) orbRamp = Math.max(orbTarget, orbRamp - ORB_SPEED);
-      const dm = document.getElementById('drop-main');
-      const W = dm?.offsetWidth || 100;
-      const H = dm?.offsetHeight || 100;
-      if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
-      orbCY += (orbCYTarget - orbCY) * 0.03;
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-      const r = ss(orbRamp);
-      for (const b of BLOBS) {
-        const px = (0.5 + Math.sin(orbT * b.speed + b.phase) * b.ax * r) * W;
-        const py = (orbCY + Math.cos(orbT * b.speed * b.freq + b.phase) * b.ay * r) * H;
-        const br = b.r * Math.min(W, H) * (1 + 0.06 * Math.sin(orbT * 0.027 + b.phase));
-        ctx.save();
-        ctx.fillStyle = (b === BLOBS[1] || b === BLOBS[3]) ? 'rgba(210,232,255,1)' : 'rgba(255,255,255,1)';
-        ctx.beginPath(); ctx.arc(px, py, br, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-      }
-      siriRaf = requestAnimationFrame(draw);
-    };
-    draw();
-  }
-
   function showAiIdle() {
     enterAiModeVisual(false);
-    if (!USE_THINKING_ORB) {
-      document.getElementById('siri-orb')?.classList.remove('visible');
-      orbRamp = 0; orbTarget = 0;
-      return;
-    }
-    orbTarget = 0;
-    ensureOrbLoop();
+    document.getElementById('siri-orb')?.classList.remove('visible');
   }
 
   function startSiriOrb(instant) {
     enterAiModeVisual(true);
-    if (!USE_THINKING_ORB) {
-      document.getElementById('siri-orb')?.classList.remove('visible');
-      orbRamp = 0; orbTarget = 0;
-      return;
-    }
-    if (instant) orbRamp = 1;
-    orbTarget = 1;
-    ensureOrbLoop();
+    document.getElementById('siri-orb')?.classList.remove('visible');
   }
 
   function ambientFromAi(shape, contentData, customGeo) {
@@ -247,14 +188,12 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     const keepAiMode = options?.keepAiMode === true;
     if (aiBreathingTimer) { clearTimeout(aiBreathingTimer); aiBreathingTimer = null; }
     if (aiBridgeTimer) { clearTimeout(aiBridgeTimer); aiBridgeTimer = null; }
-    if (siriRaf) { cancelAnimationFrame(siriRaf); siriRaf = null; }
     document.getElementById('siri-orb')?.classList.remove('visible');
     clearListPills();
     const main = document.getElementById('drop-main');
     if (main && !keepAiMode) main.classList.remove('ai-mode', 'ai-breathing', 'ai-bridge');
     C.thumb.style.opacity = '';
     C.thumb.style.fontSize = '';
-    orbRamp = 0; orbTarget = 0;
   }
 
   return {
