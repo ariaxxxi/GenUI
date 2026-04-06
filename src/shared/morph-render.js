@@ -110,6 +110,7 @@ export function createMorphRender(ctx) {
     );
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '1';
+    prototypeListRoot.dataset.listListeningOrb = listStageShowsOrb(contentData) ? '1' : '';
     prototypeListRoot.innerHTML = renderDisambiguationPills({
       items,
       selectedIndex: 0,
@@ -132,6 +133,7 @@ export function createMorphRender(ctx) {
     if (!immediate && prototypeListRoot.dataset.collapsing === '1') return;
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '';
+    prototypeListRoot.dataset.listListeningOrb = '';
     prototypeListRoot.innerHTML = '';
   }
 
@@ -167,6 +169,12 @@ export function createMorphRender(ctx) {
     DROPS.main.classList.toggle('home-blur', state.currentShape === 'magic');
     DROPS.main.classList.toggle('home-glow', listeningShape || thinkingVisualShape);
     DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
+  }
+
+  function listStageShowsOrb(contentData = {}) {
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const shape = String(scenario?.shape || 'list');
+    return !!callbacks.stageListListeningOrbForShape?.(scenario, shape);
   }
 
   function hexToCssColor(value, fallback = 'rgb(144 172 255)') {
@@ -522,7 +530,7 @@ export function createMorphRender(ctx) {
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     const thinkingVisualShape = shape === 'magic' || shape === 'ai';
     const enteringThinking = thinkingVisualShape && fromShape !== 'magic' && fromShape !== 'ai';
-    const listeningToThinking = enteringThinking && fromShape === 'listening';
+    const listeningToThinking = enteringThinking && (fromShape === 'listening' || (fromShape === 'list' && listStageShowsOrb(contentData)));
     DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
     DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
@@ -532,13 +540,13 @@ export function createMorphRender(ctx) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
       DROPS.main.classList.remove('home-glow');
       void DROPS.main.offsetWidth;
-      if (shape === 'listening' || thinkingVisualShape) DROPS.main.classList.add('home-glow');
+      if (shape === 'listening' || thinkingVisualShape || (shape === 'list' && listStageShowsOrb(contentData))) DROPS.main.classList.add('home-glow');
     } else {
       DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape);
+      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape || (shape === 'list' && listStageShowsOrb(contentData)));
     }
     DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
-    DROPS.main.classList.toggle('listening-orb', shape === 'listening');
+    DROPS.main.classList.toggle('listening-orb', shape === 'listening' || (shape === 'list' && listStageShowsOrb(contentData)));
     if (contentData) applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
     if (shape === 'list') {

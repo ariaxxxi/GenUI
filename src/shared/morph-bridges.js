@@ -91,11 +91,28 @@ export function createMorphBridges(ctx) {
 
   function bridgeFromListToTarget(shape, contentData, customGeo, stageId = null) {
     callbacks.collapseListStack();
-    runtime.morphCore('pill', null, null, true);
     callbacks.updateActive('list');
     state.listBridgeTimer = setTimeout(() => {
       state.listBridgeTimer = null;
+      if (shape === 'idle') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.showAiIdle();
+        callbacks.updateActive('idle');
+        return;
+      }
+      if (shape === 'ai') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.startSiriOrb(true);
+        callbacks.updateActive('ai');
+        return;
+      }
+      if (shape === 'magic') {
+        callbacks.stopSiriOrb({ keepAiMode: true });
+        runtime.morphCore('magic', contentData, customGeo, false, 0, stageId);
+        return;
+      }
       if (shape === 'pill') return void runtime.morphCore('pill', contentData, customGeo, false, null, stageId);
+      runtime.morphCore('pill', null, null, true);
       runtime.morphTo(shape, contentData, customGeo, stageId);
     }, listPhaseTwoStartMs());
   }

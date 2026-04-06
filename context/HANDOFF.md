@@ -1,6 +1,104 @@
 # Handoff
 
 ## Task title
+List Stage Listening Orb Toggle
+
+## Completion status
+- Completed
+
+## Summary
+- Added a stage-level `Listening orb` toggle for `List` stages in the Stage config panel.
+- Persisted the toggle on stage state as `listListeningOrb`, so built-in stages, stored stages, and duplicated stages all normalize consistently.
+- When enabled, prototype `List` keeps the listening orb visible under the chip stack, and the chip layer is promoted above the orb to match the AI disambiguation layering.
+- When enabled, `Listening -> List` preserves the orb presence instead of dropping it during the list state.
+- When disabled, `List` keeps the current orb-less presentation.
+
+## Files changed
+- `index.html`
+- `src/shapes.js`
+- `src/shared/scenario-data.js`
+- `src/shared/sidebar.js`
+- `src/shared/sidebar-render.js`
+- `src/shared/sidebar-actions.js`
+- `src/tool/modules/manual-bindings.js`
+- `src/shared/morph-render.js`
+- `src/styles/editor-decorative.css`
+- `src/tool/index-app.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shapes.js`
+- `node --check src/shared/scenario-data.js`
+- `node --check src/shared/sidebar.js`
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/shared/sidebar-actions.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/shared/morph-render.js`
+- `node --check src/tool/index-app.js`
+
+## Remaining issues / caveats
+- This pass did not include a browser interaction sample, so the toggle is code-validated but not manually visually checked in the app.
+
+## Recommended next step
+1. Verify both `Listening orb` states on a `List` stage in prototype mode and sample `Listening -> List -> Thinking` to confirm the continuity and layering feel correct.
+
+## Task title
+Prototype List Motion Retune + Direct List To Thinking
+
+## Completion status
+- Completed
+
+## Summary
+- Retuned prototype list-stage chip motion so stacked chips now animate from the bottom orb anchor instead of blooming from the center.
+- Scoped that motion change to the prototype `stack` variant only, so AI message disambiguation keeps its existing fan-in/fan-out animation.
+- Removed the forced list -> pill intermediate step when leaving list for `ai`, `idle`, or `magic`.
+- Clicking `Thinking` from the list stage now transitions directly back into thinking mode after the list stack collapses, instead of visibly visiting pill first.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/shared/morph-bridges.js`
+- `src/styles/ai-glass.css`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/shared/morph-bridges.js`
+
+## Remaining issues / caveats
+- I did not run a browser interaction pass in this worktree during this update, so the result is code-validated but not manually sampled frame-by-frame.
+
+## Recommended next step
+1. Verify the prototype `List` button on `index.html` and `ai.html` to confirm the bottom-orb motion timing feels right and the direct `List -> Thinking` transition matches the expected visual rhythm.
+
+## Task title
+Prototype Demo List Pill Size Regression
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the prototype-mode `manualShape('list')` demo path so it no longer renders the legacy `420x120` `.list-pill` stack.
+- Routed both prototype debug list and AI debug list through the shared `morphTo('list', ...)` path and the shared disambiguation-pill renderer.
+- Added `demoListRenderContent(...)` so demo data is converted into the same `listItems` structure used by the real list-stage renderer.
+
+## Files changed
+- `src/shared/list-demo.js`
+- `src/tool/modules/manual-demo.js`
+- `src/ai/demo-controls.js`
+- `context/handoff.md`
+
+## Validation performed
+- `node --check src/shared/list-demo.js`
+- `node --check src/tool/modules/manual-demo.js`
+- `node --check src/ai/demo-controls.js`
+
+## Remaining issues / caveats
+- The old legacy `.list-pill` CSS and DOM helpers still exist in the repo, but the prototype and AI demo list entry paths no longer use them.
+
+## Recommended next step
+1. Remove the unused legacy `.list-pill` path entirely once there is confidence no other hidden/demo path depends on it.
+
+## Task title
 Prototype List Stage Reusing AI Disambiguation Pills
 
 ## Completion status
