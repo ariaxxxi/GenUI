@@ -9,7 +9,7 @@ export function createMorphBridges(ctx) {
 
   const splitBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.62), 300, 460);
   const listBridgeMs = () => 600;
-  const listPhaseTwoStartMs = () => listBridgeMs() + 40;
+  const listPhaseTwoStartMs = () => 100;
   const thinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.55), 220, 420);
   const homeThinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.48), 180, 320);
   const cardHeightForTransition = (fromShape, toShape, fromGeo, toGeo) => fromShape === 'card' && Number.isFinite(fromGeo?.h) ? fromGeo.h : toShape === 'card' && Number.isFinite(toGeo?.main?.h) ? toGeo.main.h : SHAPES.card.main.h;
