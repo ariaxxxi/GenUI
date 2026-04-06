@@ -108,12 +108,17 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stagePhoneBlurToggle) ctx.UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
     if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.toggle('hidden', renderShape !== 'list');
+    if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.toggle('hidden', renderShape !== 'list');
     const listItemCount = renderShape === 'list' && ctx.stageListItemsForShape
       ? ctx.stageListItemsForShape(scenario, scenario?.shape).length
       : 0;
     if (ctx.UI.stageListCountVal) ctx.UI.stageListCountVal.textContent = String(Math.max(0, listItemCount));
     if (ctx.UI.stageListCountDec) ctx.UI.stageListCountDec.disabled = !stage || renderShape !== 'list' || listItemCount <= 1;
     if (ctx.UI.stageListCountInc) ctx.UI.stageListCountInc.disabled = !stage || renderShape !== 'list' || listItemCount >= 8;
+    if (ctx.UI.stageListListeningOrbToggle) {
+      ctx.UI.stageListListeningOrbToggle.checked = !!stage?.listListeningOrb;
+      ctx.UI.stageListListeningOrbToggle.disabled = !stage || renderShape !== 'list';
+    }
     if (ctx.UI.stageCardSToggle) {
       ctx.UI.stageCardSToggle.checked = renderShape === 'card-s';
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;

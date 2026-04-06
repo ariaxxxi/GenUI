@@ -42,6 +42,8 @@ export function buildUiRefs(documentRef = document) {
     stageListCountDec: documentRef.getElementById('stage-list-count-dec'),
     stageListCountVal: documentRef.getElementById('stage-list-count-val'),
     stageListCountInc: documentRef.getElementById('stage-list-count-inc'),
+    stageListListeningOrbRow: documentRef.getElementById('stage-list-listening-orb-row'),
+    stageListListeningOrbToggle: documentRef.getElementById('stage-list-listening-orb-toggle'),
     stagePhoneBlurToggle: documentRef.getElementById('stage-phone-blur-toggle'),
     stageSelectedToggle: documentRef.getElementById('stage-selected-toggle'),
     stageAccentColor: documentRef.getElementById('stage-accent-color'),

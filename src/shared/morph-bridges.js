@@ -8,8 +8,8 @@ export function createMorphBridges(ctx) {
   const clamp = callbacks.clamp;
 
   const splitBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.62), 300, 460);
-  const listBridgeMs = () => 500;
-  const listPhaseTwoStartMs = () => 500;
+  const listBridgeMs = () => 600;
+  const listPhaseTwoStartMs = () => 100;
   const thinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.55), 220, 420);
   const homeThinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.48), 180, 320);
   const cardHeightForTransition = (fromShape, toShape, fromGeo, toGeo) => fromShape === 'card' && Number.isFinite(fromGeo?.h) ? fromGeo.h : toShape === 'card' && Number.isFinite(toGeo?.main?.h) ? toGeo.main.h : SHAPES.card.main.h;
@@ -90,12 +90,34 @@ export function createMorphBridges(ctx) {
   }
 
   function bridgeFromListToTarget(shape, contentData, customGeo, stageId = null) {
-    callbacks.collapseListStack();
-    runtime.morphCore('pill', null, null, true);
+    callbacks.collapseListStack(listBridgeMs());
     callbacks.updateActive('list');
     state.listBridgeTimer = setTimeout(() => {
       state.listBridgeTimer = null;
+      if (shape === 'listening') {
+        runtime.morphCore('listening', contentData, customGeo, false, 0, stageId);
+        callbacks.updateActive('listening');
+        return;
+      }
+      if (shape === 'idle') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.showAiIdle();
+        callbacks.updateActive('idle');
+        return;
+      }
+      if (shape === 'ai') {
+        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        callbacks.startSiriOrb(true);
+        callbacks.updateActive('ai');
+        return;
+      }
+      if (shape === 'magic') {
+        callbacks.stopSiriOrb({ keepAiMode: true });
+        runtime.morphCore('magic', contentData, customGeo, false, 0, stageId);
+        return;
+      }
       if (shape === 'pill') return void runtime.morphCore('pill', contentData, customGeo, false, null, stageId);
+      runtime.morphCore('pill', null, null, true);
       runtime.morphTo(shape, contentData, customGeo, stageId);
     }, listPhaseTwoStartMs());
   }
