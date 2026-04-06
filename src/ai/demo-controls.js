@@ -1,5 +1,5 @@
 import { clamp } from '../utils.js';
-import { DEMO_LIST, clearListPills, collapseListStack, demoListRenderContent, selectListItem } from '../shared/list-demo.js';
+import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill, selectListItem } from '../shared/list-demo.js';
 
 export function initDemoControls({
   document,
@@ -25,7 +25,27 @@ export function initDemoControls({
     morph.hideRich();
     document.getElementById("drop-main").classList.remove("ai-mode");
     shell.setIntentHeader("Demo", "List");
-    morph.morphTo("list", demoListRenderContent(items));
+    morph.morphTo("pill", { icon: items[0]?.icon || "◉", primary: items[0]?.primary || "", secondary: items[0]?.secondary || "", detail: "" });
+    const stackHeight = items.length * LIST_PILL_H + (items.length - 1) * LIST_GAP;
+    const stackTop = -stackHeight / 2;
+    const wrap = document.getElementById("list-pills");
+    clearListPills();
+    if (!wrap) return;
+    wrap.style.opacity = "1";
+    wrap.style.pointerEvents = "auto";
+    const stage = document.getElementById("stage");
+    if (stage) stage.style.height = `${stackHeight}px`;
+    items.slice(1).forEach((item, i) => {
+      const pill = buildListPill(item, i + 1, items);
+      pill.style.transition = "transform 500ms var(--motion-ease), opacity 420ms var(--motion-ease)";
+      pill.style.transform = `translateY(${stackTop + 20}px)`;
+      pill.style.opacity = "0.01";
+      wrap.appendChild(pill);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        pill.style.transform = `translateY(${stackTop + (i + 1) * LIST_STEP}px)`;
+        pill.style.opacity = "1";
+      }));
+    });
     updateActive("list");
   }
 
@@ -82,5 +102,5 @@ export function initDemoControls({
     morph.morphTo(nextShape, DEMO[nextShape] || {});
   }
 
-  return { clearListPills, collapseListStack, selectListItem, morphToList, openCustom, applyCustomShape, manualShape };
+  return { clearListPills, collapseListStack, selectListItem, buildListPill, morphToList, openCustom, applyCustomShape, manualShape };
 }

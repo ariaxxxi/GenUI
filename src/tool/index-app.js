@@ -35,7 +35,7 @@ let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -288,11 +288,10 @@ function previewScenarioInstant(scenario) {
   morphApi.setSuppressDeformation(true);
   morphApi.setCurrentShape(shape);
   morphApi.applyGeometry(shape, geo, scenario.shape, scenario);
-  const listHasListeningOrb = shape === 'list' && !!stageListListeningOrbForShape(scenario, scenario?.shape);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic' || listHasListeningOrb);
+  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'list' || shape === 'magic');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
-  DROPS.main.classList.toggle('listening-orb', shape === 'listening' || listHasListeningOrb);
+  DROPS.main.classList.toggle('listening-orb', shape === 'listening' || shape === 'list');
   morphApi.applyContent(content);
   morphApi.applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
   if (shape === 'list') morphApi.showPrototypeListStage?.(content, { entering: false });
@@ -333,7 +332,6 @@ morphApi = initMorph({
     stageIconForShape,
     stageListChipIconsForShape,
     stageListItemsForShape,
-    stageListListeningOrbForShape,
     stageImagesForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
@@ -382,7 +380,6 @@ const sidebar = initSidebar({
   stageIconForShape,
   stageListChipIconsForShape,
   stageListItemsForShape,
-  stageListListeningOrbForShape,
   stageImagesForShape,
   stageRenderShapeForShape,
   stageSelectedForShape,

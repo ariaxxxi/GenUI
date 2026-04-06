@@ -483,17 +483,6 @@
   animation-delay: var(--pill-delay, 0ms);
   pointer-events: none;
 }
-.prototype-disambiguation-pills.entering .g-disambiguation-pill {
-  opacity: 0;
-  transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y-start, 0px))) scale(0.32) rotate(var(--pill-rot-start, 0deg));
-  animation: prototype-disambiguation-pill-in 800ms var(--motion-ease) both;
-  animation-delay: var(--pill-delay, 0ms);
-}
-.prototype-disambiguation-pills.exiting-to-compose .g-disambiguation-pill {
-  animation: prototype-disambiguation-pill-out 600ms var(--motion-ease) both;
-  animation-delay: var(--pill-delay, 0ms);
-  pointer-events: none;
-}
 @keyframes disambiguation-pill-in {
   from {
     opacity: 0;
@@ -512,26 +501,6 @@
   to {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.34) rotate(var(--pill-rot-start, 0deg));
-  }
-}
-@keyframes prototype-disambiguation-pill-in {
-  from {
-    opacity: 0;
-    transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y-start, 0px))) scale(0.32) rotate(var(--pill-rot-start, 0deg));
-  }
-  to {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y, 0px))) scale(var(--pill-scale-final, 0.98)) rotate(0deg);
-  }
-}
-@keyframes prototype-disambiguation-pill-out {
-  from {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y, 0px))) scale(var(--pill-scale-final, 0.98)) rotate(0deg);
-  }
-  to {
-    opacity: 0;
-    transform: translate(calc(-50% + var(--pill-x, 0px)), calc(-50% + var(--pill-y-start, 0px))) scale(0.34) rotate(var(--pill-rot-start, 0deg));
   }
 }
 .g-center-row {

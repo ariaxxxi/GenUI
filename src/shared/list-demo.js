@@ -4,21 +4,6 @@ export const DEMO_LIST = [
   { icon: "⏱", primary: "Timer", secondary: "10 minutes remaining" },
 ];
 
-export function demoListRenderContent(items = DEMO_LIST) {
-  return {
-    icon: { kind: "none", value: "" },
-    primary: "",
-    secondary: "",
-    detail: "",
-    listItems: items.map((item) => ({
-      label: String(item?.primary || "").trim(),
-      icon: String(item?.icon || "").trim()
-        ? { kind: "emoji", value: String(item.icon).trim() }
-        : { kind: "none", value: "" },
-    })),
-  };
-}
-
 export const LIST_PILL_H = 120;
 export const LIST_GAP = 12;
 export const LIST_STEP = LIST_PILL_H + LIST_GAP;

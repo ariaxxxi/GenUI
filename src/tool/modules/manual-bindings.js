@@ -416,11 +416,6 @@ export function initManualBindings({
     if (!stage) return;
     commitStageChange(stage.id, (draft) => { draft.phoneBgBlur = e.target.checked; });
   });
-  UI.stageListListeningOrbToggle?.addEventListener('change', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    if (!stage) return;
-    commitStageChange(stage.id, (draft) => { draft.listListeningOrb = e.target.checked; });
-  });
   UI.stageSelectedToggle?.addEventListener('change', (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;

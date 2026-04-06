@@ -82,7 +82,6 @@ export function createSidebarActions(ctx, refs) {
       iconTextGap: template.iconTextGap,
       iconLeftPadding: template.iconLeftPadding,
       phoneBgBlur: false,
-      listListeningOrb: false,
       selected: false,
       accentColor: '#90acff',
       secondaryAccentColor: '#9761ff',

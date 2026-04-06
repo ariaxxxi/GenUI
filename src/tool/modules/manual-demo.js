@@ -1,4 +1,4 @@
-import { DEMO_LIST, clearListPills, collapseListStack, demoListRenderContent, selectListItem } from '../../shared/list-demo.js';
+import { DEMO_LIST, LIST_PILL_H, LIST_GAP, LIST_STEP, clearListPills, collapseListStack, buildListPill, selectListItem } from '../../shared/list-demo.js';
 
 export function initManualDemo({
   document,
@@ -183,8 +183,72 @@ export function initManualDemo({
     stopSiriOrb();
     hideRich();
     document.getElementById('drop-main').classList.remove('ai-mode');
-    morphTo('list', demoListRenderContent(items));
-    updateActive('list');
+    const currentShape = getCurrentShape();
+    if (currentShape === 'split') {
+      morphTo('dot', { icon: '', primary: '', secondary: '', detail: '' });
+      const existing = morphApi.getListBridgeTimer();
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(() => {
+        morphApi.setListBridgeTimer(null);
+        morphToList(items);
+      }, splitBridgeMs() + 28);
+      morphApi.setListBridgeTimer(timer);
+      return;
+    }
+    const phaseOneMs = 600;
+    const phaseTwoMs = 500;
+    const overlapMs = 220;
+    const phaseTwoStart = phaseOneMs - overlapMs;
+    const easing = getActiveEasing();
+    const originalAnimCSS = document.getElementById('anim-style').textContent;
+    document.getElementById('anim-style').textContent = `
+      :root {
+        --spring: ${easing};
+        --anim-w: ${phaseOneMs}ms var(--spring);
+        --anim-h: ${phaseOneMs}ms var(--spring);
+        --anim-br: ${phaseOneMs}ms var(--spring);
+        --anim-tx: ${phaseOneMs}ms var(--spring);
+        --anim-t: ${phaseTwoMs}ms var(--spring);
+      }`;
+    morphTo('pill', {
+      icon: items[0]?.icon || '◉',
+      primary: items[0]?.primary || '',
+      secondary: items[0]?.secondary || '',
+      detail: '',
+    });
+    const stackHeight = items.length * LIST_PILL_H + (items.length - 1) * LIST_GAP;
+    const stackTop = -stackHeight / 2;
+    const firstPillY = stackTop;
+    const incomingPillY = firstPillY + 20;
+    const stage = document.getElementById('stage');
+    if (stage) stage.style.height = `${stackHeight}px`;
+    const wrap = document.getElementById('list-pills');
+    clearListPills();
+    wrap.style.opacity = '1';
+    wrap.style.transition = 'none';
+    wrap.style.pointerEvents = 'none';
+    DROPS.main.style.transform = `translate(-210px, ${firstPillY}px)`;
+    setCurrentShape('list');
+    setLastMainGeo({ ...SHAPES.pill.main, ty: firstPillY });
+    setTimeout(() => {
+      items.slice(1).forEach((item, i) => {
+        const idx = i + 1;
+        const pill = buildListPill(item, idx, items);
+        const finalY = stackTop + idx * LIST_STEP;
+        pill.style.transition = `transform ${phaseTwoMs}ms ${easing}, opacity ${Math.max(220, phaseTwoMs - 80)}ms ${easing}`;
+        pill.style.transform = `translateY(${incomingPillY}px)`;
+        pill.style.opacity = '0.01';
+        wrap.appendChild(pill);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          pill.style.transform = `translateY(${finalY}px)`;
+          pill.style.opacity = '1';
+        }));
+      });
+      wrap.style.pointerEvents = 'auto';
+      setTimeout(() => {
+        document.getElementById('anim-style').textContent = originalAnimCSS;
+      }, phaseTwoMs + overlapMs + 40);
+    }, phaseTwoStart);
   }
 
   function manualShape(shape) {
