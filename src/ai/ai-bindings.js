@@ -504,11 +504,12 @@ const isComposeMenuPointerTarget = (target) => {
   if (simPanel && target && simPanel.contains(target)) return false;
   return true;
 };
+const shouldCaptureEditableShortcut = (target) => isEditableTarget(target) && target !== input;
 document.addEventListener("keydown", (e) => {
-  if (isEditableTarget(e.target)) e.stopImmediatePropagation();
+  if (shouldCaptureEditableShortcut(e.target)) e.stopImmediatePropagation();
 }, true);
 document.addEventListener("keypress", (e) => {
-  if (isEditableTarget(e.target)) e.stopImmediatePropagation();
+  if (shouldCaptureEditableShortcut(e.target)) e.stopImmediatePropagation();
 }, true);
 document.addEventListener("keydown", (e) => {
   const captureAction = getCaptureHotkeyAction(e);

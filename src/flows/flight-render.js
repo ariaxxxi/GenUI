@@ -308,7 +308,8 @@ export function createFlightRender({
     document.body.classList.add("glass-flow-active");
     flow.C.thumb.style.opacity = "0";
     if (isDestinationStep || isDatesStep) startCommandListening?.();
-    const html = renderScreenMarkup(screenSpec);
+    const shouldRenderInsideShell = step.shape !== "magic";
+    const html = shouldRenderInsideShell ? renderScreenMarkup(screenSpec) : "";
     if (step.type === "thinking") {
       addChatBubble("ai", "Searching flights...");
       flow.setThinkingTimer(setTimeout(() => { flow.setThinkingTimer(null); flow.nextStep(true); }, THINKING_HOLD_MS));

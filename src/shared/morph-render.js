@@ -85,6 +85,20 @@ export function createMorphRender(ctx) {
     });
   }
 
+  function getPrototypeThinkingOrbAnchor() {
+    const useBottomAlign = !!callbacks.getCanvasSettings?.()?.bottomAlign;
+    const bottomAlignRef = callbacks.getBottomAlignRefHeight?.() || BOTTOM_ALIGN_REF_H;
+    const orbGeo = SHAPES.magic?.main || SHAPES.circle.main;
+    const alignedStageHeight = useBottomAlign
+      ? Math.max(bottomAlignRef, orbGeo.h, SHAPES.dot.main.h)
+      : orbGeo.h;
+    const yOffset = useBottomAlign ? ((alignedStageHeight - orbGeo.h) / 2) : 0;
+    return {
+      x: Math.round((Number(orbGeo.tx) || 0) + ((Number(orbGeo.w) || 0) / 2)),
+      y: Math.round((Number(orbGeo.ty) || 0) + yOffset + ((Number(orbGeo.h) || 0) / 2)),
+    };
+  }
+
   function syncPrototypeListPhase(phase = 'settled') {
     const cluster = prototypeListRoot?.querySelector?.('.g-disambiguation-pills');
     if (!cluster) return false;
@@ -108,11 +122,12 @@ export function createMorphRender(ctx) {
       const listGeo = state.lastMainGeo || SHAPES.list.main;
       bottomY = Math.round((Number(listGeo?.ty) || -45) - orbClearance - (pillHeight / 2));
     }
+    const orbAnchor = getPrototypeThinkingOrbAnchor();
     const items = layoutDisambiguationPillItems(
       prototypeListEntriesFromContent(contentData),
       0,
       'stack',
-      { bottomY, gap: 8 }
+      { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y }
     );
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '1';
@@ -431,6 +446,9 @@ export function createMorphRender(ctx) {
     setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.secondaryInAdvanceMs || 0)));
     setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.detailInAdvanceMs || 0)));
     if (shape === 'ai' || shape === 'magic') {
+      C.prim.textContent = '';
+      C.sec.textContent = '';
+      C.det.textContent = '';
       [C.thumb, C.prim, C.sec, C.det, C.div].forEach((el) => {
         if (!el) return;
         el.style.transitionDelay = '0ms';

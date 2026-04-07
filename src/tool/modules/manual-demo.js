@@ -231,7 +231,7 @@ export function initManualDemo({
       return;
     }
     if (shape === 'magic') {
-      morphTo('magic', DEMO[shape] || {}, PROTOTYPE_THINKING_GEO);
+      morphTo('magic', { icon: '', primary: '', secondary: '', detail: '' }, PROTOTYPE_THINKING_GEO);
       return;
     }
     stopSiriOrb();

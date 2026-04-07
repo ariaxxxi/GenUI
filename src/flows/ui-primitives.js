@@ -87,7 +87,10 @@ export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, var
     ...items[index],
     x: pos.x,
     y: pos.y,
-    yStart: variant === "stack" ? positions[count - 1]?.y ?? pos.y : undefined,
+    xStart: Number.isFinite(Number(options?.startX)) ? Math.round(Number(options.startX)) : undefined,
+    yStart: Number.isFinite(Number(options?.startY))
+      ? Math.round(Number(options.startY))
+      : (variant === "stack" ? positions[count - 1]?.y ?? pos.y : undefined),
     rotStart: pos.x >= 0 ? 10 : -10,
     delay: Math.max(0, (index * 42) - (index === selectedIndex ? 28 : 0)),
   }));
@@ -112,6 +115,7 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
       `--pill-delay:${delay}ms`,
       `--pill-scale-final:${finalScale}`,
     ];
+    if (Number.isFinite(Number(item?.xStart))) styleVars.push(`--pill-x-start:${Math.round(Number(item.xStart))}px`);
     if (Number.isFinite(Number(item?.yStart))) styleVars.push(`--pill-y-start:${Math.round(Number(item.yStart))}px`);
     if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
     if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
