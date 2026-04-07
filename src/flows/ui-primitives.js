@@ -53,7 +53,7 @@ export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, var
   if (count <= 0) return [];
   let positions;
   if (variant === "stack") {
-    const pillHeight = 56;
+    const pillHeight = Number.isFinite(Number(options?.itemHeight)) ? Math.max(40, Math.round(Number(options.itemHeight))) : 56;
     const gap = Number.isFinite(Number(options?.gap)) ? Math.max(0, Math.round(Number(options.gap))) : 8;
     const pillHalf = pillHeight / 2;
     const step = pillHeight + gap;
@@ -101,7 +101,8 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
   return `<div data-glass-body class="${esc(clusterClass)}">${items.map((item, index) => {
     const selected = index === selectedIndex;
     const title = String(item?.name || item?.title || "").trim();
-    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: "g-disambiguation-pill-media" });
+    const subtitle = String(item?.subtitle || "").trim();
+    const avatar = renderAvatar({ avatar: item?.avatar || "", initials: item?.initials || "", name: title, cls: item?.mediaClass || "g-disambiguation-pill-media" });
     const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
     const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
     const finalScale = selected ? 1 : 0.98;
@@ -120,7 +121,7 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
     if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
     if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
-    return `<div class="g-disambiguation-pill g-accent-orbit-host ${selected ? "selected" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-text">${esc(title)}</div></div>`;
+    return `<div class="g-disambiguation-pill g-accent-orbit-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
   }).join("")}</div>`;
 }
 
@@ -243,11 +244,38 @@ export function renderFlightRouteStep({
   routeRowHtml = "",
   depart = "",
   ret = "",
+  animateDepart = true,
+  animateReturn = true,
 } = {}) {
+  const renderDateValue = (value = "", animate = true) => {
+    const text = String(value || "").trim();
+    const filled = !!text;
+    const textClasses = ["flight-field-text", filled ? "is-filled" : "is-placeholder"];
+    if (animate) textClasses.push("animate-enter");
+    return `<div class="flight-date-panel-val ${filled ? "" : "placeholder"}"><span class="${textClasses.join(" ")}">${filled ? esc(text) : "&nbsp;"}</span></div>`;
+  };
   if (mode === "dates") {
-    return `<div class="flight-date-step"><div class="flight-date-route-shared">${routeRowHtml}</div><div class="flight-date-panel"><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Depart</div><div class="flight-date-panel-val ${depart ? "" : "placeholder"}">${esc(depart)}</div></div><div class="flight-date-panel-divider"></div><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Return</div><div class="flight-date-panel-val ${ret ? "" : "placeholder"}">${esc(ret)}</div></div></div></div>`;
+    return `<div class="flight-date-step"><div class="flight-date-route-shared">${routeRowHtml}</div><div class="flight-date-panel"><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Depart</div>${renderDateValue(depart, animateDepart)}</div><div class="flight-date-panel-divider"></div><div class="flight-date-panel-col"><div class="flight-date-panel-lbl">Return</div>${renderDateValue(ret, animateReturn)}</div></div></div>`;
   }
   return `<div class="flight-destination-step">${routeRowHtml}</div>`;
+}
+
+export function renderFlightRecommendationStage({
+  options = [],
+  selectedIndex = 0,
+  open = false,
+} = {}) {
+  const rows = Array.isArray(options) ? options.filter(Boolean) : [];
+  if (!rows.length) return "";
+  const renderOption = (option, index, summary = false) => {
+    const title = String(option?.title || "").trim();
+    const subtitle = String(option?.subtitle || "").trim();
+    const detail = String(option?.detail || "").trim();
+    const eyebrow = String(option?.eyebrow || "").trim();
+    const selected = index === selectedIndex;
+    return `<div class="g-flight-rec-option ${summary ? "g-flight-rec-summary" : "g-flight-rec-support"} ${selected ? "selected" : ""}" data-flight-rec-opt="${index}">${eyebrow ? `<div class="g-flight-rec-eyebrow">${esc(eyebrow)}</div>` : ""}<div class="g-flight-rec-row">${renderAvatar({ avatar: option?.avatar || "", initials: option?.initials || option?.icon || "", name: title, cls: "g-flight-rec-ava", kind: option?.avatarKind || "default" })}<div class="g-flight-rec-copy">${renderTextLine("g-flight-rec-title", title)}${renderTextLine("g-flight-rec-subtitle", subtitle)}</div>${renderTextLine("g-flight-rec-detail", detail)}</div></div>`;
+  };
+  return `<div data-glass-body class="g-flight-rec-shell ${open ? "open" : ""}">${renderOption(rows[0], 0, true)}<div class="g-flight-rec-expand">${rows.slice(1).map((option, index) => renderOption(option, index + 1, false)).join("")}</div></div>`;
 }
 
 export function renderActionRow({ actions = [], selectedIndex = 0 } = {}) {

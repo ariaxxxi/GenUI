@@ -9,6 +9,7 @@
   display: flex; flex-direction: column;
 }
 #c-rich.visible { opacity: 1; pointer-events: auto; }
+#c-rich.glass-recommendation-open { overflow: visible; }
 #c-rich.glass-active {
   top: auto;
   left: 10px;
@@ -446,9 +447,15 @@
   z-index: 2;
   flex: 0 0 auto;
 }
-.g-disambiguation-pill-text {
+.g-disambiguation-pill-copy {
   position: relative;
   z-index: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.g-disambiguation-pill-text {
   white-space: nowrap;
   font-family: 'DM Sans', sans-serif;
   font-size: 24px;
@@ -457,6 +464,16 @@
   letter-spacing: 0;
   color: rgba(255,255,255,0.72);
   transition: color 180ms var(--motion-ease), font-weight 180ms var(--motion-ease);
+}
+.g-disambiguation-pill-subtitle {
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: rgba(255,255,255,0.5);
+  transition: color 180ms var(--motion-ease);
 }
 .g-disambiguation-pill .g-ava-img {
   opacity: 0.88;
@@ -468,6 +485,30 @@
 .g-disambiguation-pill.selected .g-disambiguation-pill-text {
   color: rgba(255,255,255,1);
   font-weight: 500;
+}
+.g-disambiguation-pill.selected .g-disambiguation-pill-subtitle {
+  color: rgba(255,255,255,0.72);
+}
+.g-flight-recommendation-pills .g-disambiguation-pill {
+  height: 86px;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 32px;
+}
+.g-flight-recommendation-pills .g-disambiguation-pill-media {
+  width: 46px;
+  height: 46px;
+  border-radius: 23px;
+  font-size: 18px;
+}
+.g-flight-recommendation-pills .g-disambiguation-pill-text {
+  font-size: 22px;
+  font-weight: 560;
+}
+.g-flight-recommendation-pills .g-disambiguation-pill-subtitle {
+  font-size: 24px;
+  line-height: 1;
+  color: rgba(255,255,255,0.56);
 }
 .g-disambiguation-pills.entering .g-disambiguation-pill {
   opacity: 0;
@@ -1509,6 +1550,44 @@
   width: 100%;
   height: 100%;
 }
+.flight-destination-origin,
+.flight-destination-target,
+.flight-date-panel-val {
+  overflow: hidden;
+}
+.flight-field-text {
+  display: inline-block;
+  min-width: 0.5em;
+  will-change: opacity, transform, filter;
+}
+.flight-field-text.is-filled.animate-enter {
+  animation: flight-field-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.flight-field-text.is-placeholder.animate-enter {
+  animation: flight-field-placeholder-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes flight-field-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes flight-field-placeholder-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .flight-destination-origin {
   justify-self: center;
   font-family: 'DM Sans', sans-serif;
@@ -1645,6 +1724,136 @@ body.mode-ai .flight-destination-target.destination-placeholder-fixed {
 .flight-date-panel-val.placeholder {
   color: rgba(255,255,255,0.42);
   font-weight: 400;
+}
+.g-flight-rec-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.g-flight-rec-option {
+  position: relative;
+  border-radius: 26px;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, rgba(28,28,32,0.92) 0%, rgba(10,10,12,0.96) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 24px rgba(255,255,255,0.04);
+  transition: transform 180ms var(--motion-ease), background 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease), border-color 180ms var(--motion-ease), opacity 180ms var(--motion-ease);
+}
+.g-flight-rec-option.selected {
+  background: linear-gradient(180deg, rgba(36,36,42,0.96) 0%, rgba(6,6,10,1) 100%);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow:
+    inset 0 12px 18px rgba(255,255,255,0.12),
+    inset 0 -18px 24px rgba(0,0,0,0.48);
+}
+.g-flight-rec-summary {
+  z-index: 2;
+  padding: 2px 0 0;
+}
+.g-flight-rec-summary,
+.g-flight-rec-summary.selected {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.g-flight-rec-shell.open .g-flight-rec-summary {
+  transform: translateY(-8px);
+}
+.g-flight-rec-expand {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  transition: max-height 160ms var(--motion-ease), opacity 140ms var(--motion-ease), margin-top 160ms var(--motion-ease);
+}
+.g-flight-rec-shell.open .g-flight-rec-expand {
+  max-height: 260px;
+  opacity: 1;
+  margin-top: 8px;
+  overflow: visible;
+}
+.g-flight-rec-expand .g-flight-rec-option {
+  transform: translateY(18px) scale(0.96);
+  opacity: 0;
+}
+.g-flight-rec-support {
+  background: linear-gradient(180deg, rgba(26,26,30,0.92) 0%, rgba(8,8,10,0.98) 100%);
+}
+.g-flight-rec-shell.open .g-flight-rec-expand .g-flight-rec-option {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+.g-flight-rec-shell.open .g-flight-rec-expand .g-flight-rec-option:nth-child(1) {
+  transition-delay: 18ms;
+}
+.g-flight-rec-shell.open .g-flight-rec-expand .g-flight-rec-option:nth-child(2) {
+  transition-delay: 36ms;
+}
+.g-flight-rec-eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.52);
+  margin-bottom: 10px;
+}
+.g-flight-rec-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 14px;
+}
+.g-flight-rec-ava {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.68);
+}
+.g-flight-rec-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.g-flight-rec-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 27px;
+  font-weight: 560;
+  color: rgba(255,255,255,0.96);
+  line-height: 1;
+  white-space: nowrap;
+}
+.g-flight-rec-subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.56);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.g-flight-rec-detail {
+  justify-self: end;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.82);
+  line-height: 1;
+  white-space: nowrap;
+}
+.g-flight-rec-option:not(.selected) .g-flight-rec-title {
+  color: rgba(255,255,255,0.8);
+}
+.g-flight-rec-option:not(.selected) .g-flight-rec-detail {
+  color: rgba(255,255,255,0.5);
 }
 .flight-confirm-card {
   width: 100%;

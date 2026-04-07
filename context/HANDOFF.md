@@ -1,6 +1,194 @@
 # Handoff
 
 ## Task title
+Flight Recommendation Pill Two-Line Layout
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared disambiguation pill renderer so pills can optionally carry a second metadata line below the main label.
+- Applied that two-line layout to flight recommendation pills only, keeping the message disambiguation pills on their current single-line presentation.
+- Increased the flight pill airline thumbnail size to match the denser two-line layout.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/flight-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/flight-render.js`
+- Browser validation on `http://127.0.0.1:5174/ai.html` with Playwright:
+  - each flight pill shows time on line 1
+  - each flight pill shows airline / stops / price on line 2
+  - flight pill thumbnail size is approximately `40x40`
+  - flight pill overall height is approximately `74-75px`
+
+## Remaining issues / caveats
+- None from this pass.
+
+## Recommended next step
+1. If needed, trim the subtitle copy format to exactly match the product wording preference, for example removing the airline name and keeping only `Non-stop • $362`.
+
+## Task title
+Flight Recommendation Disambiguation Parity
+
+## Completion status
+- Completed
+
+## Summary
+- Reworked the flight recommendation step to use the same disambiguation-pill presentation model as the message flow instead of the custom nested card.
+- Restored the `Destination` placeholder text in the destination step.
+- Recommendation step now shows one selected flight pill by default and opens the other two pills on long press.
+- Removed per-option eyebrow labels such as `Recommended flight` and `Alternative`.
+- When the recommendation menu is open:
+  - the stage header is cleared
+  - the 3 options remain open after pointer release
+  - ArrowUp / ArrowDown move the selected pill
+  - `Enter` confirms the selected pill and advances to confirm
+- Long press can now start from anywhere inside the stage area instead of only on the orb.
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/flight-booking.js`
+- `node --check src/flows/flight-render.js`
+- `node --check src/flows/flight-ai.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/ai.html` with Playwright:
+  - destination step shows the `Destination` placeholder when no city is set
+  - recommendation step is `listening` shape with one pill by default
+  - long press on `#stage-wrap` opens 3 flight pills
+  - recommendation header text is empty while the menu is open
+  - releasing the pointer keeps the 3 pills open
+  - ArrowDown changes the selected pill
+  - `Enter` confirms the highlighted pill and advances to the confirm card
+
+## Remaining issues / caveats
+- None from this pass.
+
+## Recommended next step
+1. Sample one more flight destination in the live flow, then commit this recommendation interaction pass.
+
+## Task title
+Flight Recommendation Surface + Long-Press Reveal Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the nested-card look from the recommended-flight stage by making the outer card the only visible container and rendering the summary row without its own background shell.
+- Changed recommendation-stage geometry to use zero control lift, so the closed card now hugs the recommendation content instead of leaving a large outer shell around an inner card.
+- Kept the long-press alternatives visible during the hold by allowing the recommendation rich layer to overflow and by speeding up the alternatives reveal motion.
+- The extra options now appear during the hold instead of staying clipped until after the interaction ends.
+
+## Files changed
+- `src/flows/flight-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/flight-render.js`
+- Browser validation on `http://127.0.0.1:5174/ai.html` with Playwright:
+  - closed recommendation card no longer has a nested inner surface
+  - after a long press, `#c-rich` enters visible-overflow mode
+  - the two alternative flights are visible while the pointer is still held down
+
+## Remaining issues / caveats
+- The open state currently behaves like a floating three-row stack beneath the main recommendation card rather than a fully resized single-card list container. This matches the requested visibility/floating behavior, but if the product direction is to have one card body fully expand around all three rows, the card-height animation path still needs a dedicated follow-up.
+
+## Recommended next step
+1. Decide whether the recommendation-open state should remain a floating stack or be refactored into one fully expanding card body, then tune that specific animation path only.
+
+## Task title
+Flight Flow Render Scope Fixes
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the date-step text animation scope so entering depart/return dates no longer replays the entry animation for unchanged route labels like `SFO` and the destination airport code.
+- Recommendation card no longer uses the generic accent-orbit shell. It now renders as a stable dark glass card with the listening orb beneath it, which restores the intended layout and keeps the recommendation text readable.
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/ui-primitives.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/flight-booking.js`
+- `node --check src/flows/flight-render.js`
+- `node --check src/flows/ui-primitives.js`
+- Browser validation on `http://127.0.0.1:5174/ai.html` with Playwright:
+  - after entering dates, route labels (`SFO`, destination code) no longer carry the entry animation class
+  - only depart/return fields carry the entry animation class on date insertion
+  - recommendation card renders without accent-orbit markup
+  - recommendation card screenshot matches the restored compact dark-card layout with the orb below
+
+## Remaining issues / caveats
+- I did not retune typography or spacing beyond restoring the broken recommendation surface. This pass was limited to the two reported regressions.
+
+## Recommended next step
+1. Sample one more destination/date combination in the live flow to confirm the animation scope remains stable when only one of the two dates changes.
+
+## Task title
+Flight Flow Thinking Timing + Recommendation Orb Expansion
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the flight flow so entering `thinking` clears the inner rich content immediately and fully removes it after `200ms`, preventing destination/date content from lingering inside the orb.
+- Delayed rich-content reappearance by `300ms` when transitioning from `thinking` into the recommended-flight card so the card shell leads and the content fades in after the morph settles.
+- Smoothed destination and date value insertion by wrapping those values in animated text spans, so user-provided airport/date values enter with a short in-place motion instead of popping.
+- Replaced the recommendation action buttons with a listening orb interaction:
+  - default state shows only the recommended flight card plus the orb
+  - long-hold on the orb opens the two alternatives underneath the recommended flight
+  - sliding upward while holding moves the selected option
+  - releasing commits the highlighted flight and advances to confirm
+- Fixed the hold-open bug by toggling the mounted recommendation shell in place instead of re-rendering the whole step during the hold timer.
+
+## Files changed
+- `src/flows/flight-booking.js`
+- `src/flows/flight-render.js`
+- `src/flows/flight-ai.js`
+- `src/flows/ui-primitives.js`
+- `src/ai/ai-bindings.js`
+- `src/styles/ai-glass.css`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/flight-booking.js`
+- `node --check src/flows/flight-render.js`
+- `node --check src/flows/flight-ai.js`
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/ai/ai-bindings.js`
+- Browser validation on `http://127.0.0.1:5174/ai.html` with Playwright:
+  - typed flight request advances to destination/date flow
+  - date step to `thinking` hides inner content within the intended early window
+  - `thinking` to recommendation keeps content hidden until the delayed reveal
+  - recommendation stage shows no action buttons and keeps the listening orb visible
+  - holding the orb for `360ms` opens the 3-option stack
+  - upward drag changes the highlighted option
+  - release commits the highlighted option and advances to confirm with the correct flight details
+
+## Remaining issues / caveats
+- The current browser validation covered the main happy path (`book flight to tokyo`, enter dates, hold/select alternative). I did not separately re-sample every voice-parsed destination/date phrasing variant in this pass.
+
+## Recommended next step
+1. Sample one or two additional destination/date phrasings in the live flight flow to confirm the new animated value insertion still feels correct with Gemini/local-fallback variations.
+
+## Task title
 Prototype List Exit Motion Consistency
 
 ## Completion status

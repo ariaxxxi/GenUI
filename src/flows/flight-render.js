@@ -1,6 +1,7 @@
 import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
 import { normalizeFlightDateValue } from "./flight-ai.js";
+import { layoutDisambiguationPillItems, renderDisambiguationPills } from "./ui-primitives.js";
 import { clamp } from "../utils.js";
 
 export function createFlightRender({
@@ -19,6 +20,9 @@ export function createFlightRender({
   buildRouteRowHtml,
 }) {
   const THINKING_HOLD_MS = 3000;
+  const DISAMBIGUATION_ENTER_MS = 800;
+  const DISAMBIGUATION_EXIT_MS = 600;
+  const DISAMBIGUATION_ORB_SCALE = 0.625;
   const TOP = 10;
   const BOTTOM = 10;
   const MIN_H = 100;
@@ -26,6 +30,19 @@ export function createFlightRender({
   const DATE_SELECTION_STEP_GEO = { ...SHAPES["card-form"], main: { ...SHAPES["card-form"].main, h: 180, ty: -90 } };
   let controlsTrack = null;
   let confirmHeaderTrack = null;
+  let recommendationHeaderTrack = null;
+  let recommendationTimer = null;
+  let recommendationPhase = "settled";
+  let richStageToken = 0;
+  let previousStepType = "";
+  let previousRecommendationMenuOpen = false;
+  let previousVisualState = {
+    stepType: "",
+    originCode: "",
+    destinationCode: "",
+    depart: "",
+    ret: "",
+  };
 
   function contentHeightPx(html) {
     const layer = ensureMeasureLayer("flight-measure-layer");
@@ -77,6 +94,44 @@ export function createFlightRender({
     confirmHeaderTrack = requestAnimationFrame(tick);
   }
 
+  function cancelRecommendationIntentHeaderTracking() {
+    if (!recommendationHeaderTrack) return;
+    cancelAnimationFrame(recommendationHeaderTrack);
+    recommendationHeaderTrack = null;
+  }
+
+  function positionRecommendationIntentHeader() {
+    const hdr = document.getElementById("intent-header");
+    const stage = document.getElementById("stage");
+    const firstPill = document.querySelector('#c-rich [data-flight-rec-opt="0"]');
+    if (!hdr || !stage || !firstPill) {
+      positionIntentHeaderAboveMain?.();
+      return;
+    }
+    const stageRect = stage.getBoundingClientRect();
+    const pillRect = firstPill.getBoundingClientRect();
+    const hdrRect = hdr.getBoundingClientRect();
+    const headerH = Math.ceil(hdrRect.height || hdr.offsetHeight || 0);
+    const headerW = Math.ceil(hdrRect.width || hdr.offsetWidth || 0);
+    const centerX = Math.round((pillRect.left + (pillRect.width / 2)) - stageRect.left);
+    const top = Math.max(8, Math.round(pillRect.top - stageRect.top - headerH - 14));
+    hdr.style.left = `${Math.round(centerX - (headerW / 2))}px`;
+    hdr.style.top = `${top}px`;
+  }
+
+  function trackRecommendationIntentHeader(ms = 420) {
+    cancelRecommendationIntentHeaderTracking();
+    const end = performance.now() + Math.max(180, ms);
+    const tick = () => {
+      const hdr = document.getElementById("intent-header");
+      if (!hdr || !hdr.classList.contains("glass-intent") || !hdr.classList.contains("visible")) return;
+      positionRecommendationIntentHeader();
+      if (performance.now() < end) recommendationHeaderTrack = requestAnimationFrame(tick);
+      else recommendationHeaderTrack = null;
+    };
+    recommendationHeaderTrack = requestAnimationFrame(tick);
+  }
+
   function applyConfirmExpandMetrics(richRoot) {
     const shell = richRoot?.querySelector?.("[data-confirm-shell]");
     const summary = richRoot?.querySelector?.(".g-info-summary-head");
@@ -94,6 +149,36 @@ export function createFlightRender({
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: labelText,
     });
+  }
+
+  function cancelRecommendationTimer() {
+    if (!recommendationTimer) return;
+    clearTimeout(recommendationTimer);
+    recommendationTimer = null;
+  }
+
+  function recommendationDisambiguationGeo() {
+    const base = SHAPES.listening?.main || SHAPES.circle?.main || {};
+    const baseW = Number(base.w) || 80;
+    const baseH = Number(base.h) || 80;
+    const nextW = Math.round(baseW * DISAMBIGUATION_ORB_SCALE);
+    const nextH = Math.round(baseH * DISAMBIGUATION_ORB_SCALE);
+    const baseTx = Number(base.tx) || -(baseW / 2);
+    const baseTy = Number(base.ty) || -(baseH / 2);
+    return {
+      ...SHAPES.listening,
+      main: {
+        ...(SHAPES.listening?.main || {}),
+        w: nextW,
+        h: nextH,
+        br: `${Math.round(nextW / 2)}px`,
+        tx: Math.round(baseTx + ((baseW - nextW) / 2)),
+        ty: Math.round(baseTy + ((baseH - nextH) / 2)),
+        op: 1,
+      },
+      left: { ...(SHAPES.listening?.left || {}), op: 0 },
+      right: { ...(SHAPES.listening?.right || {}), op: 0 },
+    };
   }
 
   function optionRows(options) {
@@ -121,23 +206,55 @@ export function createFlightRender({
     return "Good balance of time and price.";
   }
 
-  function buildRecommendationAlternatives() {
-    const options = getFlow().currentFlightOptions?.() || [];
-    const cheapest = options.find((opt) => String(opt.sub || "").includes("$631"));
-    const nonstop = options.find((opt) => String(opt.sub || "").toLowerCase().includes("non-stop") && opt !== cheapest);
-    return [cheapest, nonstop].filter(Boolean);
+  function buildRecommendationVisualOptions() {
+    const flow = getFlow();
+    return flow.recommendationOptionsForUi?.() || [];
   }
 
-  function buildRecommendationCard() {
+  function buildRecommendationAlternatives() {
+    return buildRecommendationVisualOptions();
+  }
+
+  function buildRecommendationDisambiguationItems(open = false) {
     const flow = getFlow();
-    const option = flow.currentRecommendedFlight?.();
-    return {
-      avatar: option?.avatar || "",
-      initials: option?.avatar ? "" : (option?.icon || "✈️"),
-      title: option?.name || "Recommended flight",
-      subtitle: option?.sub || "",
-      detail: recommendationReason(option),
-    };
+    const options = flow.recommendationOptionsForUi?.() || [];
+    const visibleOptions = open ? options : options.slice(0, 1);
+    const selectedIndex = open ? flow.focused : 0;
+    return layoutDisambiguationPillItems(
+      visibleOptions.map((option) => ({
+        avatar: option?.avatar || "",
+        initials: option?.avatar ? "" : (option?.icon || "✈️"),
+        name: option?.name || "",
+        subtitle: String(option?.sub || "").replace(/Non-stop/gi, "Nonstop").trim(),
+        mediaClass: "g-disambiguation-pill-media g-disambiguation-pill-media--large",
+      })),
+      selectedIndex,
+      open ? "stack" : "fan",
+      open ? { bottomY: -82, gap: 14, itemHeight: 86 } : undefined,
+    );
+  }
+
+  function clearFlightRichStage(immediate = false) {
+    const richRoot = document.getElementById("c-rich");
+    if (!richRoot) return;
+    cancelRecommendationIntentHeaderTracking();
+    richRoot.style.opacity = "0";
+    richRoot.classList.remove("glass-recommendation-open");
+    richRoot.classList.remove("glass-disambiguation");
+    if (immediate) {
+      richRoot.classList.remove("visible", "glass-sent");
+      richRoot.innerHTML = "";
+    }
+  }
+
+  function syncRecommendationOrbChrome(step) {
+    const dropMain = document.getElementById("drop-main");
+    if (!dropMain) return;
+    const showRecommendationOrb = step?.type === "recommendation" && getFlow().recommendationMode === "recommend";
+    dropMain.classList.toggle("confirm-await-orb", false);
+    dropMain.classList.toggle("disambiguation-surface", showRecommendationOrb);
+    dropMain.classList.toggle("listening-orb", showRecommendationOrb);
+    dropMain.classList.toggle("home-glow", showRecommendationOrb);
   }
 
   function buildConfirmRows() {
@@ -184,6 +301,9 @@ export function createFlightRender({
     const flow = getFlow();
     if (step.type === "destination") {
       const dest = String(flow.data.destination || "").trim();
+      const destinationCode = dest ? flow.cityToAirport(dest) : "Destination";
+      const animateOrigin = previousVisualState.stepType !== "destination" || previousVisualState.originCode !== (flow.data.origin || "SFO");
+      const animateDestination = previousVisualState.stepType !== "destination" || previousVisualState.destinationCode !== destinationCode;
       return {
         intentHeader: "Where to?",
         layout: ["flight_route_step"],
@@ -192,8 +312,13 @@ export function createFlightRender({
             mode: "destination",
             routeRowHtml: buildRouteRowHtml(
               flow.data.origin || "SFO",
-              dest ? flow.cityToAirport(dest) : "Destination",
-              { originReady: true, destinationReady: !!dest }
+              destinationCode,
+              {
+                originReady: true,
+                destinationReady: !!dest,
+                animateOrigin,
+                animateDestination: !!dest && animateDestination,
+              }
             ),
           },
         },
@@ -201,6 +326,13 @@ export function createFlightRender({
     }
     if (step.type === "dates") {
       const destination = String(flow.data.destination || "").trim();
+      const destinationCode = destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?";
+      const depart = normalizeFlightDateValue(flow.data.depart) || "";
+      const ret = normalizeFlightDateValue(flow.data.return) || "";
+      const animateRouteOrigin = previousVisualState.stepType !== "dates" || previousVisualState.originCode !== (flow.data.origin || "SFO");
+      const animateRouteDestination = previousVisualState.stepType !== "dates" || previousVisualState.destinationCode !== destinationCode;
+      const animateDepart = previousVisualState.stepType !== "dates" || previousVisualState.depart !== depart;
+      const animateReturn = previousVisualState.stepType !== "dates" || previousVisualState.ret !== ret;
       return {
         intentHeader: "When?",
         layout: ["flight_route_step"],
@@ -209,11 +341,18 @@ export function createFlightRender({
             mode: "dates",
             routeRowHtml: buildRouteRowHtml(
               flow.data.origin,
-              destination ? flow.cityToAirport(flow.data.destination || "") : "Where to?",
-              { originReady: true, destinationReady: !!destination }
+              destinationCode,
+              {
+                originReady: true,
+                destinationReady: !!destination,
+                animateOrigin: animateRouteOrigin,
+                animateDestination: !!destination && animateRouteDestination,
+              }
             ),
-            depart: normalizeFlightDateValue(flow.data.depart) || "",
-            ret: normalizeFlightDateValue(flow.data.return) || "",
+            depart,
+            ret,
+            animateDepart: !!depart && animateDepart,
+            animateReturn: !!ret && animateReturn,
           },
         },
       };
@@ -237,24 +376,14 @@ export function createFlightRender({
           wrapBody: true,
           bodyClass: "g-flight-content-pad",
           props: {
-            selection_list: optionRows(buildRecommendationAlternatives()),
+            selection_list: optionRows(buildRecommendationVisualOptions()),
           },
         };
       }
       return {
-        intentHeader: "Recommended flight",
-        layout: ["info_card"],
-        wrapBody: true,
-        bodyClass: "g-flight-content-pad",
-        props: {
-          info_card: buildRecommendationCard(),
-        },
-        actions: [
-          { id: "confirm", emoji: "✅" },
-          { id: "alternatives", emoji: "🔄" },
-          { id: "cancel", emoji: "❌" },
-        ],
-        actionSelectedIndex: flow.focused,
+        intentHeader: flow.recommendationMenuOpen ? "" : "Recommended flight",
+        layout: [],
+        props: {},
       };
     }
     if (step.type === "thinking") {
@@ -296,6 +425,10 @@ export function createFlightRender({
     const flow = getFlow();
     const step = flow.step();
     const screenSpec = buildScreenSpec(step);
+    const stageToken = ++richStageToken;
+    const enteringFromThinking = previousStepType === "thinking" && step.type !== "thinking";
+    const enteringRecommendation = step.type === "recommendation" && previousStepType !== "recommendation";
+    const openingRecommendationMenu = step.type === "recommendation" && !!flow.recommendationMenuOpen && !previousRecommendationMenuOpen;
     const stageEl = document.getElementById("stage");
     const isDestinationStep = step.type === "destination";
     const isDatesStep = step.type === "dates";
@@ -309,8 +442,39 @@ export function createFlightRender({
     flow.C.thumb.style.opacity = "0";
     if (isDestinationStep || isDatesStep) startCommandListening?.();
     const shouldRenderInsideShell = step.shape !== "magic";
-    const html = shouldRenderInsideShell ? renderScreenMarkup(screenSpec) : "";
+    const customRecommendationHtml = step.type === "recommendation" && flow.recommendationMode === "recommend"
+      ? renderDisambiguationPills({
+        phase: openingRecommendationMenu || enteringRecommendation ? recommendationPhase : "settled",
+        selectedIndex: openingRecommendationMenu ? flow.focused : 0,
+        items: buildRecommendationDisambiguationItems(!!flow.recommendationMenuOpen),
+        rowDataAttr: "data-flight-rec-opt",
+        clusterClass: "g-disambiguation-pills g-flight-recommendation-pills",
+      })
+      : "";
+    const html = customRecommendationHtml || (shouldRenderInsideShell ? renderScreenMarkup(screenSpec) : "");
+    if (step.type === "recommendation" && flow.recommendationMode === "recommend") {
+      if (openingRecommendationMenu || enteringRecommendation) {
+        recommendationPhase = "entering";
+        cancelRecommendationTimer();
+        recommendationTimer = setTimeout(() => {
+          recommendationTimer = null;
+          if (getFlow().step().type !== "recommendation" || !getFlow().active) return;
+          recommendationPhase = "settled";
+          renderStep(true);
+        }, DISAMBIGUATION_ENTER_MS);
+      } else {
+        recommendationPhase = "settled";
+      }
+    } else {
+      recommendationPhase = "settled";
+      cancelRecommendationTimer();
+    }
     if (step.type === "thinking") {
+      clearFlightRichStage(false);
+      setTimeout(() => {
+        if (stageToken !== richStageToken) return;
+        clearFlightRichStage(true);
+      }, 200);
       addChatBubble("ai", "Searching flights...");
       flow.setThinkingTimer(setTimeout(() => { flow.setThinkingTimer(null); flow.nextStep(true); }, THINKING_HOLD_MS));
     }
@@ -324,7 +488,7 @@ export function createFlightRender({
     } else if (step.type === "recommendation" && flow.recommendationMode === "alternatives") {
       morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
     } else if (step.type === "recommendation") {
-      morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html));
+      morphTo("listening", { icon: "", primary: "", secondary: "", detail: "" }, recommendationDisambiguationGeo());
     } else if (step.type === "confirm") {
       morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html, { controlsLift: flow.showConfirmDetails ? 0 : 78, maxHeight: confirmSafeMaxHeight() }));
     } else if (step.type === "done") {
@@ -332,21 +496,52 @@ export function createFlightRender({
     } else if (step.shape === "magic") {
       morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
     }
+    syncRecommendationOrbChrome(step);
     if (html) {
+      const richRevealDelayMs = enteringFromThinking ? 300 : (previousStepType === step.type ? 0 : 180);
       setTimeout(() => {
+        if (stageToken !== richStageToken) return;
         const richRoot = document.getElementById("c-rich");
         if (!richRoot) return;
         richRoot.style.opacity = "0";
-        composeScreen({
-          documentRef: document,
-          richRoot,
-          controlsRoot: document.getElementById("glass-controls-layer"),
-          setIntentHeader,
-          hideIntentHeader,
-          positionIntentHeaderAboveMain,
-          trackIntentHeaderForTransition,
-          spec: screenSpec,
-        });
+        richRoot.classList.toggle("glass-recommendation-open", step.type === "recommendation" && !!flow.recommendationMenuOpen);
+        richRoot.classList.toggle("glass-disambiguation", step.type === "recommendation" && flow.recommendationMode === "recommend");
+        if (customRecommendationHtml) {
+          richRoot.innerHTML = customRecommendationHtml;
+          richRoot.classList.add("visible");
+          richRoot.classList.remove("glass-sent");
+          if (screenSpec.intentHeader) {
+            setIntentHeader?.(screenSpec.intentHeader, null);
+            document.getElementById("intent-header")?.classList.add("glass-intent");
+            if (step.type === "recommendation" && !flow.recommendationMenuOpen) {
+              positionRecommendationIntentHeader();
+              trackRecommendationIntentHeader(DISAMBIGUATION_ENTER_MS);
+            } else {
+              positionIntentHeaderAboveMain?.();
+              trackIntentHeaderForTransition?.();
+            }
+          } else {
+            hideIntentHeader?.();
+            const headerEl = document.getElementById("intent-header");
+            if (headerEl) headerEl.textContent = "";
+          }
+          const controlsRoot = document.getElementById("glass-controls-layer");
+          if (controlsRoot) {
+            controlsRoot.innerHTML = "";
+            controlsRoot.classList.remove("visible");
+          }
+        } else {
+          composeScreen({
+            documentRef: document,
+            richRoot,
+            controlsRoot: document.getElementById("glass-controls-layer"),
+            setIntentHeader,
+            hideIntentHeader,
+            positionIntentHeaderAboveMain,
+            trackIntentHeaderForTransition,
+            spec: screenSpec,
+          });
+        }
         richRoot.classList.add("visible");
         richRoot.classList.toggle("glass-sent", step.type === "done");
         richRoot.style.transform = step.type === "done" ? "translateY(-18px)" : "";
@@ -408,18 +603,56 @@ export function createFlightRender({
             };
           }
         }
-      }, 180);
+      }, richRevealDelayMs);
     } else {
       hideIntentHeader?.();
     }
     if (!skipGreet && step.aiGreet) addChatBubble("ai", step.aiGreet);
     if (step.type === "done") setTimeout(() => flow.resetToHome(), 2800);
+    previousVisualState = {
+      stepType: step.type,
+      originCode: flow.data.origin || "SFO",
+      destinationCode: flow.data.destination ? flow.cityToAirport(flow.data.destination || "") : (step.type === "destination" ? "Destination" : "Where to?"),
+      depart: normalizeFlightDateValue(flow.data.depart) || "",
+      ret: normalizeFlightDateValue(flow.data.return) || "",
+    };
+    previousRecommendationMenuOpen = step.type === "recommendation" && !!flow.recommendationMenuOpen;
+    previousStepType = step.type;
   }
 
   function syncConfirmFocusUi(focused) {
     const shell = document.querySelector("[data-confirm-shell]");
     if (shell) shell.classList.toggle("focused", getFlow().showConfirmDetails || focused === 2);
     document.querySelectorAll("#glass-controls-layer .g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === focused));
+  }
+
+  function updateRecommendationSelectionUi(focused) {
+    document.querySelectorAll("#c-rich [data-flight-rec-opt]").forEach((row, idx) => row.classList.toggle("selected", idx === focused));
+  }
+
+  function updateRecommendationMenuUi(open = false, focused = getFlow().focused) {
+    const richRoot = document.getElementById("c-rich");
+    if (!richRoot) return false;
+    richRoot?.classList.toggle("glass-recommendation-open", !!open);
+    richRoot?.classList.toggle("glass-disambiguation", !!open);
+    updateRecommendationSelectionUi(focused);
+    return true;
+  }
+
+  function animateRecommendationExit(selectedIndex = 0) {
+    cancelRecommendationTimer();
+    recommendationPhase = "settled";
+    const richRoot = document.getElementById("c-rich");
+    if (!richRoot) return false;
+    const cluster = richRoot.querySelector(".g-disambiguation-pills:not(.exiting-to-compose)");
+    if (!cluster) return false;
+    updateRecommendationSelectionUi(selectedIndex);
+    cluster.classList.remove("entering", "settled");
+    cluster.classList.add("exiting-to-compose");
+    richRoot.classList.add("visible");
+    richRoot.classList.add("glass-disambiguation");
+    richRoot.classList.add("glass-recommendation-open");
+    return true;
   }
 
   function getConfirmScrollContainer() {
@@ -437,5 +670,5 @@ export function createFlightRender({
     if (node) node.scrollTop = 0;
   }
 
-  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildScreenSpec, renderStep, syncConfirmFocusUi, getConfirmScrollContainer, scrollConfirmDetails, resetConfirmScroll };
+  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, DISAMBIGUATION_EXIT_MS, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildRecommendationVisualOptions, buildScreenSpec, renderStep, syncConfirmFocusUi, updateRecommendationSelectionUi, updateRecommendationMenuUi, animateRecommendationExit, getConfirmScrollContainer, scrollConfirmDetails, resetConfirmScroll };
 }
