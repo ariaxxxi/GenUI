@@ -98,7 +98,8 @@ export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, var
 
 export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
-  return `<div data-glass-body class="${esc(clusterClass)}">${items.map((item, index) => {
+  const phaseClass = phase === "entering" ? "entering" : "settled";
+  return `<div data-glass-body class="${esc(clusterClass)} ${phaseClass}">${items.map((item, index) => {
     const selected = index === selectedIndex;
     const title = String(item?.name || item?.title || "").trim();
     const subtitle = String(item?.subtitle || "").trim();
@@ -170,6 +171,37 @@ export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = f
     if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
     return `<div class="g-compose-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}"${styleAttr}>${renderAccentOrbitChrome()}<span class="g-compose-chip-label">${esc(chip.label || "")}</span></div>`;
+  }).join("")}</div>`;
+}
+
+export function renderFlightRecommendationChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 1 } = {}) {
+  const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
+  return `<div data-glass-body class="g-flight-recommendation-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
+    const accentRgb = String(chip?.accentRgb || "244 247 255").trim();
+    const accentSecondaryRgb = String(chip?.accentSecondaryRgb || accentRgb).trim();
+    const orbitMs = Number.isFinite(Number(chip?.orbitMs)) ? Math.max(600, Math.round(Number(chip.orbitMs))) : null;
+    const motion = composeChipMotionVars(index);
+    const styleVars = [
+      `--chip-order:${motion.order}`,
+      `--chip-rot-start:${motion.rotStart}deg`,
+      `--chip-rot-end:${motion.rotEnd}deg`,
+      `--chip-travel-start:${motion.travelStart}px`,
+      `--chip-travel-end:${motion.travelEnd}px`,
+    ];
+    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
+    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
+    const title = String(chip?.name || chip?.title || "").trim();
+    const subtitle = String(chip?.subtitle || "").trim();
+    const avatar = renderAvatar({
+      avatar: chip?.avatar || "",
+      initials: chip?.initials || "",
+      name: title,
+      cls: chip?.mediaClass || "g-disambiguation-pill-media g-disambiguation-pill-media--large",
+      kind: chip?.avatarKind || "logo",
+    });
+    return `<div class="g-flight-recommendation-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
   }).join("")}</div>`;
 }
 

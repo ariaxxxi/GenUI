@@ -347,7 +347,9 @@ export function createFlightBookingFlow(ctx) {
       flow.recommendationHoldTimer = null;
       if (!flow.active || step().type !== "recommendation" || !flow.recommendationMenuHolding) return;
       flow.recommendationMenuOpen = true;
-      render.renderStep(true);
+      if (!render.updateRecommendationMenuUi?.(true, flow.focused)) {
+        render.renderStep(true);
+      }
     }, RECOMMENDATION_HOLD_MS);
     return true;
   }

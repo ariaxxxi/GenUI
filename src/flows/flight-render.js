@@ -1,7 +1,7 @@
 import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
 import { normalizeFlightDateValue } from "./flight-ai.js";
-import { layoutDisambiguationPillItems, renderDisambiguationPills } from "./ui-primitives.js";
+import { renderFlightRecommendationChipStack } from "./ui-primitives.js";
 import { clamp } from "../utils.js";
 
 export function createFlightRender({
@@ -31,8 +31,6 @@ export function createFlightRender({
   let controlsTrack = null;
   let confirmHeaderTrack = null;
   let recommendationHeaderTrack = null;
-  let recommendationTimer = null;
-  let recommendationPhase = "settled";
   let richStageToken = 0;
   let previousStepType = "";
   let previousRecommendationMenuOpen = false;
@@ -151,12 +149,6 @@ export function createFlightRender({
     });
   }
 
-  function cancelRecommendationTimer() {
-    if (!recommendationTimer) return;
-    clearTimeout(recommendationTimer);
-    recommendationTimer = null;
-  }
-
   function recommendationDisambiguationGeo() {
     const base = SHAPES.listening?.main || SHAPES.circle?.main || {};
     const baseW = Number(base.w) || 80;
@@ -215,23 +207,19 @@ export function createFlightRender({
     return buildRecommendationVisualOptions();
   }
 
-  function buildRecommendationDisambiguationItems(open = false) {
+  function buildRecommendationChipItems() {
     const flow = getFlow();
     const options = flow.recommendationOptionsForUi?.() || [];
-    const visibleOptions = open ? options : options.slice(0, 1);
-    const selectedIndex = open ? flow.focused : 0;
-    return layoutDisambiguationPillItems(
-      visibleOptions.map((option) => ({
-        avatar: option?.avatar || "",
-        initials: option?.avatar ? "" : (option?.icon || "✈️"),
-        name: option?.name || "",
-        subtitle: String(option?.sub || "").replace(/Non-stop/gi, "Nonstop").trim(),
-        mediaClass: "g-disambiguation-pill-media g-disambiguation-pill-media--large",
-      })),
-      selectedIndex,
-      open ? "stack" : "fan",
-      open ? { bottomY: -82, gap: 14, itemHeight: 86 } : undefined,
-    );
+    return options.map((option) => ({
+      avatar: option?.avatar || "",
+      avatarKind: option?.avatarKind || "logo",
+      initials: option?.avatar ? "" : (option?.icon || "✈️"),
+      name: option?.name || "",
+      subtitle: String(option?.sub || "").replace(/Non-stop/gi, "Nonstop").trim(),
+      mediaClass: "g-disambiguation-pill-media g-disambiguation-pill-media--large",
+      accentRgb: "244 247 255",
+      accentSecondaryRgb: "255 255 255",
+    }));
   }
 
   function clearFlightRichStage(immediate = false) {
@@ -427,8 +415,6 @@ export function createFlightRender({
     const screenSpec = buildScreenSpec(step);
     const stageToken = ++richStageToken;
     const enteringFromThinking = previousStepType === "thinking" && step.type !== "thinking";
-    const enteringRecommendation = step.type === "recommendation" && previousStepType !== "recommendation";
-    const openingRecommendationMenu = step.type === "recommendation" && !!flow.recommendationMenuOpen && !previousRecommendationMenuOpen;
     const stageEl = document.getElementById("stage");
     const isDestinationStep = step.type === "destination";
     const isDatesStep = step.type === "dates";
@@ -443,32 +429,15 @@ export function createFlightRender({
     if (isDestinationStep || isDatesStep) startCommandListening?.();
     const shouldRenderInsideShell = step.shape !== "magic";
     const customRecommendationHtml = step.type === "recommendation" && flow.recommendationMode === "recommend"
-      ? renderDisambiguationPills({
-        phase: openingRecommendationMenu || enteringRecommendation ? recommendationPhase : "settled",
-        selectedIndex: openingRecommendationMenu ? flow.focused : 0,
-        items: buildRecommendationDisambiguationItems(!!flow.recommendationMenuOpen),
-        rowDataAttr: "data-flight-rec-opt",
-        clusterClass: "g-disambiguation-pills g-flight-recommendation-pills",
+      ? renderFlightRecommendationChipStack({
+        chips: buildRecommendationChipItems(),
+        selectedIndex: flow.recommendationMenuOpen ? flow.focused : 0,
+        open: !!flow.recommendationMenuOpen,
+        closing: false,
+        visibleCount: flow.recommendationMenuOpen ? buildRecommendationVisualOptions().length : 1,
       })
       : "";
     const html = customRecommendationHtml || (shouldRenderInsideShell ? renderScreenMarkup(screenSpec) : "");
-    if (step.type === "recommendation" && flow.recommendationMode === "recommend") {
-      if (openingRecommendationMenu || enteringRecommendation) {
-        recommendationPhase = "entering";
-        cancelRecommendationTimer();
-        recommendationTimer = setTimeout(() => {
-          recommendationTimer = null;
-          if (getFlow().step().type !== "recommendation" || !getFlow().active) return;
-          recommendationPhase = "settled";
-          renderStep(true);
-        }, DISAMBIGUATION_ENTER_MS);
-      } else {
-        recommendationPhase = "settled";
-      }
-    } else {
-      recommendationPhase = "settled";
-      cancelRecommendationTimer();
-    }
     if (step.type === "thinking") {
       clearFlightRichStage(false);
       setTimeout(() => {
@@ -505,7 +474,7 @@ export function createFlightRender({
         if (!richRoot) return;
         richRoot.style.opacity = "0";
         richRoot.classList.toggle("glass-recommendation-open", step.type === "recommendation" && !!flow.recommendationMenuOpen);
-        richRoot.classList.toggle("glass-disambiguation", step.type === "recommendation" && flow.recommendationMode === "recommend");
+        richRoot.classList.toggle("glass-disambiguation", false);
         if (customRecommendationHtml) {
           richRoot.innerHTML = customRecommendationHtml;
           richRoot.classList.add("visible");
@@ -633,24 +602,51 @@ export function createFlightRender({
   function updateRecommendationMenuUi(open = false, focused = getFlow().focused) {
     const richRoot = document.getElementById("c-rich");
     if (!richRoot) return false;
+    const stack = richRoot.querySelector(".g-flight-recommendation-chip-stack");
+    if (!stack) return false;
+    const chips = Array.from(stack.querySelectorAll(".g-flight-recommendation-chip"));
+    const previousStackRect = stack.getBoundingClientRect();
+    stack.classList.toggle("open", !!open);
+    stack.classList.remove("closing");
+    stack.dataset.visibleCount = String(open ? chips.length : 1);
+    chips.forEach((chip, idx) => {
+      chip.classList.toggle("is-visible", idx < (open ? chips.length : 1));
+      chip.classList.toggle("selected", idx === focused);
+    });
+    const nextStackRect = stack.getBoundingClientRect();
+    const deltaY = previousStackRect.top - nextStackRect.top;
+    if (Math.abs(deltaY) >= 1) {
+      stack.style.transition = "none";
+      stack.style.transform = `translate(-50%, ${deltaY}px)`;
+      stack.getBoundingClientRect();
+      stack.style.transition = "";
+      stack.style.transform = "";
+    }
     richRoot?.classList.toggle("glass-recommendation-open", !!open);
-    richRoot?.classList.toggle("glass-disambiguation", !!open);
+    richRoot?.classList.toggle("glass-disambiguation", false);
+    if (open) {
+      hideIntentHeader?.();
+    } else if (getFlow().step().type === "recommendation") {
+      setIntentHeader?.("Recommended flight", null);
+      document.getElementById("intent-header")?.classList.add("glass-intent");
+      positionRecommendationIntentHeader();
+      trackRecommendationIntentHeader();
+    }
     updateRecommendationSelectionUi(focused);
     return true;
   }
 
   function animateRecommendationExit(selectedIndex = 0) {
-    cancelRecommendationTimer();
-    recommendationPhase = "settled";
     const richRoot = document.getElementById("c-rich");
     if (!richRoot) return false;
-    const cluster = richRoot.querySelector(".g-disambiguation-pills:not(.exiting-to-compose)");
-    if (!cluster) return false;
-    updateRecommendationSelectionUi(selectedIndex);
-    cluster.classList.remove("entering", "settled");
-    cluster.classList.add("exiting-to-compose");
+    const stack = richRoot.querySelector(".g-flight-recommendation-chip-stack");
+    if (!stack) return false;
+    const chips = Array.from(stack.querySelectorAll(".g-flight-recommendation-chip"));
+    if (!chips.length) return false;
+    chips.forEach((chip, idx) => chip.classList.toggle("selected", idx === selectedIndex));
+    stack.classList.remove("open");
+    stack.classList.add("closing");
     richRoot.classList.add("visible");
-    richRoot.classList.add("glass-disambiguation");
     richRoot.classList.add("glass-recommendation-open");
     return true;
   }
