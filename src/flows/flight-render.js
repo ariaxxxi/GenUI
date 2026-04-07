@@ -190,12 +190,13 @@ export function createFlightRender({
   }
 
   function recommendationReason(option) {
-    const text = String(option?.sub || "").toLowerCase();
-    if (/\$\d/.test(text)) {
-      if (text.includes("$631")) return "Best price for this trip.";
-      if (text.includes("non-stop")) return "Fastest nonstop option.";
-    }
-    return "Good balance of time and price.";
+    const flow = getFlow();
+    const options = flow.recommendationOptionsForUi?.() || [];
+    const idx = options.findIndex((entry) => String(entry?.name || "") === String(option?.name || ""));
+    if (idx === 0) return "Best price";
+    if (idx === 1) return "Shortest time";
+    if (idx === 2) return "Free cancel";
+    return "";
   }
 
   function buildRecommendationVisualOptions() {
@@ -210,12 +211,15 @@ export function createFlightRender({
   function buildRecommendationChipItems() {
     const flow = getFlow();
     const options = flow.recommendationOptionsForUi?.() || [];
-    return options.map((option) => ({
+    return options.map((option, index) => ({
       avatar: option?.avatar || "",
       avatarKind: option?.avatarKind || "logo",
       initials: option?.avatar ? "" : (option?.icon || "✈️"),
-      name: option?.name || "",
-      subtitle: String(option?.sub || "").replace(/Non-stop/gi, "Nonstop").trim(),
+      name: option?.outbound ? `${option.outbound.departTime || ""} - ${option.outbound.arriveTime || ""}`.trim() : (option?.name || ""),
+      reason: recommendationReason(option),
+      stops: String(option?.stops || "").replace(/Non-stop/gi, "Nonstop"),
+      price: String(option?.price || "").trim(),
+      priceColor: index === 0 ? "green" : (index === 1 ? "white" : "orange"),
       mediaClass: "g-disambiguation-pill-media g-disambiguation-pill-media--large",
       accentRgb: "244 247 255",
       accentSecondaryRgb: "255 255 255",
@@ -369,7 +373,7 @@ export function createFlightRender({
         };
       }
       return {
-        intentHeader: flow.recommendationMenuOpen ? "" : "Recommended flight",
+        intentHeader: "",
         layout: [],
         props: {},
       };
@@ -473,7 +477,7 @@ export function createFlightRender({
         const richRoot = document.getElementById("c-rich");
         if (!richRoot) return;
         richRoot.style.opacity = "0";
-        richRoot.classList.toggle("glass-recommendation-open", step.type === "recommendation" && !!flow.recommendationMenuOpen);
+        richRoot.classList.toggle("glass-recommendation-open", step.type === "recommendation" && flow.recommendationMode === "recommend");
         richRoot.classList.toggle("glass-disambiguation", false);
         if (customRecommendationHtml) {
           richRoot.innerHTML = customRecommendationHtml;
@@ -622,7 +626,7 @@ export function createFlightRender({
       stack.style.transition = "";
       stack.style.transform = "";
     }
-    richRoot?.classList.toggle("glass-recommendation-open", !!open);
+    richRoot?.classList.toggle("glass-recommendation-open", getFlow().step().type === "recommendation" && getFlow().recommendationMode === "recommend");
     richRoot?.classList.toggle("glass-disambiguation", false);
     if (open) {
       hideIntentHeader?.();

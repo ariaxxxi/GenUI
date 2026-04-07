@@ -13,6 +13,15 @@ function renderTextLine(cls, value) {
   return `<div class="${cls}">${esc(text)}</div>`;
 }
 
+function renderFlightMetaRow(stops = "", price = "", priceColor = "") {
+  const stopText = String(stops || "").trim();
+  const priceText = String(price || "").trim();
+  if (!stopText && !priceText) return "";
+  const priceCls = ["g-flight-recommendation-chip-price"];
+  if (priceColor) priceCls.push(`is-${String(priceColor).trim()}`);
+  return `<div class="g-flight-recommendation-chip-meta">${stopText ? `<span class="g-flight-recommendation-chip-stops">${esc(stopText)}</span>` : ""}${priceText ? `<span class="${priceCls.join(" ")}">${esc(priceText)}</span>` : ""}</div>`;
+}
+
 function renderAvatar({ avatar = "", initials = "", name = "", cls = "g-ava", kind = "default" } = {}) {
   const trimmedAvatar = String(avatar || "").trim();
   const finalCls = `${cls}${kind === "logo" ? ` ${cls}--logo` : ""}`;
@@ -193,7 +202,7 @@ export function renderFlightRecommendationChipStack({ chips = [], selectedIndex 
     if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
     const title = String(chip?.name || chip?.title || "").trim();
-    const subtitle = String(chip?.subtitle || "").trim();
+    const reason = String(chip?.reason || "").trim();
     const avatar = renderAvatar({
       avatar: chip?.avatar || "",
       initials: chip?.initials || "",
@@ -201,7 +210,7 @@ export function renderFlightRecommendationChipStack({ chips = [], selectedIndex 
       cls: chip?.mediaClass || "g-disambiguation-pill-media g-disambiguation-pill-media--large",
       kind: chip?.avatarKind || "logo",
     });
-    return `<div class="g-flight-recommendation-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
+    return `<div class="g-flight-recommendation-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderAccentOrbitChrome()}${renderTextLine("g-flight-recommendation-chip-reason", reason)}<div class="g-flight-recommendation-chip-main">${avatar}<div class="g-flight-recommendation-chip-body">${renderTextLine("g-disambiguation-pill-text", title)}${renderFlightMetaRow(chip?.stops || "", chip?.price || "", chip?.priceColor || "")}</div></div></div>`;
   }).join("")}</div>`;
 }
 
