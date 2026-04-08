@@ -1,6 +1,580 @@
 # Handoff
 
 ## Task title
+Child Bubble Icon Disc Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the inner white circular background from functional child bubble icons.
+- Kept only the outer Figma-style child container shell.
+- Switched child icon rendering to transparent inner backgrounds and normalized dark icon colors to white so they remain visible on the darker shell.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Image-based child bubbles such as Spotify playlist covers still render as images rather than icon glyphs, so this change mainly affects the functional-icon children.
+
+## Recommended next step
+1. If any specific child icon still feels too dim, tune its `fg` color in the bubble config rather than reintroducing an inner background.
+
+## Task title
+Figma Prototype Container Style Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the previous white-shell pill/container styling with the Figma node `484:52` treatment for both pill bubbles and child bubble containers.
+- Applied these container values:
+  - border `1px solid rgba(255,255,255,0.36)`
+  - background `rgba(255,255,255,0.05)`
+  - inset shadow `0 0 20px rgba(255,255,255,0.15)`
+- Restored pill text and trailing action color to white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Child bubbles still keep the existing outer drop shadow in addition to the new Figma-style inset shell.
+
+## Recommended next step
+1. If you want the shell to match Figma even more tightly, remove or retune the extra outer drop shadow on child containers.
+
+## Task title
+Spotify Pause Control Size Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the Spotify pill pause control to `40px`.
+- Expanded the reserved right-side padding for pills with trailing actions so the larger pause icon does not collide with text.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The larger pause icon is still positioned with the existing `right: 18px` offset.
+
+## Recommended next step
+1. If the larger icon feels too close to the pill edge, increase the right offset in a separate pass.
+
+## Task title
+Prototype-Style Pill And Child Containers
+
+## Completion status
+- Completed
+
+## Summary
+- Updated pill containers to a white prototype-style shell in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- Changed pill text and action colors to dark values so they remain legible on the white container.
+- Updated child bubble containers to use the same white shell treatment.
+- Scaled the inner content of child bubbles down to `0.88` so the white container remains visible around the edge.
+- Scaled the inner bubble content of expanded pill bubbles down to `0.9` so the bubble appears inset inside the pill container.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass changes the visual treatment of all pill containers, not just Spotify.
+
+## Recommended next step
+1. If the white container feels too flat, add a subtle outer stroke or shadow tuned against the black canvas in a separate pass.
+
+## Task title
+Bootstrap Pause Icon In Spotify Pill
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the Spotify pill pause glyph with the requested Bootstrap Icons markup:
+  - `<i class="bi bi-pause-fill"></i>`
+- Added the Bootstrap Icons stylesheet to `bubble.html`.
+- Set the trailing pause control to `24 x 24` in `src/styles/bubble-page.css`.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The pause icon now depends on the Bootstrap Icons CDN being reachable in the browser.
+
+## Recommended next step
+1. If external icon font dependency is a concern, replace the Bootstrap Icon with a local asset or inline SVG in a separate pass.
+
+## Task title
+Non-Pill Hover Stroke
+
+## Completion status
+- Completed
+
+## Summary
+- Added a white hover stroke for main bubbles that are not pills.
+- Applied the stroke on the bubble surface layer so it follows the circular shape cleanly and does not affect pill bubbles.
+- Added a short box-shadow transition for smoother stroke appearance.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The stroke is currently `2px` white inset and applies only to hovered non-pill main bubbles, not child bubbles.
+
+## Recommended next step
+1. If you want the stroke to feel softer, reduce opacity or add a subtle outer glow in a separate pass.
+
+## Task title
+Spotify Pill Spacing + Pause Action
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main Spotify bubble image in `src/bubble-page.js` to:
+  - `https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3`
+- Changed Spotify pill copy to:
+  - title `Happiness`
+  - subtitle `1975`
+- Set pill title/subtitle spacing to an explicit `2px` gap.
+- Added a right-aligned pause icon inside the Spotify pill, vertically centered.
+- Updated the bottom-right Spotify badge overlay to use the provided Spotify icon image asset.
+- Added a bubble-specific hover exception so Spotify does not scale up while hovered when it expands into a pill.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The Spotify badge is still custom CSS rather than an image asset, so it is visually aligned with the existing badge system rather than pixel-matched to a sourced icon file.
+
+## Recommended next step
+1. If you want the badge to match a specific Spotify icon asset exactly, provide that asset and swap it into the `spotify-badge` renderer.
+
+## Task title
+Hovered App Scale + Sibling Fade Tuning
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main bubble hover state in `src/bubble-page.js` so the active app bubble scales to `1.1`.
+- Added a soft fade for non-hovered main bubbles while a bubble is hovered:
+  - sibling opacity `0.9`
+- Kept the stronger branch dimming behavior unchanged when a child menu is open.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Child bubble hover scale remains `1.08`.
+
+## Recommended next step
+1. If the larger hover state starts crowding nearby pills, retune push strength or default bubble gap in a separate pass.
+
+## Task title
+Child Fan Sibling Gap Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the spacing logic between sibling child bubbles in `src/bubble-page.js`.
+- Replaced the fixed fan-angle presets with a size-aware angle calculation based on child diameter, fan radius, and a required edge gap.
+- Added `CHILD_SIBLING_GAP = 14` so adjacent child bubbles keep visible separation instead of touching at the edges.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass guarantees separation mathematically in the fan layout, but it does not retune branch placement against the outer canvas edge.
+
+## Recommended next step
+1. If branches now feel too wide near the frame edge, reduce `CHILD_BUBBLE_SCALE` or make `CHILD_FAN_DISTANCE` adaptive by child count.
+
+## Task title
+Parent-Scaled Child Bubble Sizing
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the fixed child bubble size with a parent-relative rule in `src/bubble-page.js`.
+- Child bubbles now render at `0.7` of their parent bubble's larger dimension instead of using a shared static size.
+- Updated both fan-out layout math and child render sizing to use the per-parent computed size so spacing, collision, and animation stay consistent.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Child branch spacing still uses the existing fixed `CHILD_FAN_DISTANCE` and `CHILD_LAYOUT_GAP`, so very large parents will produce noticeably larger child branches.
+
+## Recommended next step
+1. If the larger branches feel too loose on the biggest parent bubbles, scale `CHILD_FAN_DISTANCE` by parent size as a separate pass.
+
+## Task title
+Figma Geometry + Bootstrap Child Icon Pass
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main bubble positions and sizes in `src/bubble-page.js` from Figma node `1261:561` geometry rather than the previous screenshot-tuned values.
+- Kept the two profile bubbles on local assets:
+  - bubble `5` -> `assets/profile1.png`
+  - bubble `9` -> `assets/profile2.png`
+- Updated the shell dimensions and orb anchor in CSS to the Figma frame/orb values:
+  - canvas `420 x 410.337`
+  - orb anchor `left: 173.999725`, `top: 332.144043`, `size: 73 x 72`
+- Swapped the orb visual in `bubble.html` to the Figma orb asset so the resting orb matches the current bubble layout source.
+- Changed the health pill copy so it only shows the step text:
+  - title `10,243 steps`
+  - no subtitle
+- Updated Spotify child bubbles to the requested playlist covers:
+  - `https://misc.scdn.co/liked-songs/liked-songs-300.jpg`
+  - `https://www.indieground.net/images/blog/2024/indieblog-best-album-covers-2010s-07.jpg`
+  - `https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg`
+- Replaced child action icon markup with Bootstrap-style filled SVG icons.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `bubble.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- `curl -I http://localhost:8791/bubble`
+
+## Remaining issues / caveats
+- This pass uses the Figma MCP geometry and asset URLs already fetched for node `1261:561`, but I did not run an automated visual diff against the Figma screenshot in this turn.
+- Main bubble icons are still image assets from Figma or local files where requested. The Bootstrap filled-icon swap applies to the child action bubbles.
+
+## Recommended next step
+1. If a stricter visual pass is needed, run a screenshot comparison against the current Figma node and nudge any remaining sub-pixel offsets in the main bubble coordinates.
+
+## Task title
+Screenshot-Matched Bubble Size + Position Pass
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main bubble layout to match the latest provided screenshot rather than the earlier calendar-based composition.
+- Applied explicit screenshot-matched width mapping for the visible app bubbles:
+  - note `64`
+  - map `90`
+  - weather `104`
+  - left profile `102`
+  - health `72`
+  - spotify `98`
+  - chatgpt `90`
+  - right profile `94`
+  - gemini `56`
+- Repositioned the visible bubbles to the screenshot composition and removed the calendar bubble from the rendered set because it is not present in the screenshot reference.
+- Kept the two profile bubbles on local assets:
+  - bubble `5` -> `assets/profile1.png`
+  - bubble `9` -> `assets/profile2.png`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Numeric layout validation for the screenshot-matched geometry
+  - no overlaps
+  - smallest remaining gap: `2.24px` between bubbles `4` and `9`
+- Browser validation on `http://localhost:8791/bubble`
+  - rendered main bubble IDs are `2,3,4,5,6,7,8,9,10`
+  - bubble `5` uses `assets/profile1.png`
+  - bubble `9` uses `assets/profile2.png`
+
+## Remaining issues / caveats
+- This pass uses the user-provided screenshot as the source of truth. Since the reference is a raster image, the result is a manual geometry match rather than a fresh Figma-node extraction.
+
+## Recommended next step
+1. If you want another accuracy pass, provide a fresh screenshot after reviewing the current composition and I can tune the remaining small gaps bubble-by-bubble.
+
+## Task title
+Local Profile Asset Swap + Resting Layout Separation
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the two profile bubbles with local repo assets:
+  - bubble `5` now uses `assets/profile1.png`
+  - bubble `9` now uses `assets/profile2.png`
+- Kept the existing Figma-derived bubble composition as the base layout and applied a minimal position correction to bubble `8` so resting bubbles no longer overlap or touch.
+- Preserved the rest of the page behavior and child-bubble interactions.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Numeric layout validation on the normalized bubble geometry
+  - no resting overlaps
+  - smallest remaining gap was `7.29px` between bubbles `9` and `10`
+- Browser validation on `http://localhost:8791/bubble`
+  - bubble `5` image source resolved to `assets/profile1.png`
+  - bubble `9` image source resolved to `assets/profile2.png`
+
+## Remaining issues / caveats
+- Figma MCP was rate-limited on this pass, so I could not fetch fresh node geometry or screenshots. The update uses the existing Figma-derived layout already in the page and adjusts it minimally to keep clean separation.
+
+## Recommended next step
+1. If you want a stricter second pass against the live Figma node once the MCP limit resets, re-run the layout with fresh geometry and compare the current non-overlapping positions to the exact node coordinates.
+
+## Task title
+Exact Main Bubble Width Mapping
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced range-based main bubble normalization with explicit per-bubble target widths.
+- Main app bubble widths now map exactly to: `73, 73, 100, 100, 100, 73, 100, 100, 100, 62`.
+- Heights and attached sub-icons still scale proportionally from each bubble's original dimensions.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This is now an explicit width map for the current ten bubbles, not a generic normalization rule.
+
+## Recommended next step
+1. If more main bubbles are added later, extend `TARGET_BUBBLE_WIDTHS` for each new bubble instead of reintroducing a global size range implicitly.
+
+## Task title
+Main Bubble Size Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the main app bubble normalization range to the previous `55–80px`.
+- Left child bubble size, dwell timing, and fan-out behavior unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only main app bubble normalization. It does not retune coordinates or child branch spacing after the size shift.
+
+## Recommended next step
+1. If the restored main bubble size changes composition balance, adjust coordinates or fan-out spacing rather than bypassing normalization.
+
+## Task title
+Child Menu Dwell Reduction + Main Bubble Size Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced child-menu dwell activation from `5s` to `3s`.
+- Restored the main bubble size normalization range from `55–80px` back to `40–100px`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Restoring the larger main-bubble range changes the overall layout density again, so child branches may feel slightly roomier than in the previous pass.
+
+## Recommended next step
+1. If you meant child bubble size instead of main bubble size, change `CHILD_BUBBLE_SIZE` separately without touching the main normalization range.
+
+## Task title
+Child Parent Gap Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the parent-to-child fan-out distance so child bubbles now target a `20px` edge gap from their parent.
+- Kept the current `50px` child bubble size and the same branch behavior.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Increasing the parent-child gap changes branch spread and may require a visual retune if some child menus now sit too close to neighboring bubbles.
+
+## Recommended next step
+1. If any branch now collides with nearby bubbles too early, increase fan angle spread before increasing repulsion strength.
+
+## Task title
+Main Bubble Size Range Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated main bubble size normalization from `40–100px` to `55–80px`.
+- Kept the same data-driven normalization path, so bubble assets and sub-icons still scale from the shared config.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Tightening the max size changes the overall composition density, so some child branches or pill layouts may need a visual retune if they now feel too close.
+
+## Recommended next step
+1. If spacing now feels compressed, tune bubble coordinates or fan-out spacing rather than bypassing the normalization layer.
+
+## Task title
+Child Parent Gap Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the parent-to-child fan-out distance so child bubbles now target a `10px` edge gap from their parent.
+- Kept the current `50px` child bubble size and the same fan-out / push-away behavior.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The geometric gap now targets `10px`, but visual spacing can still read slightly tighter or looser depending on scale and image crop.
+
+## Recommended next step
+1. If the child branch still feels crowded, increase the fan angle spread before increasing the parent-child distance again.
+
+## Task title
+Child Bubble Size Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased child bubble size from `30px` to `50px` by updating the shared child size constant.
+- Kept the same child fan-out interaction, physics integration, and app-specific child content.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Larger child bubbles increase branch density, so some fan-out layouts may need spacing retuning in a later visual pass.
+
+## Recommended next step
+1. If any child branches now feel crowded, increase `CHILD_FAN_DISTANCE` or `CHILD_LAYOUT_GAP` rather than hardcoding per-app offsets.
+
+## Task title
+Context Child Bubble Fan-Out
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new dwell interaction: after `5s` of stable hover on a bubble, a data-driven branch of `2-4` small `30px` child bubbles fans out from that bubble.
+- Child bubbles are app-related actions:
+  - Spotify opens playlist-cover bubbles
+  - Google Maps opens `home` and `work`
+  - profile bubbles open `call`, `message`, and `video`
+  - other app bubbles use matching action icons
+- Active child branches push the rest of the app bubbles away through the same layout/physics system and dim unrelated bubbles.
+- Hovering onto a child bubble keeps the branch open. Leaving both the parent bubble and its child area collapses the branch and hides the children.
+- When a child branch is open on a pill-capable bubble, the pill yields to the child menu so the layout stays clean.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - hovering Spotify for `5s` opened `7:playlist-1`, `7:playlist-2`, and `7:playlist-3`
+  - unrelated bubbles dimmed (`dimmedCount: 9`)
+  - leaving the branch collapsed the child bubbles (`visibleChildren: []`)
+  - moving from Spotify onto `7:playlist-2` kept the branch open
+
+## Remaining issues / caveats
+- The child branch layout uses an outward fan heuristic from the parent bubble and a repulsion pass for nearby bubbles. It is stable and visually clean in the current layout, but it is not a full constraint solver.
+
+## Recommended next step
+1. If you want child bubbles to be actionable next, add a selected/pressed state and map each child action to a real callback or route while keeping the current data-driven config shape.
+
+## Task title
 Gemini Pill Removal
 
 ## Completion status

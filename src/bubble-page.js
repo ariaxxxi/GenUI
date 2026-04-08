@@ -2,34 +2,223 @@ const LONG_PRESS_MS = 140;
 const APPEAR_MOVE_DURATION_MS = 600;
 const FADE_DURATION_MS = 400;
 const PUSH_DURATION_MS = 1000;
+const CHILD_MENU_HOLD_MS = 3000;
+const CHILD_BUBBLE_SCALE = 0.7;
+const CHILD_FAN_DISTANCE = 20;
+const CHILD_FAN_BOUNDS_PADDING = 14;
+const CHILD_DIMMED_OPACITY = 0.22;
+const CHILD_LAYOUT_GAP = 10;
+const CHILD_SIBLING_GAP = 14;
+const HOVERED_SIBLING_OPACITY = 0.9;
 const HOVER_LEASH_PX = 15;
 const PAN_MARGIN_PX = 35;
+const DEFAULT_BUBBLE_GAP = 8;
 const PILL_TEXT_LEFT_PADDING = 16;
 const PILL_TEXT_RIGHT_PADDING = 40;
+const PILL_TEXT_RIGHT_PADDING_WITH_ACTION = 68;
 const PILL_HIT_RIGHT_PADDING = 10;
 const PILL_COLLISION_PADDING = 0;
 const PILL_INITIAL_INFLUENCE_PADDING = 44;
 const PILL_LAYOUT_GAP = 10;
-const MIN_BUBBLE_SIZE = 40;
-const MAX_BUBBLE_SIZE = 100;
 const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
 const textMeasureContext = document.createElement('canvas').getContext('2d');
+const FIGMA_ASSETS = {
+  orb: 'https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d',
+  spotify: 'https://www.figma.com/api/mcp/asset/2665f4e0-86fa-43f9-8899-9a4cd1a9500b',
+  chatgpt: 'https://www.figma.com/api/mcp/asset/6226094c-fe66-40cc-bfeb-a23992ea5c25',
+  gemini: 'https://www.figma.com/api/mcp/asset/9d1608d4-5006-4ce7-9784-7dc5b7eb62c5',
+  health: 'https://www.figma.com/api/mcp/asset/87b4cdef-3bb5-416a-bb0f-211d77a0d40b',
+  map: 'https://www.figma.com/api/mcp/asset/f40a0071-c992-4dbf-9256-c3736addfb85',
+  weather: 'https://www.figma.com/api/mcp/asset/896a1ccd-1004-44f8-8049-ca37fea131a9',
+  note: 'https://www.figma.com/api/mcp/asset/cdea9f5f-3322-4b7d-a23d-bde7e27887c7',
+};
 const ORB_CENTER = {
-  x: 169.999 + (80.122 / 2),
-  y: 323.56 + (79.587 / 2),
+  x: 210.49972534179688,
+  y: 368.14404296875,
 };
 
 const RAW_BUBBLES_CONFIG = [
-  { id: 1, width: 73, height: 72, x: -60.97, y: -278.72, zIndex: 10, kind: 'calendar' },
-  { id: 2, width: 73, height: 72, x: 120.44, y: -287.35, zIndex: 10, kind: 'note', rotate: -4.29, img: 'https://play-lh.googleusercontent.com/z_o9Zbkp-r2ZU6_Erc2zNnrJDaD0rSa2mxX90Ucg77VzdTaCJvPj_RWywsT1NcRwBNAZffOM66PYkuOhBqwRlg', fill: true },
-  { id: 3, width: 101, height: 100, x: 14.93, y: -222.65, zIndex: 9, img: 'https://pbs.twimg.com/profile_images/2028882435585249280/pENAnNHz_400x400.jpg', fill: true },
-  { id: 4, width: 117, height: 116, x: 123, y: -185.63, zIndex: 8, kind: 'weather', img: 'https://downloadr2.apkmirror.com/wp-content/uploads/2024/12/38/676ed91c8e506_com.sec.android.daemonapp.png', fill: true },
-  { id: 5, width: 153, height: 153, x: -106.56, y: -174.85, zIndex: 5, img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=80', fill: true, isPill: true, pillTitle: 'Tony', pillSubtitle: 'I love it!', subIconKind: 'message-badge', subIconSize: 66.692, subIconOffsetX: 86.31, subIconOffsetY: 86.31 },
-  { id: 6, width: 73, height: 72, x: -170.97, y: -77.72, zIndex: 4, kind: 'health', isPill: true, pillTitle: 'Health', pillSubtitle: '10,243 steps' },
-  { id: 7, width: 134, height: 131, x: 26.29, y: -104.67, zIndex: 7, kind: 'spotify', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/3840px-Spotify_logo_without_text.svg.png', fill: true, isPill: true, pillTitle: 'Playing', pillSubtitle: 'Blinding Lights' },
-  { id: 8, width: 101, height: 99, x: -88.71, y: -49.81, zIndex: 4, img: 'https://store-images.s-microsoft.com/image/apps.14785.14423064005243201.42399137-369b-40bb-b5be-ac2f079c41bf.b1d6d110-9d93-441f-ac20-2e04fd7dfe3c', fill: true, isPill: true, pillTitle: 'Ready', pillSubtitle: 'How can I help?', rotate: -4.29 },
-  { id: 9, width: 106, height: 106, x: 143.94, y: -73.35, zIndex: 4, img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=80', fill: true, subIconKind: 'message-badge', subIconSize: 46.205, subIconOffsetX: 59.79, subIconOffsetY: 59.79 },
-  { id: 10, width: 62, height: 61, x: 76.94, y: -15.85, zIndex: 3, kind: 'gemini', img: 'https://static.vecteezy.com/system/resources/previews/055/687/055/non_2x/rectangle-gemini-google-icon-symbol-logo-free-png.png', fill: true, imageScale: 1.18 },
+  {
+    id: 1,
+    width: 73,
+    height: 72,
+    x: -60.97,
+    y: -278.72,
+    zIndex: 10,
+    hidden: true,
+    kind: 'calendar',
+    childActions: [
+      { id: 'event', kind: 'plus', bg: '#ffffff', fg: '#121212' },
+      { id: 'reminder', kind: 'bell', bg: '#ffffff', fg: '#1cc2c0' },
+      { id: 'focus', kind: 'spark', bg: '#ffffff', fg: '#6d61ff' },
+    ],
+  },
+  {
+    id: 2,
+    width: 53,
+    height: 54,
+    x: -55.999725341796875,
+    y: -263.14404296875,
+    zIndex: 10,
+    kind: 'note',
+    rotate: -4.29,
+    img: FIGMA_ASSETS.note,
+    fill: true,
+    childActions: [
+      { id: 'checklist', kind: 'check', bg: '#ffffff', fg: '#111827' },
+      { id: 'voice', kind: 'mic', bg: '#fff5f5', fg: '#ff1d1d' },
+      { id: 'scan', kind: 'scan', bg: '#ffffff', fg: '#ff1d1d' },
+    ],
+  },
+  {
+    id: 3,
+    width: 90,
+    height: 92,
+    x: 10.5,
+    y: -211,
+    zIndex: 9,
+    img: FIGMA_ASSETS.map,
+    fill: true,
+    childActions: [
+      { id: 'home', kind: 'home', bg: '#ffffff', fg: '#00a56a' },
+      { id: 'work', kind: 'briefcase', bg: '#ffffff', fg: '#0f172a' },
+    ],
+  },
+  {
+    id: 4,
+    width: 104,
+    height: 104,
+    x: 112.5,
+    y: -186,
+    zIndex: 8,
+    kind: 'weather',
+    img: FIGMA_ASSETS.weather,
+    fill: true,
+    childActions: [
+      { id: 'forecast', kind: 'sun', bg: '#ffffff', fg: '#f5b400' },
+      { id: 'rain', kind: 'umbrella', bg: '#ffffff', fg: '#149cf1' },
+      { id: 'radar', kind: 'radar', bg: '#ffffff', fg: '#149cf1' },
+    ],
+  },
+  {
+    id: 5,
+    width: 137.52670288085938,
+    height: 137.52670288085938,
+    x: -106.89862369000912,
+    y: -169.48192654550016,
+    zIndex: 5,
+    img: 'assets/profile1.png',
+    fill: true,
+    isPill: true,
+    pillTitle: 'Tony',
+    pillSubtitle: 'I love it!',
+    subIconKind: 'message-badge',
+    subIconSize: 59.94753646850586,
+    subIconOffsetX: 77.57571719586849,
+    subIconOffsetY: 77.5787435621023,
+    childActions: [
+      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
+      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
+      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
+    ],
+  },
+  {
+    id: 6,
+    width: 69,
+    height: 69,
+    x: 75.00027465820312,
+    y: -274.64404296875,
+    zIndex: 4,
+    kind: 'health',
+    img: FIGMA_ASSETS.health,
+    fill: true,
+    isPill: true,
+    pillTitle: '10,243 steps',
+    pillSubtitle: '',
+    childActions: [
+      { id: 'run', kind: 'shoe', bg: '#ffffff', fg: '#28d7ff' },
+      { id: 'heart', kind: 'heart', bg: '#ffffff', fg: '#ff4d6d' },
+      { id: 'water', kind: 'drop', bg: '#ffffff', fg: '#2aa8ff' },
+    ],
+  },
+  {
+    id: 7,
+    width: 120,
+    height: 117,
+    x: 27.5,
+    y: -101.5,
+    zIndex: 7,
+    kind: 'spotify',
+    img: 'https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3',
+    fill: true,
+    isPill: true,
+    pillTitle: 'Happiness',
+    pillSubtitle: '1975',
+    pillTrailingIcon: 'pause',
+    subIconKind: 'spotify-badge',
+    subIconSize: 50,
+    subIconOffsetX: 70,
+    subIconOffsetY: 67,
+    disableHoverScale: true,
+    childActions: [
+      { id: 'playlist-1', img: 'https://misc.scdn.co/liked-songs/liked-songs-300.jpg', fill: true },
+      { id: 'playlist-2', img: 'https://www.indieground.net/images/blog/2024/indieblog-best-album-covers-2010s-07.jpg', fill: true },
+      { id: 'playlist-3', img: 'https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg', fill: true },
+    ],
+  },
+  {
+    id: 8,
+    width: 97.18635060095039,
+    height: 95.52808486193521,
+    x: -83.6368403245245,
+    y: -48.190557959079774,
+    zIndex: 4,
+    img: FIGMA_ASSETS.chatgpt,
+    fill: true,
+    isPill: true,
+    pillTitle: 'Ready',
+    pillSubtitle: 'How can I help?',
+    rotate: -4.29,
+    childActions: [
+      { id: 'voice', kind: 'mic', bg: '#ffffff', fg: '#111827' },
+      { id: 'compose', kind: 'pen', bg: '#ffffff', fg: '#111827' },
+      { id: 'summarize', kind: 'spark', bg: '#ffffff', fg: '#1f66ff' },
+    ],
+  },
+  {
+    id: 9,
+    width: 95.2799301147461,
+    height: 95.2799301147461,
+    x: 140.79552867962057,
+    y: -80.63431444764195,
+    zIndex: 4,
+    img: 'assets/profile2.png',
+    fill: true,
+    subIconKind: 'message-badge',
+    subIconSize: 41.53227233886719,
+    subIconOffsetX: 53.74606677889824,
+    subIconOffsetY: 53.74751940369606,
+    childActions: [
+      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
+      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
+      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
+    ],
+  },
+  {
+    id: 10,
+    width: 55,
+    height: 55,
+    x: 76.00027465820312,
+    y: -20.5,
+    zIndex: 3,
+    kind: 'gemini',
+    img: FIGMA_ASSETS.gemini,
+    fill: true,
+    childActions: [
+      { id: 'draft', kind: 'spark', bg: '#ffffff', fg: '#6d61ff' },
+      { id: 'refine', kind: 'pen', bg: '#ffffff', fg: '#3ea9ff' },
+    ],
+  },
 ];
 
 let BUBBLES_CONFIG = buildBubbleConfig();
@@ -37,8 +226,12 @@ let BUBBLES_CONFIG = buildBubbleConfig();
 const state = {
   isPressed: false,
   hoveredBubble: null,
+  hoveredChildBubble: null,
   pressTimer: null,
   pressArmed: false,
+  childHoverTimer: null,
+  childHoverCandidateId: null,
+  childMenuParentId: null,
 };
 
 const runtime = {
@@ -55,6 +248,7 @@ const panLayer = document.querySelector('[data-bubble-pan-layer]');
 const orb = document.querySelector('[data-bubble-orb]');
 const orbVisual = document.querySelector('.bubble-orb-visual');
 const bubbleRefs = new Map();
+const childBubbleRefs = new Map();
 
 buildBubbles();
 render();
@@ -69,32 +263,12 @@ if (document.fonts?.ready) {
 
 function buildBubbleConfig() {
   return RAW_BUBBLES_CONFIG
-    .map(normalizeBubbleSize)
+    .filter((bubble) => !bubble.hidden)
     .map(enrichBubbleMetrics);
 }
 
 function normalizeBubbleSize(bubble) {
-  const largestSide = Math.max(bubble.width, bubble.height);
-  const smallestSide = Math.min(bubble.width, bubble.height);
-  let scale = 1;
-
-  if (largestSide > MAX_BUBBLE_SIZE) {
-    scale = Math.min(scale, MAX_BUBBLE_SIZE / largestSide);
-  }
-  if ((smallestSide * scale) < MIN_BUBBLE_SIZE) {
-    scale = MIN_BUBBLE_SIZE / smallestSide;
-  }
-
-  if (scale === 1) return bubble;
-
-  return {
-    ...bubble,
-    width: bubble.width * scale,
-    height: bubble.height * scale,
-    subIconSize: bubble.subIconSize ? bubble.subIconSize * scale : bubble.subIconSize,
-    subIconOffsetX: bubble.subIconOffsetX ? bubble.subIconOffsetX * scale : bubble.subIconOffsetX,
-    subIconOffsetY: bubble.subIconOffsetY ? bubble.subIconOffsetY * scale : bubble.subIconOffsetY,
-  };
+  return bubble;
 }
 
 function enrichBubbleMetrics(bubble) {
@@ -107,7 +281,8 @@ function enrichBubbleMetrics(bubble) {
 function measurePillExtraWidth(bubble) {
   const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 24px "DM Sans"');
   const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '500 24px "DM Sans"');
-  return Math.ceil(Math.max(titleWidth, subtitleWidth) + PILL_TEXT_LEFT_PADDING + PILL_TEXT_RIGHT_PADDING + 6);
+  const rightPadding = bubble.pillTrailingIcon ? PILL_TEXT_RIGHT_PADDING_WITH_ACTION : PILL_TEXT_RIGHT_PADDING;
+  return Math.ceil(Math.max(titleWidth, subtitleWidth) + PILL_TEXT_LEFT_PADDING + rightPadding + 6);
 }
 
 function measureTextWidth(text, font) {
@@ -119,6 +294,8 @@ function measureTextWidth(text, font) {
 function buildBubbles() {
   panLayer.innerHTML = '';
   bubbleRefs.clear();
+  childBubbleRefs.clear();
+  const childItems = [];
   for (const bubble of BUBBLES_CONFIG) {
     const item = document.createElement('div');
     item.className = 'bubble-item';
@@ -137,13 +314,20 @@ function buildBubbles() {
 
     let copy = null;
     if (bubble.isPill) {
+      const titleMarkup = bubble.pillTitle ? `<p class="bubble-pill-title">${bubble.pillTitle}</p>` : '';
+      const subtitleMarkup = bubble.pillSubtitle ? `<p class="bubble-pill-subtitle">${bubble.pillSubtitle}</p>` : '';
+      const actionMarkup = bubble.pillTrailingIcon
+        ? `<div class="bubble-pill-action">${getPillTrailingIconMarkup(bubble.pillTrailingIcon)}</div>`
+        : '';
       copy = document.createElement('div');
       copy.className = 'bubble-pill-copy';
+      if (bubble.pillTrailingIcon) copy.classList.add('has-action');
       copy.innerHTML = `
         <div class="bubble-pill-copy-inner">
-          <p class="bubble-pill-title">${bubble.pillTitle || ''}</p>
-          <p class="bubble-pill-subtitle">${bubble.pillSubtitle || ''}</p>
+          ${titleMarkup}
+          ${subtitleMarkup}
         </div>
+        ${actionMarkup}
       `;
       surface.append(copy);
     }
@@ -168,6 +352,34 @@ function buildBubbles() {
       copy,
       subIcon,
     });
+
+    for (const action of bubble.childActions || []) {
+      const childKey = getChildBubbleKey(bubble.id, action.id);
+      const childItem = document.createElement('div');
+      childItem.className = 'bubble-item bubble-child-item';
+      childItem.dataset.childBubbleId = childKey;
+      childItem.dataset.parentBubbleId = String(bubble.id);
+
+      const childSurface = document.createElement('div');
+      childSurface.className = 'bubble-surface bubble-child-surface';
+
+      const childIconWrap = document.createElement('div');
+      childIconWrap.className = 'bubble-icon-wrap bubble-child-icon-wrap';
+      childIconWrap.append(createChildActionGraphic(action));
+      childSurface.append(childIconWrap);
+      childItem.append(childSurface);
+      childItems.push(childItem);
+
+      childBubbleRefs.set(childKey, {
+        item: childItem,
+        surface: childSurface,
+        iconWrap: childIconWrap,
+      });
+    }
+  }
+
+  for (const childItem of childItems) {
+    panLayer.append(childItem);
   }
 }
 
@@ -266,13 +478,121 @@ function createSubIconGraphic(kind) {
       </div>
     `);
   }
+  if (kind === 'spotify-badge') {
+    const image = document.createElement('img');
+    image.className = 'bubble-icon is-fill';
+    image.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Spotify_icon.svg/960px-Spotify_icon.svg.png?_=20220821125323';
+    image.alt = '';
+    image.draggable = false;
+    image.style.setProperty('--bubble-image-scale', '1');
+    image.addEventListener('error', () => {
+      if (image.src !== FALLBACK_ICON) image.src = FALLBACK_ICON;
+    });
+    return image;
+  }
   return document.createElement('div');
+}
+
+function createChildActionGraphic(action) {
+  if (action.img) {
+    const image = document.createElement('img');
+    image.className = action.fill ? 'bubble-icon is-fill' : 'bubble-icon is-contain';
+    image.src = action.img;
+    image.alt = '';
+    image.draggable = false;
+    image.style.setProperty('--bubble-image-scale', String(action.imageScale ?? (action.fill ? 1 : 0.76)));
+    image.addEventListener('error', () => {
+      if (image.src !== FALLBACK_ICON) image.src = FALLBACK_ICON;
+    });
+    return image;
+  }
+
+  const fg = getChildActionForeground(action.fg);
+  const iconMarkup = getChildActionIconMarkup(action.kind);
+  return createHtmlNode(`
+    <div class="child-action-icon" style="--child-action-fg: ${fg};">
+      ${iconMarkup}
+    </div>
+  `);
+}
+
+function getChildActionForeground(color) {
+  const normalized = (color || '').trim().toLowerCase();
+  if (!normalized) return '#ffffff';
+  if (normalized === '#121212' || normalized === '#111827' || normalized === '#0f172a' || normalized === '#000000') {
+    return '#ffffff';
+  }
+  return color;
+}
+
+function getPillTrailingIconMarkup(kind) {
+  switch (kind) {
+    case 'pause':
+      return `<i class="bi bi-pause-fill" aria-hidden="true"></i>`;
+    default:
+      return '';
+  }
+}
+
+function getChildActionIconMarkup(kind) {
+  switch (kind) {
+    case 'home':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="m8 3.293 6 6V13.5a.5.5 0 0 1-.5.5H10V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V14H2.5a.5.5 0 0 1-.5-.5V9.293l6-6Z"/><path fill="currentColor" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646-.708.708L14 8.207V14a1 1 0 0 1-1 1h-3.5V10H6.5v5H3a1 1 0 0 1-1-1V8.207l-.646.647-.708-.708L7.293 1.5Z"/></svg>`;
+    case 'briefcase':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.5 0a.5.5 0 0 0-.5.5V2H2.5A1.5 1.5 0 0 0 1 3.5v2.79c.237.11.495.198.77.26A41.36 41.36 0 0 0 8 7c2.152 0 4.17-.21 6.23-.45.274-.062.532-.15.77-.26V3.5A1.5 1.5 0 0 0 13.5 2H10V.5a.5.5 0 0 0-.5-.5h-3Z"/><path fill="currentColor" d="M16 8.11V12.5A1.5 1.5 0 0 1 14.5 14h-13A1.5 1.5 0 0 1 0 12.5V8.11c.22.08.45.147.68.2A42.5 42.5 0 0 0 8 8.75c2.362 0 4.5-.22 7.32-.44.23-.053.46-.12.68-.2Z"/></svg>`;
+    case 'phone':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3.654 1.328a.678.678 0 0 1 .737-.163l2.522 1.01c.294.117.48.404.457.72l-.207 2.132a.678.678 0 0 1-.58.606l-1.29.185a11.72 11.72 0 0 0 4.516 4.516l.185-1.29a.678.678 0 0 1 .606-.58l2.132-.207a.678.678 0 0 1 .72.457l1.01 2.522a.678.678 0 0 1-.163.737l-1.119 1.119c-.84.84-2.09 1.156-3.252.702-2.798-1.092-5.23-3.524-6.322-6.322-.454-1.163-.138-2.412.702-3.252l1.119-1.119Z"/></svg>`;
+    case 'message':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 1 0 3.918 14.974c.275.07.827.233 1.405.504.58.272 1.149.635 1.522 1.12.032.04.09.052.135.027a.094.094 0 0 0 .047-.099c-.043-.399-.17-.995-.613-1.645A7.967 7.967 0 0 0 16 8a8 8 0 0 0-8-8Z"/></svg>`;
+    case 'video':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v.5l3.553-2.132A.5.5 0 0 1 16 3.5v9a.5.5 0 0 1-.447.497.5.5 0 0 1-.276-.06L12 10.803V11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5Z"/></svg>`;
+    case 'check':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.354-8.354a.5.5 0 0 0-.708-.708L7 9.586 5.854 8.44a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l4-4Z"/></svg>`;
+    case 'mic':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 3a3 3 0 0 1 6 0v4a3 3 0 0 1-6 0V3Z"/><path fill="currentColor" d="M3.5 6.5A.5.5 0 0 1 4 7v.5a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v.5A5 5 0 0 1 8.5 12.45V14H10a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1h1.5v-1.55A5 5 0 0 1 3 7.5V7a.5.5 0 0 1 .5-.5Z"/></svg>`;
+    case 'scan':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 2h3v1H3v2H2V2Zm11 0h1v3h-1V3h-2V2h2ZM2 11h1v2h2v1H2v-3Zm11 0h1v3h-3v-1h2v-2ZM5.5 5h5v6h-5V5Zm1 1v4h3V6h-3Z"/></svg>`;
+    case 'bell':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 16a2 2 0 0 0 1.985-1.75H6.015A2 2 0 0 0 8 16Zm.104-14.804A1 1 0 0 0 7 2.18V2.5c-2.44.514-4 2.276-4 4.9 0 1.171-.166 2.65-.545 3.982-.19.667-.43 1.247-.706 1.73-.07.122-.146.242-.227.36h12.956a8.79 8.79 0 0 1-.227-.36c-.275-.483-.516-1.063-.706-1.73C13.166 10.05 13 8.57 13 7.4c0-2.624-1.56-4.386-4-4.9V2.18a1 1 0 0 0-.896-.984Z"/></svg>`;
+    case 'spark':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M7.247.86c.317-.766 1.19-.766 1.506 0l1.08 2.612a1 1 0 0 0 .53.53l2.612 1.08c.766.317.766 1.19 0 1.506l-2.612 1.08a1 1 0 0 0-.53.53l-1.08 2.612c-.317.766-1.19.766-1.506 0l-1.08-2.612a1 1 0 0 0-.53-.53L3.025 6.368c-.766-.317-.766-1.19 0-1.506l2.612-1.08a1 1 0 0 0 .53-.53L7.247.86Zm6.286 9.346c.184-.447.75-.447.934 0l.363.878a.5.5 0 0 0 .265.265l.878.363c.447.185.447.75 0 .934l-.878.363a.5.5 0 0 0-.265.265l-.363.878c-.185.447-.75.447-.934 0l-.363-.878a.5.5 0 0 0-.265-.265l-.878-.363c-.447-.185-.447-.75 0-.934l.878-.363a.5.5 0 0 0 .265-.265l.363-.878Z"/></svg>`;
+    case 'sun':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 4a.5.5 0 0 1-.5-.5V14a.5.5 0 0 1 1 0v1.5a.5.5 0 0 1-.5.5Zm0-13a.5.5 0 0 1-.5-.5V1a.5.5 0 0 1 1 0v1.5A.5.5 0 0 1 8 3Zm8 5a.5.5 0 0 1-.5.5H14a.5.5 0 0 1 0-1h1.5A.5.5 0 0 1 16 8ZM2 8a.5.5 0 0 1-.5.5H0a.5.5 0 0 1 0-1h1.5A.5.5 0 0 1 2 8Zm11.657 5.657a.5.5 0 0 1-.707 0l-1.06-1.06a.5.5 0 1 1 .707-.708l1.06 1.061a.5.5 0 0 1 0 .707Zm-9.9-9.9a.5.5 0 0 1-.707 0L1.99 2.697a.5.5 0 1 1 .707-.707l1.06 1.06a.5.5 0 0 1 0 .708Zm9.9-1.06a.5.5 0 0 1 0 .707l-1.06 1.061a.5.5 0 0 1-.707-.708l1.06-1.06a.5.5 0 0 1 .707 0Zm-9.9 9.9a.5.5 0 0 1 0 .707l-1.06 1.06a.5.5 0 0 1-.707-.707l1.06-1.06a.5.5 0 0 1 .707 0Z"/></svg>`;
+    case 'umbrella':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a5.5 5.5 0 0 0-5.456 4.803A1.5 1.5 0 0 0 2.5 8H7v5.5a1.5 1.5 0 0 0 3 0V13a.5.5 0 0 0-1 0v.5a.5.5 0 0 1-1 0V8h5.5a1.5 1.5 0 0 0-.044-3.197A5.5 5.5 0 0 0 8 0Z"/></svg>`;
+    case 'radar':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm0-1A6 6 0 1 1 8 2a6 6 0 0 1 0 12Zm0-2.5A3.5 3.5 0 1 0 8 4.5a3.5 3.5 0 0 0 0 7Zm0-1A2.5 2.5 0 1 1 8 5.5a2.5 2.5 0 0 1 0 5Zm0-2A.5.5 0 1 0 8 7a.5.5 0 0 0 0 1Z"/></svg>`;
+    case 'shoe':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8.5 1.5a.5.5 0 0 1 .5.5v2.086a1 1 0 0 0 .293.707l1.414 1.414a1 1 0 0 0 .707.293H14a1 1 0 0 1 1 1v1H1v-.5a2 2 0 0 1 2-2h2.086a1 1 0 0 0 .707-.293L7.5 4.5V2a.5.5 0 0 1 .5-.5Z"/></svg>`;
+    case 'heart':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="m8 2.748-.717-.737C5.6.281 2.514 1.878 2.514 4.385c0 1.737 1.4 3.41 3.44 5.42L8 11.81l2.046-2.004c2.039-2.01 3.44-3.683 3.44-5.42 0-2.507-3.087-4.104-4.77-2.374L8 2.748Z"/></svg>`;
+    case 'drop':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4.406 1.342C5.102.53 5.906 0 8 0s2.898.53 3.594 1.342C12.29 2.154 13 3.41 13 5a5 5 0 1 1-10 0c0-1.59.71-2.846 1.406-3.658Z"/></svg>`;
+    case 'pen':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="m12.146.146 3.708 3.708-9.5 9.5L2 14l.646-4.354 9.5-9.5Zm.708 1.415L4.207 10.207 3.5 13.5l3.293-.707 8.647-8.646-2.586-2.586Z"/></svg>`;
+    case 'plus':
+      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0ZM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3Z"/></svg>`;
+    default:
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/></svg>`;
+  }
 }
 
 function createHtmlNode(markup) {
   const template = document.createElement('template');
   template.innerHTML = markup.trim();
   return template.content.firstElementChild;
+}
+
+function getChildBubbleKey(parentId, childId) {
+  return `${parentId}:${childId}`;
+}
+
+function getBubbleConfigById(id) {
+  return BUBBLES_CONFIG.find((bubble) => bubble.id === id) || null;
+}
+
+function hasChildActions(id) {
+  return Boolean(getBubbleConfigById(id)?.childActions?.length);
 }
 
 function bindEvents() {
@@ -302,20 +622,42 @@ function handlePointerMove(event) {
 
   const stablePoint = getStablePointerPoint(event);
   if (!stablePoint || !runtime.layout) return;
-  const nextHovered = getHoveredBubbleId(stablePoint, runtime.layout, state.hoveredBubble);
+  const nextHoverState = getHoverState(
+    stablePoint,
+    runtime.layout,
+    state.hoveredBubble,
+    state.hoveredChildBubble,
+  );
+  let shouldRender = false;
 
-  if (nextHovered !== state.hoveredBubble) {
-    state.hoveredBubble = nextHovered;
+  if (nextHoverState.bubbleId !== state.hoveredBubble) {
+    state.hoveredBubble = nextHoverState.bubbleId;
+    shouldRender = true;
+  }
+
+  if (nextHoverState.childId !== state.hoveredChildBubble) {
+    state.hoveredChildBubble = nextHoverState.childId;
+    shouldRender = true;
+  }
+
+  if (syncChildMenuState(nextHoverState.bubbleId)) {
+    shouldRender = true;
+  }
+
+  if (shouldRender) {
     render();
   }
 }
 
 function handleRelease() {
   clearPressTimer();
+  clearChildHoverTimer();
   if (!state.pressArmed && !state.isPressed && state.hoveredBubble == null) return;
   state.pressArmed = false;
   state.isPressed = false;
   state.hoveredBubble = null;
+  state.hoveredChildBubble = null;
+  state.childMenuParentId = null;
   render();
 }
 
@@ -326,8 +668,70 @@ function clearPressTimer() {
   }
 }
 
+function clearChildHoverTimer() {
+  if (state.childHoverTimer != null) {
+    window.clearTimeout(state.childHoverTimer);
+    state.childHoverTimer = null;
+  }
+  state.childHoverCandidateId = null;
+}
+
+function syncChildMenuState(nextHoveredBubbleId) {
+  let changed = false;
+
+  if (!state.isPressed) {
+    if (state.childMenuParentId != null) {
+      state.childMenuParentId = null;
+      changed = true;
+    }
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (state.childMenuParentId != null && nextHoveredBubbleId !== state.childMenuParentId) {
+    state.childMenuParentId = null;
+    state.hoveredChildBubble = null;
+    changed = true;
+  }
+
+  if (!nextHoveredBubbleId || !hasChildActions(nextHoveredBubbleId)) {
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (state.childMenuParentId === nextHoveredBubbleId) {
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (state.childHoverCandidateId === nextHoveredBubbleId) {
+    return changed;
+  }
+
+  clearChildHoverTimer();
+  state.childHoverCandidateId = nextHoveredBubbleId;
+  state.childHoverTimer = window.setTimeout(() => {
+    state.childHoverTimer = null;
+    state.childHoverCandidateId = null;
+
+    if (!state.isPressed || state.hoveredBubble !== nextHoveredBubbleId) return;
+    if (!hasChildActions(nextHoveredBubbleId)) return;
+
+    state.childMenuParentId = nextHoveredBubbleId;
+    state.hoveredChildBubble = null;
+    render();
+  }, CHILD_MENU_HOLD_MS);
+
+  return changed;
+}
+
 function render() {
-  const layout = computeLayout(state.isPressed, state.hoveredBubble);
+  const layout = computeLayout(
+    state.isPressed,
+    state.hoveredBubble,
+    state.childMenuParentId,
+    state.hoveredChildBubble,
+  );
   runtime.layout = layout;
   updatePanTarget(layout.panOffset);
 
@@ -336,6 +740,9 @@ function render() {
     if (!bubble) continue;
 
     const isHovered = state.hoveredBubble === bubble.id;
+    const isContextParent = state.childMenuParentId === bubble.id;
+    const isDimmed = state.childMenuParentId != null && !isContextParent;
+    const isSoftFaded = state.childMenuParentId == null && state.hoveredBubble != null && !isHovered;
     const transformDuration = state.isPressed && state.hoveredBubble != null
       ? PUSH_DURATION_MS
       : APPEAR_MOVE_DURATION_MS;
@@ -345,20 +752,34 @@ function render() {
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
       : '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
     const transform = `translate3d(${bubble.targetX - bubble.width / 2}px, ${bubble.targetY - bubble.height / 2}px, 0) rotate(${bubble.rotate || 0}deg) scale(${bubble.targetScale})`;
+    const opacity = state.isPressed
+      ? (isDimmed ? CHILD_DIMMED_OPACITY : (isSoftFaded ? HOVERED_SIBLING_OPACITY : 1))
+      : 0;
+    const filter = isDimmed ? 'brightness(0.42) saturate(0.68)' : 'none';
 
     refs.item.classList.toggle('is-pressed', state.isPressed);
     refs.item.style.zIndex = String(isHovered ? 50 : bubble.zIndex);
     refs.item.style.width = `${bubble.targetWidth}px`;
     refs.item.style.height = `${bubble.height}px`;
-    refs.item.style.opacity = state.isPressed ? '1' : '0';
+    refs.item.style.opacity = String(opacity);
     refs.item.style.boxShadow = shadow;
+    refs.item.style.filter = filter;
     refs.item.style.transform = transform;
-    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s`;
-    refs.item.style.transitionDuration = `${transformDuration}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms`;
+    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s`;
+    refs.item.style.transitionDuration = `${transformDuration}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms`;
 
-    refs.surface.style.backgroundColor = bubble.isPill ? '#2D2D2E' : 'transparent';
+    refs.surface.style.backgroundColor = bubble.isPill ? 'rgba(255, 255, 255, 0.05)' : 'transparent';
+    refs.surface.style.border = bubble.isPill
+      ? '1px solid rgba(255, 255, 255, 0.36)'
+      : '0 solid transparent';
+    refs.surface.style.boxShadow = bubble.isPill
+      ? 'inset 0 0 20px rgba(255, 255, 255, 0.15)'
+      : (isHovered && !bubble.isPill
+        ? 'inset 0 0 0 2px rgba(255, 255, 255, 0.96)'
+        : 'none');
     refs.iconWrap.style.width = `${bubble.width}px`;
     refs.iconWrap.style.height = `${bubble.height}px`;
+    refs.iconWrap.style.transform = bubble.isExpanded ? 'scale(0.9)' : 'scale(1)';
 
     if (refs.copy) {
       refs.copy.classList.toggle('is-expanded', bubble.isExpanded);
@@ -373,19 +794,56 @@ function render() {
       refs.subIcon.style.top = `${bubble.subIconOffsetY}px`;
     }
   }
+
+  for (const [childKey, refs] of childBubbleRefs.entries()) {
+    const child = layout.children.find((entry) => entry.id === childKey);
+    const parentId = Number(refs.item.dataset.parentBubbleId);
+    const parentBubble = layout.bubbles.find((entry) => entry.id === parentId);
+    if (!parentBubble) continue;
+    const childSize = child ? child.width : getChildBubbleSize(parentBubble);
+    const childRadius = child ? child.radius : childSize / 2;
+
+    const childActionIndex = child
+      ? child.actionIndex
+      : ((getBubbleConfigById(parentId)?.childActions || []).findIndex((action) => getChildBubbleKey(parentId, action.id) === childKey));
+    const staggerDelay = Math.max(0, childActionIndex) * 0.028;
+    const restingScale = 0.62;
+    const displayX = child ? child.targetX : parentBubble.targetX;
+    const displayY = child ? child.targetY : parentBubble.targetY;
+    const scale = child ? child.targetScale : restingScale;
+    const opacity = child ? 1 : 0;
+    const shadow = child && state.hoveredChildBubble === childKey
+      ? '0 16px 32px rgba(0, 0, 0, 0.42)'
+      : '0 10px 24px rgba(0, 0, 0, 0.26)';
+
+    refs.item.style.zIndex = String(child ? 65 + childActionIndex : 20);
+    refs.item.style.width = `${childSize}px`;
+    refs.item.style.height = `${childSize}px`;
+    refs.item.style.opacity = String(opacity);
+    refs.item.style.boxShadow = shadow;
+    refs.item.style.filter = 'none';
+    refs.item.style.transform = `translate3d(${displayX - childRadius}px, ${displayY - childRadius}px, 0) scale(${scale})`;
+    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s, 0s`;
+    refs.item.style.transitionDuration = `${APPEAR_MOVE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms`;
+    refs.iconWrap.style.width = `${childSize}px`;
+    refs.iconWrap.style.height = `${childSize}px`;
+    refs.iconWrap.style.transform = 'scale(0.88)';
+  }
 }
 
-function computeLayout(isPressed, hoveredBubble) {
+function computeLayout(isPressed, hoveredBubble, childMenuParentId, hoveredChildBubbleId) {
   const positions = BUBBLES_CONFIG.map((bubble) => ({
     ...bubble,
     radius: Math.max(bubble.width, bubble.height) / 2,
     targetX: isPressed ? bubble.x : 0,
     targetY: isPressed ? bubble.y : 0,
-    targetWidth: isPressed && hoveredBubble === bubble.id && bubble.isPill
+    targetWidth: isPressed && hoveredBubble === bubble.id && bubble.isPill && childMenuParentId !== bubble.id
       ? bubble.width + bubble.expandedExtraWidth
       : bubble.width,
-    targetScale: !isPressed ? 0.18 : (hoveredBubble === bubble.id ? 1.04 : 1),
-    isExpanded: isPressed && hoveredBubble === bubble.id && bubble.isPill,
+    targetScale: !isPressed
+      ? 0.18
+      : (hoveredBubble === bubble.id ? (bubble.disableHoverScale ? 1 : 1.1) : 1),
+    isExpanded: isPressed && hoveredBubble === bubble.id && bubble.isPill && childMenuParentId !== bubble.id,
   }));
 
   const orbNode = {
@@ -399,11 +857,20 @@ function computeLayout(isPressed, hoveredBubble) {
   };
   positions.push(orbNode);
 
+  let childNodes = [];
+  const childMenuParent = isPressed && childMenuParentId != null
+    ? positions.find((bubble) => bubble.id === childMenuParentId)
+    : null;
+  if (childMenuParent) {
+    childNodes = buildChildBubbleLayout(childMenuParent, hoveredChildBubbleId);
+    positions.push(...childNodes);
+  }
+
   const activeBubble = isPressed && hoveredBubble
     ? positions.find((bubble) => bubble.id === hoveredBubble)
     : null;
 
-  if (activeBubble?.isPill) {
+  if (activeBubble?.isExpanded) {
     for (const position of positions) {
       if (position.id === activeBubble.id) continue;
 
@@ -433,7 +900,59 @@ function computeLayout(isPressed, hoveredBubble) {
           const dx = p2.targetX - p1.targetX;
           const dy = p2.targetY - p1.targetY;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const minDist = p1.radius + p2.radius + 8;
+          const minDist = p1.radius + p2.radius + getNodeGap(p1, p2);
+
+          if (dist < minDist) {
+            const diff = (minDist - dist) / 2;
+            const angle = Math.atan2(dy, dx);
+            const moveX = Math.cos(angle) * diff;
+            const moveY = Math.sin(angle) * diff;
+            p1.targetX -= moveX;
+            p1.targetY -= moveY;
+            p2.targetX += moveX;
+            p2.targetY += moveY;
+          }
+        }
+      }
+    }
+  }
+
+  if (childNodes.length) {
+    const branchIds = new Set([childMenuParent.id, ...childNodes.map((node) => node.id)]);
+
+    for (const child of childNodes) {
+      for (const position of positions) {
+        if (branchIds.has(position.id)) continue;
+        const initialPush = getCircleRepulsion(child, position, 28, CHILD_LAYOUT_GAP);
+        if (initialPush) {
+          position.targetX += initialPush.x;
+          position.targetY += initialPush.y;
+        }
+      }
+    }
+
+    for (let iter = 0; iter < 12; iter += 1) {
+      for (const child of childNodes) {
+        for (const position of positions) {
+          if (branchIds.has(position.id)) continue;
+          const repel = getCircleRepulsion(child, position, 0, CHILD_LAYOUT_GAP);
+          if (repel) {
+            position.targetX += repel.x;
+            position.targetY += repel.y;
+          }
+        }
+      }
+
+      for (let i = 0; i < positions.length; i += 1) {
+        for (let j = i + 1; j < positions.length; j += 1) {
+          const p1 = positions[i];
+          const p2 = positions[j];
+          if (branchIds.has(p1.id) || branchIds.has(p2.id)) continue;
+
+          const dx = p2.targetX - p1.targetX;
+          const dy = p2.targetY - p1.targetY;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const minDist = p1.radius + p2.radius + getNodeGap(p1, p2);
 
           if (dist < minDist) {
             const diff = (minDist - dist) / 2;
@@ -452,14 +971,28 @@ function computeLayout(isPressed, hoveredBubble) {
 
   let panX = 0;
   let panY = 0;
-  const activeItem = positions.find((bubble) => bubble.id === hoveredBubble);
+  const activeItem = childMenuParent || positions.find((bubble) => bubble.id === hoveredBubble);
   if (activeItem) {
-    const halfWidth = activeItem.width / 2;
-    const halfHeight = activeItem.height / 2;
-    const left = activeItem.targetX - halfWidth;
-    const right = activeItem.targetX + (activeItem.isExpanded ? halfWidth + activeItem.expandedExtraWidth : halfWidth);
-    const top = activeItem.targetY - halfHeight;
-    const bottom = activeItem.targetY + halfHeight;
+    let left;
+    let right;
+    let top;
+    let bottom;
+
+    if (childMenuParent && childNodes.length) {
+      const branchBounds = getChildBranchBounds(childMenuParent, childNodes);
+      left = branchBounds.left;
+      right = branchBounds.right;
+      top = branchBounds.top;
+      bottom = branchBounds.bottom;
+    } else {
+      const halfWidth = activeItem.width / 2;
+      const halfHeight = activeItem.height / 2;
+      left = activeItem.targetX - halfWidth;
+      right = activeItem.targetX + (activeItem.isExpanded ? halfWidth + activeItem.expandedExtraWidth : halfWidth);
+      top = activeItem.targetY - halfHeight;
+      bottom = activeItem.targetY + halfHeight;
+    }
+
     const canvasHalf = 210;
     const topLimit = -323;
     const bottomLimit = 40;
@@ -472,8 +1005,12 @@ function computeLayout(isPressed, hoveredBubble) {
   }
 
   return {
-    bubbles: positions.filter((bubble) => bubble.id !== 'orb'),
+    bubbles: positions.filter((bubble) => bubble.id !== 'orb' && !bubble.isChild),
+    children: childNodes,
     orb: orbNode,
+    childZone: childMenuParent && childNodes.length
+      ? getChildZone(childMenuParent, childNodes)
+      : null,
     panOffset: { x: panX, y: panY },
   };
 }
@@ -494,7 +1031,29 @@ function getStablePointerPoint(event) {
   };
 }
 
-function getHoveredBubbleId(point, layout, previousHoveredId) {
+function getHoverState(point, layout, previousHoveredId, previousHoveredChildId) {
+  const children = [...(layout.children || [])].sort((a, b) => {
+    if (a.id === previousHoveredChildId) return -1;
+    if (b.id === previousHoveredChildId) return 1;
+    return (b.zIndex || 0) - (a.zIndex || 0);
+  });
+
+  for (const child of children) {
+    if (isPointerInsideCircle(point, child, previousHoveredChildId === child.id ? HOVER_LEASH_PX : 0)) {
+      return {
+        bubbleId: child.parentId,
+        childId: child.id,
+      };
+    }
+  }
+
+  if (layout.childZone && isPointInsideRect(point, layout.childZone)) {
+    return {
+      bubbleId: layout.childZone.parentId,
+      childId: null,
+    };
+  }
+
   const bubbles = [...layout.bubbles].sort((a, b) => {
     if (a.id === previousHoveredId) return -1;
     if (b.id === previousHoveredId) return 1;
@@ -503,11 +1062,17 @@ function getHoveredBubbleId(point, layout, previousHoveredId) {
 
   for (const bubble of bubbles) {
     if (isPointerInsideBubble(point, bubble, previousHoveredId)) {
-      return bubble.id;
+      return {
+        bubbleId: bubble.id,
+        childId: null,
+      };
     }
   }
 
-  return null;
+  return {
+    bubbleId: null,
+    childId: null,
+  };
 }
 
 function isPointerInsideBubble(point, bubble, previousHoveredId) {
@@ -524,9 +1089,23 @@ function isPointerInsideBubble(point, bubble, previousHoveredId) {
   }
 
   const radius = bubble.radius + stickyPadding;
-  const dx = point.x - bubble.targetX;
-  const dy = point.y - bubble.targetY;
+  return isPointerInsideCircle(point, bubble, stickyPadding);
+}
+
+function isPointerInsideCircle(point, node, padding) {
+  const radius = node.radius + padding;
+  const dx = point.x - node.targetX;
+  const dy = point.y - node.targetY;
   return Math.sqrt(dx * dx + dy * dy) <= radius;
+}
+
+function isPointInsideRect(point, rect) {
+  return (
+    point.x >= rect.left &&
+    point.x <= rect.right &&
+    point.y >= rect.top &&
+    point.y <= rect.bottom
+  );
 }
 
 function updatePanTarget(nextTarget) {
@@ -613,6 +1192,109 @@ function getPillRepulsion(pill, node, influencePadding) {
   return {
     x: Math.cos(angle) * distance,
     y: Math.sin(angle) * distance,
+  };
+}
+
+function getCircleRepulsion(source, node, influencePadding, extraGap) {
+  const dx = node.targetX - source.targetX;
+  const dy = node.targetY - source.targetY;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const safeDist = source.radius + node.radius + extraGap;
+  const influenceZone = safeDist + influencePadding;
+  if (dist >= influenceZone) return null;
+
+  const pushFactor = influencePadding > 0
+    ? Math.pow((influenceZone - dist) / influenceZone, 1.1)
+    : 0;
+  const required = Math.max(0, safeDist - dist);
+  const angle = Math.atan2(dy || 0.0001, dx || 0.0001);
+  const distance = required + (pushFactor * 20);
+
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+  };
+}
+
+function getNodeGap(nodeA, nodeB) {
+  if (nodeA.isChild || nodeB.isChild) return CHILD_LAYOUT_GAP;
+  return DEFAULT_BUBBLE_GAP;
+}
+
+function getChildBubbleSize(parentBubble) {
+  return Math.max(parentBubble.width, parentBubble.height) * CHILD_BUBBLE_SCALE;
+}
+
+function buildChildBubbleLayout(parentBubble, hoveredChildBubbleId) {
+  const actions = parentBubble.childActions || [];
+  const baseAngle = Math.atan2(parentBubble.targetY - 18, parentBubble.targetX || 0.001);
+  const childSize = getChildBubbleSize(parentBubble);
+  const childRadius = childSize / 2;
+  const distance = parentBubble.radius + childRadius + CHILD_FAN_DISTANCE;
+  const offsets = getFanAngleOffsets(actions.length, childSize, distance);
+
+  return actions.map((action, index) => {
+    const angle = baseAngle + offsets[index];
+    const childId = getChildBubbleKey(parentBubble.id, action.id);
+    return {
+      ...action,
+      id: childId,
+      parentId: parentBubble.id,
+      actionIndex: index,
+      isChild: true,
+      width: childSize,
+      height: childSize,
+      radius: childRadius,
+      targetX: parentBubble.targetX + Math.cos(angle) * distance,
+      targetY: parentBubble.targetY + Math.sin(angle) * distance,
+      targetScale: hoveredChildBubbleId === childId ? 1.08 : 1,
+      zIndex: 60 + index,
+    };
+  });
+}
+
+function getFanAngleOffsets(count, childSize, distance) {
+  if (count <= 1) return [0];
+
+  const minimumChord = childSize + CHILD_SIBLING_GAP;
+  const safeRatio = Math.min(0.98, minimumChord / Math.max(1, 2 * distance));
+  const minimumStep = 2 * Math.asin(safeRatio);
+  const preferredStep = count === 2 ? 0.76 : count === 3 ? 0.7 : 0.64;
+  const step = Math.max(preferredStep, minimumStep);
+  const centerIndex = (count - 1) / 2;
+
+  return Array.from({ length: count }, (_, index) => (index - centerIndex) * step);
+}
+
+function getChildBranchBounds(parentBubble, childNodes) {
+  const nodes = [parentBubble, ...childNodes];
+  return nodes.reduce((bounds, node) => {
+    const left = node.targetX - node.radius;
+    const right = node.targetX + node.radius;
+    const top = node.targetY - node.radius;
+    const bottom = node.targetY + node.radius;
+    return {
+      left: Math.min(bounds.left, left),
+      right: Math.max(bounds.right, right),
+      top: Math.min(bounds.top, top),
+      bottom: Math.max(bounds.bottom, bottom),
+    };
+  }, {
+    left: Number.POSITIVE_INFINITY,
+    right: Number.NEGATIVE_INFINITY,
+    top: Number.POSITIVE_INFINITY,
+    bottom: Number.NEGATIVE_INFINITY,
+  });
+}
+
+function getChildZone(parentBubble, childNodes) {
+  const bounds = getChildBranchBounds(parentBubble, childNodes);
+  return {
+    parentId: parentBubble.id,
+    left: bounds.left - CHILD_FAN_BOUNDS_PADDING,
+    right: bounds.right + CHILD_FAN_BOUNDS_PADDING,
+    top: bounds.top - CHILD_FAN_BOUNDS_PADDING,
+    bottom: bounds.bottom + CHILD_FAN_BOUNDS_PADDING,
   };
 }
 

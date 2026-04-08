@@ -37,7 +37,7 @@ body.bubble-page {
 .bubble-canvas {
   position: relative;
   width: 420px;
-  height: 420px;
+  height: 410.337px;
   overflow: hidden;
   border: 1px solid var(--bubble-frame-border);
   border-radius: 31px;
@@ -47,10 +47,10 @@ body.bubble-page {
 
 .bubble-anchor {
   position: absolute;
-  left: 169.999px;
-  top: 323.56px;
-  width: 80.122px;
-  height: 79.587px;
+  left: 173.999725px;
+  top: 332.144043px;
+  width: 73px;
+  height: 72px;
 }
 
 .bubble-pan-layer {
@@ -70,12 +70,13 @@ body.bubble-page {
   opacity: 0;
   border-radius: 999px;
   pointer-events: none;
-  will-change: transform, width, opacity, box-shadow;
+  will-change: transform, width, opacity, box-shadow, filter;
   transition:
     transform 1000ms var(--bubble-ease),
     width 400ms var(--bubble-ease),
     opacity 400ms var(--bubble-ease),
-    box-shadow 400ms var(--bubble-ease);
+    box-shadow 400ms var(--bubble-ease),
+    filter 400ms var(--bubble-ease);
 }
 
 .bubble-item.is-pressed {
@@ -93,7 +94,12 @@ body.bubble-page {
   inset: 0;
   overflow: hidden;
   border-radius: 999px;
+  border: 0 solid transparent;
   background: transparent;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
 }
 
 .bubble-icon-wrap {
@@ -105,6 +111,8 @@ body.bubble-page {
   justify-content: center;
   border-radius: 999px;
   overflow: hidden;
+  transform-origin: center;
+  transition: transform 260ms var(--bubble-ease);
 }
 
 .bubble-icon {
@@ -141,9 +149,14 @@ body.bubble-page {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
+  gap: 2px;
   padding: 0 40px 0 16px;
   transform: translateX(-15px);
   transition: transform 350ms ease-out;
+}
+
+.bubble-pill-copy.has-action .bubble-pill-copy-inner {
+  padding-right: 68px;
 }
 
 .bubble-pill-copy.is-expanded {
@@ -155,7 +168,7 @@ body.bubble-page {
 }
 
 .bubble-pill-title {
-  margin: 0 0 2px;
+  margin: 0;
   color: #ffffff;
   font-size: 24px;
   font-weight: 600;
@@ -165,10 +178,35 @@ body.bubble-page {
 
 .bubble-pill-subtitle {
   margin: 0;
-  color: #a1a1a6;
+  color: #ffffff;
   font-size: 24px;
   font-weight: 500;
   line-height: 1.1;
+}
+
+.bubble-pill-action {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  transform: translateY(-50%);
+}
+
+.bubble-pill-action svg,
+.bubble-pill-action i {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bubble-pill-action i {
+  font-size: 40px;
+  line-height: 1;
 }
 
 .bubble-subicon {
@@ -177,6 +215,24 @@ body.bubble-page {
   overflow: hidden;
   border-radius: 999px;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+}
+
+.bubble-child-item {
+  pointer-events: none;
+}
+
+.bubble-child-surface {
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow:
+    inset 0 0 20px rgba(255, 255, 255, 0.15),
+    0 10px 24px rgba(0, 0, 0, 0.12);
+}
+
+.bubble-child-icon-wrap {
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: none;
 }
 
 .bubble-orb {
@@ -396,21 +452,19 @@ body.bubble-page {
 }
 
 .orb-icon {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(250, 252, 241, 1) 0%, rgba(250, 252, 241, 0.96) 14%, rgba(250, 252, 241, 0.28) 34%, rgba(250, 252, 241, 0) 52%),
-    radial-gradient(circle at 50% 44%, rgba(85, 103, 136, 0.94) 0%, rgba(84, 102, 136, 0.98) 42%, rgba(110, 125, 152, 1) 100%);
+  overflow: hidden;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.06),
     0 14px 30px rgba(0, 0, 0, 0.2);
 }
 
-.orb-icon__glow {
+.orb-icon__image {
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 68% 70%, rgba(40, 52, 72, 0.18) 0%, rgba(40, 52, 72, 0) 48%),
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 38%);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .message-badge {
@@ -453,6 +507,62 @@ body.bubble-page {
   height: 11%;
   border-radius: 999px;
   background: #226fe7;
+}
+
+.spotify-badge {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: #1ed760;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.spotify-badge__arc {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 10%;
+  border-radius: 999px;
+  background: #000000;
+}
+
+.spotify-badge__arc--one {
+  top: 31%;
+  transform: rotate(7deg);
+}
+
+.spotify-badge__arc--two {
+  top: 45%;
+  left: 24%;
+  right: 24%;
+  transform: rotate(7deg);
+}
+
+.spotify-badge__arc--three {
+  top: 59%;
+  left: 29%;
+  right: 29%;
+  transform: rotate(7deg);
+}
+
+.child-action-icon {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--child-action-fg, #ffffff);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18));
+}
+
+.child-action-icon svg {
+  width: 60%;
+  height: 60%;
+  display: block;
 }
 
 @media (max-width: 520px) {
