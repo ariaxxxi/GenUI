@@ -1,6 +1,110 @@
 # Handoff
 
 ## Task title
+Child Chip Padding And Stack Gap Update
+
+## Completion status
+- Completed
+
+## Summary
+- Increased chip padding to `14px` top/bottom and `16px` left/right.
+- Increased chip height to `48px` so the larger padding fits the current `20px` text cleanly.
+- Updated chip width measurement to use the new `16px` horizontal padding.
+- Normalized GPT and Gemini chip stack spacing to an exact `10px` vertical gap between chips.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The stack normalization preserves the top chip anchor and repositions lower chips beneath it.
+
+## Recommended next step
+1. If the whole chip branch should move after the new padding change, adjust only the first chip seed per branch and let the stack normalization place the rest.
+
+## Task title
+Child Chip Parent Clearance And Idle Shadow Tuning
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the ChatGPT middle chip label from `Explain something` to `Explain this`.
+- Reworked chip branch placement so chip layouts get an additional geometric rect-vs-circle clearance offset from the parent bubble instead of only a fixed center offset.
+- Dimmed the default chip container inner shadow so the idle state reads less bright.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The final chip branch spacing still depends on the seeded Figma offsets plus the computed parent-clearance offset.
+
+## Recommended next step
+1. If the top and bottom GPT chips should also sit farther from the parent bubble, increase `CHILD_CHIP_PARENT_GAP` or tune their individual `layoutLeft` / `layoutTop` seeds.
+
+## Task title
+Child Chip Typography And Parent Gap Adjustment
+
+## Completion status
+- Completed
+
+## Summary
+- Increased GPT and Gemini child chip text from `16px` to `20px`.
+- Increased chip height to `40px` so the larger text fits cleanly.
+- Added a `10px` outward offset from the parent bubble for chip branches so the chips no longer touch the parent bubble.
+- Updated chip width measurement to use the new `20px` DM Sans size.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The chip branch still uses per-chip Figma offset seeds; the new parent gap is applied on top of those values.
+
+## Recommended next step
+1. If the visual gap should vary by branch, adjust `CHILD_CHIP_PARENT_GAP` per layout instead of globally.
+
+## Task title
+ChatGPT And Gemini Child Chip Conversion
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced ChatGPT child action bubbles with text chips based on Figma node `493:68`.
+- Replaced Gemini child action bubbles with text chips based on Figma node `493:113`.
+- Added chip-specific child rendering, sizing, and rectangular hit-testing while preserving the existing child reveal/collapse motion.
+- Added explicit Figma-derived chip offsets for the ChatGPT and Gemini child layouts so they no longer use the circular fan geometry.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Figma MCP `get_design_context` and `get_screenshot` for nodes `493:68` and `493:113`
+
+## Remaining issues / caveats
+- Chip widths are measured from the current DM Sans font metrics in code, so they will track the live font rather than hardcoded screenshot widths.
+
+## Recommended next step
+1. If the chip branch spacing still needs tuning, do a visual pass against the live page and adjust the per-chip `layoutLeft` / `layoutTop` offsets only.
+
+## Task title
 SVG Asset MIME Fix
 
 ## Completion status

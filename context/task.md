@@ -4,3 +4,6 @@
 - webcam hand gesture interaction: thumb and index pinch and hold = long press, pinch and hold and move in the air  = moving mouse, release pinch = release mouse
 
 - when start speaking, bubbles disappear, orb become listening mode, text dictation appear. 
+
+
+implement visual

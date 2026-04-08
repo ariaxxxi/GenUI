@@ -52,7 +52,6 @@ body.bubble-page {
   width: 420px;
   height: 410.337px;
   overflow: hidden;
-  border: 1px solid var(--bubble-frame-border);
   border-radius: 31px;
   background: var(--bubble-frame-bg);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.45);
@@ -320,6 +319,14 @@ body.bubble-page {
     inset 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
+.bubble-child-surface.is-chip {
+  border-radius: 30px;
+  box-shadow:
+    0 0 28px rgba(255, 255, 255, 0.015),
+    0 10px 24px rgba(0, 0, 0, 0.12),
+    inset 0 0 8px rgba(255, 255, 255, 0.09);
+}
+
 .bubble-child-surface.is-image-only {
   background: transparent;
   box-shadow: none;
@@ -490,6 +497,30 @@ body.bubble-page {
   border-radius: 999px;
   overflow: hidden;
   box-shadow: none;
+}
+
+.bubble-child-chip-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  transform-origin: center;
+  transition: transform 300ms var(--bubble-ease);
+}
+
+.bubble-child-chip-label {
+  display: block;
+  margin: 0;
+  color: #f4f4f4;
+  font-size: 20px;
+  font-weight: var(--child-chip-font-weight, 400);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0;
 }
 
 .bubble-orb {
