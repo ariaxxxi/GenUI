@@ -1,6 +1,470 @@
 # Handoff
 
 ## Task title
+Bubble Fade Timing Split
+
+## Completion status
+- Completed
+
+## Summary
+- Kept bubble travel at `600ms` for open and close motion.
+- Added a `200ms` fade-in delay when bubbles come out.
+- Set bubble fade-out to `400ms` during the `600ms` collapse motion.
+- Left the `1000ms` push / pan timing path unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass changes only per-bubble opacity timing. It does not retune pill-copy opacity timing or the stagger interval.
+
+## Recommended next step
+1. If the open still feels too empty in the first `200ms`, tune `FADE_IN_DELAY_MS` without changing the `600ms` move duration.
+
+## Task title
+Bubble Collapse Stagger Order
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the collapse stagger ordering so bubbles return in the same sequence they expanded.
+- The first bubble to come out is now also the first bubble to go back.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the stagger order. It does not retune the stagger interval or durations.
+
+## Recommended next step
+1. If the return motion still feels off, tune the `0.02s` stagger step separately from the ordering.
+
+## Task title
+Pill Width Fit + Expanded Overlap Clearance
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the fixed pill text allowance with measured per-bubble copy width so expanded pills size to their actual title/subtitle content.
+- Increased right-side copy padding and aligned the rendered padding with the measured width so long subtitles no longer clip.
+- Strengthened the expanded-pill collision solve by increasing the clearance gap, increasing the initial influence radius, and running more separation passes so neighboring bubbles move fully out of the pill path.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - bubble `8` expanded successfully
+  - expanded width style was `339px`
+  - title and subtitle both fit within the pill bounds
+  - overlap set was empty (`[]`)
+
+## Remaining issues / caveats
+- The no-overlap solve is still heuristic rather than a full constraint solver. If the layout gets denser or more pills can expand at once, the spacing constants may need another pass.
+
+## Recommended next step
+1. If you want the expanded pills to keep even more breathing room, tune `PILL_COLLISION_PADDING`, `PILL_LAYOUT_GAP`, and `PILL_INITIAL_INFLUENCE_PADDING` together instead of widening only the text block.
+
+## Task title
+Bubble Gemini Fit Adjustment
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the Gemini bubble image so it fills the circular crop more tightly.
+- Added per-bubble image scaling support and applied it to Gemini only, leaving the other bubble assets unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This is a scale-based fit adjustment on the supplied PNG; if the source asset itself changes, the exact scale factor may need retuning.
+
+## Recommended next step
+1. If any other image-backed bubbles need tighter crop control, reuse the same per-bubble `imageScale` field instead of adding one-off CSS rules.
+
+## Task title
+Bubble Orb Smooth Physics Motion
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the orb jump by splitting orb motion into two layers:
+  - outer orb button follows camera pan
+  - inner orb visual animates the orb's physics displacement and scale
+- Added a `1000ms` transform transition to the inner orb visual so orb push/bounce motion now eases like the other bubbles instead of snapping to the new offset.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - outer orb transform carried pan offset
+  - inner orb visual transform carried its own non-zero physics offset and scale
+
+## Remaining issues / caveats
+- The orb now uses a CSS transition for its physics layer, while camera pan is still driven by runtime interpolation. That split is intentional and should remain unless the whole motion system is unified.
+
+## Recommended next step
+1. If the orb should feel heavier than the bubbles, increase only the inner orb visual transition duration or reduce its displacement amount.
+
+## Task title
+Bubble Size Range Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the bubble size normalization range from `60–120px` to `40–100px`.
+- Kept the same data-driven normalization path, so all bubble assets and attached sub-icons continue to scale through the same logic.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Shrinking the lower bound may make the smallest bubbles harder to target visually; interaction hit-testing behavior itself was not changed in this pass.
+
+## Recommended next step
+1. If the smallest bubbles now feel too hard to hover, increase hover hit padding without changing visual size.
+
+## Task title
+Bubble Typography Update
+
+## Completion status
+- Completed
+
+## Summary
+- Loaded `DM Sans` for the bubble page.
+- Updated all visible text on the page to `24px`, including:
+  - pill title text
+  - pill subtitle text
+  - calendar date text
+
+## Files changed
+- `bubble.html`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Verified `DM Sans` font load link in `bubble.html`
+- Verified `24px` text rules in `src/styles/bubble-page.css`
+
+## Remaining issues / caveats
+- This pass only changes typography on the bubble page. It does not retune pill spacing after the font-size increase.
+
+## Recommended next step
+1. If the larger text causes crowding in expanded pills, adjust pill spacing and line-height next.
+
+## Task title
+Bubble Timing Split
+
+## Completion status
+- Completed
+
+## Summary
+- Split bubble timing so appear/disappear motion uses `450ms`, while hover-driven push / pan settling continues to use `1000ms`.
+- Kept the stagger ordering unchanged.
+- Applied the shorter timing to the per-bubble transition path and left the pan animation runtime on the slower path.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass only changes timing selection. It does not retune easing curves or stagger intervals.
+
+## Recommended next step
+1. If the open/close motion still feels off, tune the stagger step (`0.02s`) separately from the base duration.
+
+## Task title
+Bubble Orb Physics Render Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the bubble page so the orb now visually follows the physics engine instead of staying pinned at the anchor.
+- The orb was already included in the layout/repulsion calculations, but the renderer only applied camera pan plus scale and ignored the orb's computed `targetX` / `targetY`.
+- Updated the orb transform path to include both physics displacement and camera pan.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - orb computed transform after pressure was `matrix(0.92, 0, 0, 0.92, -21.0076, 5.50565)`, confirming non-zero displacement
+
+## Remaining issues / caveats
+- None for this specific fix.
+
+## Recommended next step
+1. If desired, tune orb repulsion strength separately from other bubbles so it feels heavier or lighter than the icons.
+
+## Task title
+Bubble Size Clamp + Orb Visual Update
+
+## Completion status
+- Completed
+
+## Summary
+- Added a data-driven size normalization step so bubble dimensions are constrained to a minimum of `60px` and a maximum of `120px`.
+- Kept bubble centers and interaction behavior unchanged while scaling only the rendered bubble dimensions and any attached sub-icon offsets/sizes.
+- Updated the resting orb visual to match the new supplied orb image more closely using a softer gray-blue sphere treatment with a bright top-left highlight.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The orb is still rendered as CSS gradients rather than a binary image asset; it is visually matched to the provided reference rather than embedded as an external file.
+
+## Recommended next step
+1. If you want the orb to use an exact image file instead of a CSS recreation, add the source asset to the repo and point the orb visual at it directly.
+
+## Task title
+Bubble Pan Stability + Slower Push Motion
+
+## Completion status
+- Completed
+
+## Summary
+- Increased bubble push / bounce-back movement timing to `1000ms` so panning interactions feel slower and less abrupt.
+- Replaced DOM-based hover detection with stable coordinate hit-testing in cluster space.
+- Implemented hysteresis for hover retention:
+  - `15px` sticky radius on the active circular bubble
+  - expanded pill hit-testing uses a larger rectangular bounds check
+- Added `35px` pan margins so edge panning over-corrects instead of stopping exactly at the clipping boundary.
+- Switched pan tracking to an explicit animated runtime pan state so hover hit-testing uses the current camera offset instead of relying on DOM hover events.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - long press expands the cluster
+  - moving to the right-edge weather bubble keeps one pill expanded after `1200ms` of pan/settling (`expandedCount: 1`)
+
+## Remaining issues / caveats
+- Bubble transform motion now uses `1000ms` globally for push / bounce-back. If only some motion paths should be slow while others stay fast, that timing needs a narrower split by interaction type.
+
+## Recommended next step
+1. Do a visual timing pass and decide whether `1000ms` should apply to all bubble transform motion or only to panning-induced movement.
+
+## Task title
+Bubble ChatGPT Asset Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the ChatGPT bubble asset to the user-provided Microsoft Store image URL.
+- Kept the current layout, long-press interaction, and stagger behavior unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The ChatGPT icon now depends on the external Microsoft Store image host remaining available.
+
+## Recommended next step
+1. If you want this icon to be durable offline, mirror it into the repo and point the bubble config at a local asset.
+
+## Task title
+Bubble Stagger Timing Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the staggered bubble timing so expansion cascades out in sequence and collapse reverses the order, matching the original interaction feel more closely.
+- Kept the current long-press interaction and layout unchanged; this pass only reintroduced per-bubble transition delay timing.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass restores stagger timing only. It does not retune easing, duration, or expanded-state geometry.
+
+## Recommended next step
+1. If needed, do a visual timing pass in the browser and tune only the delay curve or base duration.
+
+## Task title
+Bubble Page Asset Swap
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the bubble page to use the user-provided image assets for the weather, Google Maps, Gemini, notes, and Spotify bubbles.
+- Kept the restored long-press interaction and existing bubble expansion behavior unchanged.
+- Changed the renderer to prioritize explicit `img` assets in bubble config, so these bubbles now render from provided URLs instead of the locally drawn icon treatments.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The page still depends on the availability of the external asset hosts for these icons.
+
+## Recommended next step
+1. If any remote icon host is unstable, mirror the approved assets into the repo and point the bubble config at local files.
+
+## Task title
+Bubble Interaction Restore After Figma Layout Pass
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the orb-triggered hold interaction that was accidentally removed during the Figma layout update.
+- Kept the Figma-aligned expanded target positions and sizing, but put the interaction model back:
+  - centered orb at rest
+  - hold on the orb to expand the cluster
+  - release to collapse
+  - hover a bubble while expanded to trigger the existing pill-style expansion behavior
+- Replaced the static absolute-layout implementation with the prior interaction architecture so layout changes no longer remove behavior.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser interaction verification with Playwright on `http://localhost:8791/bubble`
+  - before hold: first bubble opacity `0`
+  - after hold: first bubble opacity transitioned above `0`
+
+## Remaining issues / caveats
+- The expanded target layout follows the Figma-derived coordinates, but because the page keeps the pre-existing interactive pill-expansion behavior, hovered bubbles can temporarily diverge from the exact static Figma composition by design.
+
+## Recommended next step
+1. If needed, tune only the expanded-state coordinates and z-order further without touching the restored interaction model.
+
+## Task title
+Bubble Page Figma Layout Alignment
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the `bubble` page layout to match Figma node `1261:561` in file `UfVYVYDJetggVnGNcKt9zx`.
+- Replaced the previous interactive bubble-spread composition with a fixed absolute layout based on the Figma node geometry.
+- Matched the Figma frame treatment:
+  - `420x420` canvas
+  - `31px` corner radius
+  - `#646464` stroke
+  - black background
+- Matched the relative bubble positions, overlap order, and sizes from the Figma node using the coordinates returned by `get_design_context`.
+- Rebuilt several icons as local CSS/SVG treatments (`calendar`, `notes`, `weather`, `health`, `spotify`, `gemini`, and the orb) so the page does not depend on unstable third-party image responses for those bubbles.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma MCP: `get_design_context(fileKey=\"UfVYVYDJetggVnGNcKt9zx\", nodeId=\"1261:561\")`
+- `node --check src/bubble-page.js`
+- `curl -I http://localhost:8791/bubble`
+- Browser screenshot pass with Playwright against `http://localhost:8791/bubble`
+
+## Remaining issues / caveats
+- Figma MCP `get_screenshot` hit the Starter plan rate limit during this pass, so final verification used the design-context geometry plus the user-provided reference image.
+- The Figma MCP asset URLs returned by design context were not directly fetchable from this environment, so some icons were reconstructed locally instead of using Figma-exported image files.
+- The composition geometry matches the Figma node; a few icon illustrations are approximations rather than the exact source artwork.
+
+## Recommended next step
+1. If exact icon artwork is required beyond the current geometry match, provide exported assets for the affected bubbles or re-run with Figma screenshot/asset access available.
+
+## Task title
+Bubble Page From Reference JSX
+
+## Completion status
+- Completed
+
+## Summary
+- Added a dedicated `bubble` page that recreates the interaction and layout from `ref/bubble.jsx` as a real repo page instead of a fragile browser-side JSX preview.
+- Rebuilt the reference in plain HTML, CSS, and ES modules to respect the repo's no-framework, no-bundler architecture.
+- Preserved the core interaction model from the JSX reference:
+  - center orb press expands the bubble cluster
+  - hovered pill bubbles widen and reveal title/subtitle copy
+  - pill expansion pushes neighboring bubbles through the same physics rules
+  - active bubble panning keeps expanded content inside the `420x420` frame
+- Added a direct `/bubble` route alongside the existing `/ai` and `/prototype` routes.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `server.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- `curl -I http://localhost:8791/bubble.html`
+- Verified server route mapping in `server.mjs` for `/bubble`
+
+## Remaining issues / caveats
+- I did not run an automated visual browser diff in this environment.
+- The previous temporary preview file under `ref/` was left untouched because the requested deliverable is now the real `bubble` page.
+
+## Recommended next step
+1. Open `/bubble` in the browser and do a visual pass against `ref/bubble.jsx` for any final spacing or image-asset tuning.
+
+## Task title
 Flight Recommendation Chip Figma Layout Update
 
 ## Completion status
