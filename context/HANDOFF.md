@@ -1,6 +1,49 @@
 # Handoff
 
 ## Task title
+Flight Recommendation Chip Figma Layout Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the AI flight recommendation chip to match the Figma row layout instead of the previous stacked card treatment.
+- The chip now renders as a single horizontal pill with:
+  - a round `48x48` airline thumbnail on the left
+  - a two-line text column with reason on top and time below
+  - the price pinned on the right and vertically centered
+- Tightened the recommendation copy casing to title case and compacted the displayed time range by removing `AM` / `PM` from the chip label to better match the design reference.
+- Follow-up adjustment: reduced the body-to-price spacing to `20px` and removed the fixed chip width so the pill now wraps tighter around its content.
+- Follow-up adjustment: reduced the chip text weights by one step so both the reason and time read lighter without changing their font sizes.
+- Follow-up adjustment: reduced the time text to `22px` and increased the stack lift so the bottom chip sits `12px` above the orb, matching the gap between chips.
+- Follow-up adjustment: restored per-chip price colors so the middle chip price is white and the third chip price is orange while the primary chip stays green.
+- Follow-up adjustment: reduced the price-to-text spacing again so the price now sits `10px` from the left text block.
+- Follow-up adjustment: shortened the recommendation chip enter/exit motion from `1000ms` to `600ms`.
+- Follow-up adjustment: in message disambiguation and flight selection only, reduced the listening orb to `scale(0.4)` and pushed it toward a dim near-white treatment with lower opacity and desaturated canvas output.
+
+## Files changed
+- `src/flows/ui-primitives.js`
+- `src/flows/flight-render.js`
+- `src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/ui-primitives.js`
+- `node --check src/flows/flight-render.js`
+- Direct renderer verification with `node --input-type=module`:
+  - confirmed the generated chip markup now contains `.g-flight-recommendation-chip-thumb`
+  - confirmed the chip body contains `.g-flight-recommendation-chip-reason` and `.g-flight-recommendation-chip-time`
+  - confirmed the price renders as its own right-side `.g-flight-recommendation-chip-price` node
+- Attempted browser validation on `http://localhost:5175/ai`, but this checkout does not currently have the `playwright` package installed, so I could not run the live visual pass here.
+
+## Remaining issues / caveats
+- Live browser validation against `ai.html` is still pending because `playwright` is missing from the current environment.
+- The underlying recommendation data still carries unused `stops`, `priceColor`, and `mediaClass` fields; this pass left those untouched because they are no longer needed by the updated chip markup but do not affect runtime behavior.
+
+## Recommended next step
+1. Run a browser pass on `ai.html` once `playwright` is available and compare the recommendation chip directly against Figma node `466:9` for final spacing/polish confirmation.
+
+## Task title
 Flight Recommendation Pill Two-Line Layout
 
 ## Completion status

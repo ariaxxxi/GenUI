@@ -203,14 +203,17 @@ export function renderFlightRecommendationChipStack({ chips = [], selectedIndex 
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
     const title = String(chip?.name || chip?.title || "").trim();
     const reason = String(chip?.reason || "").trim();
+    const price = String(chip?.price || "").trim();
+    const priceColor = String(chip?.priceColor || "").trim();
+    const priceClass = `g-flight-recommendation-chip-price${priceColor ? ` is-${priceColor}` : ""}`;
     const avatar = renderAvatar({
       avatar: chip?.avatar || "",
       initials: chip?.initials || "",
       name: title,
-      cls: chip?.mediaClass || "g-disambiguation-pill-media g-disambiguation-pill-media--large",
-      kind: chip?.avatarKind || "logo",
+      cls: "g-flight-recommendation-chip-thumb",
+      kind: "default",
     });
-    return `<div class="g-flight-recommendation-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderAccentOrbitChrome()}${renderTextLine("g-flight-recommendation-chip-reason", reason)}<div class="g-flight-recommendation-chip-main">${avatar}<div class="g-flight-recommendation-chip-body">${renderTextLine("g-disambiguation-pill-text", title)}${renderFlightMetaRow(chip?.stops || "", chip?.price || "", chip?.priceColor || "")}</div></div></div>`;
+    return `<div class="g-flight-recommendation-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderAccentOrbitChrome()}<div class="g-flight-recommendation-chip-main">${avatar}<div class="g-flight-recommendation-chip-body">${renderTextLine("g-flight-recommendation-chip-reason", reason)}${renderTextLine("g-flight-recommendation-chip-time", title)}</div>${price ? `<div class="${priceClass}">${esc(price)}</div>` : ""}</div></div>`;
   }).join("")}</div>`;
 }
 

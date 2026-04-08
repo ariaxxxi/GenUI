@@ -193,9 +193,9 @@ export function createFlightRender({
     const flow = getFlow();
     const options = flow.recommendationOptionsForUi?.() || [];
     const idx = options.findIndex((entry) => String(entry?.name || "") === String(option?.name || ""));
-    if (idx === 0) return "Best price";
-    if (idx === 1) return "Shortest time";
-    if (idx === 2) return "Free cancel";
+    if (idx === 0) return "Best Price";
+    if (idx === 1) return "Shortest Time";
+    if (idx === 2) return "Free Cancel";
     return "";
   }
 
@@ -208,6 +208,13 @@ export function createFlightRender({
     return buildRecommendationVisualOptions();
   }
 
+  function compactRecommendationTime(value) {
+    return String(value || "")
+      .trim()
+      .replace(/\s*(AM|PM)\b/gi, "")
+      .replace(/\s+\+/g, " +");
+  }
+
   function buildRecommendationChipItems() {
     const flow = getFlow();
     const options = flow.recommendationOptionsForUi?.() || [];
@@ -215,7 +222,7 @@ export function createFlightRender({
       avatar: option?.avatar || "",
       avatarKind: option?.avatarKind || "logo",
       initials: option?.avatar ? "" : (option?.icon || "✈️"),
-      name: option?.outbound ? `${option.outbound.departTime || ""} - ${option.outbound.arriveTime || ""}`.trim() : (option?.name || ""),
+      name: option?.outbound ? `${compactRecommendationTime(option.outbound.departTime || "")} - ${compactRecommendationTime(option.outbound.arriveTime || "")}`.trim() : (option?.name || ""),
       reason: recommendationReason(option),
       stops: String(option?.stops || "").replace(/Non-stop/gi, "Nonstop"),
       price: String(option?.price || "").trim(),
