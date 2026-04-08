@@ -1,6 +1,76 @@
 # Handoff
 
 ## Task title
+Gemini Pill Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed pill behavior from the Gemini bubble.
+- Gemini now remains an icon-only bubble and no longer expands to show copy.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- None for this specific change.
+
+## Recommended next step
+1. If more bubbles should be icon-only, remove their `isPill` and copy fields in the same config layer.
+
+## Task title
+Bubble Fade-In Delay Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the bubble fade-in delay on expand.
+- Kept bubble movement at `600ms` and opacity fade timing at `400ms`.
+- Left collapse timing and the `1000ms` push / pan path unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the open-state opacity delay. Stagger timing still applies uniformly across transform and opacity.
+
+## Recommended next step
+1. If the bubbles should appear even snappier, reduce `FADE_DURATION_MS` rather than reintroducing an opacity delay.
+
+## Task title
+Pill Gap Reduction + Pill Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced expanded pill clearance so neighboring bubbles settle to a `10px` gap.
+- Removed pill behavior from the weather bubble and the Michael bubble, leaving them as image bubbles only.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The `10px` spacing is enforced by the current heuristic repulsion solver, so exact visual spacing can still vary slightly during motion.
+
+## Recommended next step
+1. If you want the `10px` gap to be visually exact at rest for every layout case, the pill collision system should move from heuristic repulsion to a stricter constraint pass.
+
+## Task title
 Bubble Fade Timing Split
 
 ## Completion status

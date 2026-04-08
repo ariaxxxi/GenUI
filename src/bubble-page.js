@@ -1,6 +1,5 @@
 const LONG_PRESS_MS = 140;
 const APPEAR_MOVE_DURATION_MS = 600;
-const FADE_IN_DELAY_MS = 200;
 const FADE_DURATION_MS = 400;
 const PUSH_DURATION_MS = 1000;
 const HOVER_LEASH_PX = 15;
@@ -8,9 +7,9 @@ const PAN_MARGIN_PX = 35;
 const PILL_TEXT_LEFT_PADDING = 16;
 const PILL_TEXT_RIGHT_PADDING = 40;
 const PILL_HIT_RIGHT_PADDING = 10;
-const PILL_COLLISION_PADDING = 24;
+const PILL_COLLISION_PADDING = 0;
 const PILL_INITIAL_INFLUENCE_PADDING = 44;
-const PILL_LAYOUT_GAP = 18;
+const PILL_LAYOUT_GAP = 10;
 const MIN_BUBBLE_SIZE = 40;
 const MAX_BUBBLE_SIZE = 100;
 const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
@@ -24,13 +23,13 @@ const RAW_BUBBLES_CONFIG = [
   { id: 1, width: 73, height: 72, x: -60.97, y: -278.72, zIndex: 10, kind: 'calendar' },
   { id: 2, width: 73, height: 72, x: 120.44, y: -287.35, zIndex: 10, kind: 'note', rotate: -4.29, img: 'https://play-lh.googleusercontent.com/z_o9Zbkp-r2ZU6_Erc2zNnrJDaD0rSa2mxX90Ucg77VzdTaCJvPj_RWywsT1NcRwBNAZffOM66PYkuOhBqwRlg', fill: true },
   { id: 3, width: 101, height: 100, x: 14.93, y: -222.65, zIndex: 9, img: 'https://pbs.twimg.com/profile_images/2028882435585249280/pENAnNHz_400x400.jpg', fill: true },
-  { id: 4, width: 117, height: 116, x: 123, y: -185.63, zIndex: 8, kind: 'weather', img: 'https://downloadr2.apkmirror.com/wp-content/uploads/2024/12/38/676ed91c8e506_com.sec.android.daemonapp.png', fill: true, isPill: true, pillTitle: 'Weather', pillSubtitle: 'Sunny 72°' },
+  { id: 4, width: 117, height: 116, x: 123, y: -185.63, zIndex: 8, kind: 'weather', img: 'https://downloadr2.apkmirror.com/wp-content/uploads/2024/12/38/676ed91c8e506_com.sec.android.daemonapp.png', fill: true },
   { id: 5, width: 153, height: 153, x: -106.56, y: -174.85, zIndex: 5, img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=80', fill: true, isPill: true, pillTitle: 'Tony', pillSubtitle: 'I love it!', subIconKind: 'message-badge', subIconSize: 66.692, subIconOffsetX: 86.31, subIconOffsetY: 86.31 },
   { id: 6, width: 73, height: 72, x: -170.97, y: -77.72, zIndex: 4, kind: 'health', isPill: true, pillTitle: 'Health', pillSubtitle: '10,243 steps' },
   { id: 7, width: 134, height: 131, x: 26.29, y: -104.67, zIndex: 7, kind: 'spotify', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/3840px-Spotify_logo_without_text.svg.png', fill: true, isPill: true, pillTitle: 'Playing', pillSubtitle: 'Blinding Lights' },
   { id: 8, width: 101, height: 99, x: -88.71, y: -49.81, zIndex: 4, img: 'https://store-images.s-microsoft.com/image/apps.14785.14423064005243201.42399137-369b-40bb-b5be-ac2f079c41bf.b1d6d110-9d93-441f-ac20-2e04fd7dfe3c', fill: true, isPill: true, pillTitle: 'Ready', pillSubtitle: 'How can I help?', rotate: -4.29 },
-  { id: 9, width: 106, height: 106, x: 143.94, y: -73.35, zIndex: 4, img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=80', fill: true, isPill: true, pillTitle: 'Michael', pillSubtitle: 'Incoming call...', subIconKind: 'message-badge', subIconSize: 46.205, subIconOffsetX: 59.79, subIconOffsetY: 59.79 },
-  { id: 10, width: 62, height: 61, x: 76.94, y: -15.85, zIndex: 3, kind: 'gemini', img: 'https://static.vecteezy.com/system/resources/previews/055/687/055/non_2x/rectangle-gemini-google-icon-symbol-logo-free-png.png', fill: true, imageScale: 1.18, isPill: true, pillTitle: 'Draft Ready', pillSubtitle: 'Tap to review' },
+  { id: 9, width: 106, height: 106, x: 143.94, y: -73.35, zIndex: 4, img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=80', fill: true, subIconKind: 'message-badge', subIconSize: 46.205, subIconOffsetX: 59.79, subIconOffsetY: 59.79 },
+  { id: 10, width: 62, height: 61, x: 76.94, y: -15.85, zIndex: 3, kind: 'gemini', img: 'https://static.vecteezy.com/system/resources/previews/055/687/055/non_2x/rectangle-gemini-google-icon-symbol-logo-free-png.png', fill: true, imageScale: 1.18 },
 ];
 
 let BUBBLES_CONFIG = buildBubbleConfig();
@@ -342,9 +341,6 @@ function render() {
       : APPEAR_MOVE_DURATION_MS;
     const bubbleIndex = BUBBLES_CONFIG.findIndex((entry) => entry.id === bubble.id);
     const staggerDelay = bubbleIndex * 0.02;
-    const opacityDelay = state.isPressed
-      ? staggerDelay + (FADE_IN_DELAY_MS / 1000)
-      : staggerDelay;
     const shadow = isHovered
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
       : '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
@@ -357,7 +353,7 @@ function render() {
     refs.item.style.opacity = state.isPressed ? '1' : '0';
     refs.item.style.boxShadow = shadow;
     refs.item.style.transform = transform;
-    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${opacityDelay}s, ${staggerDelay}s`;
+    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s`;
     refs.item.style.transitionDuration = `${transformDuration}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms`;
 
     refs.surface.style.backgroundColor = bubble.isPill ? '#2D2D2E' : 'transparent';
