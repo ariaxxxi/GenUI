@@ -2,7 +2,7 @@
   --bubble-page-bg: #121212;
   --bubble-frame-bg: #000000;
   --bubble-frame-border: #646464;
-  --bubble-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --bubble-ease: cubic-bezier(0.35,0.23,0.13,0.98);
   --bubble-pan-ease: cubic-bezier(0.2, 0.9, 0.18, 1.02);
 }
 
@@ -73,7 +73,7 @@ body.bubble-page {
   will-change: transform, width, opacity, box-shadow, filter;
   transition:
     transform 1000ms var(--bubble-ease),
-    width 400ms var(--bubble-ease),
+    width 300ms var(--bubble-ease),
     opacity 400ms var(--bubble-ease),
     box-shadow 400ms var(--bubble-ease),
     filter 400ms var(--bubble-ease);
@@ -96,10 +96,62 @@ body.bubble-page {
   border-radius: 999px;
   border: 0 solid transparent;
   background: transparent;
+  isolation: isolate;
   transition:
     border-color 220ms ease,
     box-shadow 220ms ease,
     background-color 220ms ease;
+}
+
+.bubble-surface.is-pill,
+.bubble-child-surface {
+  background: transparent;
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.02),
+    inset 0 0 20px rgba(255, 255, 255, 0.25);
+}
+
+.bubble-surface.is-pill::before,
+.bubble-child-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(180, 180, 180, 0.2) 45%,
+    rgba(100, 100, 100, 0.08) 75%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.bubble-surface.is-pill::after,
+.bubble-child-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 20px rgba(255, 255, 255, 0.25),
+    inset 0 6px 6px -2px rgba(74, 135, 255, 0.15),
+    inset 0 -20px 20px -8px rgba(172, 188, 247, 0.5),
+    inset 0 -15px 20px -6px rgba(255, 255, 255, 0.4),
+    inset 0 -70px 60px -30px #001643;
+  opacity: 0.22;
+  pointer-events: none;
 }
 
 .bubble-icon-wrap {
@@ -111,6 +163,7 @@ body.bubble-page {
   justify-content: center;
   border-radius: 999px;
   overflow: hidden;
+  z-index: 1;
   transform-origin: center;
   transition: transform 260ms var(--bubble-ease);
 }
@@ -141,6 +194,7 @@ body.bubble-page {
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
+  z-index: 1;
   transition: opacity 250ms ease;
 }
 
@@ -149,14 +203,14 @@ body.bubble-page {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 2px;
-  padding: 0 40px 0 16px;
+  gap: 4px;
+  padding: 0 var(--pill-text-right-padding, 40px) 0 var(--pill-text-left-padding, 16px);
   transform: translateX(-15px);
   transition: transform 350ms ease-out;
 }
 
 .bubble-pill-copy.has-action .bubble-pill-copy-inner {
-  padding-right: 68px;
+  padding-right: var(--pill-text-right-padding, 68px);
 }
 
 .bubble-pill-copy.is-expanded {
@@ -178,7 +232,7 @@ body.bubble-page {
 
 .bubble-pill-subtitle {
   margin: 0;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.76);
   font-size: 24px;
   font-weight: 500;
   line-height: 1.1;
@@ -187,9 +241,9 @@ body.bubble-page {
 .bubble-pill-action {
   position: absolute;
   top: 50%;
-  right: 18px;
-  width: 40px;
-  height: 40px;
+  right: var(--pill-action-right, 18px);
+  width: var(--pill-action-size, 40px);
+  height: var(--pill-action-size, 40px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,7 +259,7 @@ body.bubble-page {
 }
 
 .bubble-pill-action i {
-  font-size: 40px;
+  font-size: var(--pill-action-size, 40px);
   line-height: 1;
 }
 
@@ -222,11 +276,10 @@ body.bubble-page {
 }
 
 .bubble-child-surface {
-  border: 1px solid rgba(255, 255, 255, 0.36);
-  background: rgba(255, 255, 255, 0.05);
   box-shadow:
-    inset 0 0 20px rgba(255, 255, 255, 0.15),
-    0 10px 24px rgba(0, 0, 0, 0.12);
+    0 0 40px rgba(255, 255, 255, 0.02),
+    0 10px 24px rgba(0, 0, 0, 0.12),
+    inset 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
 .bubble-child-icon-wrap {
@@ -559,10 +612,18 @@ body.bubble-page {
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18));
 }
 
-.child-action-icon svg {
+.child-action-icon svg,
+.child-action-icon i {
   width: 60%;
   height: 60%;
   display: block;
+}
+
+.child-action-icon i {
+  width: auto;
+  height: auto;
+  font-size: 1.75rem;
+  line-height: 1;
 }
 
 @media (max-width: 520px) {

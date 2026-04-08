@@ -1,9 +1,17 @@
 const LONG_PRESS_MS = 140;
-const APPEAR_MOVE_DURATION_MS = 600;
-const FADE_DURATION_MS = 400;
-const PUSH_DURATION_MS = 1000;
+const APPEAR_MOVE_DURATION_MS = 500;
+const DISAPPEAR_MOVE_DURATION_MS = 400;
+const FADE_IN_DURATION_MS = 400;
+const FADE_OUT_DURATION_MS = 300;
+const PUSH_DURATION_MS = 400;
+const PAN_DURATION_MS = 1000;
+const BUBBLE_STAGGER_STEP_S = 0.035;
+const CHILD_STAGGER_STEP_S = 0.042;
+const BUBBLE_ENTER_EASE = 'cubic-bezier(0.22, 1.16, 0.3, 1.02)';
+const BUBBLE_EXIT_EASE = 'cubic-bezier(0.42, -0.14, 0.7, 0.68)';
 const CHILD_MENU_HOLD_MS = 3000;
 const CHILD_BUBBLE_SCALE = 0.7;
+const CHILD_BUBBLE_MIN_SIZE = 50;
 const CHILD_FAN_DISTANCE = 20;
 const CHILD_FAN_BOUNDS_PADDING = 14;
 const CHILD_DIMMED_OPACITY = 0.22;
@@ -13,9 +21,9 @@ const HOVERED_SIBLING_OPACITY = 0.9;
 const HOVER_LEASH_PX = 15;
 const PAN_MARGIN_PX = 35;
 const DEFAULT_BUBBLE_GAP = 8;
+const PILL_INSET_ICON_SCALE = 0.8;
 const PILL_TEXT_LEFT_PADDING = 16;
 const PILL_TEXT_RIGHT_PADDING = 40;
-const PILL_TEXT_RIGHT_PADDING_WITH_ACTION = 68;
 const PILL_HIT_RIGHT_PADDING = 10;
 const PILL_COLLISION_PADDING = 0;
 const PILL_INITIAL_INFLUENCE_PADDING = 44;
@@ -32,6 +40,7 @@ const FIGMA_ASSETS = {
   weather: 'https://www.figma.com/api/mcp/asset/896a1ccd-1004-44f8-8049-ca37fea131a9',
   note: 'https://www.figma.com/api/mcp/asset/cdea9f5f-3322-4b7d-a23d-bde7e27887c7',
 };
+const PROFILE_CALL_BADGE_ASSET = 'https://store-images.s-microsoft.com/image/apps.36692.13838317266281778.c2d285ff-9d71-4e2b-9a04-aa9832c1b3c2.506b3747-5c34-4ea3-a97c-53b41cdf491e';
 const ORB_CENTER = {
   x: 210.49972534179688,
   y: 368.14404296875,
@@ -81,7 +90,7 @@ const RAW_BUBBLES_CONFIG = [
     fill: true,
     childActions: [
       { id: 'home', kind: 'home', bg: '#ffffff', fg: '#00a56a' },
-      { id: 'work', kind: 'briefcase', bg: '#ffffff', fg: '#0f172a' },
+      { id: 'work', kind: 'briefcase', bg: '#ffffff', fg: '#ffffff' },
     ],
   },
   {
@@ -136,7 +145,7 @@ const RAW_BUBBLES_CONFIG = [
     pillTitle: '10,243 steps',
     pillSubtitle: '',
     childActions: [
-      { id: 'run', kind: 'shoe', bg: '#ffffff', fg: '#28d7ff' },
+      { id: 'run', img: 'assets/run.svg', imageScale: 0.92 },
       { id: 'heart', kind: 'heart', bg: '#ffffff', fg: '#ff4d6d' },
       { id: 'water', kind: 'drop', bg: '#ffffff', fg: '#2aa8ff' },
     ],
@@ -155,6 +164,7 @@ const RAW_BUBBLES_CONFIG = [
     pillTitle: 'Happiness',
     pillSubtitle: '1975',
     pillTrailingIcon: 'pause',
+    pillTrailingIconSize: 40,
     subIconKind: 'spotify-badge',
     subIconSize: 50,
     subIconOffsetX: 70,
@@ -194,10 +204,13 @@ const RAW_BUBBLES_CONFIG = [
     zIndex: 4,
     img: 'assets/profile2.png',
     fill: true,
-    subIconKind: 'message-badge',
-    subIconSize: 41.53227233886719,
-    subIconOffsetX: 53.74606677889824,
-    subIconOffsetY: 53.74751940369606,
+    isPill: true,
+    pillTitle: 'Hiro',
+    pillSubtitle: 'Yesterday',
+    pillTrailingIcon: 'incoming-call',
+    pillTrailingIconSize: 24,
+    pillTrailingIconRight: 20,
+    pillTextLeftPadding: 20,
     childActions: [
       { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
       { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
@@ -216,7 +229,7 @@ const RAW_BUBBLES_CONFIG = [
     fill: true,
     childActions: [
       { id: 'draft', kind: 'spark', bg: '#ffffff', fg: '#6d61ff' },
-      { id: 'refine', kind: 'pen', bg: '#ffffff', fg: '#3ea9ff' },
+      { id: 'refine', kind: 'mic', bg: '#ffffff', fg: '#3ea9ff' },
     ],
   },
 ];
@@ -281,8 +294,16 @@ function enrichBubbleMetrics(bubble) {
 function measurePillExtraWidth(bubble) {
   const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 24px "DM Sans"');
   const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '500 24px "DM Sans"');
-  const rightPadding = bubble.pillTrailingIcon ? PILL_TEXT_RIGHT_PADDING_WITH_ACTION : PILL_TEXT_RIGHT_PADDING;
-  return Math.ceil(Math.max(titleWidth, subtitleWidth) + PILL_TEXT_LEFT_PADDING + rightPadding + 6);
+  const leftPadding = bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING;
+  const rightPadding = getPillTextRightPadding(bubble);
+  return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 6);
+}
+
+function getPillTextRightPadding(bubble) {
+  if (!bubble.pillTrailingIcon) return PILL_TEXT_RIGHT_PADDING;
+  const actionSize = bubble.pillTrailingIconSize || 40;
+  const actionRight = bubble.pillTrailingIconRight ?? 18;
+  return actionRight + actionSize + 10;
 }
 
 function measureTextWidth(text, font) {
@@ -306,6 +327,7 @@ function buildBubbles() {
 
     const surface = document.createElement('div');
     surface.className = 'bubble-surface';
+    if (bubble.isPill) surface.classList.add('is-pill');
 
     const iconWrap = document.createElement('div');
     iconWrap.className = 'bubble-icon-wrap';
@@ -317,11 +339,13 @@ function buildBubbles() {
       const titleMarkup = bubble.pillTitle ? `<p class="bubble-pill-title">${bubble.pillTitle}</p>` : '';
       const subtitleMarkup = bubble.pillSubtitle ? `<p class="bubble-pill-subtitle">${bubble.pillSubtitle}</p>` : '';
       const actionMarkup = bubble.pillTrailingIcon
-        ? `<div class="bubble-pill-action">${getPillTrailingIconMarkup(bubble.pillTrailingIcon)}</div>`
+        ? `<div class="bubble-pill-action" style="--pill-action-size: ${bubble.pillTrailingIconSize || 40}px; --pill-action-right: ${bubble.pillTrailingIconRight ?? 18}px;">${getPillTrailingIconMarkup(bubble.pillTrailingIcon)}</div>`
         : '';
       copy = document.createElement('div');
       copy.className = 'bubble-pill-copy';
       if (bubble.pillTrailingIcon) copy.classList.add('has-action');
+      copy.style.setProperty('--pill-text-left-padding', `${bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING}px`);
+      copy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble)}px`);
       copy.innerHTML = `
         <div class="bubble-pill-copy-inner">
           ${titleMarkup}
@@ -490,6 +514,18 @@ function createSubIconGraphic(kind) {
     });
     return image;
   }
+  if (kind === 'call-badge') {
+    const image = document.createElement('img');
+    image.className = 'bubble-icon is-fill';
+    image.src = PROFILE_CALL_BADGE_ASSET;
+    image.alt = '';
+    image.draggable = false;
+    image.style.setProperty('--bubble-image-scale', '1');
+    image.addEventListener('error', () => {
+      if (image.src !== FALLBACK_ICON) image.src = FALLBACK_ICON;
+    });
+    return image;
+  }
   return document.createElement('div');
 }
 
@@ -529,6 +565,8 @@ function getPillTrailingIconMarkup(kind) {
   switch (kind) {
     case 'pause':
       return `<i class="bi bi-pause-fill" aria-hidden="true"></i>`;
+    case 'incoming-call':
+      return `<i class="bi bi-telephone-inbound-fill" aria-hidden="true"></i>`;
     default:
       return '';
   }
@@ -537,19 +575,19 @@ function getPillTrailingIconMarkup(kind) {
 function getChildActionIconMarkup(kind) {
   switch (kind) {
     case 'home':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="m8 3.293 6 6V13.5a.5.5 0 0 1-.5.5H10V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5V14H2.5a.5.5 0 0 1-.5-.5V9.293l6-6Z"/><path fill="currentColor" d="M7.293 1.5a1 1 0 0 1 1.414 0l6.647 6.646-.708.708L14 8.207V14a1 1 0 0 1-1 1h-3.5V10H6.5v5H3a1 1 0 0 1-1-1V8.207l-.646.647-.708-.708L7.293 1.5Z"/></svg>`;
+      return `<i class="bi bi-house-door-fill" aria-hidden="true"></i>`;
     case 'briefcase':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.5 0a.5.5 0 0 0-.5.5V2H2.5A1.5 1.5 0 0 0 1 3.5v2.79c.237.11.495.198.77.26A41.36 41.36 0 0 0 8 7c2.152 0 4.17-.21 6.23-.45.274-.062.532-.15.77-.26V3.5A1.5 1.5 0 0 0 13.5 2H10V.5a.5.5 0 0 0-.5-.5h-3Z"/><path fill="currentColor" d="M16 8.11V12.5A1.5 1.5 0 0 1 14.5 14h-13A1.5 1.5 0 0 1 0 12.5V8.11c.22.08.45.147.68.2A42.5 42.5 0 0 0 8 8.75c2.362 0 4.5-.22 7.32-.44.23-.053.46-.12.68-.2Z"/></svg>`;
+      return `<i class="bi bi-suitcase-lg-fill" aria-hidden="true"></i>`;
     case 'phone':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3.654 1.328a.678.678 0 0 1 .737-.163l2.522 1.01c.294.117.48.404.457.72l-.207 2.132a.678.678 0 0 1-.58.606l-1.29.185a11.72 11.72 0 0 0 4.516 4.516l.185-1.29a.678.678 0 0 1 .606-.58l2.132-.207a.678.678 0 0 1 .72.457l1.01 2.522a.678.678 0 0 1-.163.737l-1.119 1.119c-.84.84-2.09 1.156-3.252.702-2.798-1.092-5.23-3.524-6.322-6.322-.454-1.163-.138-2.412.702-3.252l1.119-1.119Z"/></svg>`;
+      return `<i class="bi bi-telephone-fill" aria-hidden="true"></i>`;
     case 'message':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a8 8 0 1 0 3.918 14.974c.275.07.827.233 1.405.504.58.272 1.149.635 1.522 1.12.032.04.09.052.135.027a.094.094 0 0 0 .047-.099c-.043-.399-.17-.995-.613-1.645A7.967 7.967 0 0 0 16 8a8 8 0 0 0-8-8Z"/></svg>`;
+      return `<i class="bi bi-chat-fill" aria-hidden="true"></i>`;
     case 'video':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v.5l3.553-2.132A.5.5 0 0 1 16 3.5v9a.5.5 0 0 1-.447.497.5.5 0 0 1-.276-.06L12 10.803V11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5Z"/></svg>`;
+      return `<i class="bi bi-camera-video-fill" aria-hidden="true"></i>`;
     case 'check':
       return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.354-8.354a.5.5 0 0 0-.708-.708L7 9.586 5.854 8.44a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l4-4Z"/></svg>`;
     case 'mic':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 3a3 3 0 0 1 6 0v4a3 3 0 0 1-6 0V3Z"/><path fill="currentColor" d="M3.5 6.5A.5.5 0 0 1 4 7v.5a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v.5A5 5 0 0 1 8.5 12.45V14H10a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1h1.5v-1.55A5 5 0 0 1 3 7.5V7a.5.5 0 0 1 .5-.5Z"/></svg>`;
+      return `<i class="bi bi-mic-fill" aria-hidden="true"></i>`;
     case 'scan':
       return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 2h3v1H3v2H2V2Zm11 0h1v3h-1V3h-2V2h2ZM2 11h1v2h2v1H2v-3Zm11 0h1v3h-3v-1h2v-2ZM5.5 5h5v6h-5V5Zm1 1v4h3V6h-3Z"/></svg>`;
     case 'bell':
@@ -565,11 +603,11 @@ function getChildActionIconMarkup(kind) {
     case 'shoe':
       return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8.5 1.5a.5.5 0 0 1 .5.5v2.086a1 1 0 0 0 .293.707l1.414 1.414a1 1 0 0 0 .707.293H14a1 1 0 0 1 1 1v1H1v-.5a2 2 0 0 1 2-2h2.086a1 1 0 0 0 .707-.293L7.5 4.5V2a.5.5 0 0 1 .5-.5Z"/></svg>`;
     case 'heart':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="m8 2.748-.717-.737C5.6.281 2.514 1.878 2.514 4.385c0 1.737 1.4 3.41 3.44 5.42L8 11.81l2.046-2.004c2.039-2.01 3.44-3.683 3.44-5.42 0-2.507-3.087-4.104-4.77-2.374L8 2.748Z"/></svg>`;
+      return `<i class="bi bi-heart-fill" aria-hidden="true"></i>`;
     case 'drop':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4.406 1.342C5.102.53 5.906 0 8 0s2.898.53 3.594 1.342C12.29 2.154 13 3.41 13 5a5 5 0 1 1-10 0c0-1.59.71-2.846 1.406-3.658Z"/></svg>`;
+      return `<i class="bi bi-droplet-fill" aria-hidden="true"></i>`;
     case 'pen':
-      return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="m12.146.146 3.708 3.708-9.5 9.5L2 14l.646-4.354 9.5-9.5Zm.708 1.415L4.207 10.207 3.5 13.5l3.293-.707 8.647-8.646-2.586-2.586Z"/></svg>`;
+      return `<i class="bi bi-pencil-square" aria-hidden="true"></i>`;
     case 'plus':
       return `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0ZM8.5 4.5a.5.5 0 0 0-1 0v3h-3a.5.5 0 0 0 0 1h3v3a.5.5 0 0 0 1 0v-3h3a.5.5 0 0 0 0-1h-3v-3Z"/></svg>`;
     default:
@@ -743,11 +781,15 @@ function render() {
     const isContextParent = state.childMenuParentId === bubble.id;
     const isDimmed = state.childMenuParentId != null && !isContextParent;
     const isSoftFaded = state.childMenuParentId == null && state.hoveredBubble != null && !isHovered;
-    const transformDuration = state.isPressed && state.hoveredBubble != null
-      ? PUSH_DURATION_MS
-      : APPEAR_MOVE_DURATION_MS;
+    const transformDuration = state.isPressed
+      ? (state.hoveredBubble != null ? PUSH_DURATION_MS : APPEAR_MOVE_DURATION_MS)
+      : DISAPPEAR_MOVE_DURATION_MS;
+    const fadeDuration = state.isPressed ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
+    const transformEase = !state.isPressed
+      ? BUBBLE_EXIT_EASE
+      : (state.hoveredBubble == null ? BUBBLE_ENTER_EASE : 'var(--bubble-ease)');
     const bubbleIndex = BUBBLES_CONFIG.findIndex((entry) => entry.id === bubble.id);
-    const staggerDelay = bubbleIndex * 0.02;
+    const staggerDelay = bubbleIndex * BUBBLE_STAGGER_STEP_S;
     const shadow = isHovered
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
       : '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
@@ -766,20 +808,23 @@ function render() {
     refs.item.style.filter = filter;
     refs.item.style.transform = transform;
     refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s`;
-    refs.item.style.transitionDuration = `${transformDuration}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms`;
+    refs.item.style.transitionDuration = `${transformDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
+    refs.item.style.transitionTimingFunction = `${transformEase}, var(--bubble-ease), var(--bubble-ease), var(--bubble-ease), var(--bubble-ease)`;
 
-    refs.surface.style.backgroundColor = bubble.isPill ? 'rgba(255, 255, 255, 0.05)' : 'transparent';
-    refs.surface.style.border = bubble.isPill
-      ? '1px solid rgba(255, 255, 255, 0.36)'
-      : '0 solid transparent';
-    refs.surface.style.boxShadow = bubble.isPill
-      ? 'inset 0 0 20px rgba(255, 255, 255, 0.15)'
-      : (isHovered && !bubble.isPill
+    if (bubble.isPill) {
+      refs.surface.style.backgroundColor = '';
+      refs.surface.style.border = '';
+      refs.surface.style.boxShadow = '';
+    } else {
+      refs.surface.style.backgroundColor = 'transparent';
+      refs.surface.style.border = '0 solid transparent';
+      refs.surface.style.boxShadow = isHovered
         ? 'inset 0 0 0 2px rgba(255, 255, 255, 0.96)'
-        : 'none');
+        : 'none';
+    }
     refs.iconWrap.style.width = `${bubble.width}px`;
     refs.iconWrap.style.height = `${bubble.height}px`;
-    refs.iconWrap.style.transform = bubble.isExpanded ? 'scale(0.9)' : 'scale(1)';
+    refs.iconWrap.style.transform = bubble.isExpanded ? `scale(${PILL_INSET_ICON_SCALE})` : 'scale(1)';
 
     if (refs.copy) {
       refs.copy.classList.toggle('is-expanded', bubble.isExpanded);
@@ -806,12 +851,14 @@ function render() {
     const childActionIndex = child
       ? child.actionIndex
       : ((getBubbleConfigById(parentId)?.childActions || []).findIndex((action) => getChildBubbleKey(parentId, action.id) === childKey));
-    const staggerDelay = Math.max(0, childActionIndex) * 0.028;
+    const staggerDelay = Math.max(0, childActionIndex) * CHILD_STAGGER_STEP_S;
     const restingScale = 0.62;
     const displayX = child ? child.targetX : parentBubble.targetX;
     const displayY = child ? child.targetY : parentBubble.targetY;
     const scale = child ? child.targetScale : restingScale;
     const opacity = child ? 1 : 0;
+    const transformEase = child ? BUBBLE_ENTER_EASE : BUBBLE_EXIT_EASE;
+    const fadeDuration = child ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
     const shadow = child && state.hoveredChildBubble === childKey
       ? '0 16px 32px rgba(0, 0, 0, 0.42)'
       : '0 10px 24px rgba(0, 0, 0, 0.26)';
@@ -824,7 +871,8 @@ function render() {
     refs.item.style.filter = 'none';
     refs.item.style.transform = `translate3d(${displayX - childRadius}px, ${displayY - childRadius}px, 0) scale(${scale})`;
     refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s, 0s`;
-    refs.item.style.transitionDuration = `${APPEAR_MOVE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms, ${FADE_DURATION_MS}ms`;
+    refs.item.style.transitionDuration = `${child ? APPEAR_MOVE_DURATION_MS : DISAPPEAR_MOVE_DURATION_MS}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
+    refs.item.style.transitionTimingFunction = `${transformEase}, var(--bubble-ease), var(--bubble-ease), var(--bubble-ease), var(--bubble-ease)`;
     refs.iconWrap.style.width = `${childSize}px`;
     refs.iconWrap.style.height = `${childSize}px`;
     refs.iconWrap.style.transform = 'scale(0.88)';
@@ -1124,8 +1172,8 @@ function updatePanTarget(nextTarget) {
 
   const tick = (now) => {
     const elapsed = now - runtime.panStartedAt;
-    const progress = Math.min(1, elapsed / PUSH_DURATION_MS);
-    const eased = easeInOutCubic(progress);
+    const progress = Math.min(1, elapsed / PAN_DURATION_MS);
+    const eased = cubicBezier(progress, 0.35, 0.23, 0.13, 0.98);
     runtime.panCurrent.x = lerp(runtime.panFrom.x, runtime.panTarget.x, eased);
     runtime.panCurrent.y = lerp(runtime.panFrom.y, runtime.panTarget.y, eased);
     applyPanVisuals();
@@ -1155,10 +1203,31 @@ function lerp(from, to, progress) {
   return from + ((to - from) * progress);
 }
 
-function easeInOutCubic(progress) {
-  return progress < 0.5
-    ? 4 * progress * progress * progress
-    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+function cubicBezier(t, x1, y1, x2, y2) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+
+  const sampleCurveX = (u) => ((ax * u + bx) * u + cx) * u;
+  const sampleCurveY = (u) => ((ay * u + by) * u + cy) * u;
+  const sampleCurveDerivativeX = (u) => (3 * ax * u + 2 * bx) * u + cx;
+
+  let u = t;
+  for (let i = 0; i < 5; i += 1) {
+    const x = sampleCurveX(u) - t;
+    const dx = sampleCurveDerivativeX(u);
+    if (Math.abs(x) < 1e-6 || Math.abs(dx) < 1e-6) break;
+    u -= x / dx;
+  }
+
+  u = Math.min(1, Math.max(0, u));
+  return sampleCurveY(u);
 }
 
 function getPillRepulsion(pill, node, influencePadding) {
@@ -1222,7 +1291,10 @@ function getNodeGap(nodeA, nodeB) {
 }
 
 function getChildBubbleSize(parentBubble) {
-  return Math.max(parentBubble.width, parentBubble.height) * CHILD_BUBBLE_SCALE;
+  return Math.max(
+    CHILD_BUBBLE_MIN_SIZE,
+    Math.max(parentBubble.width, parentBubble.height) * CHILD_BUBBLE_SCALE,
+  );
 }
 
 function buildChildBubbleLayout(parentBubble, hoveredChildBubbleId) {

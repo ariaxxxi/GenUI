@@ -1,6 +1,567 @@
 # Handoff
 
 ## Task title
+Push Motion Physics Easing Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the dedicated push-motion easing change in `src/bubble-page.js`.
+- Restored bubble push/settle transform motion to the shared easing path.
+- Restored JS pan interpolation to:
+  - `cubic-bezier(0.35,0.23,0.13,0.98)`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Push/settle motion and pan are back to the shared interaction easing rather than a dedicated physics-specific curve.
+
+## Recommended next step
+1. If you still want a more physical push feel later, try a subtler dedicated curve and test it against the current shared easing rather than replacing it outright.
+
+## Task title
+Profile 2 Overlay Icon Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the lower-right overlay badge icon from profile 2 in `src/bubble-page.js`.
+- Kept profile 2’s pill text and trailing inbound-call action unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Profile 1 still uses its existing overlay badge icon.
+
+## Recommended next step
+1. If the two profiles should behave consistently, decide whether profile 1 should also lose its overlay badge in a separate pass.
+
+## Task title
+Separate Pan Duration Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Split pan timing from pill push timing in `src/bubble-page.js`.
+- Restored pan interpolation duration to `1000ms`.
+- Left pill movement / push response at `400ms`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pan and pushed-bubble motion now use the same easing curve but different durations.
+
+## Recommended next step
+1. If the separation feels visually disconnected, retune the pan easing or add a slight delay offset in a separate pass.
+
+## Task title
+Shared Pill Easing Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared pill expansion / push / settle easing back to:
+  - `cubic-bezier(0.35,0.23,0.13,0.98)`
+- Matched the JS pan interpolation to the same curve.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The separate reveal overshoot curve is still distinct from this shared interaction easing.
+
+## Recommended next step
+1. If you want all motion to share one curve, replace the reveal overshoot easing separately.
+
+## Task title
+Pill Expansion Duration Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced pill movement / push response duration in `src/bubble-page.js` from `1000ms` to `400ms`.
+- Reduced pill width expansion duration in `src/styles/bubble-page.css` from `400ms` to `300ms`.
+- Left reveal/collapse motion durations unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pill text fade/slide timing is unchanged, so the text may still complete on its own `250ms` / `350ms` timings.
+
+## Recommended next step
+1. If the pill still feels slow, reduce the text slide timing alongside the shell timings in a separate pass.
+
+## Task title
+Faster Pill Push Easing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared pill expansion / push / settle easing to:
+  - `cubic-bezier(0.18,0.35,0.24,0.95)`
+- Applied the same curve to JS-driven pan interpolation so pushed-away motion and camera tracking stay matched.
+- Left the separate bubble reveal overshoot curve unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Reveal and collapse still use their own dedicated transform curves for non-push motion states.
+
+## Recommended next step
+1. If pill expansion still feels late, reduce `PUSH_DURATION_MS` rather than pushing this easing further.
+
+## Task title
+Bubble Reveal And Collapse Duration Split
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main and child bubble motion durations in `src/bubble-page.js` to:
+  - come out: `500ms`
+  - disappear: `400ms`
+- Left push/pan response at `1000ms`.
+- Split fade timing to:
+  - fade in: `400ms`
+  - fade out: `300ms`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Opacity still uses the existing shared fade duration, so the visual fade may outlast the `300ms` collapse movement.
+
+## Recommended next step
+1. If you want collapse to finish visually in `300ms` as well, split fade timing into enter/exit durations in a separate pass.
+
+## Task title
+Shared Pill And Push Easing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared interaction easing for pill expansion and push/settle motion to:
+  - `cubic-bezier(0.35,0.23,0.13,0.98)`
+- Applied the same easing to JS-driven pan interpolation so camera tracking matches the pill/push motion.
+- Left the separate bubble reveal overshoot curve unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The come-out reveal motion still uses its own dedicated overshoot curve instead of the shared easing.
+
+## Recommended next step
+1. If you want all bubble motion to feel uniform, replace the separate reveal curve with the shared easing in a separate pass.
+
+## Task title
+Faster Bubble Reveal + Stronger Overshoot
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the bubble reveal movement duration in `src/bubble-page.js` from `450ms` to `700ms`.
+- Reduced the bubble reveal overshoot slightly:
+  - `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+- Collapse hesitation and push/pan timing are unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The collapse hesitation curve is unchanged.
+
+## Recommended next step
+1. If you want enter and exit to feel more unified, retune the collapse curve to a softer counterpart in a separate pass.
+
+## Task title
+Expanded Pill Bubble Inset Scale Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the inner bubble/icon scale inside expanded pill states in `src/bubble-page.js` from `0.9` to `0.8`.
+- This makes hovered pill bubbles read more clearly as nested inside the pill container.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This affects all expanded pill bubbles that use the shared inset-content treatment.
+
+## Recommended next step
+1. If one specific pill should keep a larger inset icon, add a per-bubble pill inset scale override in a separate pass.
+
+## Task title
+Bubble Enter Overshoot + Exit Hesitation
+
+## Completion status
+- Completed
+
+## Summary
+- Added a subtle overshoot easing curve to bubble reveal motion in `src/bubble-page.js`.
+- Added a slight back-in / hesitation easing curve to bubble collapse motion.
+- Applied the same reveal/collapse easing treatment to child bubbles.
+- Left hover push/pan physics on the existing standard easing.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The easing is applied via inline transition timing functions on the transform property, while width/opacity/filter still use the default bubble easing.
+
+## Recommended next step
+1. If you want the anticipation to be stronger, increase the negative y value in `BUBBLE_EXIT_EASE` slightly rather than extending the duration.
+
+## Task title
+Profile 2 Pill Spacing Override
+
+## Completion status
+- Completed
+
+## Summary
+- Added per-bubble pill spacing overrides in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- Set profile 2’s text-left padding to `20px`.
+- Set profile 2’s trailing inbound-call icon offset from the right edge to `20px`.
+- Left the default pill spacing unchanged for other bubbles.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The profile-specific spacing uses inline CSS variables on the pill copy/action elements.
+
+## Recommended next step
+1. If more bubble-specific pill spacing variants are needed, promote these overrides into named modifier classes instead of inline variables.
+
+## Task title
+Bubble Stagger Emphasis Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the main bubble stagger step in `src/bubble-page.js` from `0.02s` to `0.035s`.
+- Increased the child bubble stagger step in `src/bubble-page.js` from `0.028s` to `0.042s`.
+- Left the underlying movement and fade durations unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This makes ordering more obvious but also slightly increases the total visible reveal/collapse window across a full set.
+
+## Recommended next step
+1. If you want even more separation, increase only the main bubble stagger further and leave child stagger as-is to avoid over-dramatizing the submenus.
+
+## Task title
+Pill Copy Vertical Gap Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the shared pill title/subtitle gap in `src/styles/bubble-page.css` from `2px` to `4px`.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Visual CSS-only change
+
+## Remaining issues / caveats
+- This affects all pill bubbles, not just a single app/profile pill.
+
+## Recommended next step
+1. If only one pill type should have different copy spacing, split the pill copy layout into per-bubble modifier classes.
+
+## Task title
+Profile 2 Trailing Call Icon Size Override
+
+## Completion status
+- Completed
+
+## Summary
+- Added per-bubble trailing pill action sizing in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- Set profile 2’s inbound-call trailing icon to `24px`.
+- Kept Spotify’s pause action at `40px`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pills with trailing actions still share the same reserved text padding unless further tuned per bubble.
+
+## Recommended next step
+1. If you want profile 2’s text block to reclaim the unused space from the smaller icon, make action padding dynamic per bubble in a separate pass.
+
+## Task title
+Child Bubble Minimum Size Floor Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the minimum child bubble size floor in `src/bubble-page.js` from `40px` to `50px`.
+- Child bubbles still scale at `0.7` of the parent size above that floor.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This affects only the lower bound. Larger child bubbles still follow the same parent-relative scaling rule.
+
+## Recommended next step
+1. If the larger floor makes tight branches feel crowded, retune sibling gap or fan distance in a separate pass.
+
+## Task title
+Profile 2 Subtitle + Inbound Call Action
+
+## Completion status
+- Completed
+
+## Summary
+- Updated profile 2’s pill subtitle to `Yesterday`.
+- Added a trailing pill action for profile 2 using Bootstrap Icons:
+  - `bi-telephone-inbound-fill`
+- Reused the same right-side pill action slot and styling used by the Spotify pause icon.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Profile 2 still uses the existing pill layout geometry and spacing reserved for trailing actions.
+
+## Recommended next step
+1. If the inbound-call icon should have a different color or size than Spotify’s pause icon, split pill action styling by action type in a separate pass.
+
+## Task title
+Profile Action Bootstrap Icon Swap
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the profile child action icons in `src/bubble-page.js` to the requested Bootstrap filled variants:
+  - call -> `bi-telephone-fill`
+  - chat -> `bi-chat-fill`
+  - video -> `bi-camera-video-fill`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- These icons use the existing Bootstrap Icons font dependency already loaded by `bubble.html`.
+
+## Recommended next step
+1. If you want the profile actions to differ between profile 1 and profile 2, split their child action arrays in a separate pass.
+
+## Task title
+Child Bubble Minimum Size Clamp
+
+## Completion status
+- Completed
+
+## Summary
+- Added a minimum child bubble size floor in `src/bubble-page.js`.
+- Child bubbles still scale at `0.7` of the parent bubble, but they now never render below `40px`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This affects only the lower bound. Larger child bubbles still follow the existing parent-scale rule.
+
+## Recommended next step
+1. If you want tighter visual consistency, add a maximum child bubble size cap in a separate pass.
+
+## Task title
+Profile 2 Incoming Call Pill
+
+## Completion status
+- Completed
+
+## Summary
+- Changed profile 2 to a pill-capable incoming call state in `src/bubble-page.js`.
+- Added profile 2 pill copy:
+  - title `Hiro`
+  - subtitle `Incoming call, 12:37`
+- Replaced profile 2’s overlay icon with the provided call badge asset from Microsoft Store.
+- Softened pill subtitle color in `src/styles/bubble-page.css` to a slightly gray white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The new profile 2 call state reuses the existing pill behavior and geometry rather than a dedicated incoming-call layout variant.
+
+## Recommended next step
+1. If you want profile 2’s incoming-call state to feel more specific, add a dedicated trailing accept/decline action layout in a separate pass.
+
+## Task title
+Child Action Icon Mapping Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated ChatGPT child actions to:
+  - compose -> Bootstrap `bi-pencil-square`
+  - voice -> Bootstrap `bi-mic-fill`
+  - summarize -> existing star icon kept
+- Updated Google Maps child actions to:
+  - home -> Bootstrap `bi-house-door-fill`
+  - work -> Bootstrap `bi-suitcase-lg-fill`
+- Updated Gemini child actions so the second action is now a microphone instead of a pencil.
+- Updated Health child actions to:
+  - heart -> Bootstrap `bi-heart-fill` in pink
+  - water -> Bootstrap `bi-droplet-fill` in blue
+  - run -> local asset `assets/run.svg`
+- Added CSS support for Bootstrap-icon-based child actions alongside the existing SVG/icon-image paths.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Bootstrap-icon child actions use a fixed `1.75rem` font size, while image-based child actions still size via the image wrapper.
+
+## Recommended next step
+1. If you want stricter size parity between icon-font children and image/SVG children, move icon-font sizing to a per-bubble CSS variable driven from JS.
+
+## Task title
+Design.md Prototype Shell Applied To Bubble Containers
+
+## Completion status
+- Completed
+
+## Summary
+- Read `/Users/ariax/.codex/worktrees/02b2/GenUI/design.md` and updated pill and child bubble containers to use that prototype shell treatment.
+- Moved pill container styling away from inline JS fill/stroke overrides and into CSS-driven shell styling.
+- Applied the `design.md` shell characteristics to pill and child containers:
+  - transparent base
+  - soft outer bloom
+  - masked 1px gradient border
+  - inner white wash / glow layer
+- Kept pill text white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The child shell still keeps its extra outer drop shadow in addition to the prototype shell bloom.
+
+## Recommended next step
+1. If you want an even stricter match to `design.md`, remove the extra child drop shadow and rely only on the shell bloom.
+
+## Task title
 Child Bubble Icon Disc Removal
 
 ## Completion status
