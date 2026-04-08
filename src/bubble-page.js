@@ -4,7 +4,7 @@ const DISAPPEAR_MOVE_DURATION_MS = 400;
 const FADE_IN_DURATION_MS = 400;
 const FADE_OUT_DURATION_MS = 300;
 const PUSH_DURATION_MS = 400;
-const PAN_DURATION_MS = 1000;
+const PAN_DURATION_MS = 1500;
 const BUBBLE_STAGGER_STEP_S = 0.035;
 const CHILD_STAGGER_STEP_S = 0.042;
 const BUBBLE_ENTER_EASE = 'cubic-bezier(0.22, 1.16, 0.3, 1.02)';
@@ -12,6 +12,7 @@ const BUBBLE_EXIT_EASE = 'cubic-bezier(0.42, -0.14, 0.7, 0.68)';
 const CHILD_MENU_HOLD_MS = 3000;
 const CHILD_BUBBLE_SCALE = 0.7;
 const CHILD_BUBBLE_MIN_SIZE = 50;
+const CHILD_BUBBLE_SIZE = 56;
 const CHILD_FAN_DISTANCE = 20;
 const CHILD_FAN_BOUNDS_PADDING = 14;
 const CHILD_DIMMED_OPACITY = 0.22;
@@ -22,13 +23,15 @@ const HOVER_LEASH_PX = 15;
 const PAN_MARGIN_PX = 35;
 const DEFAULT_BUBBLE_GAP = 8;
 const PILL_INSET_ICON_SCALE = 0.8;
-const PILL_TEXT_LEFT_PADDING = 16;
+const PILL_TEXT_LEFT_PADDING = 6;
 const PILL_TEXT_RIGHT_PADDING = 40;
 const PILL_HIT_RIGHT_PADDING = 10;
 const PILL_COLLISION_PADDING = 0;
 const PILL_INITIAL_INFLUENCE_PADDING = 44;
 const PILL_LAYOUT_GAP = 10;
 const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
+const ORB_BASE_SIZE = 80;
+const ORB_PRESSED_SIZE = 110;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   orb: 'https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d',
@@ -42,8 +45,8 @@ const FIGMA_ASSETS = {
 };
 const PROFILE_CALL_BADGE_ASSET = 'https://store-images.s-microsoft.com/image/apps.36692.13838317266281778.c2d285ff-9d71-4e2b-9a04-aa9832c1b3c2.506b3747-5c34-4ea3-a97c-53b41cdf491e';
 const ORB_CENTER = {
-  x: 210.49972534179688,
-  y: 368.14404296875,
+  x: 210.5,
+  y: 374.5,
 };
 
 const RAW_BUBBLES_CONFIG = [
@@ -64,41 +67,40 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 2,
-    width: 53,
-    height: 54,
-    x: -55.999725341796875,
-    y: -263.14404296875,
+    width: 80,
+    height: 80,
+    x: 74.5,
+    y: -184.5,
     zIndex: 10,
     kind: 'note',
-    rotate: -4.29,
     img: FIGMA_ASSETS.note,
     fill: true,
     childActions: [
       { id: 'checklist', kind: 'check', bg: '#ffffff', fg: '#111827' },
-      { id: 'voice', kind: 'mic', bg: '#fff5f5', fg: '#ff1d1d' },
-      { id: 'scan', kind: 'scan', bg: '#ffffff', fg: '#ff1d1d' },
+      { id: 'voice', kind: 'mic', bg: '#fff5f5', fg: '#ff5252' },
+      { id: 'scan', kind: 'scan', bg: '#ffffff', fg: '#ff5252' },
     ],
   },
   {
     id: 3,
     width: 90,
-    height: 92,
-    x: 10.5,
-    y: -211,
+    height: 90,
+    x: -17.08,
+    y: -217.69,
     zIndex: 9,
     img: FIGMA_ASSETS.map,
     fill: true,
     childActions: [
-      { id: 'home', kind: 'home', bg: '#ffffff', fg: '#00a56a' },
+      { id: 'home', kind: 'home', bg: '#ffffff', fg: '#ffffff' },
       { id: 'work', kind: 'briefcase', bg: '#ffffff', fg: '#ffffff' },
     ],
   },
   {
     id: 4,
-    width: 104,
-    height: 104,
-    x: 112.5,
-    y: -186,
+    width: 61,
+    height: 61,
+    x: -79,
+    y: -280,
     zIndex: 8,
     kind: 'weather',
     img: FIGMA_ASSETS.weather,
@@ -111,10 +113,10 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 5,
-    width: 137.52670288085938,
-    height: 137.52670288085938,
-    x: -106.89862369000912,
-    y: -169.48192654550016,
+    width: 110,
+    height: 110,
+    x: -116.02,
+    y: -152.96,
     zIndex: 5,
     img: 'assets/profile1.png',
     fill: true,
@@ -122,9 +124,9 @@ const RAW_BUBBLES_CONFIG = [
     pillTitle: 'Tony',
     pillSubtitle: 'I love it!',
     subIconKind: 'message-badge',
-    subIconSize: 59.94753646850586,
-    subIconOffsetX: 77.57571719586849,
-    subIconOffsetY: 77.5787435621023,
+    subIconSize: 47.949,
+    subIconOffsetX: 62.04,
+    subIconOffsetY: 62.05,
     childActions: [
       { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
       { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
@@ -133,10 +135,10 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 6,
-    width: 69,
-    height: 69,
-    x: 75.00027465820312,
-    y: -274.64404296875,
+    width: 60,
+    height: 60,
+    x: 55.5,
+    y: -260.5,
     zIndex: 4,
     kind: 'health',
     img: FIGMA_ASSETS.health,
@@ -152,23 +154,26 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 7,
-    width: 120,
-    height: 117,
-    x: 27.5,
-    y: -101.5,
+    width: 110,
+    height: 110,
+    x: 4.23,
+    y: -108.02,
     zIndex: 7,
     kind: 'spotify',
     img: 'https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3',
     fill: true,
+    imageOutlineColor: '#1ED760',
+    imageOutlineWidth: 3,
     isPill: true,
     pillTitle: 'Happiness',
     pillSubtitle: '1975',
     pillTrailingIcon: 'pause',
     pillTrailingIconSize: 40,
+    pillTrailingIconColor: '#1ED760',
     subIconKind: 'spotify-badge',
-    subIconSize: 50,
-    subIconOffsetX: 70,
-    subIconOffsetY: 67,
+    subIconSize: 42.167,
+    subIconOffsetX: 67.83,
+    subIconOffsetY: 67.83,
     disableHoverScale: true,
     childActions: [
       { id: 'playlist-1', img: 'https://misc.scdn.co/liked-songs/liked-songs-300.jpg', fill: true },
@@ -178,17 +183,16 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 8,
-    width: 97.18635060095039,
-    height: 95.52808486193521,
-    x: -83.6368403245245,
-    y: -48.190557959079774,
+    width: 80,
+    height: 80,
+    x: -87.31,
+    y: -51.24,
     zIndex: 4,
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
-    isPill: true,
-    pillTitle: 'Ready',
-    pillSubtitle: 'How can I help?',
-    rotate: -4.29,
+    pillTitle: 'Continue',
+    pillSubtitle: 'Book flight to Coachella',
+    rotate: -4,
     childActions: [
       { id: 'voice', kind: 'mic', bg: '#ffffff', fg: '#111827' },
       { id: 'compose', kind: 'pen', bg: '#ffffff', fg: '#111827' },
@@ -197,20 +201,21 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 9,
-    width: 95.2799301147461,
-    height: 95.2799301147461,
-    x: 140.79552867962057,
-    y: -80.63431444764195,
+    width: 95.28,
+    height: 95.28,
+    x: 124.84,
+    y: -97.73,
     zIndex: 4,
     img: 'assets/profile2.png',
     fill: true,
     isPill: true,
     pillTitle: 'Hiro',
     pillSubtitle: 'Yesterday',
-    pillTrailingIcon: 'incoming-call',
-    pillTrailingIconSize: 24,
-    pillTrailingIconRight: 20,
-    pillTextLeftPadding: 20,
+    pillTextLeftPadding: 10,
+    subIconKind: 'call-badge',
+    subIconSize: 41.532,
+    subIconOffsetX: 53.74,
+    subIconOffsetY: 53.75,
     childActions: [
       { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
       { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
@@ -219,14 +224,16 @@ const RAW_BUBBLES_CONFIG = [
   },
   {
     id: 10,
-    width: 55,
-    height: 55,
-    x: 76.00027465820312,
-    y: -20.5,
+    width: 80,
+    height: 80,
+    x: 74.31,
+    y: -18.77,
     zIndex: 3,
     kind: 'gemini',
     img: FIGMA_ASSETS.gemini,
     fill: true,
+    pillTitle: 'Ready',
+    pillSubtitle: 'Where should we start?',
     childActions: [
       { id: 'draft', kind: 'spark', bg: '#ffffff', fg: '#6d61ff' },
       { id: 'refine', kind: 'mic', bg: '#ffffff', fg: '#3ea9ff' },
@@ -292,11 +299,11 @@ function enrichBubbleMetrics(bubble) {
 }
 
 function measurePillExtraWidth(bubble) {
-  const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 24px "DM Sans"');
-  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '500 24px "DM Sans"');
+  const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 22px "DM Sans"');
+  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '400 18px "DM Sans"');
   const leftPadding = bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING;
   const rightPadding = getPillTextRightPadding(bubble);
-  return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 6);
+  return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 2);
 }
 
 function getPillTextRightPadding(bubble) {
@@ -331,6 +338,11 @@ function buildBubbles() {
 
     const iconWrap = document.createElement('div');
     iconWrap.className = 'bubble-icon-wrap';
+    if (bubble.imageOutlineColor) {
+      iconWrap.classList.add('has-inner-outline');
+      iconWrap.style.setProperty('--bubble-image-outline-color', bubble.imageOutlineColor);
+      iconWrap.style.setProperty('--bubble-image-outline-width', `${bubble.imageOutlineWidth ?? 2}px`);
+    }
     iconWrap.append(createBubbleGraphic(bubble));
     surface.append(iconWrap);
 
@@ -339,7 +351,7 @@ function buildBubbles() {
       const titleMarkup = bubble.pillTitle ? `<p class="bubble-pill-title">${bubble.pillTitle}</p>` : '';
       const subtitleMarkup = bubble.pillSubtitle ? `<p class="bubble-pill-subtitle">${bubble.pillSubtitle}</p>` : '';
       const actionMarkup = bubble.pillTrailingIcon
-        ? `<div class="bubble-pill-action" style="--pill-action-size: ${bubble.pillTrailingIconSize || 40}px; --pill-action-right: ${bubble.pillTrailingIconRight ?? 18}px;">${getPillTrailingIconMarkup(bubble.pillTrailingIcon)}</div>`
+        ? `<div class="bubble-pill-action" style="--pill-action-size: ${bubble.pillTrailingIconSize || 40}px; --pill-action-right: ${bubble.pillTrailingIconRight ?? 18}px; --pill-action-color: ${bubble.pillTrailingIconColor || '#ffffff'};">${getPillTrailingIconMarkup(bubble.pillTrailingIcon)}</div>`
         : '';
       copy = document.createElement('div');
       copy.className = 'bubble-pill-copy';
@@ -386,6 +398,23 @@ function buildBubbles() {
 
       const childSurface = document.createElement('div');
       childSurface.className = 'bubble-surface bubble-child-surface';
+      if (action.img) childSurface.classList.add('is-image-only');
+      childSurface.innerHTML = `
+        <div class="bubble-child-selection" aria-hidden="true">
+          <div class="bubble-child-selection-accent bubble-child-selection-accent-left">
+            <div class="bubble-child-selection-accent-left-base"></div>
+            <div class="bubble-child-selection-accent-left-white-2"></div>
+            <div class="bubble-child-selection-accent-left-white-1"></div>
+          </div>
+          <div class="bubble-child-selection-accent bubble-child-selection-accent-right">
+            <div class="bubble-child-selection-accent-right-base"></div>
+            <div class="bubble-child-selection-accent-right-white-2"></div>
+            <div class="bubble-child-selection-accent-right-white-1"></div>
+          </div>
+          <div class="bubble-child-selection-inner-glow"></div>
+          <div class="bubble-child-selection-ring"></div>
+        </div>
+      `;
 
       const childIconWrap = document.createElement('div');
       childIconWrap.className = 'bubble-icon-wrap bubble-child-icon-wrap';
@@ -397,6 +426,7 @@ function buildBubbles() {
       childBubbleRefs.set(childKey, {
         item: childItem,
         surface: childSurface,
+        action,
         iconWrap: childIconWrap,
       });
     }
@@ -559,6 +589,11 @@ function getChildActionForeground(color) {
     return '#ffffff';
   }
   return color;
+}
+
+function getChildActionAccent(action) {
+  if (!action) return 'rgb(144 172 255)';
+  return getChildActionForeground(action.fg || action.bg || 'rgb(144 172 255)');
 }
 
 function getPillTrailingIconMarkup(kind) {
@@ -772,6 +807,7 @@ function render() {
   );
   runtime.layout = layout;
   updatePanTarget(layout.panOffset);
+  orb.classList.toggle('is-pressed', state.isPressed);
 
   for (const [id, refs] of bubbleRefs.entries()) {
     const bubble = layout.bubbles.find((entry) => entry.id === id);
@@ -807,9 +843,9 @@ function render() {
     refs.item.style.boxShadow = shadow;
     refs.item.style.filter = filter;
     refs.item.style.transform = transform;
-    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s`;
-    refs.item.style.transitionDuration = `${transformDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
-    refs.item.style.transitionTimingFunction = `${transformEase}, var(--bubble-ease), var(--bubble-ease), var(--bubble-ease), var(--bubble-ease)`;
+    refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s`;
+    refs.item.style.transitionDuration = `${transformDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
+    refs.item.style.transitionTimingFunction = `${transformEase}, var(--bubble-ease), var(--bubble-ease), var(--bubble-ease), var(--bubble-ease), var(--bubble-ease)`;
 
     if (bubble.isPill) {
       refs.surface.style.backgroundColor = '';
@@ -824,6 +860,8 @@ function render() {
     }
     refs.iconWrap.style.width = `${bubble.width}px`;
     refs.iconWrap.style.height = `${bubble.height}px`;
+    refs.iconWrap.style.left = '0px';
+    refs.iconWrap.style.top = '0px';
     refs.iconWrap.style.transform = bubble.isExpanded ? `scale(${PILL_INSET_ICON_SCALE})` : 'scale(1)';
 
     if (refs.copy) {
@@ -837,6 +875,7 @@ function render() {
       refs.subIcon.style.height = `${bubble.subIconSize}px`;
       refs.subIcon.style.left = `${bubble.subIconOffsetX}px`;
       refs.subIcon.style.top = `${bubble.subIconOffsetY}px`;
+      refs.subIcon.style.transform = bubble.isExpanded ? 'scale(0.8)' : 'scale(1)';
     }
   }
 
@@ -862,6 +901,9 @@ function render() {
     const shadow = child && state.hoveredChildBubble === childKey
       ? '0 16px 32px rgba(0, 0, 0, 0.42)'
       : '0 10px 24px rgba(0, 0, 0, 0.26)';
+    const isHighlighted = state.hoveredChildBubble === childKey;
+    const childAccent = getChildActionAccent(refs.action);
+    const childSecondaryAccent = 'rgb(0 0 0)';
 
     refs.item.style.zIndex = String(child ? 65 + childActionIndex : 20);
     refs.item.style.width = `${childSize}px`;
@@ -873,9 +915,12 @@ function render() {
     refs.item.style.transitionDelay = `${staggerDelay}s, ${staggerDelay}s, ${staggerDelay}s, 0s, 0s`;
     refs.item.style.transitionDuration = `${child ? APPEAR_MOVE_DURATION_MS : DISAPPEAR_MOVE_DURATION_MS}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
     refs.item.style.transitionTimingFunction = `${transformEase}, var(--bubble-ease), var(--bubble-ease), var(--bubble-ease), var(--bubble-ease)`;
+    refs.surface.classList.toggle('is-highlighted', isHighlighted && !refs.action?.img);
+    refs.surface.style.setProperty('--g-stage-selected-rgb', childAccent);
+    refs.surface.style.setProperty('--g-stage-selected-secondary-rgb', childSecondaryAccent);
     refs.iconWrap.style.width = `${childSize}px`;
     refs.iconWrap.style.height = `${childSize}px`;
-    refs.iconWrap.style.transform = 'scale(0.88)';
+    refs.iconWrap.style.transform = refs.action?.img ? 'scale(1)' : 'scale(0.88)';
   }
 }
 
@@ -896,12 +941,12 @@ function computeLayout(isPressed, hoveredBubble, childMenuParentId, hoveredChild
 
   const orbNode = {
     id: 'orb',
-    width: 80.122,
-    height: 79.587,
-    radius: 40.061,
+    width: ORB_BASE_SIZE,
+    height: ORB_BASE_SIZE,
+    radius: ORB_BASE_SIZE / 2,
     targetX: 0,
     targetY: 0,
-    targetScale: isPressed ? 0.92 : 1,
+    targetScale: isPressed ? (ORB_PRESSED_SIZE / ORB_BASE_SIZE) : 1,
   };
   positions.push(orbNode);
 
@@ -1291,10 +1336,7 @@ function getNodeGap(nodeA, nodeB) {
 }
 
 function getChildBubbleSize(parentBubble) {
-  return Math.max(
-    CHILD_BUBBLE_MIN_SIZE,
-    Math.max(parentBubble.width, parentBubble.height) * CHILD_BUBBLE_SCALE,
-  );
+  return CHILD_BUBBLE_SIZE;
 }
 
 function buildChildBubbleLayout(parentBubble, hoveredChildBubbleId) {

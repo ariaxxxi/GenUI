@@ -1,6 +1,678 @@
 # Handoff
 
 ## Task title
+SVG Asset MIME Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed static SVG serving in `server.mjs` by adding an explicit `.svg` MIME type.
+- This corrects the loading issue for `assets/run.svg`, which is already used by the health child bubble.
+- Restarted the local `server.mjs` process on port `8791` so the MIME fix is active in the running app.
+
+## Files changed
+- `server.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `curl -I http://localhost:8791/assets/run.svg`
+  - returned `Content-Type: image/svg+xml; charset=utf-8`
+
+## Remaining issues / caveats
+- None for the SVG path. Other uncommon asset types will still use the fallback MIME unless explicitly added later.
+
+## Recommended next step
+1. Reload the bubble page and confirm the health run icon now renders from `assets/run.svg`.
+
+## Task title
+Child Bubble Size Unification And Maps Icon Color
+
+## Completion status
+- Completed
+
+## Summary
+- Confirmed ChatGPT’s previous child bubble size was `56px`.
+- Updated `src/bubble-page.js` so all child bubbles now use a fixed `56px` size.
+- Changed the Google Maps home child icon color to white.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The older scale-based child size constants remain in the file but are no longer used by the sizing function.
+
+## Recommended next step
+1. If you want, I can do a small cleanup pass to remove the now-unused scale-based child-size constants.
+
+## Task title
+ChatGPT And Gemini Pill Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed pill expansion from ChatGPT in `src/bubble-page.js`.
+- Removed pill expansion from Gemini in `src/bubble-page.js`.
+- Moved the Gemini bubble down by `10px` in the resting layout.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The ChatGPT and Gemini copy strings remain in config but are now unused because those bubbles no longer enter pill state.
+
+## Recommended next step
+1. If those copy fields are no longer needed, remove them in a separate cleanup pass rather than mixing cleanup into behavior changes.
+
+## Task title
+Spotify Pause Icon Color Override
+
+## Completion status
+- Completed
+
+## Summary
+- Added a per-bubble trailing action color override in `src/bubble-page.js`.
+- Set Spotify’s pause icon color to `#1ED760`.
+- Updated `.bubble-pill-action` in `src/styles/bubble-page.css` to read from `--pill-action-color` instead of a hardcoded white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- JS/CSS config-only change
+
+## Remaining issues / caveats
+- Other pill trailing icons still default to white unless a color override is provided.
+
+## Recommended next step
+1. If more pills need custom action colors, add `pillTrailingIconColor` per bubble rather than branching in CSS.
+
+## Task title
+Orb Layer Order Update
+
+## Completion status
+- Completed
+
+## Summary
+- Moved the orb behind the bubble stack in `src/styles/bubble-page.css`.
+- Set `.bubble-pan-layer` to `z-index: 1`.
+- Set `.bubble-orb` to `z-index: 0`.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change; no JS syntax impact
+
+## Remaining issues / caveats
+- Interaction behavior is unchanged; this only affects visual stacking order.
+
+## Recommended next step
+1. If any bubble-adjacent element still appears under the orb, adjust that specific element’s z-index rather than raising the orb again.
+
+## Task title
+Long-Press Orb Growth And Blur Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the pressed orb behavior in `src/bubble-page.js` so long press scales the orb up to `120px` instead of shrinking it.
+- Updated the pressed orb behavior in `src/bubble-page.js` so long press scales the orb up to `110px`.
+- Added explicit orb size constants:
+  - base size: `80px`
+  - pressed size: `110px`
+- Updated the pressed orb blur in `src/styles/bubble-page.css` to `30px`.
+- Removed the dark outer orb shadow / outline.
+- Restored the pressed-state inner shadow / inset light layer using `#EFFAE9`.
+- Updated the orb anchor box in `src/styles/bubble-page.css` to keep the orb centered at the same canvas position with the larger base size.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The orb still retains its default non-pressed shell styling; only the pressed-state visual treatment changed.
+
+## Recommended next step
+1. If the enlarged orb now feels too dominant, tune only the pressed size constant before changing blur again.
+
+## Task title
+Standard Pill Size Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the forced shared expanded pill size behavior from `src/bubble-page.js`.
+- Expanded pills now return to using each bubble’s own width and height instead of the temporary fixed `80px` base.
+- Reverted the temporary per-pill badge scaling/offset scaling that was only needed for the forced standard size.
+- Kept the separate animation improvements intact.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pills still use the shared inset icon scale of `0.8`; only the forced common base size was removed.
+
+## Recommended next step
+1. If any specific pill still needs tuning, adjust that bubble’s own size or text padding rather than reintroducing a global forced pill size.
+
+## Task title
+Pill Inner Bubble Timing Sync
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `.bubble-icon-wrap` in `src/styles/bubble-page.css` so its transform transition matches the pill shell resize timing exactly.
+- Changed inner bubble transform timing from `260ms` to `300ms` to align with the pill container’s width/height animation.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change; no JS syntax impact
+
+## Remaining issues / caveats
+- This syncs the inner bubble with the pill shell resize only. Push/pan timing remains separate.
+
+## Recommended next step
+1. If any remaining mismatch is visible, compare the pill copy fade/slide timing next rather than retuning the bubble scale again.
+
+## Task title
+Centered Standardized Pill Bubble Scaling
+
+## Completion status
+- Completed
+
+## Summary
+- Updated standardized pill scaling so the bubble graphic shrinks using its center as the anchor instead of visually collapsing from the top-left.
+- Kept the original bubble graphic box during expansion, then offset it into the standard `80px` pill slot and scale it down to the standard `64px` visual size.
+- Added `left` and `top` transitions to `.bubble-icon-wrap` so the centered offset animates smoothly.
+- Preserved the existing smooth height transition and badge-resize behavior from the previous pass.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The pill geometry is still driven by the shared expanded pill standard; this change fixes the anchor and transition behavior only.
+
+## Recommended next step
+1. If the resize still feels off, the next lever is the icon-wrap transition duration rather than the standardized pill dimensions.
+
+## Task title
+Standardized Expanded Pill Size
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the default pill icon-to-text gap in `src/bubble-page.js` from `10px` to `6px`.
+- Standardized all expanded pill-capable bubbles to the same shell size used by the current GPT/Gemini pills:
+  - expanded pill bubble base size: `80px`
+  - inset bubble visual size: `64px` via `0.8` scale
+- Updated expanded pill width calculation so the shell width is based on `80px + text width`, not the original bubble size.
+- Scaled bottom-right sub-icon size and offsets proportionally during pill expansion so larger original bubbles still collapse into the standard pill geometry cleanly.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the expanded pill state. Resting bubble sizes and positions are unchanged.
+
+## Recommended next step
+1. If any individual pill still feels oversized, tune its text padding or copy length rather than breaking the shared pill-size standard.
+
+## Task title
+Image Child Bubble Shell Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Updated child bubble rendering in `src/bubble-page.js` so image-based child actions opt out of the glass container shell.
+- Disabled the selected-state overlay for image child bubbles.
+- Let image child bubbles fill the circle directly by removing the icon-wrap inset scale.
+- Removed child shell background, glow, and border pseudo-elements for image children in `src/styles/bubble-page.css`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Functional icon child bubbles still use the glass container and selected-state treatment.
+
+## Recommended next step
+1. If image child bubbles need a different hover treatment later, add it separately without reintroducing the glass shell.
+
+## Task title
+Pill Width Measurement Tightening
+
+## Completion status
+- Completed
+
+## Summary
+- Updated pill width measurement in `src/bubble-page.js` to match the live pill typography styles.
+- Changed title measurement from `600 24px` to `600 22px`.
+- Changed subtitle measurement from `500 24px` to `400 18px`.
+- Reduced the extra width buffer from `6px` to `2px` so pill shells fit the text more tightly.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pill width is still intentionally based on the longer of title or subtitle plus the configured left/right padding.
+
+## Recommended next step
+1. If any single pill still feels too wide, tune that bubble’s text padding rather than loosening the shared measurement again.
+
+## Task title
+Pill Typography Size Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated shared pill typography in `src/styles/bubble-page.css`.
+- Set pill titles to `22px`.
+- Set pill subtitles to `18px`.
+- Reduced subtitle weight from `500` to `400`.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change; no JS syntax impact
+
+## Remaining issues / caveats
+- This applies to pill title/subtitle text. Other text like the calendar date and icon glyph sizes are unchanged.
+
+## Recommended next step
+1. If any individual pill now feels too compressed, retune its spacing or width rather than raising the shared font sizes again.
+
+## Task title
+ChatGPT And Gemini Pill Content Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated ChatGPT’s pill copy in `src/bubble-page.js` to:
+  - title: `Continue`
+  - subtitle: `Book flight to Coachella`
+- Updated Gemini to match ChatGPT’s bubble size at `80x80`.
+- Promoted Gemini to a pill bubble and set its copy to:
+  - title: `Ready`
+  - subtitle: `Where should we start?`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Gemini’s geometry position was preserved; only its size and pill content changed.
+
+## Recommended next step
+1. If Gemini’s larger size now needs a composition adjustment, retune only its `x`/`y` position in a separate pass.
+
+## Task title
+Spotify Cover Outline Visibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Moved the Spotify cover’s inset green outline from the image element to the icon wrapper in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- The outline now renders on the visible clipped surface layer instead of being lost on the scaled image.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The outline thickness is still controlled by Spotify bubble `7`’s `imageOutlineWidth` config value.
+
+## Recommended next step
+1. If the green ring is still too subtle, increase only `imageOutlineWidth` for bubble `7`.
+
+## Task title
+ChatGPT Bubble Rotation Adjustment
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the ChatGPT bubble rotation in `src/bubble-page.js` from `4deg` to `-4deg`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the resting/rendered angle. Interaction behavior and pill expansion are unchanged.
+
+## Recommended next step
+1. If you are still tuning composition by eye, keep future angle adjustments isolated to config values so they remain easy to revert.
+
+## Task title
+Pill Icon-To-Text Gap Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the default pill text left padding in `src/bubble-page.js` from `16px` to `10px`.
+- Updated profile 2’s pill-specific left padding override from `20px` to `10px` so it matches the new pill spacing.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes the measured pill width too, because the text-width calculation uses the same left padding value.
+
+## Recommended next step
+1. If any individual pill now feels too tight, add a per-bubble left padding override instead of increasing the global default again.
+
+## Task title
+ChatGPT Bubble Rotation Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the ChatGPT bubble rotation in `src/bubble-page.js` from `-9.16deg` to `4deg`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the resting/rendered angle. Interaction behavior and pill expansion are unchanged.
+
+## Recommended next step
+1. If you want the angle to match Figma exactly again later, re-pull the node after the next geometry change instead of stacking manual tweaks.
+
+## Task title
+Profile 2 Badge Swap And Spotify Cover Outline
+
+## Completion status
+- Completed
+
+## Summary
+- Removed profile 2’s trailing pill call icon from `src/bubble-page.js`.
+- Added a bottom-right `call-badge` sub-icon to profile 2 instead.
+- Added a Spotify-specific inset outline on the main album cover using `#1ED760`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The Spotify cover outline is implemented as an inset box-shadow on the cover image layer, so its perceived thickness depends on the cover scale and border clipping.
+
+## Recommended next step
+1. If the Spotify outline reads too thin or too thick in-browser, tune only `imageOutlineWidth` on bubble `7`.
+
+## Task title
+Red Accent Color Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the red note-related icon color to `#FF5252`.
+- Changed the note child action foregrounds in `src/bubble-page.js` from `#ff1d1d` to `#ff5252`.
+- Changed the fallback `.note-icon` background in `src/styles/bubble-page.css` from `#ff1d1d` to `#ff5252`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The main note bubble currently uses the Figma image asset, so this mainly affects note-related child icon accents and the CSS fallback note graphic.
+
+## Recommended next step
+1. If other red accents should match too, list the specific bubble or child actions to retint rather than broadening all warm colors.
+
+## Task title
+Figma Node 1261:561 Geometry Sync
+
+## Completion status
+- Completed
+
+## Summary
+- Fetched live geometry from Figma MCP for node `1261:561` in file `UfVYVYDJetggVnGNcKt9zx`.
+- Updated `src/bubble-page.js` main bubble sizes and positions to match the current Figma frame for:
+  - weather
+  - maps
+  - health
+  - notes
+  - profile 1
+  - Spotify
+  - ChatGPT
+  - profile 2
+  - Gemini
+- Updated profile and Spotify badge sizes/offsets from the Figma node geometry.
+- Updated orb center and orb size to match the current Figma frame.
+- Updated the orb anchor box in `src/styles/bubble-page.css` to the new Figma position and size.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- numeric layout gap check: minimum main-bubble gap `7.85px`
+
+## Remaining issues / caveats
+- This pass updates geometry only. Existing app assets, copy, and interaction behavior were preserved even where the current Figma screenshot uses different content.
+
+## Recommended next step
+1. If you want full 1:1 parity with the current Figma frame, update the content assets and text for any bubbles that intentionally differ from the screenshot.
+
+## Task title
+Pill Sub-Icon Inset Scaling
+
+## Completion status
+- Completed
+
+## Summary
+- Updated pill-expansion behavior for bottom-right bubble badges in `src/bubble-page.js`.
+- When a bubble with a bottom-right sub-icon expands into a pill, the sub-icon now scales to `0.8`.
+- Set the sub-icon transform anchor to its top-left corner in `src/styles/bubble-page.css` so the badge stays visually pinned while shrinking.
+- Added a smooth transform transition for the sub-icon.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This applies only to bubbles that render a `subIconKind` badge in the bottom-right.
+
+## Recommended next step
+1. If the badge still feels too large inside the pill, tune only the sub-icon scale value rather than moving its offsets.
+
+## Task title
+Child Highlight Secondary Accent To Black
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the child selected-state accent wiring in `src/bubble-page.js`.
+- Kept the primary accent tied to the child icon color.
+- Changed the secondary accent variable to black:
+  - `--g-stage-selected-secondary-rgb: rgb(0 0 0)`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the child selected-state overlay accent pairing. Other container treatments are unchanged.
+
+## Recommended next step
+1. If the black secondary accent feels too heavy, try a dark neutral instead of pure black without changing the primary accent.
+
+## Task title
+Container Selected-State 1:1 Port
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the previous approximate child selected-state styling with a 1:1 port of the live `index.html` container selected-state implementation from `src/styles/shared.css`.
+- Added the same registered accent properties used by the main prototype stage:
+  - `@property --g-stage-selected-rgb`
+  - `@property --g-stage-selected-secondary-rgb`
+- Matched the child selected overlay to the exact production values for:
+  - transition timings
+  - accent bloom positions and sizes
+  - white hotspot positions and sizes
+  - radial gradient stops
+  - blur radii
+  - inner glow stack
+- Kept the child accent color driven from the child icon color.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass ports the selected-state overlay literally for child containers. Pill containers still use the existing shell treatment and do not mount the selected overlay stack.
+
+## Recommended next step
+1. If you want pill containers to use the same selected overlay too, add the same overlay DOM structure to pill surfaces rather than restyling the current shell.
+
+## Task title
+Pan Duration Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the pan interpolation duration in `src/bubble-page.js` from `1000ms` to `1500ms`.
+- Left pill push timing and other bubble motion durations unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The pan now lags further behind the pill push motion, which still runs at its shorter existing duration.
+
+## Recommended next step
+1. If the separation feels too slow, reduce pan duration slightly rather than coupling it back to push timing.
+
+## Task title
+Long-Press Orb Pressed-State Styling
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the long-press orb state in `src/bubble-page.js` to toggle a pressed class on the orb shell.
+- Changed the orb pressed-state scale target from `0.92` to `0.7`.
+- Added smooth pressed-state styling in `src/styles/bubble-page.css` for:
+  - `blur(20px)` on the orb surface
+  - inset white light using `inset 0 4px 0 40px`
+  - smooth transitions on the orb surface and image layers
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The requested inset shadow value is implemented as CSS `box-shadow: inset 0 4px 0 40px rgba(255, 255, 255, 0.95)`, which is the closest valid CSS form.
+
+## Recommended next step
+1. If the blur feels too heavy on device, reduce it slightly rather than changing the pressed-state scale again.
+
+## Task title
 Push Motion Physics Easing Revert
 
 ## Completion status
