@@ -4,9 +4,9 @@ import { createFlightAi } from "./flight-ai.js";
 import { apiUrl } from "../utils.js";
 
 const AIRLINE_LOGOS = {
-  ANA: "src/assets/airline-ana.png",
-  JAL: "src/assets/airline-jal.png",
-  United: "src/assets/airline-united.png",
+  United: "src/assets/airline-united-ref.webp",
+  Delta: "src/assets/airline-delta-ref.png",
+  Alaska: "src/assets/airline-alaska-ref.png",
 };
 
 const PAYMENT_METHODS = [
@@ -19,11 +19,11 @@ const DEFAULT_FLIGHT_RECOMMENDATION_INDEX = 1;
 const FLIGHT_RECOMMENDATIONS = [
   {
     icon: "🟢",
-    avatar: AIRLINE_LOGOS.ANA,
+    avatar: AIRLINE_LOGOS.United,
     avatarKind: "logo",
-    airline: "ANA",
+    airline: "United",
     name: "06:45 → 09:30",
-    sub: "ANA · Non-stop · $842",
+    sub: "United · Non-stop · $842",
     price: "$842",
     stops: "Non-stop",
     outbound: { departTime: "6:45 AM", arriveTime: "9:30 AM" },
@@ -31,11 +31,11 @@ const FLIGHT_RECOMMENDATIONS = [
   },
   {
     icon: "🟡",
-    avatar: AIRLINE_LOGOS.JAL,
+    avatar: AIRLINE_LOGOS.Delta,
     avatarKind: "logo",
-    airline: "JAL",
+    airline: "Delta",
     name: "07:10 → 10:30",
-    sub: "JAL · 1 stop · $631",
+    sub: "Delta · 1 stop · $631",
     price: "$631",
     stops: "1 stop",
     outbound: { departTime: "7:10 AM", arriveTime: "10:30 AM" },
@@ -43,11 +43,11 @@ const FLIGHT_RECOMMENDATIONS = [
   },
   {
     icon: "🟢",
-    avatar: AIRLINE_LOGOS.United,
+    avatar: AIRLINE_LOGOS.Alaska,
     avatarKind: "logo",
-    airline: "United",
+    airline: "Alaska",
     name: "22:00 → 06:15+1",
-    sub: "United · Non-stop · $912",
+    sub: "Alaska · Non-stop · $912",
     price: "$912",
     stops: "Non-stop",
     outbound: { departTime: "10:00 PM", arriveTime: "6:15 AM +1" },
@@ -69,7 +69,8 @@ export function createFlightBookingFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
   const CONFIRM_CONTAINER_INDEX = 2;
   const CONFIRM_SCROLL_STEP = 72;
-  const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, recommendationMode: "recommend", showConfirmDetails: false, selectedFlightOption: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", returnFlight: "", paymentMethod: "" }, thinkingTimer: null, startupTimer: null, C: ctx.C };
+  const RECOMMENDATION_HOLD_MS = 280;
+  const flow = { active: false, stepIndex: 0, focused: 0, editReturnStepIndex: null, recommendationMode: "recommend", recommendationMenuOpen: false, recommendationMenuHolding: false, showConfirmDetails: false, selectedFlightOption: null, data: { origin: "SFO", destination: "", depart: "", return: "", passengers: "", flight: "", returnFlight: "", paymentMethod: "" }, thinkingTimer: null, startupTimer: null, recommendationHoldTimer: null, recommendationExitTimer: null, C: ctx.C };
   let flowEpoch = 0;
 
   function isEpochAlive(epoch) {
@@ -93,22 +94,49 @@ export function createFlightBookingFlow(ctx) {
     flow.selectedFlightOption = null;
     flow.editReturnStepIndex = null;
     flow.recommendationMode = "recommend";
+    flow.recommendationMenuOpen = false;
+    flow.recommendationMenuHolding = false;
     flow.showConfirmDetails = false;
   }
   function normalizeCity(input) { return String(input || "").trim().split(/\s+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" "); }
   function cityToAirport(city) { const key = String(city || "").toLowerCase(); const map = { tokyo: "NRT", paris: "CDG", london: "LHR", "new york": "JFK", ny: "JFK", nyc: "JFK", manhattan: "JFK", sydney: "SYD", dubai: "DXB", seoul: "ICN", amsterdam: "AMS", singapore: "SIN", berlin: "BER" }; const found = Object.keys(map).find((entry) => key.includes(entry)); return found ? map[found] : (city ? city.toUpperCase().slice(0, 3) : "---"); }
+  function clearRecommendationHoldTimer() {
+    if (!flow.recommendationHoldTimer) return;
+    clearTimeout(flow.recommendationHoldTimer);
+    flow.recommendationHoldTimer = null;
+  }
+  function clearRecommendationExitTimer() {
+    if (!flow.recommendationExitTimer) return;
+    clearTimeout(flow.recommendationExitTimer);
+    flow.recommendationExitTimer = null;
+  }
+  function clearRecommendationPointerGesture() {
+    return;
+  }
+  function closeRecommendationMenu() {
+    clearRecommendationHoldTimer();
+    clearRecommendationExitTimer();
+    flow.recommendationMenuHolding = false;
+    flow.recommendationMenuOpen = false;
+    clearRecommendationPointerGesture();
+    render.updateRecommendationMenuUi?.(false, flow.focused);
+  }
   function resetConfirmState() {
     flow.showConfirmDetails = false;
     flow.focused = 0;
     render.resetConfirmScroll?.();
   }
+  function renderAnimatedFlightValue(text, { baseClass, filled, placeholderFixed = false, animate = true } = {}) {
+    const classes = [baseClass, filled ? "filled" : "placeholder"];
+    if (!filled && placeholderFixed) classes.push("destination-placeholder-fixed");
+    const textClasses = ["flight-field-text", filled ? "is-filled" : "is-placeholder"];
+    if (animate) textClasses.push("animate-enter");
+    return `<div class="${classes.join(" ")}"><span class="${textClasses.join(" ")}">${text || ""}</span></div>`;
+  }
   function buildRouteRowHtml(originText, destinationText, options = {}) {
     const originReady = options?.originReady !== false;
     const destinationReady = options?.destinationReady === true;
-    const destinationInlineStyle = destinationReady
-      ? ""
-      : ' style="font-family:Inter,DM Sans,sans-serif;font-size:20px;font-weight:400;color:rgba(255,255,255,0.24);"';
-    return `<div class="flight-route-row-core"><div class="flight-destination-origin ${originReady ? "filled" : "placeholder"}">${originText}</div><div class="flight-destination-swap" aria-hidden="true"><svg viewBox="0 0 26 24.7279" fill="none" xmlns="http://www.w3.org/2000/svg"><g opacity="0.8"><path d="M11 6.36396C10.4477 6.36396 10 6.81168 10 7.36396C10 7.91624 10.4477 8.36396 11 8.36396L11 7.36396L11 6.36396ZM25.7071 8.07107C26.0976 7.68054 26.0976 7.04738 25.7071 6.65685L19.3431 0.292893C18.9526 -0.0976311 18.3195 -0.0976312 17.9289 0.292893C17.5384 0.683418 17.5384 1.31658 17.9289 1.70711L23.5858 7.36396L17.9289 13.0208C17.5384 13.4113 17.5384 14.0445 17.9289 14.435C18.3195 14.8256 18.9526 14.8256 19.3431 14.435L25.7071 8.07107ZM11 7.36396L11 8.36396L25 8.36396L25 7.36396L25 6.36396L11 6.36396L11 7.36396Z" fill="white"/><path d="M0.292893 16.6569C-0.0976311 17.0474 -0.0976311 17.6805 0.292893 18.0711L6.65685 24.435C7.04738 24.8256 7.68054 24.8256 8.07107 24.435C8.46159 24.0445 8.46159 23.4113 8.07107 23.0208L2.41421 17.364L8.07107 11.7071C8.46159 11.3166 8.46159 10.6834 8.07107 10.2929C7.68054 9.90237 7.04738 9.90237 6.65685 10.2929L0.292893 16.6569ZM15 18.364C15.5523 18.364 16 17.9162 16 17.364C16 16.8117 15.5523 16.364 15 16.364L15 17.364L15 18.364ZM1 17.364L1 18.364L15 18.364L15 17.364L15 16.364L1 16.364L1 17.364Z" fill="white"/></g></svg></div><div class="flight-destination-target ${destinationReady ? "filled" : "placeholder"} ${destinationReady ? "" : "destination-placeholder-fixed"}"${destinationInlineStyle}>${destinationText}</div></div>`;
+    return `<div class="flight-route-row-core">${renderAnimatedFlightValue(originText, { baseClass: "flight-destination-origin", filled: originReady, animate: options?.animateOrigin !== false })}<div class="flight-destination-swap" aria-hidden="true"><svg viewBox="0 0 26 24.7279" fill="none" xmlns="http://www.w3.org/2000/svg"><g opacity="0.8"><path d="M11 6.36396C10.4477 6.36396 10 6.81168 10 7.36396C10 7.91624 10.4477 8.36396 11 8.36396L11 7.36396L11 6.36396ZM25.7071 8.07107C26.0976 7.68054 26.0976 7.04738 25.7071 6.65685L19.3431 0.292893C18.9526 -0.0976311 18.3195 -0.0976312 17.9289 0.292893C17.5384 0.683418 17.5384 1.31658 17.9289 1.70711L23.5858 7.36396L17.9289 13.0208C17.5384 13.4113 17.5384 14.0445 17.9289 14.435C18.3195 14.8256 18.9526 14.8256 19.3431 14.435L25.7071 8.07107ZM11 7.36396L11 8.36396L25 8.36396L25 7.36396L25 6.36396L11 6.36396L11 7.36396Z" fill="white"/><path d="M0.292893 16.6569C-0.0976311 17.0474 -0.0976311 17.6805 0.292893 18.0711L6.65685 24.435C7.04738 24.8256 7.68054 24.8256 8.07107 24.435C8.46159 24.0445 8.46159 23.4113 8.07107 23.0208L2.41421 17.364L8.07107 11.7071C8.46159 11.3166 8.46159 10.6834 8.07107 10.2929C7.68054 9.90237 7.04738 9.90237 6.65685 10.2929L0.292893 16.6569ZM15 18.364C15.5523 18.364 16 17.9162 16 17.364C16 16.8117 15.5523 16.364 15 16.364L15 17.364L15 18.364ZM1 17.364L1 18.364L15 18.364L15 17.364L15 16.364L1 16.364L1 17.364Z" fill="white"/></g></svg></div>${renderAnimatedFlightValue(destinationText, { baseClass: "flight-destination-target", filled: destinationReady, placeholderFixed: true, animate: options?.animateDestination !== false })}</div>`;
   }
 
   const render = createFlightRender({
@@ -138,6 +166,10 @@ export function createFlightBookingFlow(ctx) {
     set editReturnStepIndex(value) { flow.editReturnStepIndex = value; },
     get recommendationMode() { return flow.recommendationMode; },
     set recommendationMode(value) { flow.recommendationMode = value; },
+    get recommendationMenuOpen() { return flow.recommendationMenuOpen; },
+    set recommendationMenuOpen(value) { flow.recommendationMenuOpen = !!value; },
+    get recommendationMenuHolding() { return flow.recommendationMenuHolding; },
+    set recommendationMenuHolding(value) { flow.recommendationMenuHolding = !!value; },
     get showConfirmDetails() { return flow.showConfirmDetails; },
     set showConfirmDetails(value) { flow.showConfirmDetails = !!value; },
     setThinkingTimer(timer) { flow.thinkingTimer = timer; },
@@ -160,9 +192,72 @@ export function createFlightBookingFlow(ctx) {
       if (flow.recommendationMode === "recommend" && flow.selectedFlightOption) return flow.selectedFlightOption;
       return api.currentFlightOptions()[api.recommendedFlightIndex()] || api.currentFlightOptions()[0] || null;
     },
+    recommendationOptionsForUi() {
+      const recommended = api.currentRecommendedFlight();
+      const options = api.currentFlightOptions();
+      if (!recommended) return options.slice();
+      const recommendedName = String(recommended.name || "");
+      return [recommended, ...options.filter((option) => String(option?.name || "") !== recommendedName)];
+    },
+    selectRecommendationOptionByUiIndex(index, { advance = true } = {}) {
+      const options = api.recommendationOptionsForUi();
+      const selected = options[Math.max(0, Math.min(options.length - 1, Number(index) || 0))];
+      if (!selected) return false;
+      api.setSelectedFlightOption(selected);
+      flow.recommendationMode = "recommend";
+      flow.recommendationMenuOpen = false;
+      flow.recommendationMenuHolding = false;
+      flow.focused = 0;
+      clearRecommendationPointerGesture();
+      if (advance) {
+        api.nextStep();
+      } else {
+        render.renderStep(true);
+      }
+      return true;
+    },
+    animateRecommendationSelection(index, { advance = true } = {}) {
+      if (flow.recommendationExitTimer) return true;
+      const options = api.recommendationOptionsForUi();
+      const selectedIndex = Math.max(0, Math.min(options.length - 1, Number(index) || 0));
+      const selected = options[selectedIndex];
+      if (!selected) return false;
+      const visibleIndex = flow.recommendationMenuOpen ? selectedIndex : 0;
+      clearRecommendationHoldTimer();
+      flow.recommendationMenuHolding = false;
+      flow.recommendationMenuOpen = false;
+      clearRecommendationPointerGesture();
+      const started = render.animateRecommendationExit?.(visibleIndex);
+      const finishSelection = () => {
+        flow.recommendationExitTimer = null;
+        api.setSelectedFlightOption(selected);
+        flow.recommendationMode = "recommend";
+        flow.recommendationMenuOpen = false;
+        flow.recommendationMenuHolding = false;
+        flow.focused = 0;
+        if (advance) {
+          api.nextStep();
+        } else {
+          render.renderStep(true);
+        }
+      };
+      if (!started) {
+        finishSelection();
+        return true;
+      }
+      flow.recommendationExitTimer = setTimeout(() => {
+        if (!flow.active) {
+          flow.recommendationExitTimer = null;
+          return;
+        }
+        finishSelection();
+      }, render.DISAMBIGUATION_EXIT_MS || 600);
+      return true;
+    },
     renderStep: render.renderStep,
     nextStep(skipGreet = false) {
       if (flow.stepIndex >= FLOW_STEPS.length - 1) return;
+      closeRecommendationMenu();
       let nextIndex = flow.stepIndex + 1;
       while (nextIndex < FLOW_STEPS.length && FLOW_STEPS[nextIndex]?.type === "payment" && flow.data.paymentMethod) nextIndex += 1;
       if (nextIndex >= FLOW_STEPS.length) return;
@@ -171,7 +266,7 @@ export function createFlightBookingFlow(ctx) {
       if (FLOW_STEPS[nextIndex]?.type !== "confirm") flow.focused = 0;
       render.renderStep(skipGreet);
     },
-    backStep() { if (!flow.active) return; if (flow.stepIndex > 0) { flow.stepIndex -= 1; flow.focused = 0; render.renderStep(true); } else api.resetToHome(); },
+    backStep() { if (!flow.active) return; closeRecommendationMenu(); if (flow.stepIndex > 0) { flow.stepIndex -= 1; flow.focused = 0; render.renderStep(true); } else api.resetToHome(); },
     stepIndexBy(type, key = null) { return FLOW_STEPS.findIndex((entry) => entry.type === type && (key == null || entry.key === key)); },
     nextStepFor(currentStep) {
       if (flow.editReturnStepIndex != null && currentStep?.type === "dates") return FLOW_STEPS[flow.editReturnStepIndex] || null;
@@ -180,7 +275,7 @@ export function createFlightBookingFlow(ctx) {
       while (nextIndex < FLOW_STEPS.length && FLOW_STEPS[nextIndex]?.type === "payment" && flow.data.paymentMethod) nextIndex += 1;
       return FLOW_STEPS[nextIndex] || null;
     },
-    jumpToStep(target) { const idx = api.stepIndexBy(target.type, target.key || null); if (idx < 0) return false; if (FLOW_STEPS[idx]?.type === "confirm") resetConfirmState(); flow.stepIndex = idx; if (FLOW_STEPS[idx]?.type !== "confirm") flow.focused = 0; render.renderStep(true); return true; },
+    jumpToStep(target) { const idx = api.stepIndexBy(target.type, target.key || null); if (idx < 0) return false; closeRecommendationMenu(); if (FLOW_STEPS[idx]?.type === "confirm") resetConfirmState(); flow.stepIndex = idx; if (FLOW_STEPS[idx]?.type !== "confirm") flow.focused = 0; render.renderStep(true); return true; },
     normalizeCity,
     cityToAirport,
     advanceAfterDatesConfirm() { if (flow.editReturnStepIndex != null) { const idx = flow.editReturnStepIndex; flow.editReturnStepIndex = null; flow.stepIndex = idx; flow.focused = 0; render.renderStep(true); } else api.nextStep(true); },
@@ -191,8 +286,7 @@ export function createFlightBookingFlow(ctx) {
       flow.focused = index;
       ctx.addChatBubble("user", selected.name);
       if (current.type === "recommendation") {
-        api.setSelectedFlightOption(selected);
-        return api.nextStep();
+        return api.animateRecommendationSelection(index);
       }
       if (current.type === "payment") {
         flow.data.paymentMethod = selected.name;
@@ -201,7 +295,7 @@ export function createFlightBookingFlow(ctx) {
       flow.data[current.key] = selected.name;
       api.nextStep();
     },
-    resetToHome() { flowEpoch += 1; if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer); if (flow.startupTimer) clearTimeout(flow.startupTimer); flow.thinkingTimer = null; flow.startupTimer = null; flow.active = false; flow.stepIndex = 0; flow.focused = 0; flow.editReturnStepIndex = null; ctx.hideTypingBubble(); document.body.classList.remove("glass-flow-active"); ctx.morph.hideRich(); ctx.shell.stopSiriOrb(); ctx.shell.clearOrbLabel?.(); ctx.shell.hideIntentHeader?.(); if (typeof ctx.returnToHomeContext === "function") ctx.returnToHomeContext(); else ctx.morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); const stageEl = document.getElementById("stage"); stageEl?.classList.remove("flow-active", "flight-destination-active", "flight-voice-viz"); document.getElementById("stage-wrap")?.classList.remove("flow-active"); },
+    resetToHome() { flowEpoch += 1; closeRecommendationMenu(); if (flow.thinkingTimer) clearTimeout(flow.thinkingTimer); if (flow.startupTimer) clearTimeout(flow.startupTimer); flow.thinkingTimer = null; flow.startupTimer = null; flow.active = false; flow.stepIndex = 0; flow.focused = 0; flow.editReturnStepIndex = null; ctx.hideTypingBubble(); document.body.classList.remove("glass-flow-active"); ctx.morph.hideRich(); ctx.shell.stopSiriOrb(); ctx.shell.clearOrbLabel?.(); ctx.shell.hideIntentHeader?.(); if (typeof ctx.returnToHomeContext === "function") ctx.returnToHomeContext(); else ctx.morph.morphTo("circle", { icon: "", primary: "", secondary: "", detail: "" }); const stageEl = document.getElementById("stage"); stageEl?.classList.remove("flow-active", "flight-destination-active", "flight-voice-viz"); document.getElementById("stage-wrap")?.classList.remove("flow-active"); },
     syncDestinationFromText(userText) { const match = String(userText || "").match(/to\s+([a-zA-Z\s]+)/i); if (match) flow.data.destination = normalizeCity(match[1].trim()); },
     isFlightIntent(userText) { return /(?:\bflight\b|\bfly\b|book\s+(?:a\s+)?flight|\bticket\b)/i.test(String(userText || "")); },
   };
@@ -209,14 +303,18 @@ export function createFlightBookingFlow(ctx) {
   function moveHighlight(dir) {
     const current = step();
     if (!flow.active) return;
+    if (flow.recommendationExitTimer) return;
     if (current.type === "payment" || (current.type === "recommendation" && flow.recommendationMode === "alternatives")) {
-      flow.focused = Math.max(0, Math.min((current.options || []).length - 1, flow.focused + dir));
+      const recommendationCount = current.type === "recommendation" ? api.recommendationOptionsForUi().length : (current.options || []).length;
+      flow.focused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
       document.querySelectorAll("[data-flight-opt]").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
       return;
     }
     if (current.type === "recommendation") {
-      flow.focused = Math.max(0, Math.min(2, flow.focused + dir));
-      document.querySelectorAll("#glass-controls-layer .g-action-btn").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
+      if (!flow.recommendationMenuOpen) return;
+      const recommendationCount = api.recommendationOptionsForUi().length;
+      flow.focused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
+      render.updateRecommendationSelectionUi?.(flow.focused);
       return;
     }
     if (current.type === "confirm") {
@@ -235,33 +333,59 @@ export function createFlightBookingFlow(ctx) {
     }
   }
 
+  function updateRecommendationSelectionFromPointer() {
+    return false;
+  }
+
+  function startRecommendationHold(options = {}) {
+    const current = step();
+    if (!flow.active || current.type !== "recommendation" || flow.recommendationMode !== "recommend" || flow.recommendationMenuOpen || flow.recommendationExitTimer) return false;
+    closeRecommendationMenu();
+    flow.recommendationMenuHolding = true;
+    flow.focused = 0;
+    flow.recommendationHoldTimer = setTimeout(() => {
+      flow.recommendationHoldTimer = null;
+      if (!flow.active || step().type !== "recommendation" || !flow.recommendationMenuHolding) return;
+      flow.recommendationMenuOpen = true;
+      if (!render.updateRecommendationMenuUi?.(true, flow.focused)) {
+        render.renderStep(true);
+      }
+    }, RECOMMENDATION_HOLD_MS);
+    return true;
+  }
+
+  function updateRecommendationPointerGesture(pointerY) {
+    return false;
+  }
+
+  function endRecommendationHold(options = {}) {
+    const current = step();
+    if (!flow.active || current.type !== "recommendation" || flow.recommendationMode !== "recommend") return false;
+    if (flow.recommendationHoldTimer) {
+      clearRecommendationHoldTimer();
+      flow.recommendationMenuHolding = false;
+      clearRecommendationPointerGesture();
+      return true;
+    }
+    if (flow.recommendationMenuOpen) {
+      flow.recommendationMenuHolding = false;
+      clearRecommendationPointerGesture();
+      return true;
+    }
+    return false;
+  }
+
   function confirmStep() {
     const current = step();
+    if (flow.recommendationExitTimer) return true;
     if (current.type === "recommendation") {
       if (flow.recommendationMode === "alternatives") {
-        const alternatives = render.buildRecommendationAlternatives();
-        const selected = alternatives[flow.focused];
-        if (!selected) return;
-        const allOptions = api.currentFlightOptions();
-        const selectedIndex = allOptions.findIndex((item) => item.name === selected.name);
-        if (selectedIndex >= 0) {
-          api.setSelectedFlightOption(allOptions[selectedIndex]);
-        }
-        flow.recommendationMode = "recommend";
-        flow.focused = 0;
-        return api.nextStep();
+        return api.animateRecommendationSelection(flow.focused);
       }
-      if (flow.focused === 0) {
-        const recommended = api.currentRecommendedFlight();
-        if (recommended) api.setSelectedFlightOption(recommended);
-        return api.nextStep();
+      if (flow.recommendationMenuOpen) {
+        return api.animateRecommendationSelection(flow.focused);
       }
-      if (flow.focused === 1) {
-        flow.recommendationMode = "alternatives";
-        flow.focused = 0;
-        return render.renderStep(true);
-      }
-      return api.resetToHome();
+      return api.animateRecommendationSelection(0);
     }
     if (current.type === "payment") return api.selectByIndex(flow.focused);
     if (current.type === "confirm") {
@@ -315,5 +439,5 @@ export function createFlightBookingFlow(ctx) {
     }, FLOW_START_THINK_MS);
   }
 
-  return { isActive: () => flow.active, start, cancel: api.resetToHome, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
+  return { isActive: () => flow.active, start, cancel: api.resetToHome, reset: api.resetToHome, handleUserInput, handleKeyDown(e) { const activeInInput = document.activeElement?.matches?.("input, textarea, select"); if (!flow.active) return false; if (e.key === "Escape") { e.preventDefault(); api.resetToHome(); return true; } if ((e.key === "x" || e.key === "X") && !(activeInInput && ctx.input.value.trim().length > 0)) { e.preventDefault(); api.backStep(); return true; } if (e.key === "ArrowUp") { e.preventDefault(); moveHighlight(-1); return true; } if (e.key === "ArrowDown") { e.preventDefault(); moveHighlight(1); return true; } if (((e.code === "Space" && !(activeInInput && ctx.input.value.length > 0)) || (e.key === "Enter" && !activeInInput))) { e.preventDefault(); confirmStep(); return true; } return false; }, moveHighlight, confirmStep, startRecommendationHold, updateRecommendationPointerGesture, endRecommendationHold, syncDestinationFromText: api.syncDestinationFromText, processRequest(userText) { if (api.isFlightIntent(userText)) { api.syncDestinationFromText(userText); start(userText); return true; } return false; } };
 }

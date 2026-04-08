@@ -105,7 +105,8 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
     const options = flow.currentFlightOptions?.() || [];
     if (!options.length) return false;
     if (/\b(alternative|alternatives|other options|show more)\b/.test(t)) {
-      flow.recommendationMode = "alternatives";
+      flow.recommendationMode = "recommend";
+      flow.recommendationMenuOpen = false;
       flow.focused = 0;
       return true;
     }
@@ -113,12 +114,14 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
       const cheapest = options.find((opt) => String(opt.sub || "").includes("$631")) || options[0];
       flow.setSelectedFlightOption?.(cheapest);
       flow.recommendationMode = "recommend";
+      flow.recommendationMenuOpen = false;
       return true;
     }
     if (/\b(nonstop|non stop|faster|fastest|convenient|earlier)\b/.test(t)) {
       const nonstop = options.find((opt) => String(opt.sub || "").toLowerCase().includes("non-stop")) || options[0];
       flow.setSelectedFlightOption?.(nonstop);
       flow.recommendationMode = "recommend";
+      flow.recommendationMenuOpen = false;
       return true;
     }
     return false;
@@ -171,7 +174,7 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
     }
     if (step.type === "recommendation") {
       if (/\b(yes|ok|confirm|book)\b/i.test(text)) return { reply: "Great, I’ll use that one.", action: "next", data: {} };
-      if (/\b(alternative|alternatives|other option|other flight)\b/i.test(text)) return { reply: "Here are two alternatives.", action: "alternatives", data: {} };
+      if (/\b(alternative|alternatives|other option|other flight)\b/i.test(text)) return { reply: "Here are three flight options.", action: "alternatives", data: {} };
       if (/\b(cancel|never mind)\b/i.test(text)) return { reply: "Canceled.", action: "cancel", data: {} };
       return { reply: "Want this one or should I show alternatives?", action: "stay", data: {} };
     }
@@ -228,7 +231,7 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
     }
     if (step.type === "recommendation") {
       if (applyRecommendationRefinement(rawText, flow)) {
-        addChatBubble("ai", flow.recommendationMode === "alternatives" ? "Here are two alternatives." : "I found a better match.");
+        addChatBubble("ai", flow.recommendationMenuOpen ? "Here are three flight options." : "I found a better match.");
         return flow.renderStep(true);
       }
     }
@@ -242,7 +245,7 @@ export function createFlightAi({ apiUrl, getFlow, addChatBubble }) {
     if (reply) addChatBubble("ai", reply);
     if (action === "back") return flow.backStep();
     if (action === "select") return flow.selectByIndex(Number(result?.data?.index) || 0);
-    if (action === "alternatives") { flow.recommendationMode = "alternatives"; flow.focused = 0; return flow.renderStep(true); }
+    if (action === "alternatives") { flow.recommendationMode = "recommend"; flow.recommendationMenuOpen = true; flow.focused = 0; return flow.renderStep(true); }
     if (action === "cancel") return flow.resetToHome();
     if (action === "next") return step.type === "dates" && !isDatesAdvanceIntent(rawText) ? flow.renderStep(true) : flow.nextStep(true);
     if (action === "update") return flow.renderStep(true);

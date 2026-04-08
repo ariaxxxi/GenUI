@@ -208,6 +208,11 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 0 40px rgba(255,255,255,0.02);
+  pointer-events: auto;
+  cursor: grab;
+}
+#drop-main.confirm-await-orb #home-glow-layer {
+  pointer-events: auto;
 }
 #drop-main.confirm-await-orb.listening-orb #siri-orb::before {
   content: '';
@@ -251,6 +256,19 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
 }
 #drop-main.disambiguation-surface {
   overflow: visible !important;
+}
+#drop-main.disambiguation-surface.listening-orb #siri-orb,
+#drop-main.disambiguation-surface.listening-orb #siri-orb.visible {
+  opacity: 0.52;
+  transform: scale(0.4);
+  filter: blur(11px) contrast(13) saturate(0.08) brightness(1.28);
+}
+#drop-main.disambiguation-surface.listening-orb #siri-orb canvas {
+  opacity: 0.24;
+  filter: grayscale(1) brightness(1.85) saturate(0.05);
+}
+#drop-main.disambiguation-surface.listening-orb #home-glow-layer {
+  opacity: 0.16;
 }
 #drop-main.compose-surface {
   overflow: visible !important;

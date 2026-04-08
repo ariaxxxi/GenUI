@@ -497,6 +497,8 @@ input?.addEventListener("input", (e) => {
 });
 let composeMenuPointerActive = false;
 let composeMenuPointerId = null;
+let flightRecommendationPointerActive = false;
+let flightRecommendationPointerId = null;
 const isComposeMenuPointerTarget = (target) => {
   const leftSidebar = document.getElementById("left-sidebar");
   const simPanel = document.getElementById("sim-panel");
@@ -504,11 +506,20 @@ const isComposeMenuPointerTarget = (target) => {
   if (simPanel && target && simPanel.contains(target)) return false;
   return true;
 };
+const isFlightRecommendationOrbTarget = (target) => {
+  const leftSidebar = document.getElementById("left-sidebar");
+  const simPanel = document.getElementById("sim-panel");
+  const stageWrap = document.getElementById("stage-wrap");
+  if (leftSidebar && target && leftSidebar.contains(target)) return false;
+  if (simPanel && target && simPanel.contains(target)) return false;
+  return !!(stageWrap && target && stageWrap.contains(target));
+};
+const shouldCaptureEditableShortcut = (target) => isEditableTarget(target) && target !== input;
 document.addEventListener("keydown", (e) => {
-  if (isEditableTarget(e.target)) e.stopImmediatePropagation();
+  if (shouldCaptureEditableShortcut(e.target)) e.stopImmediatePropagation();
 }, true);
 document.addEventListener("keypress", (e) => {
-  if (isEditableTarget(e.target)) e.stopImmediatePropagation();
+  if (shouldCaptureEditableShortcut(e.target)) e.stopImmediatePropagation();
 }, true);
 document.addEventListener("keydown", (e) => {
   const captureAction = getCaptureHotkeyAction(e);
@@ -591,9 +602,23 @@ document.addEventListener("pointerdown", (e) => {
   if (document.activeElement === input) input?.blur();
   e.preventDefault();
 });
+document.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  if (!flightFlow.isActive()) return;
+  if (!isFlightRecommendationOrbTarget(e.target)) return;
+  if (!flightFlow.startRecommendationHold?.({ pointerOriginY: e.clientY })) return;
+  flightRecommendationPointerActive = true;
+  flightRecommendationPointerId = e.pointerId;
+  if (document.activeElement === input) input?.blur();
+  e.preventDefault();
+});
 document.addEventListener("pointermove", (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
   if (messageFlow.updateComposeMenuPointerGesture(e.clientY)) e.preventDefault();
+});
+document.addEventListener("pointermove", (e) => {
+  if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
+  if (flightFlow.updateRecommendationPointerGesture?.(e.clientY)) e.preventDefault();
 });
 const releaseComposeMenuPointer = (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
@@ -604,6 +629,15 @@ const releaseComposeMenuPointer = (e) => {
 };
 document.addEventListener("pointerup", releaseComposeMenuPointer);
 document.addEventListener("pointercancel", releaseComposeMenuPointer);
+const releaseFlightRecommendationPointer = (e) => {
+  if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
+  flightRecommendationPointerActive = false;
+  flightRecommendationPointerId = null;
+  flightFlow.endRecommendationHold?.({ commitSelection: false });
+  e.preventDefault();
+};
+document.addEventListener("pointerup", releaseFlightRecommendationPointer);
+document.addEventListener("pointercancel", releaseFlightRecommendationPointer);
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => {
   el.addEventListener("keydown", (e) => e.stopImmediatePropagation());
   el.addEventListener("keypress", (e) => e.stopImmediatePropagation());

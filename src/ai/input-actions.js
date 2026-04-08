@@ -74,8 +74,9 @@ export function initInputActions({
     }));
   }
 
-  async function processRequest(userText) {
-    if (typeof canProcessRequest === "function" && !canProcessRequest()) return false;
+  async function processRequest(userText, options = {}) {
+    const bypassCanProcessGate = options?.bypassCanProcessGate === true;
+    if (!bypassCanProcessGate && typeof canProcessRequest === "function" && !canProcessRequest()) return false;
     if (messageFlow.isActive()) return messageFlow.processRequest?.(userText);
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
     if (coffeeFlow?.isActive?.()) return coffeeFlow.handleInputSubmit?.(userText);
@@ -89,11 +90,13 @@ export function initInputActions({
   }
 
   function handleSend() {
-    if (typeof canProcessRequest === "function" && !canProcessRequest()) return;
     const text = input.value.trim();
     if (!text) return;
+    if (typeof canProcessRequest === "function" && !canProcessRequest()) {
+      ensureHomeAwake?.();
+    }
     input.value = "";
-    void processRequest(text);
+    void processRequest(text, { bypassCanProcessGate: true });
   }
 
   function handleChipQuickAction(text) {
