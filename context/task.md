@@ -6,4 +6,10 @@
 - when start speaking, bubbles disappear, orb become listening mode, text dictation appear. 
 
 
-implement visual
+- push logic ✅
+- motion ease✅
+	- only coming in and out motion
+	- push motion seems to conflict with sizing logic✅
+- orb visual ✅
+- layout
+- child bubble

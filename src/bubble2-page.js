@@ -3,9 +3,21 @@ const MIN_Y = -370;
 const MAX_Y = 0;
 const MAX_DIST = 260;
 const MAX_PAN = 75;
+const DEFAULT_BUBBLE_GAP = 8;
+const PILL_LAYOUT_GAP = 10;
+const PILL_REPULSION_INFLUENCE = 28;
+const PILL_REPULSION_ITERATIONS = 12;
 const OPEN_STAGGER_STEP_MS = 25;
 const DEFAULT_MOVE_DURATION_MS = 450;
 const ACTIVE_MOVE_DURATION_MS = 250;
+const APPEAR_MOVE_DURATION_MS = 500;
+const DISAPPEAR_MOVE_DURATION_MS = 400;
+const FADE_IN_DURATION_MS = 400;
+const FADE_OUT_DURATION_MS = 300;
+const BUBBLE_ENTER_EASE = 'cubic-bezier(0.22, 1.16, 0.3, 1.02)';
+const BUBBLE_EXIT_EASE = 'cubic-bezier(0.42, -0.14, 0.7, 0.68)';
+const ORB_BASE_SIZE = 80;
+const ORB_PRESSED_SIZE = 110;
 const ORB_IDLE_DURATION_MS = 1000;
 const ORB_PRESSED_DURATION_MS = 450;
 const ORB_CENTER_X = 210;
@@ -15,6 +27,7 @@ const PILL_TEXT_LEFT_PADDING = 6;
 const PILL_TEXT_RIGHT_PADDING = 40;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
+  orb: 'https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d',
   chatgpt: 'https://www.figma.com/api/mcp/asset/6226094c-fe66-40cc-bfeb-a23992ea5c25',
   gemini: 'https://www.figma.com/api/mcp/asset/9d1608d4-5006-4ce7-9784-7dc5b7eb62c5',
   health: 'https://www.figma.com/api/mcp/asset/87b4cdef-3bb5-416a-bb0f-211d77a0d40b',
@@ -172,6 +185,7 @@ const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
+  orbVisual: null,
   bubbleNodes: new Map(),
 };
 
@@ -195,6 +209,7 @@ function buildScene() {
   });
 
   refs.orb = createOrbNode();
+  refs.orbVisual = refs.orb.querySelector('.bubble2-orb-visual');
   fragment.appendChild(refs.orb);
   refs.panLayer.appendChild(fragment);
 }
@@ -293,9 +308,24 @@ function createOrbNode() {
   button.type = 'button';
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
 
-  const icon = document.createElement('div');
-  icon.className = 'bubble2-orb-icon';
-  button.appendChild(icon);
+  const visual = document.createElement('div');
+  visual.className = 'bubble2-orb-visual';
+
+  const iconShell = document.createElement('div');
+  iconShell.className = 'bubble2-orb-icon-shell';
+
+  const image = document.createElement('img');
+  image.className = 'bubble2-orb-icon-image';
+  image.src = FIGMA_ASSETS.orb;
+  image.alt = '';
+  image.draggable = false;
+  image.addEventListener('error', () => {
+    if (image.src !== FALLBACK_ICON) image.src = FALLBACK_ICON;
+  });
+
+  iconShell.appendChild(image);
+  visual.appendChild(iconShell);
+  button.appendChild(visual);
 
   button.addEventListener('pointerdown', handlePointerDown);
   return button;
@@ -410,13 +440,25 @@ function render() {
     if (!node) continue;
 
     const isHovered = scene.hoveredId === bubble.id;
+    const isAppearing = state.isPressed && !state.mousePos.active;
+    const isReturning = !state.isPressed;
     const staggerDelay = staggered ? node.index * staggered : 0;
+    const transformDuration = isAppearing
+      ? APPEAR_MOVE_DURATION_MS
+      : (isReturning ? DISAPPEAR_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS);
+    const opacityDuration = isAppearing
+      ? FADE_IN_DURATION_MS
+      : (isReturning ? FADE_OUT_DURATION_MS : DEFAULT_MOVE_DURATION_MS);
+    const shadowDuration = isAppearing
+      ? FADE_IN_DURATION_MS
+      : (isReturning ? FADE_OUT_DURATION_MS : 300);
+    const transformEase = isAppearing
+      ? BUBBLE_ENTER_EASE
+      : (isReturning ? BUBBLE_EXIT_EASE : 'ease-out');
     const translateX = bubble.targetX - bubble.size / 2;
     const translateY = bubble.targetY - bubble.size / 2;
     const pillScale = Math.max(bubble.targetScale || 1, 0.0001);
 
-    node.root.style.setProperty('--bubble2-move-duration', `${activeMoveDuration}ms`);
-    node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
     node.root.style.zIndex = String(isHovered ? 50 : bubble.zIndex);
     node.root.style.width = `${format(bubble.targetWidth)}px`;
     node.root.style.height = `${format(bubble.size)}px`;
@@ -426,6 +468,10 @@ function render() {
       : '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
     node.root.style.transform =
       `translate3d(${format(translateX)}px, ${format(translateY)}px, 0) scale(${bubble.targetScale.toFixed(4)})`;
+    node.root.style.setProperty('--bubble2-move-duration', `${activeMoveDuration}ms`);
+    node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
+    node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms`;
+    node.root.style.transitionTimingFunction = `${transformEase}, var(--bubble2-pill-ease), ease-out, ease`;
 
     node.iconWrap.style.width = `${bubble.size}px`;
     node.iconWrap.style.height = `${bubble.size}px`;
@@ -457,9 +503,13 @@ function render() {
   }
 
   if (refs.orb) {
-    refs.orb.style.transitionDuration = `${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms, ${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms`;
-    refs.orb.style.backgroundColor = state.isPressed ? '#c8c2d4' : '#dad6e5';
-    refs.orb.style.transform = `translate3d(0, 0, 0) scale(${scene.orb.targetScale.toFixed(4)})`;
+    refs.orb.classList.toggle('is-pressed', state.isPressed);
+    refs.orb.style.transform = 'translate3d(0, 0, 0)';
+  }
+
+  if (refs.orbVisual) {
+    refs.orbVisual.style.transitionDuration = `${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms`;
+    refs.orbVisual.style.transform = `translate3d(0, 0, 0) scale(${scene.orb.targetScale.toFixed(4)})`;
   }
 }
 
@@ -485,7 +535,6 @@ function computeScene() {
       const smoothFactor = smoothstep(factor);
       const minVisualSize = bubble.size * defaultDepth * 0.85;
       const maxVisualSize = 110;
-
       visualSize = minVisualSize + (maxVisualSize - minVisualSize) * smoothFactor;
       depthScale = visualSize / bubble.size;
 
@@ -553,15 +602,48 @@ function computeScene() {
       isExpanded,
       expandedExtraSourceWidth,
       targetWidth: isExpanded ? bubble.size + expandedExtraSourceWidth : bubble.size,
+      radius: (bubble.size * finalTargetScale) / 2,
       targetScale: finalTargetScale,
     };
   });
+
+  const expandedPill = processedBubbles.find((bubble) => bubble.isExpanded);
+  if (expandedPill) {
+    for (const bubble of processedBubbles) {
+      if (bubble.id === expandedPill.id) continue;
+      const initialPush = getExpandedPillRepulsion(expandedPill, bubble, PILL_REPULSION_INFLUENCE);
+      if (initialPush) {
+        bubble.targetX += initialPush.x;
+        bubble.targetY += initialPush.y;
+      }
+    }
+
+    for (let iter = 0; iter < PILL_REPULSION_ITERATIONS; iter += 1) {
+      for (const bubble of processedBubbles) {
+        if (bubble.id === expandedPill.id) continue;
+        const pillPush = getExpandedPillRepulsion(expandedPill, bubble, 0);
+        if (pillPush) {
+          bubble.targetX += pillPush.x;
+          bubble.targetY += pillPush.y;
+        }
+      }
+
+      for (let i = 0; i < processedBubbles.length; i += 1) {
+        for (let j = i + 1; j < processedBubbles.length; j += 1) {
+          const bubbleA = processedBubbles[i];
+          const bubbleB = processedBubbles[j];
+          if (bubbleA.id === expandedPill.id || bubbleB.id === expandedPill.id) continue;
+          separateBubblePair(bubbleA, bubbleB);
+        }
+      }
+    }
+  }
 
   return {
     bubbles: processedBubbles,
     orb: {
       id: 'orb',
-      targetScale: state.isPressed ? 0.85 : 1,
+      targetScale: state.isPressed ? (ORB_PRESSED_SIZE / ORB_BASE_SIZE) : 1,
     },
     panOffset: {
       x: targetPanX,
@@ -569,6 +651,60 @@ function computeScene() {
     },
     hoveredId: bestHit,
   };
+}
+
+function getExpandedPillRepulsion(pill, bubble, influencePadding) {
+  const pillHalfWidth = (pill.size * pill.targetScale) / 2;
+  const pillHalfHeight = (pill.size * pill.targetScale) / 2;
+  const rectLeft = pill.targetX - pillHalfWidth;
+  const rectRight = pill.targetX + pillHalfWidth + pill.expandedExtraWidth;
+  const rectTop = pill.targetY - pillHalfHeight;
+  const rectBottom = pill.targetY + pillHalfHeight;
+
+  const closestX = clamp(bubble.targetX, rectLeft, rectRight);
+  const closestY = clamp(bubble.targetY, rectTop, rectBottom);
+  let dx = bubble.targetX - closestX;
+  let dy = bubble.targetY - closestY;
+
+  if (dx === 0 && dy === 0) {
+    dx = bubble.targetX >= pill.targetX ? 1 : -1;
+    dy = 0;
+  }
+
+  const dist = Math.hypot(dx, dy) || 1;
+  const safeDist = bubble.radius + PILL_LAYOUT_GAP;
+  const influenceZone = safeDist + influencePadding;
+  if (dist >= influenceZone) return null;
+
+  const required = Math.max(0, safeDist - dist);
+  const pushFactor = influencePadding > 0
+    ? Math.pow((influenceZone - dist) / influenceZone, 1.15)
+    : 0;
+  const angle = Math.atan2(dy, dx);
+  const distance = required + (pushFactor * 22);
+
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+  };
+}
+
+function separateBubblePair(bubbleA, bubbleB) {
+  const dx = bubbleB.targetX - bubbleA.targetX;
+  const dy = bubbleB.targetY - bubbleA.targetY;
+  const dist = Math.hypot(dx, dy) || 1;
+  const minDist = bubbleA.radius + bubbleB.radius + DEFAULT_BUBBLE_GAP;
+
+  if (dist >= minDist) return;
+
+  const diff = (minDist - dist) / 2;
+  const angle = Math.atan2(dy || 0.0001, dx || 0.0001);
+  const moveX = Math.cos(angle) * diff;
+  const moveY = Math.sin(angle) * diff;
+  bubbleA.targetX -= moveX;
+  bubbleA.targetY -= moveY;
+  bubbleB.targetX += moveX;
+  bubbleB.targetY += moveY;
 }
 
 function measurePillExtraWidth(bubble) {

@@ -1,6 +1,284 @@
 # Handoff
 
 ## Task title
+Update bubble2 orb visual and pressed-state visuals
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the old `bubble2` orb plus-button visual with the same image-based orb shell used on the main bubble page.
+- Updated the orb structure in `src/bubble2-page.js`:
+  - added orb asset usage
+  - added `.bubble2-orb-visual`
+  - added `.bubble2-orb-icon-shell`
+  - added `.bubble2-orb-icon-image`
+- Updated the pressed-state visual behavior:
+  - orb button now toggles `is-pressed`
+  - visual scale now grows on press instead of shrinking
+  - orb shell applies blur and bright inset bloom while pressed
+  - orb image itself scales up under the pressed state
+- Kept the current `bubble2` press mechanics and interaction model intact; this change is visual only.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - orb image source present: `https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d`
+  - before press:
+    - orb visual transform: `matrix(1, 0, 0, 1, 0, 0)`
+    - orb shell filter: `none`
+    - `is-pressed`: `false`
+  - during press:
+    - orb visual transform: `matrix(1.3052, 0, 0, 1.3052, 0, 0)`
+    - orb image transform: `matrix(1.07413, 0, 0, 1.07413, 0, 0)`
+    - orb shell filter: `blur(12.3557px)`
+    - `is-pressed`: `true`
+
+## Remaining issues / caveats
+- `git diff --check` still has the unrelated pre-existing trailing whitespace issue in `context/task.md`; I did not modify that file in this pass.
+
+## Recommended next step
+1. If needed, the next orb pass would be to tune only the pressed bloom intensity or scale amount against the bubble-page reference.
+
+## Task title
+Tune only bubble2 reveal and return motion to bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated only the bubble reveal and return motion in `bubble2` to use the `bubble.html` transform timing/easing.
+- Kept the active local motion path unchanged:
+  - live sizing response while moving
+  - local push motion
+  - pill expansion timing path
+- Applied the bubble-page reveal/return transform contract in `src/bubble2-page.js`:
+  - reveal transform: `500ms` with `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - return transform: `400ms` with `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+  - reveal fade: `400ms`
+  - return fade: `300ms`
+- Left active movement on the earlier `bubble2` response:
+  - transform: `250ms`
+  - transform easing: `ease-out`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - reveal state computed transitions:
+    - duration: `0.5s, 0.6s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.22, 1.16, 0.3, 1.02), cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+  - active move state remained local:
+    - duration: `0.25s, 0.6s, 0.45s, 0.3s`
+    - timing: `ease-out, cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+  - return state computed transitions:
+    - duration: `0.4s, 0.6s, 0.3s, 0.3s`
+    - timing: `cubic-bezier(0.42, -0.14, 0.7, 0.68), cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+- `git diff --check` still reports a pre-existing trailing-whitespace issue in `context/task.md`, unrelated to this change.
+
+## Remaining issues / caveats
+- This pass only tuned reveal/return motion. Active movement and pan motion were intentionally left alone.
+
+## Recommended next step
+1. If needed, the next safe refinement is to tune only the reveal/return stagger amount without touching active sizing or push response.
+
+## Task title
+Undo bubble2 motion-tuning layer and restore sizing response
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the later `bubble2` motion-tuning layer that had been added after the push logic work.
+- Restored the earlier `bubble2` live sizing behavior in `src/bubble2-page.js`:
+  - depth-based reveal sizing
+  - pointer-proximity magnification
+  - local pointer push response
+  - hovered bubble scale boost without the later hard clamp
+- Removed the later motion override path that was flattening or delaying that sizing response:
+  - removed the bubble-page-style enter / push / exit timing split
+  - restored the earlier `bubble2` active move duration logic
+  - restored zero stagger while the pointer is actively moving
+- Restored the earlier CSS transition contract in `src/styles/bubble2-page.css` so the render loop controls local sizing response again instead of the later motion layer.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - initial pressed state used the earlier transition contract:
+    - first sampled item duration `0.45s, 0.6s, 0.45s, 0.3s`
+    - stagger returned to `0s / 0.025s / 0.05s / 0.075s` on reveal
+  - after pointer movement, sampled transforms changed dynamically again:
+    - `matrix(0.8488, ...)`
+    - `matrix(0.7502, ...)`
+    - `matrix(0.8075, ...)`
+    - `matrix(0.9683, ...)`
+
+## Remaining issues / caveats
+- This rollback intentionally removes the later motion matching work. `bubble2` is back on its earlier local interaction timing rather than the `bubble.html` motion contract.
+
+## Recommended next step
+1. If needed, the next pass should tune sizing or push behavior directly, without reintroducing a separate motion layer on top of the live sizing path.
+
+## Task title
+Clamp bubble2 mouse-distance sizing to 60px-100px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` mouse-distance sizing so the rendered circular bubble size stays within a `60px` to `100px` band while pressed and moving around the field.
+- Replaced the previous dynamic sizing path in `src/bubble2-page.js` with a direct distance-based interpolation:
+  - nearest bubbles scale toward `100px`
+  - farther bubbles scale down toward `60px`
+- Also clamped the final hovered bubble size after the local hover boost so the hovered state cannot exceed the same size band.
+- Left the rest of the motion system unchanged.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - after letting the motion settle, rendered circular bubble widths were within the requested range:
+    - min: `62.627px`
+    - max: `96.075px`
+
+## Remaining issues / caveats
+- During the transition into a new pointer position, intermediate widths can momentarily reflect the previous state until the 400-500ms motion completes. The settled state respects the `60px` to `100px` range.
+
+## Recommended next step
+1. If you want the range enforced even during transition sampling, the next step is to reduce interpolation overshoot by shortening the local size transition.
+
+## Task title
+Revert bubble2 pan easing change
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the `bubble2` pan-layer easing change from the previous motion pass.
+- Restored `.bubble2-pan-layer` to `transition-timing-function: ease-out`.
+- Left the local bubble motion timing unchanged:
+  - bubble reveal timing/ease
+  - pill expansion timing/ease
+  - pushed-bubble timing/ease
+
+## Files changed
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - pan layer computed transition: duration `1s`, timing `ease-out`
+  - bubble item computed transition remained on the local bubble-page easing contract
+
+## Remaining issues / caveats
+- This only reverts the pan easing change. No other motion behavior was altered.
+
+## Recommended next step
+1. If needed, I can separate bubble appear easing from pushed-bubble easing even more finely, but keep pan untouched.
+
+## Task title
+Match bubble2 item motion timing to bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` item motion so the bubble reveal, pill expansion, and pushed-bubble movement use the same duration/easing contract as `bubble.html`.
+- Applied the bubble-page timing values in `src/bubble2-page.js`:
+  - appear transform: `500ms`
+  - push transform: `400ms`
+  - exit transform: `400ms`
+  - fade-in: `400ms`
+  - fade-out: `300ms`
+  - stagger step: `0.035s`
+  - appear ease: `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - exit ease: `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+  - push/pill width ease: `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+- Aligned the CSS defaults in `src/styles/bubble2-page.css` to the same motion curve family so the base transition contract matches the main bubble page.
+- Kept the current `bubble2` sizing and local interaction model intact.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - appear state computed transition values:
+    - duration: `0.5s, 0.4s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.22, 1.16, 0.3, 1.02), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+  - push/expanded-pill state computed transition values:
+    - duration: `0.4s, 0.4s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+  - exit state computed transition values:
+    - duration: `0.4s, 0.3s, 0.3s, 0.3s`
+    - timing: `cubic-bezier(0.42, -0.14, 0.7, 0.68), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+
+## Remaining issues / caveats
+- This pass matched the bubble item motion contract only. It does not change `bubble2` pan behavior or swap in the full `bubble.html` interaction engine.
+
+## Recommended next step
+1. If needed, the next motion pass would be to match the pan interpolation and orb timing with the same level of precision.
+
+## Task title
+Add bubble push-away when a pill expands in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Added sibling repulsion to `bubble2` when a pill expands.
+- Kept the current `bubble2` sizing model intact:
+  - depth-based reveal sizing
+  - local pointer magnification
+  - existing orb behavior
+- Implemented a contained collision pass in `src/bubble2-page.js`:
+  - the expanded pill now pushes overlapping neighbors away from its widened pill bounds
+  - nearby bubbles then run through a short pairwise separation pass so pushed bubbles can push adjacent bubbles too
+- This change only affects expanded-pill interaction and does not reintroduce the broader `bubble.html` motion engine.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - Spotify pill expanded successfully: `expanded: true`
+  - Spotify root width increased to `256.266px`
+  - neighboring bubble `id=9` changed transform during Spotify expansion:
+    - before: `matrix(0.353778, 0, 0, 0.353778, -39.2192, -108.932)`
+    - after: `matrix(0.722756, 0, 0, 0.722756, 147.061, -232.085)`
+
+## Remaining issues / caveats
+- The push-away is intentionally scoped to the expanded-pill case. It is not a full bubble-field physics port from `bubble.html`.
+
+## Recommended next step
+1. If needed, the next tuning pass is to adjust how strong or how far the sibling repulsion propagates when larger pills open.
+
+## Task title
 Undo last 2 bubble2 motion changes
 
 ## Completion status
