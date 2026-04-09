@@ -214,7 +214,7 @@ export function createMorphRender(ctx) {
   }
 
   function syncPrototypeFigmaButtonDemo(stageId = null, scenario = null) {
-    const preview = document.getElementById('prototype-figma-button-demo');
+    const previews = document.querySelectorAll('.prototype-figma-button-demo');
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
     const stage = stageId ? callbacks.stageById?.(stageId) : null;
     const accentColor = stageId
@@ -223,9 +223,14 @@ export function createMorphRender(ctx) {
     const accentSecondaryColor = stageId
       ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
       : null;
-    if (!preview) return;
-    preview.style.setProperty('--prototype-figma-button-accent-a', hexToCssColor(accentColor, 'rgb(144 172 255)'));
-    preview.style.setProperty('--prototype-figma-button-accent-b', hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)'));
+    if (!previews.length) return;
+    const accentA = hexToCssColor(accentColor, 'rgb(144 172 255)');
+    const accentB = hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)');
+    previews.forEach((preview) => {
+      if (preview.dataset.staticAccents === 'true') return;
+      preview.style.setProperty('--prototype-figma-button-accent-a', accentA);
+      preview.style.setProperty('--prototype-figma-button-accent-b', accentB);
+    });
   }
 
   function syncPrototypeStageSelection(stageId = null, scenario = null) {
