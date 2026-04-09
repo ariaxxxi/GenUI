@@ -17,6 +17,7 @@
 
 #prototype-figma-button-demo .prototype-figma-button-shell,
 #prototype-figma-button-demo .prototype-figma-button-refraction,
+#prototype-figma-button-demo .prototype-figma-button-accent-rim,
 #prototype-figma-button-demo .prototype-figma-button-highlight,
 #prototype-figma-button-demo .prototype-figma-button-label,
 #prototype-figma-button-demo .prototype-figma-button-highlight-mask {
@@ -93,12 +94,22 @@
 #prototype-figma-button-demo .prototype-figma-button-sharp-highlight {
   position: absolute;
   inset: -44.12%;
-  background-image: url('../assets/figma-proto-button-sharp-highlight.svg');
+  background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
   background-size: 64px 64px;
   background-position: center;
   mix-blend-mode: screen;
   opacity: 1;
+}
+
+#prototype-figma-button-demo .prototype-figma-button-accent-rim {
+  border-radius: 60px;
+  box-shadow:
+    inset 0 -1px 1.5px color-mix(in srgb, var(--prototype-figma-button-accent-b) 46%, white 54%),
+    inset 0 1px 1px color-mix(in srgb, var(--prototype-figma-button-accent-a) 12%, white 88%),
+    inset 1px 0 1px color-mix(in srgb, var(--prototype-figma-button-accent-b) 22%, white 78%),
+    inset -1px 0 1px color-mix(in srgb, var(--prototype-figma-button-accent-a) 24%, white 76%);
+  opacity: 0.88;
 }
 
 #prototype-figma-button-demo .prototype-figma-button-highlight {
