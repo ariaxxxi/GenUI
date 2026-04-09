@@ -1,6 +1,288 @@
 # Handoff
 
 ## Task title
+Set bubble2 pan duration to 1000ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` pan duration in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so it is always `1000ms`.
+- This removes the shorter active pan duration and keeps the existing `ease-out` timing.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - pan transition duration: `1s`
+  - pan transition timing: `ease-out`
+
+## Remaining issues / caveats
+- None for this scoped change.
+
+## Recommended next step
+1. If needed, the next pan tweak would be easing only, since duration is now uniform.
+
+## Task title
+Retune bubble2 initial bubble positions to match packed Figma cluster
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the initial bubble centers in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) to better match the packed arrangement in the Figma reference (`LTNbsRqNkyLeo81OSL1X7J`, node `516:9`).
+- The main adjustment was tightening the lower portion of the cluster:
+  - moved the large left bubble lower
+  - moved the large right bubble lower
+  - made small refinements to nearby bubble centers so the full group reads as a tighter packed cluster
+- Kept the non-overlap solver intact so the cluster stays compact without circles intersecting.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - opened-state rendered centers after retune:
+    - `id=10`: `(120.6, 121.3)`
+    - `id=6`: `(188.5, 147.6)`
+    - `id=9`: `(276.5, 149.4)`
+    - `id=3`: `(121.3, 204.1)`
+    - `id=5`: `(323.7, 224.7)`
+    - `id=1`: `(219.6, 240.5)`
+    - `id=2`: `(95.8, 331.3)`
+    - `id=8`: `(310.6, 362.7)`
+  - opened-state overlap probe remained empty: `[]`
+
+## Remaining issues / caveats
+- The layout is still finalized by the no-overlap solver, so the config centers act as target anchors rather than absolute final screen positions.
+
+## Recommended next step
+1. If needed, the next pass should tune only the lower-left/lower-right anchor positions a few more pixels at a time against the Figma screenshot.
+
+## Task title
+Prevent bubble overlap across the full bubble2 field
+
+## Completion status
+- Completed
+
+## Summary
+- Added a general bubble-to-bubble layout separation pass to `bubble2`, not just the expanded-pill repulsion pass.
+- The field now resolves overlap in two layers inside [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js):
+  - normal field layout:
+    - all bubbles run through a pairwise separation solver so circle bounds do not overlap
+  - expanded-pill state:
+    - existing pill-to-bubble repulsion still runs
+    - existing secondary pairwise cleanup still runs after pill push
+- This preserves the good gap behavior seen during expanded-pill hover and applies the same non-overlap rule to the rest of the field.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - opened-state overlap probe: `[]`
+  - active-move overlap probe: `[]`
+  - probe used rendered circle bounds from `.bubble2-icon-wrap` and checked pairwise circle intersections
+
+## Remaining issues / caveats
+- This guarantees no circle overlap for the bubble faces. Expanded pill width is still handled by the dedicated pill repulsion/safety logic.
+
+## Recommended next step
+1. If needed, the next refinement is to tune the default inter-bubble gap amount without changing the non-overlap guarantee.
+
+## Task title
+Remove duplicate note bubble from bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the last duplicated note bubble from the `bubble2` bubble config in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- This deletes the extra trailing note entry and leaves a single note bubble in the scene.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - total bubbles: `9`
+  - note bubbles using the note asset: `1`
+
+## Remaining issues / caveats
+- None for this scoped change.
+
+## Recommended next step
+1. If needed, the next cleanup is to retune spacing after the bubble removal, but I left positions unchanged here.
+
+## Task title
+Restore bubble2 reveal stagger on orb open
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the bubble coming-out stagger effect for `bubble2` without changing the current sizing logic.
+- Added a dedicated `pointerMovedSincePress` state flag in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- The opening sequence now behaves in two phases:
+  - initial orb-open reveal:
+    - uses reveal stagger again
+    - keeps the orb-centered sizing logic
+    - uses the reveal enter easing/duration
+  - after the first actual pointer move:
+    - stagger is removed
+    - active interaction stays on the fast local motion path
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - reveal phase delays returned:
+    - `0s`
+    - `0.025s`
+    - `0.05s`
+    - `0.075s`
+  - reveal phase durations/easing stayed on the reveal contract:
+    - duration: `0.5s, 0.6s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.22, 1.16, 0.3, 1.02), cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+  - after pointer movement, stagger cleared again for active interaction:
+    - all sampled delays became `0s, 0s, 0s, 0s`
+    - active duration remained `0.25s, 0.6s, 0.45s, 0.3s`
+- `git diff --check` still reports the unrelated pre-existing formatting issue in [context/task.md](/Users/ariax/Documents/GitHub/GenUI/context/task.md).
+
+## Remaining issues / caveats
+- This restores stagger only for the initial reveal phase, which matches the intended behavior.
+
+## Recommended next step
+1. If needed, the next refinement is to tune only the stagger step amount without touching reveal sizing or active motion.
+
+## Task title
+Keep expanded pill bubble size stable while hovering pill area
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` so hovering on an expanded pill counts as staying on that same bubble for sizing purposes.
+- Added a stateful lock in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js):
+  - when a pill becomes the hovered bubble, its current scale is captured
+  - while the hover remains on that expanded pill, the bubble face keeps that scale
+  - moving across the pill text area no longer changes the bubble’s rendered size
+  - the lock clears as soon as hover leaves that pill or the press ends
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - expanded pill stayed active while moving from bubble face into pill text area
+  - after settling, the bubble face width remained unchanged:
+    - center hover: `107.646px`
+    - pill-area hover: `107.646px`
+  - the root transform translation changed, but scale stayed the same:
+    - center: `matrix(0.9786, 0, 0, 0.9786, 62.847, -186.319)`
+    - pill area: `matrix(0.9786, 0, 0, 0.9786, 49.042, -176.996)`
+- `git diff --check` still reports the unrelated pre-existing formatting issue in [context/task.md](/Users/ariax/Documents/GitHub/GenUI/context/task.md).
+
+## Remaining issues / caveats
+- The size lock is scoped to the currently hovered expanded pill only, which matches the requested behavior.
+
+## Recommended next step
+1. If needed, the next refinement is to apply the same hover-lock idea to any future child-pill or chip layouts.
+
+## Task title
+Add bubble2 panning safety for expanded pills
+
+## Completion status
+- Completed
+
+## Summary
+- Added bubble-page-style panning safety logic to `bubble2` so an expanded pill is kept inside the canvas instead of being clipped at the edges.
+- Kept the existing `bubble2` pan behavior as the base:
+  - mouse-driven pan from pointer displacement still runs first
+- Added a final bounds correction pass in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js):
+  - if an expanded pill would overflow left/right/top/bottom, pan target is adjusted just enough to bring it back inside
+  - correction uses the pill’s full expanded width, not just its circular icon diameter
+  - correction only applies when a pill is expanded
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - right-side pill (`id=5`) expanded successfully and stayed within the `420x420` canvas:
+    - pan: `matrix(1, 0, 0, 1, -57.0227, 13.4979)`
+    - pill bounds inside canvas: left `218.509`, right `381.346`, top `210.177`, bottom `299.646`
+  - left-side pill (`id=3`) expanded successfully and stayed within the canvas:
+    - pan: `matrix(1, 0, 0, 1, 9.70015, 16.7151)`
+    - pill bounds inside canvas: left `102.692`, right `254.209`, top `190.661`, bottom `279.102`
+
+## Remaining issues / caveats
+- This safety pass currently targets expanded pills only, which matches the requested behavior.
+
+## Recommended next step
+1. If needed, the next refinement is to tune the safety margin amount so expanded pills sit tighter or looser against the canvas edges.
+
+## Task title
+Make bubble2 sizing fully mouse-distance-driven and align initial layout to Figma
+
+## Completion status
+- Completed
+
+## Summary
+- Removed per-bubble predefined sizing from `bubble2`.
+- Replaced the old per-item `size` data model in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) with:
+  - shared base diameter: `110px`
+  - rendered size range driven only by distance to the active mouse point: `60px` to `110px`
+- Removed the separate hover size boost so rendered bubble size is now determined only by distance from the mouse/orb center.
+- Changed press start behavior so the field opens with the orb center as the active mouse point immediately, which makes the nearest bubbles start out as the largest.
+- Updated the initial cluster positions to match the referenced Figma node’s layout pattern:
+  - file: `LTNbsRqNkyLeo81OSL1X7J`
+  - node: `516:9`
+- Kept existing bubble content, pill behavior, and push logic intact.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma design context and screenshot fetched for `LTNbsRqNkyLeo81OSL1X7J`, node `516:9`
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - opened-state rendered bubble widths stayed in the requested range:
+    - min: `60.005px`
+    - max: `93.5px`
+  - largest opened-state bubbles were the ones nearest the orb:
+    - `id=8`: `93.5px`
+    - `id=1`: `90.904px`
+    - `id=2`: `89.815px`
+
+## Remaining issues / caveats
+- The largest opened-state bubble is below `110px` because none of the current bubble centers sits directly on the orb center; the full `110px` size is still reachable when the pointer moves closer to a bubble.
+
+## Recommended next step
+1. If needed, the next pass should tune only the cluster positions so a specific starting bubble lands even closer to the orb center.
+
+## Task title
 Update bubble2 orb visual and pressed-state visuals
 
 ## Completion status

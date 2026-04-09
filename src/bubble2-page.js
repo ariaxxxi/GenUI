@@ -1,12 +1,15 @@
-const EXTRA_WIDTH = 135;
-const MIN_Y = -370;
-const MAX_Y = 0;
+const BUBBLE_BASE_SIZE = 110;
+const BUBBLE_MIN_SIZE = 60;
+const BUBBLE_MAX_SIZE = 110;
 const MAX_DIST = 260;
 const MAX_PAN = 75;
+const PAN_MARGIN_PX = 24;
+const CANVAS_HALF_SIZE = 210;
 const DEFAULT_BUBBLE_GAP = 8;
 const PILL_LAYOUT_GAP = 10;
 const PILL_REPULSION_INFLUENCE = 28;
 const PILL_REPULSION_ITERATIONS = 12;
+const BUBBLE_LAYOUT_ITERATIONS = 12;
 const OPEN_STAGGER_STEP_MS = 25;
 const DEFAULT_MOVE_DURATION_MS = 450;
 const ACTIVE_MOVE_DURATION_MS = 250;
@@ -40,9 +43,8 @@ const PROFILE_CALL_BADGE_ASSET = 'https://store-images.s-microsoft.com/image/app
 const BUBBLES_CONFIG = [
   {
     id: 1,
-    size: 126,
-    x: 15,
-    y: -150,
+    x: 9,
+    y: -107,
     zIndex: 20,
     img: 'https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3',
     fill: true,
@@ -62,9 +64,8 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 3,
-    size: 165,
-    x: -130,
-    y: -185,
+    x: -87,
+    y: -148,
     zIndex: 15,
     img: 'assets/profile1.png',
     fill: true,
@@ -78,18 +79,16 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 9,
-    size: 142,
-    x: 155,
-    y: -185,
+    x: 66,
+    y: -204,
     zIndex: 14,
     img: FIGMA_ASSETS.note,
     fill: true,
   },
   {
     id: 4,
-    size: 73,
-    x: -150,
-    y: -45,
+    x: 18,
+    y: -272,
     zIndex: 12,
     img: FIGMA_ASSETS.health,
     fill: true,
@@ -99,9 +98,8 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 2,
-    size: 86,
-    x: -60,
-    y: -65,
+    x: -106,
+    y: -22,
     zIndex: 13,
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
@@ -110,18 +108,16 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 8,
-    size: 53,
-    x: 25,
-    y: -45,
+    x: 91,
+    y: 7,
     zIndex: 14,
     img: FIGMA_ASSETS.gemini,
     fill: true,
   },
   {
     id: 5,
-    size: 87,
-    x: 165,
-    y: -60,
+    x: 110,
+    y: -126,
     zIndex: 16,
     img: 'assets/profile2.png',
     fill: true,
@@ -136,29 +132,18 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 6,
-    size: 125,
-    x: 10,
-    y: -274,
+    x: -21,
+    y: -203,
     zIndex: 10,
     img: FIGMA_ASSETS.map,
     fill: true,
   },
   {
     id: 10,
-    size: 111,
-    x: -75,
-    y: -330,
+    x: -88,
+    y: -230,
     zIndex: 12,
     img: FIGMA_ASSETS.weather,
-    fill: true,
-  },
-  {
-    id: 7,
-    size: 111,
-    x: 115,
-    y: -320,
-    zIndex: 11,
-    img: FIGMA_ASSETS.note,
     fill: true,
   },
 ].map(enrichBubbleMetrics);
@@ -176,6 +161,9 @@ const state = {
     x: ORB_CENTER_X,
     y: ORB_CENTER_Y,
   },
+  pointerMovedSincePress: false,
+  lockedExpandedPillId: null,
+  lockedExpandedPillScale: null,
   renderQueued: false,
 };
 
@@ -354,12 +342,13 @@ function handlePointerDown(event) {
     };
   }
   state.isPressed = true;
+  state.pointerMovedSincePress = false;
   state.mousePos = {
     x: 0,
     y: 0,
     nx: 0,
     ny: 0,
-    active: false,
+    active: true,
   };
   if (refs.orb?.setPointerCapture && event.pointerId != null) {
     refs.orb.setPointerCapture(event.pointerId);
@@ -386,6 +375,7 @@ function handlePointerMove(event) {
     ny,
     active: true,
   };
+  state.pointerMovedSincePress = true;
 
   scheduleRender();
 }
@@ -413,6 +403,9 @@ function handlePointerRelease(event) {
     x: ORB_CENTER_X,
     y: ORB_CENTER_Y,
   };
+  state.pointerMovedSincePress = false;
+  state.lockedExpandedPillId = null;
+  state.lockedExpandedPillScale = null;
   previousHoveredId = null;
   scheduleRender();
 }
@@ -428,10 +421,13 @@ function scheduleRender() {
 
 function render() {
   const scene = computeScene();
-  const activeMoveDuration = state.mousePos.active ? ACTIVE_MOVE_DURATION_MS : DEFAULT_MOVE_DURATION_MS;
-  const staggered = state.mousePos.active ? 0 : OPEN_STAGGER_STEP_MS;
+  const isInitialReveal = state.isPressed && !state.pointerMovedSincePress;
+  const activeMoveDuration = state.mousePos.active
+    ? (isInitialReveal ? DEFAULT_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS)
+    : DEFAULT_MOVE_DURATION_MS;
+  const staggered = isInitialReveal ? OPEN_STAGGER_STEP_MS : 0;
 
-  refs.panLayer.style.transitionDuration = `${state.mousePos.active ? 300 : 1000}ms`;
+  refs.panLayer.style.transitionDuration = '1000ms';
   refs.panLayer.style.transform =
     `translate(-50%, -50%) translate3d(${format(scene.panOffset.x)}px, ${format(scene.panOffset.y)}px, 0)`;
 
@@ -440,7 +436,7 @@ function render() {
     if (!node) continue;
 
     const isHovered = scene.hoveredId === bubble.id;
-    const isAppearing = state.isPressed && !state.mousePos.active;
+    const isAppearing = isInitialReveal;
     const isReturning = !state.isPressed;
     const staggerDelay = staggered ? node.index * staggered : 0;
     const transformDuration = isAppearing
@@ -455,13 +451,13 @@ function render() {
     const transformEase = isAppearing
       ? BUBBLE_ENTER_EASE
       : (isReturning ? BUBBLE_EXIT_EASE : 'ease-out');
-    const translateX = bubble.targetX - bubble.size / 2;
-    const translateY = bubble.targetY - bubble.size / 2;
+    const translateX = bubble.targetX - bubble.baseSize / 2;
+    const translateY = bubble.targetY - bubble.baseSize / 2;
     const pillScale = Math.max(bubble.targetScale || 1, 0.0001);
 
     node.root.style.zIndex = String(isHovered ? 50 : bubble.zIndex);
     node.root.style.width = `${format(bubble.targetWidth)}px`;
-    node.root.style.height = `${format(bubble.size)}px`;
+    node.root.style.height = `${format(bubble.baseSize)}px`;
     node.root.style.opacity = state.isPressed ? '1' : '0';
     node.root.style.boxShadow = isHovered
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
@@ -473,11 +469,11 @@ function render() {
     node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms`;
     node.root.style.transitionTimingFunction = `${transformEase}, var(--bubble2-pill-ease), ease-out, ease`;
 
-    node.iconWrap.style.width = `${bubble.size}px`;
-    node.iconWrap.style.height = `${bubble.size}px`;
+    node.iconWrap.style.width = `${bubble.baseSize}px`;
+    node.iconWrap.style.height = `${bubble.baseSize}px`;
 
     if (node.pillCopy) {
-      node.pillCopy.style.left = `${bubble.size}px`;
+      node.pillCopy.style.left = `${bubble.baseSize}px`;
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
       node.pillCopy.style.setProperty('--bubble2-title-size', `${22 / pillScale}px`);
       node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${18 / pillScale}px`);
@@ -492,9 +488,9 @@ function render() {
     }
 
     if (node.subIcon) {
-      const subIconSize = bubble.subIconSize ?? (bubble.size * 0.38);
-      const subIconOffsetX = bubble.subIconOffsetX ?? (bubble.size * 0.6);
-      const subIconOffsetY = bubble.subIconOffsetY ?? (bubble.size * 0.6);
+      const subIconSize = bubble.subIconSize ?? (bubble.baseSize * 0.38);
+      const subIconOffsetX = bubble.subIconOffsetX ?? (bubble.baseSize * 0.6);
+      const subIconOffsetY = bubble.subIconOffsetY ?? (bubble.baseSize * 0.6);
       node.subIcon.style.width = `${format(subIconSize)}px`;
       node.subIcon.style.height = `${format(subIconSize)}px`;
       node.subIcon.style.left = `${format(subIconOffsetX)}px`;
@@ -523,20 +519,17 @@ function computeScene() {
   const clusterMouseY = state.mousePos.y - targetPanY;
 
   let processedBubbles = BUBBLES_CONFIG.map((bubble) => {
-    const defaultDepth = 0.7 + (0.5 * (bubble.y - MIN_Y) / (MAX_Y - MIN_Y));
-    let depthScale = defaultDepth;
+    let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
     let dx = 0;
     let dy = 0;
-    let visualSize = bubble.size * defaultDepth;
+    let visualSize = BUBBLE_MIN_SIZE;
 
-    if (state.isPressed && state.mousePos.active) {
+    if (state.isPressed) {
       const dist = Math.hypot(bubble.x - clusterMouseX, bubble.y - clusterMouseY);
       const factor = Math.max(0, 1 - dist / MAX_DIST);
       const smoothFactor = smoothstep(factor);
-      const minVisualSize = bubble.size * defaultDepth * 0.85;
-      const maxVisualSize = 110;
-      visualSize = minVisualSize + (maxVisualSize - minVisualSize) * smoothFactor;
-      depthScale = visualSize / bubble.size;
+      visualSize = BUBBLE_MIN_SIZE + ((BUBBLE_MAX_SIZE - BUBBLE_MIN_SIZE) * smoothFactor);
+      depthScale = visualSize / bubble.baseSize;
 
       if (factor > 0) {
         const angle = Math.atan2(bubble.y - clusterMouseY, bubble.x - clusterMouseX);
@@ -552,9 +545,14 @@ function computeScene() {
       targetY: state.isPressed ? bubble.y + dy : 0,
       baseVisualSize: visualSize,
       currentDepthScale: depthScale,
+      radius: visualSize / 2,
       targetScale: state.isPressed ? depthScale : 0.2,
     };
   });
+
+  if (state.isPressed) {
+    resolveBubbleFieldLayout(processedBubbles);
+  }
 
   let bestHit = null;
   let maxZ = -1;
@@ -586,13 +584,30 @@ function computeScene() {
     }
   }
 
+  const hoveredPill = processedBubbles.find((bubble) => bubble.id === bestHit && bubble.isPill);
+  if (hoveredPill && state.isPressed) {
+    if (state.lockedExpandedPillId !== hoveredPill.id) {
+      state.lockedExpandedPillId = hoveredPill.id;
+      state.lockedExpandedPillScale = hoveredPill.targetScale;
+    }
+  } else {
+    state.lockedExpandedPillId = null;
+    state.lockedExpandedPillScale = null;
+  }
+
   previousHoveredId = bestHit;
 
   processedBubbles = processedBubbles.map((bubble) => {
     const isHovered = bestHit === bubble.id;
-    const finalTargetScale = isHovered
-      ? bubble.targetScale * (bubble.disableHoverScale ? 1 : 1.05)
-      : bubble.targetScale;
+    let finalTargetScale = bubble.targetScale;
+    if (
+      isHovered &&
+      bubble.isPill &&
+      state.lockedExpandedPillId === bubble.id &&
+      state.lockedExpandedPillScale != null
+    ) {
+      finalTargetScale = state.lockedExpandedPillScale;
+    }
     const expandedExtraSourceWidth = bubble.isPill
       ? bubble.expandedExtraWidth / Math.max(finalTargetScale || 1, 0.0001)
       : 0;
@@ -601,8 +616,8 @@ function computeScene() {
       ...bubble,
       isExpanded,
       expandedExtraSourceWidth,
-      targetWidth: isExpanded ? bubble.size + expandedExtraSourceWidth : bubble.size,
-      radius: (bubble.size * finalTargetScale) / 2,
+      targetWidth: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
+      radius: (bubble.baseSize * finalTargetScale) / 2,
       targetScale: finalTargetScale,
     };
   });
@@ -639,6 +654,29 @@ function computeScene() {
     }
   }
 
+  let panX = targetPanX;
+  let panY = targetPanY;
+  if (expandedPill) {
+    const pillHalfWidth = (expandedPill.baseSize * expandedPill.targetScale) / 2;
+    const pillHalfHeight = (expandedPill.baseSize * expandedPill.targetScale) / 2;
+    const left = expandedPill.targetX - pillHalfWidth;
+    const right = expandedPill.targetX + pillHalfWidth + expandedPill.expandedExtraWidth;
+    const top = expandedPill.targetY - pillHalfHeight;
+    const bottom = expandedPill.targetY + pillHalfHeight;
+
+    if (right + panX + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
+      panX = CANVAS_HALF_SIZE - right - PAN_MARGIN_PX;
+    } else if (left + panX - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
+      panX = -CANVAS_HALF_SIZE - left + PAN_MARGIN_PX;
+    }
+
+    if (bottom + panY + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
+      panY = CANVAS_HALF_SIZE - bottom - PAN_MARGIN_PX;
+    } else if (top + panY - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
+      panY = -CANVAS_HALF_SIZE - top + PAN_MARGIN_PX;
+    }
+  }
+
   return {
     bubbles: processedBubbles,
     orb: {
@@ -646,16 +684,16 @@ function computeScene() {
       targetScale: state.isPressed ? (ORB_PRESSED_SIZE / ORB_BASE_SIZE) : 1,
     },
     panOffset: {
-      x: targetPanX,
-      y: targetPanY,
+      x: panX,
+      y: panY,
     },
     hoveredId: bestHit,
   };
 }
 
 function getExpandedPillRepulsion(pill, bubble, influencePadding) {
-  const pillHalfWidth = (pill.size * pill.targetScale) / 2;
-  const pillHalfHeight = (pill.size * pill.targetScale) / 2;
+  const pillHalfWidth = (pill.baseSize * pill.targetScale) / 2;
+  const pillHalfHeight = (pill.baseSize * pill.targetScale) / 2;
   const rectLeft = pill.targetX - pillHalfWidth;
   const rectRight = pill.targetX + pillHalfWidth + pill.expandedExtraWidth;
   const rectTop = pill.targetY - pillHalfHeight;
@@ -707,6 +745,16 @@ function separateBubblePair(bubbleA, bubbleB) {
   bubbleB.targetY += moveY;
 }
 
+function resolveBubbleFieldLayout(bubbles) {
+  for (let iter = 0; iter < BUBBLE_LAYOUT_ITERATIONS; iter += 1) {
+    for (let i = 0; i < bubbles.length; i += 1) {
+      for (let j = i + 1; j < bubbles.length; j += 1) {
+        separateBubblePair(bubbles[i], bubbles[j]);
+      }
+    }
+  }
+}
+
 function measurePillExtraWidth(bubble) {
   const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 22px "DM Sans"');
   const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '400 18px "DM Sans"');
@@ -731,6 +779,7 @@ function measureTextWidth(text, font) {
 function enrichBubbleMetrics(bubble) {
   return {
     ...bubble,
+    baseSize: BUBBLE_BASE_SIZE,
     expandedExtraWidth: bubble.isPill ? measurePillExtraWidth(bubble) : 0,
   };
 }
