@@ -1,6 +1,335 @@
 # Handoff
 
 ## Task title
+Undo last 2 bubble2 motion changes
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the last two `bubble2` behavior passes:
+  - removed the `bubble.html` orb and motion-physics port
+  - removed the follow-up hybrid sizing rollback built on top of that port
+- Restored the earlier `bubble2` interaction model:
+  - immediate orb press instead of the long-press engine
+  - `bubble2` depth-based reveal sizing
+  - local pointer magnification and small pointer push behavior
+  - simple orb scale/background pressed state instead of the bubble-page bloom orb
+- Kept the earlier approved content/styling updates intact:
+  - `bubble.html` content/images
+  - pill/non-pill matching
+  - Spotify outline and badge
+  - message pill typography fix
+  - no automatic upward pan on press
+- Reintroduced the missing pill-width helper functions required by the reverted file so the page initializes correctly.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- `curl -I http://localhost:62931/bubble2`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - found 1 orb node
+  - found 10 bubble nodes
+  - found 0 direct shell orb nodes
+  - found 11 children inside `.bubble2-pan-layer`
+
+## Remaining issues / caveats
+- This is a targeted revert of the last two `bubble2` changes only. Earlier content and style matching work remains in place by design.
+
+## Recommended next step
+1. If you want a narrower rollback after this, the next step is to call out the exact earlier behavior snapshot to preserve and I can trim only that part.
+
+## Task title
+Restore bubble2 sizing logic after motion port
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the fixed-size reveal scale model that came over from `bubble.html`.
+- Restored `bubble2`’s own sizing behavior in `src/bubble2-page.js`:
+  - depth-scaled idle reveal based on bubble Y position
+  - pointer-proximity magnification when moving in the field
+  - small cursor-driven local displacement around the pointer
+- Kept the newer orb visual behavior and motion engine from the previous pass:
+  - long-press timing
+  - bubble-page-style orb pressed bloom/blur
+  - repulsion / settle motion
+  - animated pan interpolation
+- Re-enabled continuous rerender on pointer movement while pressed so the restored `bubble2` magnifier sizing actually tracks pointer motion again.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - after press, leading bubble transforms showed layered non-uniform scales instead of flat `1.0` reveal:
+    - first four sampled items included `matrix(0.575566 ...)`, `matrix(0.315806 ...)`, `matrix(0.2 ...)`, `matrix(0.2 ...)`
+  - after moving the pointer upward, sampled bubbles re-sized dynamically:
+    - first four sampled items included `matrix(0.864214 ...)`, `matrix(0.721932 ...)`, `matrix(0.76413 ...)`, `matrix(0.990385 ...)`
+  - hovered pill width expanded while using the restored sizing path:
+    - sampled expanded width `316.234px`
+  - orb pressed visual remained active during the restored sizing path:
+    - sampled orb filter `blur(29.7734px)`
+
+## Remaining issues / caveats
+- The motion engine is still the newer hybrid: `bubble2` now uses its original size behavior with the later orb/repulsion/timing port, rather than reverting fully to the earlier `bubble2` implementation.
+
+## Recommended next step
+1. If needed, I can tune the restored `bubble2` depth curve or magnifier ceiling next without touching the orb/motion system.
+
+## Task title
+Port bubble-page orb and motion physics into bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the `bubble2` interaction engine with the same motion model used by `bubble.html` for:
+  - long-press activation timing
+  - bubble reveal / return timing
+  - expanded-pill repulsion and sibling relaxation
+  - animated pan interpolation
+  - hover hit-testing with sticky leash behavior
+- Updated the `bubble2` orb structure to match the main bubble page:
+  - uses the same orb image asset
+  - same pressed-state blur / bloom treatment
+  - same long-press timing model
+  - orb visual now gets displaced by pill-expansion physics instead of only scaling in place
+- Updated `bubble2` item transition wiring so bubble motion follows the same duration/easing split as `bubble.html`:
+  - enter motion
+  - exit motion
+  - push / settle motion
+  - staggered reveal timing
+- Preserved the `bubble2` content and spatial composition, but changed the interaction feel to the main bubble page’s engine.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - before long-press threshold, first bubble opacity stayed `0`
+  - after long-press threshold, first bubble opacity increased to `0.57712`
+  - orb pressed visuals activated:
+    - orb icon filter reached `blur(15.9879px)` during transition sampling
+    - orb image transform reached `matrix(1.10538, 0, 0, 1.10538, 0, 0)` during transition sampling
+  - immediately after press, pan layer stayed at `matrix(1, 0, 0, 1, 0, 0)`
+  - direct hover at Spotify’s bubble-space coordinates expanded the pill width to `314px`
+  - during Spotify expansion, orb visual transform became `matrix(1.3692, 0, 0, 1.3692, 1.53352, 18.1548)`, confirming the orb is being displaced by the repulsion solver
+
+## Remaining issues / caveats
+- `bubble2` now uses the bubble-page interaction engine, but it still uses the larger `bubble-2` cluster geometry rather than the original `bubble.html` cluster layout.
+- The pressed-orb verification sampled mid-transition in headless mode, so the reported blur/scale values are transitional rather than final settled values.
+
+## Recommended next step
+1. If you want even closer parity, the next step is to tune the `bubble2` anchor position and canvas bounds against the `bubble.html` frame so the same physics engine also lands in the same screen zones.
+
+## Task title
+Fix bubble2 message pill typography scaling
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed `bubble2` pill typography so the expanded pill text now renders at the same visual size as `bubble.html`, regardless of the source bubble’s scale in the `bubble2` layout.
+- Adjusted expanded pill width math to preserve the same visual text container width while the outer bubble continues to use the `bubble2` scaling model.
+- Applied the same compensation to:
+  - title font size
+  - subtitle font size
+  - pill gap
+  - left/right text padding
+  - trailing action size/offset
+- This specifically fixes the message pills (`Tony`, `Hiro`) that were reading too small because their parent bubbles were being scaled differently in the `bubble2` composition.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - expanded pill title computed styles:
+    - `Happiness` → `22px`, `600`
+    - `Tony` → `22px`, `600`
+    - `10,243 steps` → `22px`, `600`
+    - `Hiro` → `22px`, `600`
+  - expanded pill subtitle computed styles:
+    - `1975` → `18px`, `400`
+    - `I love it!` → `18px`, `400`
+    - `Yesterday` → `18px`, `400`
+
+## Remaining issues / caveats
+- The pill typography now matches visually, but the overall cluster still follows the `bubble2` spatial composition rather than the `bubble.html` spatial composition.
+
+## Recommended next step
+1. If needed, I can apply the same visual-size normalization to any other scaled sub-elements that still read off in the `bubble2` layout.
+
+## Task title
+Remove bubble2 auto-upward pan on orb press
+
+## Completion status
+- Completed
+
+## Summary
+- Changed `bubble2` camera pan so it is now relative to the pointer-down position instead of the absolute canvas position.
+- This removes the previous bottom-orb upward bias: long-pressing the orb no longer automatically pans the bubble field upward before you drag.
+- Bubble hover/magnifier hit-testing still uses the same bubble-space coordinates, so the interaction model stays intact; only the pan origin changed.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - pan transform right after orb press: `matrix(1, 0, 0, 1, 0, 0)`
+  - pan transform after dragging away from the press point: `matrix(1, 0, 0, 1, -24.3788, 18.2848)`
+
+## Remaining issues / caveats
+- Pan now follows drag displacement from the press point, not absolute cursor position inside the canvas. That removes the unwanted upward jump, but it also changes the camera feel slightly compared with the original reference math.
+
+## Recommended next step
+1. If you want, I can tune the drag-to-pan sensitivity next without reintroducing the upward jump.
+
+## Task title
+Align bubble2 pill styling with bubble.html
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` so its pill/non-pill status now matches the current `bubble.html` content model:
+  - pill bubbles: Spotify, Tony, Health, Hiro
+  - non-pill bubbles: ChatGPT, Gemini, map, weather, note
+- Replaced the simplified `bubble2` pill visuals with the main bubble page’s visual language:
+  - glass pill shell styling
+  - `22px` title / `18px` subtitle typography
+  - same text padding/layout rules
+  - trailing pill action support
+- Added dynamic pill-width measurement so each expanded pill container sizes to its actual text like `bubble.html`.
+- Added the Spotify-specific treatments from the main bubble page:
+  - green inset album-cover outline
+  - green pause action on the pill
+  - Spotify badge at the bottom-right
+- Ported the message badge style for Tony and kept Hiro’s call badge treatment.
+- Added the Bootstrap Icons stylesheet to `bubble2.html` so the Spotify pause icon renders correctly.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - pill count: `4`
+  - visible pill titles: `Happiness`, `Tony`, `10,243 steps`, `Hiro`
+  - Spotify bubble icon wrapper has inset-outline class: `true`
+  - Spotify bottom-right badge count: `1`
+  - Spotify pause action count: `1`
+
+## Remaining issues / caveats
+- `bubble2` still uses the `bubble-2` spatial layout, so this change aligns content semantics and bubble styling with `bubble.html` without re-laying out the full cluster.
+- There is still one extra visible slot in `bubble2` compared with the main bubble page, so one non-pill artwork remains redistributed into the larger `bubble2` composition.
+
+## Recommended next step
+1. If you want full visual parity beyond pill treatment, the next step is to retune `bubble2` positions/sizes against the `bubble.html` cluster rather than the `bubble-2` reference layout.
+
+## Task title
+Sync bubble2 content with bubble.html
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `src/bubble2-page.js` so the `bubble2` page now uses the current `bubble.html` content set for visible bubble copy and artwork.
+- Replaced the previous reference-only content with the bubble-page assets/text for:
+  - Spotify: `Happiness` / `1975`
+  - Health: `10,243 steps`
+  - ChatGPT: `Continue` / `Book flight to Coachella`
+  - Gemini: `Ready` / `Where should we start?`
+  - map / weather / note / profile artwork from the current bubble page
+- Swapped the lower-right profile overlay badge to the call badge asset used by `bubble.html`.
+- Left `bubble2` layout and interaction logic unchanged; this was a content-only remap.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - expanded pill titles: `Happiness`, `10,243 steps`, `Continue`, `Ready`
+  - expanded pill subtitles: `1975`, ``, `Book flight to Coachella`, `Where should we start?`
+  - first bubble image source: `https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3`
+
+## Remaining issues / caveats
+- `bubble2` has a different slot layout than `bubble.html`, so the content was redistributed into the existing `bubble2` positions rather than made one-to-one structurally identical.
+- `bubble2` still has one extra visible slot compared with the current visible bubble set on `bubble.html`, so one app family is necessarily reused in the redistributed content layout.
+
+## Recommended next step
+1. If you want strict one-to-one parity with `bubble.html`, decide whether `bubble2` should also drop to the same visible bubble count and app ordering.
+
+## Task title
+Build bubble2 page from bubble-2 reference
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new standalone `bubble2` page that translates `ref/bubble-2.jsx` into the repo’s vanilla HTML/CSS/JS stack.
+- Implemented the reference interaction model in `src/bubble2-page.js`:
+  - orb press toggles the field open
+  - pointer movement drives proportional camera pan
+  - nearby bubbles magnify and gently push apart
+  - pill bubbles expand with copy on stable hover
+  - badge and sub-icon overlays match the reference behavior
+- Added dedicated `bubble2` page styling in `src/styles/bubble2-page.css`.
+- Wired `/bubble2` and `bubble2.html` through `server.mjs` without changing the existing `bubble` page.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `server.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `curl -I http://127.0.0.1:62800/bubble2`
+- Playwright browser verification on `http://127.0.0.1:62800/bubble2`
+  - page loaded successfully
+  - rendered 10 bubble items
+  - orb mouse press changed the first bubble opacity from `0` to `0.393036`
+  - orb background changed from `rgb(218, 214, 229)` to `rgb(203, 197, 215)`
+
+## Remaining issues / caveats
+- The new page intentionally uses the reference’s remote image URLs, so visual fidelity depends on network access to those assets.
+- This is a standalone page and is not linked from the existing prototype surfaces yet.
+
+## Recommended next step
+1. If this page should be discoverable from existing demos, add a navigation entry or launch link from the relevant prototype surface.
+
+## Task title
 Original Edge Pan Safety Range Increase
 
 ## Completion status

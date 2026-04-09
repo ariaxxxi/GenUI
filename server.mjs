@@ -469,7 +469,13 @@ function safePath(urlPath) {
   const clean = urlPath.split('?')[0].split('#')[0] || '/';
   const target = clean === '/'
     ? '/index.html'
-    : (clean === '/prototype' ? '/index.html' : (clean === '/ai' ? '/ai.html' : (clean === '/bubble' ? '/bubble.html' : clean)));
+    : (clean === '/prototype'
+      ? '/index.html'
+      : (clean === '/ai'
+        ? '/ai.html'
+        : (clean === '/bubble'
+          ? '/bubble.html'
+          : (clean === '/bubble2' ? '/bubble2.html' : clean))));
   const rel = normalize(target)
     .replace(/^(\.\.(\/|\\|$))+/, '')
     .replace(/^[/\\]+/, '');
@@ -531,7 +537,13 @@ const server = createServer(async (req, res) => {
   // SPA fallback for Serval deployment - scoped to BASE_URL
   if (BASE_URL && req.url.startsWith(BASE_URL) && !urlPath.includes('.')) {
     const spaPath = urlPath === '/' || urlPath === '' ? '/index.html' : urlPath;
-    const targetFile = spaPath === '/ai' ? '/ai.html' : (spaPath === '/prototype' ? '/index.html' : (spaPath === '/bubble' ? '/bubble.html' : spaPath));
+    const targetFile = spaPath === '/ai'
+      ? '/ai.html'
+      : (spaPath === '/prototype'
+        ? '/index.html'
+        : (spaPath === '/bubble'
+          ? '/bubble.html'
+          : (spaPath === '/bubble2' ? '/bubble2.html' : spaPath)));
     const filePath = safePath(targetFile);
     if (filePath && existsSync(filePath)) {
       try {
