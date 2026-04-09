@@ -21,12 +21,12 @@
   width: var(--prototype-figma-demo-width);
   height: var(--prototype-figma-demo-height);
   flex: 0 0 auto;
-  --prototype-figma-demo-width: 140px;
-  --prototype-figma-demo-height: 56px;
+  --prototype-figma-demo-width: 200px;
+  --prototype-figma-demo-height: 72px;
   --prototype-figma-demo-radius: calc(var(--prototype-figma-demo-height) / 2);
   --prototype-figma-demo-mask-image: url('../assets/figma-proto-button-refraction-mask.svg');
-  --prototype-figma-demo-mask-width: 140px;
-  --prototype-figma-demo-mask-height: 56px;
+  --prototype-figma-demo-mask-width: 200px;
+  --prototype-figma-demo-mask-height: 72px;
   --prototype-figma-demo-blur-size: calc((var(--prototype-figma-demo-width) * 0.65) + (var(--prototype-figma-demo-height) * 0.8));
   --prototype-figma-demo-right-x: calc(var(--prototype-figma-demo-width) - (var(--prototype-figma-demo-blur-size) * 0.3235));
   --prototype-figma-demo-right-y: calc(-1 * (var(--prototype-figma-demo-blur-size) * 0.353));
@@ -149,8 +149,8 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 140px;
-  height: 56px;
+  width: 200px;
+  height: 72px;
   overflow: visible;
 }
 
@@ -158,11 +158,11 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 140px;
-  height: 56px;
+  width: 200px;
+  height: 72px;
   background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
-  background-size: 140px 56px;
+  background-size: 200px 72px;
   background-position: bottom right;
   mix-blend-mode: screen;
   opacity: 1;
@@ -207,8 +207,8 @@
 }
 
 .prototype-figma-button-demo .prototype-figma-button-highlight-mask {
-  width: var(--prototype-figma-demo-width);
-  height: var(--prototype-figma-demo-height);
+  width: 200px;
+  height: 72px;
   overflow: hidden;
   border-radius: var(--prototype-figma-demo-radius);
 }
@@ -221,8 +221,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 140px;
-  height: 56px;
+  width: 200px;
+  height: 72px;
   background-image: url("../assets/button-highlight-top-left.png");
   background-repeat: no-repeat;
   background-position: left top;

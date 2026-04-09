@@ -186,6 +186,7 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
+    "design.md",
     "src/assets/button-highlight-top-left.png",
     "src/assets/Button Highlight top left.png",
     "src/assets/figma-proto-button-refraction-mask-zero-spread.svg",
@@ -196,7 +197,6 @@
     "src/assets/figma-proto-button-highlight-bottom-mask.svg",
     "src/assets/figma-proto-button-br-highlight-mask.svg",
     "src/assets/figma-proto-button-br-highlight-fill.svg",
-    "src/assets/figma-proto-button-refraction-fill.svg",
     "src/bubble2-page.js",
     "src/styles/bubble2-page.css",
     "bubble2.html",
