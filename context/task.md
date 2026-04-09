@@ -11,5 +11,8 @@
 	- only coming in and out motion
 	- push motion seems to conflict with sizing logic✅
 - orb visual ✅
-- layout
+- layout ✅
+- panning safety area, make sure pills are visible ✅
 - child bubble
+
+panning duration longer

@@ -1,6 +1,77 @@
 # Handoff
 
 ## Task title
+Fix bubble2 child arc center to stay anchored on the parent bubble center
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the child-only canvas-fit offset from [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- That offset was shifting child nodes independently after the child arc had already been built, which moved the child arc's center away from the parent bubble center.
+- Child branch safety now relies on branch-level pan correction instead of translating only the child nodes, so the child arc remains anchored to the parent center.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - Spotify child menu opened with `3` visible children
+  - measured child offsets from the parent center stayed on the same arc around the parent:
+    - `(dx: -60, dy: -83, dist: 102)`
+    - `(dx: 8, dy: -100, dist: 101)`
+    - `(dx: 68, dy: -67, dist: 95)`
+
+## Remaining issues / caveats
+- This fixes the arc-center mismatch. It does not retune the arc shape itself.
+
+## Recommended next step
+1. If needed, the next pass should retune the arc spread/angle only, while keeping the parent-centered anchor intact.
+
+## Task title
+Implement bubble-page child bubble logic and content in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Ported the child-action content from the main bubble page into [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) for the current `bubble2` bubbles:
+  - Spotify playlist covers
+  - Tony and Hiro call/message/video actions
+  - Notes checklist/voice/scan actions
+  - Health run/heart/water actions
+  - Map home/work actions
+  - Weather forecast/rain/radar actions
+  - ChatGPT and Gemini chip menus
+- Added child menu DOM creation, hover/hold state, child hit-testing, chip/fan layout builders, branch repulsion, and child-branch canvas fitting without replacing `bubble2`'s current mouse-distance sizing model.
+- Added the matching child selection/highlight visuals in [src/styles/bubble2-page.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css).
+- Stabilized child menu behavior by freezing the pointer basis when the child menu opens, so the child branch no longer fights the live size/pan loop while you move across it.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `curl -I http://127.0.0.1:62931/bubble2`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - ChatGPT child hold-open produced `3` visible child chips
+  - moving from the ChatGPT parent onto `Give me ideas` kept the child menu open
+  - child highlight count became `1`
+  - child items remained inside the `420x420` canvas bounds after the fit pass
+  - non-parent bubbles dimmed while the child branch was open
+
+## Remaining issues / caveats
+- `context/task.md` still has unrelated local edits and was intentionally left untouched.
+- Child menu opening still depends on the existing `3000ms` hold behavior from the main bubble page.
+
+## Recommended next step
+1. If needed, the next pass should tune which parent is easiest to acquire in dense overlaps, but the child system itself is now wired and working.
+
+## Task title
 Set bubble2 pan duration to 1000ms
 
 ## Completion status

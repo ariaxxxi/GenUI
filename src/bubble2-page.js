@@ -28,6 +28,20 @@ const ORB_CENTER_Y = 356;
 const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
 const PILL_TEXT_LEFT_PADDING = 6;
 const PILL_TEXT_RIGHT_PADDING = 40;
+const CHILD_STAGGER_STEP_MS = 60;
+const CHILD_MENU_HOLD_MS = 3000;
+const CHILD_BUBBLE_SIZE = 56;
+const CHILD_CHIP_FONT_SIZE = 20;
+const CHILD_CHIP_HEIGHT = 48;
+const CHILD_CHIP_PADDING_X = 16;
+const CHILD_CHIP_PARENT_GAP = 10;
+const CHILD_CHIP_VERTICAL_GAP = 10;
+const CHILD_FAN_DISTANCE = 20;
+const CHILD_FAN_BOUNDS_PADDING = 14;
+const CHILD_DIMMED_OPACITY = 0.22;
+const CHILD_LAYOUT_GAP = 10;
+const CHILD_SIBLING_GAP = 14;
+const HOVER_LEASH_PX = 15;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   orb: 'https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d',
@@ -61,6 +75,11 @@ const BUBBLES_CONFIG = [
     subIconOffsetX: 67.83,
     subIconOffsetY: 67.83,
     disableHoverScale: true,
+    childActions: [
+      { id: 'playlist-1', img: 'https://misc.scdn.co/liked-songs/liked-songs-300.jpg', fill: true },
+      { id: 'playlist-2', img: 'https://www.indieground.net/images/blog/2024/indieblog-best-album-covers-2010s-07.jpg', fill: true },
+      { id: 'playlist-3', img: 'https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg', fill: true },
+    ],
   },
   {
     id: 3,
@@ -76,6 +95,11 @@ const BUBBLES_CONFIG = [
     subIconSize: 47.949,
     subIconOffsetX: 62.04,
     subIconOffsetY: 62.05,
+    childActions: [
+      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
+      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
+      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
+    ],
   },
   {
     id: 9,
@@ -84,6 +108,11 @@ const BUBBLES_CONFIG = [
     zIndex: 14,
     img: FIGMA_ASSETS.note,
     fill: true,
+    childActions: [
+      { id: 'checklist', kind: 'check', bg: '#ffffff', fg: '#111827' },
+      { id: 'voice', kind: 'mic', bg: '#fff5f5', fg: '#ff5252' },
+      { id: 'scan', kind: 'scan', bg: '#ffffff', fg: '#ffffff' },
+    ],
   },
   {
     id: 4,
@@ -95,6 +124,11 @@ const BUBBLES_CONFIG = [
     isPill: true,
     pillTitle: '10,243 steps',
     pillSubtitle: '',
+    childActions: [
+      { id: 'run', img: 'assets/run.svg', imageScale: 0.92 },
+      { id: 'heart', kind: 'heart', bg: '#ffffff', fg: '#ff4d6d' },
+      { id: 'water', kind: 'drop', bg: '#ffffff', fg: '#2aa8ff' },
+    ],
   },
   {
     id: 2,
@@ -105,6 +139,12 @@ const BUBBLES_CONFIG = [
     fill: true,
     pillTitle: 'Continue',
     pillSubtitle: 'Book flight to Coachella',
+    childLayout: 'chatgpt-chips',
+    childActions: [
+      { id: 'ideas', kind: 'chip', label: '💡 Give me ideas', fontWeight: 400, layoutLeft: -136, layoutTop: -85, accent: '#f5d76e' },
+      { id: 'explain', kind: 'chip', label: '🔍 Explain this', fontWeight: 400, layoutLeft: -209, layoutTop: -36, accent: '#f4f4f4' },
+      { id: 'surprise', kind: 'chip', label: '🎲 Surprise me', fontWeight: 400, layoutLeft: -172, layoutTop: 13, accent: '#d7d7ff' },
+    ],
   },
   {
     id: 8,
@@ -113,6 +153,12 @@ const BUBBLES_CONFIG = [
     zIndex: 14,
     img: FIGMA_ASSETS.gemini,
     fill: true,
+    childLayout: 'gemini-chips',
+    childActions: [
+      { id: 'plan', kind: 'chip', label: '🧩 Plan my day', fontWeight: 500, layoutLeft: -3, layoutTop: -81, accent: '#8ce56f' },
+      { id: 'summarize', kind: 'chip', label: '📄 Summarize this', fontWeight: 500, layoutLeft: 40, layoutTop: -32, accent: '#f4f4f4' },
+      { id: 'rewrite', kind: 'chip', label: '🔁 Rewrite this', fontWeight: 500, layoutLeft: 30, layoutTop: 17, accent: '#9dc5ff' },
+    ],
   },
   {
     id: 5,
@@ -129,6 +175,11 @@ const BUBBLES_CONFIG = [
     subIconSize: 41.532,
     subIconOffsetX: 53.74,
     subIconOffsetY: 53.75,
+    childActions: [
+      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
+      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
+      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
+    ],
   },
   {
     id: 6,
@@ -137,6 +188,10 @@ const BUBBLES_CONFIG = [
     zIndex: 10,
     img: FIGMA_ASSETS.map,
     fill: true,
+    childActions: [
+      { id: 'home', kind: 'home', bg: '#ffffff', fg: '#ffffff' },
+      { id: 'work', kind: 'briefcase', bg: '#ffffff', fg: '#ffffff' },
+    ],
   },
   {
     id: 10,
@@ -145,11 +200,18 @@ const BUBBLES_CONFIG = [
     zIndex: 12,
     img: FIGMA_ASSETS.weather,
     fill: true,
+    childActions: [
+      { id: 'forecast', kind: 'sun', bg: '#ffffff', fg: '#f5b400' },
+      { id: 'rain', kind: 'umbrella', bg: '#ffffff', fg: '#149cf1' },
+      { id: 'radar', kind: 'radar', bg: '#ffffff', fg: '#149cf1' },
+    ],
   },
 ].map(enrichBubbleMetrics);
 
 const state = {
   isPressed: false,
+  hoveredBubble: null,
+  hoveredChildBubble: null,
   mousePos: {
     x: 0,
     y: 0,
@@ -164,10 +226,15 @@ const state = {
   pointerMovedSincePress: false,
   lockedExpandedPillId: null,
   lockedExpandedPillScale: null,
+  childHoverTimer: null,
+  childHoverCandidateId: null,
+  childMenuParentId: null,
+  childMenuPointerLock: null,
   renderQueued: false,
 };
 
 let previousHoveredId = null;
+let previousHoveredChildId = null;
 
 const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
@@ -175,6 +242,7 @@ const refs = {
   orb: null,
   orbVisual: null,
   bubbleNodes: new Map(),
+  childNodes: new Map(),
 };
 
 init();
@@ -189,17 +257,25 @@ function init() {
 
 function buildScene() {
   const fragment = document.createDocumentFragment();
+  const childFragment = document.createDocumentFragment();
 
   BUBBLES_CONFIG.forEach((bubble, index) => {
     const node = createBubbleNode(bubble, index);
     refs.bubbleNodes.set(bubble.id, node);
     fragment.appendChild(node.root);
+
+    for (const action of bubble.childActions || []) {
+      const childNode = createChildNode(bubble, action);
+      refs.childNodes.set(getChildBubbleKey(bubble.id, action.id), childNode);
+      childFragment.appendChild(childNode.root);
+    }
   });
 
   refs.orb = createOrbNode();
   refs.orbVisual = refs.orb.querySelector('.bubble2-orb-visual');
   fragment.appendChild(refs.orb);
   refs.panLayer.appendChild(fragment);
+  refs.panLayer.appendChild(childFragment);
 }
 
 function createBubbleNode(bubble, index) {
@@ -290,6 +366,57 @@ function createBubbleNode(bubble, index) {
   };
 }
 
+function createChildNode(parentBubble, action) {
+  const root = document.createElement('div');
+  root.className = 'bubble2-item bubble2-child-item';
+  root.dataset.childBubbleId = getChildBubbleKey(parentBubble.id, action.id);
+  root.dataset.parentBubbleId = String(parentBubble.id);
+
+  const surface = document.createElement('div');
+  surface.className = 'bubble2-surface bubble2-child-surface';
+  if (action.img) surface.classList.add('is-image-only');
+  if (isChipAction(action)) surface.classList.add('is-chip');
+  surface.innerHTML = `
+    <div class="bubble2-child-selection" aria-hidden="true">
+      <div class="bubble2-child-selection-accent bubble2-child-selection-accent-left">
+        <div class="bubble2-child-selection-accent-left-base"></div>
+        <div class="bubble2-child-selection-accent-left-white-2"></div>
+        <div class="bubble2-child-selection-accent-left-white-1"></div>
+      </div>
+      <div class="bubble2-child-selection-accent bubble2-child-selection-accent-right">
+        <div class="bubble2-child-selection-accent-right-base"></div>
+        <div class="bubble2-child-selection-accent-right-white-2"></div>
+        <div class="bubble2-child-selection-accent-right-white-1"></div>
+      </div>
+      <div class="bubble2-child-selection-inner-glow"></div>
+      <div class="bubble2-child-selection-ring"></div>
+    </div>
+  `;
+
+  let content;
+  if (isChipAction(action)) {
+    content = document.createElement('div');
+    content.className = 'bubble2-child-chip-content';
+    content.style.setProperty('--child-chip-font-weight', String(action.fontWeight || 400));
+    content.innerHTML = `<span class="bubble2-child-chip-label">${action.label}</span>`;
+  } else {
+    content = document.createElement('div');
+    content.className = 'bubble2-icon-wrap bubble2-child-icon-wrap';
+    content.appendChild(createChildActionGraphic(action));
+  }
+
+  surface.appendChild(content);
+  root.appendChild(surface);
+
+  return {
+    root,
+    surface,
+    content,
+    action,
+    parentId: parentBubble.id,
+  };
+}
+
 function createOrbNode() {
   const button = document.createElement('button');
   button.className = 'bubble2-orb';
@@ -327,6 +454,7 @@ function bindEvents() {
 
 function handlePointerDown(event) {
   event.preventDefault();
+  clearChildHoverTimer();
   if (refs.shell) {
     const rect = refs.shell.getBoundingClientRect();
     const scaleX = rect.width / 420;
@@ -343,6 +471,10 @@ function handlePointerDown(event) {
   }
   state.isPressed = true;
   state.pointerMovedSincePress = false;
+  state.hoveredBubble = null;
+  state.hoveredChildBubble = null;
+  state.childMenuParentId = null;
+  state.childMenuPointerLock = null;
   state.mousePos = {
     x: 0,
     y: 0,
@@ -404,9 +536,15 @@ function handlePointerRelease(event) {
     y: ORB_CENTER_Y,
   };
   state.pointerMovedSincePress = false;
+  state.hoveredBubble = null;
+  state.hoveredChildBubble = null;
   state.lockedExpandedPillId = null;
   state.lockedExpandedPillScale = null;
+  state.childMenuParentId = null;
+  state.childMenuPointerLock = null;
+  clearChildHoverTimer();
   previousHoveredId = null;
+  previousHoveredChildId = null;
   scheduleRender();
 }
 
@@ -420,7 +558,18 @@ function scheduleRender() {
 }
 
 function render() {
-  const scene = computeScene();
+  let scene = computeScene();
+  const hoverChanged = state.hoveredBubble !== scene.hoveredId || state.hoveredChildBubble !== scene.hoveredChildId;
+  if (hoverChanged) {
+    state.hoveredBubble = scene.hoveredId;
+    state.hoveredChildBubble = scene.hoveredChildId;
+    scene = computeScene();
+  }
+  if (syncChildMenuState(scene.hoveredId)) {
+    scene = computeScene();
+    state.hoveredBubble = scene.hoveredId;
+    state.hoveredChildBubble = scene.hoveredChildId;
+  }
   const isInitialReveal = state.isPressed && !state.pointerMovedSincePress;
   const activeMoveDuration = state.mousePos.active
     ? (isInitialReveal ? DEFAULT_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS)
@@ -458,16 +607,19 @@ function render() {
     node.root.style.zIndex = String(isHovered ? 50 : bubble.zIndex);
     node.root.style.width = `${format(bubble.targetWidth)}px`;
     node.root.style.height = `${format(bubble.baseSize)}px`;
-    node.root.style.opacity = state.isPressed ? '1' : '0';
+    const isContextParent = state.childMenuParentId === bubble.id;
+    const isDimmed = state.childMenuParentId != null && !isContextParent;
+    node.root.style.opacity = state.isPressed ? String(isDimmed ? CHILD_DIMMED_OPACITY : 1) : '0';
     node.root.style.boxShadow = isHovered
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
       : '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
     node.root.style.transform =
       `translate3d(${format(translateX)}px, ${format(translateY)}px, 0) scale(${bubble.targetScale.toFixed(4)})`;
+    node.root.style.filter = isDimmed ? 'brightness(0.42) saturate(0.68)' : 'none';
     node.root.style.setProperty('--bubble2-move-duration', `${activeMoveDuration}ms`);
     node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
-    node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms`;
-    node.root.style.transitionTimingFunction = `${transformEase}, var(--bubble2-pill-ease), ease-out, ease`;
+    node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
+    node.root.style.transitionTimingFunction = `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
 
     node.iconWrap.style.width = `${bubble.baseSize}px`;
     node.iconWrap.style.height = `${bubble.baseSize}px`;
@@ -498,6 +650,47 @@ function render() {
     }
   }
 
+  for (const [childId, node] of refs.childNodes.entries()) {
+    const child = scene.children.find((entry) => entry.id === childId);
+    const parentBubble = scene.bubbles.find((entry) => entry.id === node.parentId);
+    if (!parentBubble) continue;
+
+    const isChip = isChipAction(node.action);
+    const fallbackWidth = isChip ? measureChildChipWidth(node.action) : CHILD_BUBBLE_SIZE;
+    const width = child ? child.width : fallbackWidth;
+    const height = child ? child.height : (isChip ? CHILD_CHIP_HEIGHT : CHILD_BUBBLE_SIZE);
+    const displayX = child ? child.targetX : parentBubble.targetX;
+    const displayY = child ? child.targetY : parentBubble.targetY;
+    const scale = child ? child.targetScale : 0.62;
+    const opacity = child ? 1 : 0;
+    const transformEase = child ? BUBBLE_ENTER_EASE : BUBBLE_EXIT_EASE;
+    const fadeDuration = child ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
+    const staggerDelay = child ? child.actionIndex * CHILD_STAGGER_STEP_MS : 0;
+    const isHighlighted = scene.hoveredChildId === childId;
+
+    node.root.style.zIndex = String(child ? 65 + child.actionIndex : 20);
+    node.root.style.width = `${format(width)}px`;
+    node.root.style.height = `${format(height)}px`;
+    node.root.style.opacity = String(opacity);
+    node.root.style.boxShadow = isHighlighted
+      ? '0 16px 32px rgba(0, 0, 0, 0.42)'
+      : '0 10px 24px rgba(0, 0, 0, 0.26)';
+    node.root.style.filter = 'none';
+    node.root.style.transform =
+      `translate3d(${format(displayX - (width / 2))}px, ${format(displayY - (height / 2))}px, 0) scale(${format(scale)})`;
+    node.root.style.transitionDelay = `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, 0ms, 0ms`;
+    node.root.style.transitionDuration =
+      `${child ? APPEAR_MOVE_DURATION_MS : DISAPPEAR_MOVE_DURATION_MS}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
+    node.root.style.transitionTimingFunction = `${transformEase}, ease-out, ease-out, ease-out, ease-out`;
+
+    node.surface.classList.toggle('is-highlighted', isHighlighted && !node.action.img);
+    node.surface.style.setProperty('--g-stage-selected-rgb', getChildActionAccent(node.action));
+    node.surface.style.setProperty('--g-stage-selected-secondary-rgb', 'rgb(0 0 0)');
+    node.content.style.width = `${format(width)}px`;
+    node.content.style.height = `${format(height)}px`;
+    node.content.style.transform = isChip ? 'scale(1)' : (node.action.img ? 'scale(1)' : 'scale(0.88)');
+  }
+
   if (refs.orb) {
     refs.orb.classList.toggle('is-pressed', state.isPressed);
     refs.orb.style.transform = 'translate3d(0, 0, 0)';
@@ -510,13 +703,16 @@ function render() {
 }
 
 function computeScene() {
-  const nx = state.mousePos.active ? state.mousePos.nx : 0;
-  const ny = state.mousePos.active ? state.mousePos.ny : 0;
+  const pointerBasis = state.childMenuParentId != null && state.childMenuPointerLock
+    ? state.childMenuPointerLock
+    : state.mousePos;
+  const nx = pointerBasis.active ? pointerBasis.nx : 0;
+  const ny = pointerBasis.active ? pointerBasis.ny : 0;
 
   const targetPanX = -nx * MAX_PAN;
   const targetPanY = -ny * MAX_PAN;
-  const clusterMouseX = state.mousePos.x - targetPanX;
-  const clusterMouseY = state.mousePos.y - targetPanY;
+  const clusterMouseX = pointerBasis.x - targetPanX;
+  const clusterMouseY = pointerBasis.y - targetPanY;
 
   let processedBubbles = BUBBLES_CONFIG.map((bubble) => {
     let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
@@ -554,35 +750,26 @@ function computeScene() {
     resolveBubbleFieldLayout(processedBubbles);
   }
 
-  let bestHit = null;
-  let maxZ = -1;
+  const childMenuParent = state.isPressed && state.childMenuParentId != null
+    ? processedBubbles.find((bubble) => bubble.id === state.childMenuParentId)
+    : null;
+  let childNodes = childMenuParent
+    ? buildChildBubbleLayout(childMenuParent, state.hoveredChildBubble)
+    : [];
+  let childZone = childMenuParent && childNodes.length
+    ? getChildZone(childMenuParent, childNodes)
+    : null;
 
-  if (state.isPressed && state.mousePos.active) {
-    for (const bubble of processedBubbles) {
-      const dx = clusterMouseX - bubble.targetX;
-      const dy = clusterMouseY - bubble.targetY;
-      const hitRadius = bubble.baseVisualSize / 2;
-      let isHit = false;
-
-      if (previousHoveredId === bubble.id && bubble.isPill) {
-        const scaledExtraWidth = bubble.expandedExtraWidth;
-        if (
-          dx >= -hitRadius - 15 &&
-          dx <= hitRadius + scaledExtraWidth + 15 &&
-          Math.abs(dy) <= hitRadius + 15
-        ) {
-          isHit = true;
-        }
-      } else if (Math.hypot(dx, dy) <= hitRadius + 5) {
-        isHit = true;
-      }
-
-      if (isHit && bubble.zIndex > maxZ) {
-        maxZ = bubble.zIndex;
-        bestHit = bubble.id;
-      }
-    }
-  }
+  const hoverState = state.isPressed && state.mousePos.active
+    ? getHoverState(
+      { x: clusterMouseX, y: clusterMouseY },
+      processedBubbles,
+      childNodes,
+      childZone,
+    )
+    : { bubbleId: null, childId: null };
+  let bestHit = hoverState.bubbleId;
+  let hoveredChildId = hoverState.childId;
 
   const hoveredPill = processedBubbles.find((bubble) => bubble.id === bestHit && bubble.isPill);
   if (hoveredPill && state.isPressed) {
@@ -594,8 +781,6 @@ function computeScene() {
     state.lockedExpandedPillId = null;
     state.lockedExpandedPillScale = null;
   }
-
-  previousHoveredId = bestHit;
 
   processedBubbles = processedBubbles.map((bubble) => {
     const isHovered = bestHit === bubble.id;
@@ -611,7 +796,7 @@ function computeScene() {
     const expandedExtraSourceWidth = bubble.isPill
       ? bubble.expandedExtraWidth / Math.max(finalTargetScale || 1, 0.0001)
       : 0;
-    const isExpanded = state.isPressed && isHovered && bubble.isPill;
+    const isExpanded = state.isPressed && isHovered && bubble.isPill && state.childMenuParentId !== bubble.id;
     return {
       ...bubble,
       isExpanded,
@@ -621,6 +806,11 @@ function computeScene() {
       targetScale: finalTargetScale,
     };
   });
+
+  childNodes = childNodes.map((child) => ({
+    ...child,
+    targetScale: hoveredChildId === child.id ? 1.08 : 1,
+  }));
 
   const expandedPill = processedBubbles.find((bubble) => bubble.isExpanded);
   if (expandedPill) {
@@ -654,9 +844,80 @@ function computeScene() {
     }
   }
 
+  if (childNodes.length && childMenuParent) {
+    const branchIds = new Set([childMenuParent.id, ...childNodes.map((node) => node.id)]);
+    for (const child of childNodes) {
+      for (const bubble of processedBubbles) {
+        if (branchIds.has(bubble.id)) continue;
+        const initialPush = getNodeRepulsion(child, bubble, 28, CHILD_LAYOUT_GAP);
+        if (initialPush) {
+          bubble.targetX += initialPush.x;
+          bubble.targetY += initialPush.y;
+        }
+      }
+    }
+
+    for (let iter = 0; iter < 12; iter += 1) {
+      for (const child of childNodes) {
+        for (const bubble of processedBubbles) {
+          if (branchIds.has(bubble.id)) continue;
+          const repel = getNodeRepulsion(child, bubble, 0, CHILD_LAYOUT_GAP);
+          if (repel) {
+            bubble.targetX += repel.x;
+            bubble.targetY += repel.y;
+          }
+        }
+      }
+      resolveBubbleFieldLayout(processedBubbles);
+    }
+  }
+
   let panX = targetPanX;
   let panY = targetPanY;
-  if (expandedPill) {
+  if (childMenuParent && childNodes.length) {
+    const branchBounds = getChildBranchBounds(childMenuParent, childNodes);
+    if (branchBounds.right + panX + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
+      panX = CANVAS_HALF_SIZE - branchBounds.right - PAN_MARGIN_PX;
+    } else if (branchBounds.left + panX - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
+      panX = -CANVAS_HALF_SIZE - branchBounds.left + PAN_MARGIN_PX;
+    }
+
+    if (branchBounds.bottom + panY + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
+      panY = CANVAS_HALF_SIZE - branchBounds.bottom - PAN_MARGIN_PX;
+    } else if (branchBounds.top + panY - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
+      panY = -CANVAS_HALF_SIZE - branchBounds.top + PAN_MARGIN_PX;
+    }
+
+    if (state.mousePos.active) {
+      const correctedPoint = { x: state.mousePos.x - panX, y: state.mousePos.y - panY };
+      let correctedHover = getHoverState(
+        correctedPoint,
+        processedBubbles,
+        childNodes,
+        childZone,
+      );
+      if (!correctedHover.childId) {
+        const stickyChild = getNearestChildHover(correctedPoint, childNodes);
+        if (stickyChild) {
+          correctedHover = {
+            bubbleId: childMenuParent.id,
+            childId: stickyChild.id,
+          };
+        } else if (!correctedHover.bubbleId) {
+          correctedHover = {
+            bubbleId: childMenuParent.id,
+            childId: null,
+          };
+        }
+      }
+      bestHit = correctedHover.bubbleId;
+      hoveredChildId = correctedHover.childId;
+      childNodes = childNodes.map((child) => ({
+        ...child,
+        targetScale: hoveredChildId === child.id ? 1.08 : 1,
+      }));
+    }
+  } else if (expandedPill) {
     const pillHalfWidth = (expandedPill.baseSize * expandedPill.targetScale) / 2;
     const pillHalfHeight = (expandedPill.baseSize * expandedPill.targetScale) / 2;
     const left = expandedPill.targetX - pillHalfWidth;
@@ -677,8 +938,13 @@ function computeScene() {
     }
   }
 
+  previousHoveredId = bestHit;
+  previousHoveredChildId = hoveredChildId;
+
   return {
     bubbles: processedBubbles,
+    children: childNodes,
+    childZone,
     orb: {
       id: 'orb',
       targetScale: state.isPressed ? (ORB_PRESSED_SIZE / ORB_BASE_SIZE) : 1,
@@ -688,6 +954,7 @@ function computeScene() {
       y: panY,
     },
     hoveredId: bestHit,
+    hoveredChildId,
   };
 }
 
@@ -776,6 +1043,12 @@ function measureTextWidth(text, font) {
   return textMeasureContext.measureText(text).width;
 }
 
+function measureChildChipWidth(action) {
+  const fontWeight = action.fontWeight || 400;
+  const labelWidth = measureTextWidth(action.label || '', `${fontWeight} ${CHILD_CHIP_FONT_SIZE}px "DM Sans"`);
+  return Math.ceil(labelWidth + (CHILD_CHIP_PADDING_X * 2));
+}
+
 function enrichBubbleMetrics(bubble) {
   return {
     ...bubble,
@@ -837,6 +1110,28 @@ function createSubIconGraphic(kind) {
   return document.createElement('div');
 }
 
+function createChildActionGraphic(action) {
+  if (action.img) {
+    const image = document.createElement('img');
+    image.className = action.fill ? 'bubble2-icon is-fill' : 'bubble2-icon is-contain';
+    image.src = action.img;
+    image.alt = '';
+    image.draggable = false;
+    image.style.setProperty('--bubble-image-scale', String(action.imageScale ?? (action.fill ? 1 : 0.76)));
+    image.addEventListener('error', () => {
+      if (image.src !== FALLBACK_ICON) image.src = FALLBACK_ICON;
+    });
+    return image;
+  }
+
+  const fg = getChildActionForeground(action.fg);
+  return createHtmlNode(`
+    <div class="bubble2-child-action-icon" style="--child-action-fg: ${fg};">
+      ${getChildActionIconMarkup(action.kind)}
+    </div>
+  `);
+}
+
 function getPillTrailingIconMarkup(kind) {
   switch (kind) {
     case 'pause':
@@ -846,10 +1141,410 @@ function getPillTrailingIconMarkup(kind) {
   }
 }
 
+function getChildActionForeground(color) {
+  const normalized = (color || '').trim().toLowerCase();
+  if (!normalized) return '#ffffff';
+  if (normalized === '#121212' || normalized === '#111827' || normalized === '#0f172a' || normalized === '#000000') {
+    return '#ffffff';
+  }
+  return color;
+}
+
+function getChildActionAccent(action) {
+  if (!action) return 'rgb(144 172 255)';
+  if (action.accent) return action.accent;
+  return getChildActionForeground(action.fg || action.bg || 'rgb(144 172 255)');
+}
+
+function getChildActionIconMarkup(kind) {
+  switch (kind) {
+    case 'home':
+      return '<i class="bi bi-house-door-fill" aria-hidden="true"></i>';
+    case 'briefcase':
+      return '<i class="bi bi-suitcase-lg-fill" aria-hidden="true"></i>';
+    case 'phone':
+      return '<i class="bi bi-telephone-fill" aria-hidden="true"></i>';
+    case 'message':
+      return '<i class="bi bi-chat-fill" aria-hidden="true"></i>';
+    case 'video':
+      return '<i class="bi bi-camera-video-fill" aria-hidden="true"></i>';
+    case 'check':
+      return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm3.354-8.354a.5.5 0 0 0-.708-.708L7 9.586 5.854 8.44a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l4-4Z"/></svg>';
+    case 'mic':
+      return '<i class="bi bi-mic-fill" aria-hidden="true"></i>';
+    case 'scan':
+      return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 2h3v1H3v2H2V2Zm11 0h1v3h-1V3h-2V2h2ZM2 11h1v2h2v1H2v-3Zm11 0h1v3h-3v-1h2v-2ZM5.5 5h5v6h-5V5Zm1 1v4h3V6h-3Z"/></svg>';
+    case 'sun':
+      return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 4a.5.5 0 0 1-.5-.5V14a.5.5 0 0 1 1 0v1.5a.5.5 0 0 1-.5.5Zm0-13a.5.5 0 0 1-.5-.5V1a.5.5 0 0 1 1 0v1.5A.5.5 0 0 1 8 3Zm8 5a.5.5 0 0 1-.5.5H14a.5.5 0 0 1 0-1h1.5A.5.5 0 0 1 16 8ZM2 8a.5.5 0 0 1-.5.5H0a.5.5 0 0 1 0-1h1.5A.5.5 0 0 1 2 8Zm11.657 5.657a.5.5 0 0 1-.707 0l-1.06-1.06a.5.5 0 1 1 .707-.708l1.06 1.061a.5.5 0 0 1 0 .707Zm-9.9-9.9a.5.5 0 0 1-.707 0L1.99 2.697a.5.5 0 1 1 .707-.707l1.06 1.06a.5.5 0 0 1 0 .708Zm9.9-1.06a.5.5 0 0 1 0 .707l-1.06 1.061a.5.5 0 0 1-.707-.708l1.06-1.06a.5.5 0 0 1 .707 0Zm-9.9 9.9a.5.5 0 0 1 0 .707l-1.06 1.06a.5.5 0 0 1-.707-.707l1.06-1.06a.5.5 0 0 1 .707 0Z"/></svg>';
+    case 'umbrella':
+      return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a5.5 5.5 0 0 0-5.456 4.803A1.5 1.5 0 0 0 2.5 8H7v5.5a1.5 1.5 0 0 0 3 0V13a.5.5 0 0 0-1 0v.5a.5.5 0 0 1-1 0V8h5.5a1.5 1.5 0 0 0-.044-3.197A5.5 5.5 0 0 0 8 0Z"/></svg>';
+    case 'radar':
+      return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm0-1A6 6 0 1 1 8 2a6 6 0 0 1 0 12Zm0-2.5A3.5 3.5 0 1 0 8 4.5a3.5 3.5 0 0 0 0 7Zm0-1A2.5 2.5 0 1 1 8 5.5a2.5 2.5 0 0 1 0 5Zm0-2A.5.5 0 1 0 8 7a.5.5 0 0 0 0 1Z"/></svg>';
+    case 'heart':
+      return '<i class="bi bi-heart-fill" aria-hidden="true"></i>';
+    case 'drop':
+      return '<i class="bi bi-droplet-fill" aria-hidden="true"></i>';
+    default:
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/></svg>';
+  }
+}
+
 function createHtmlNode(markup) {
   const template = document.createElement('template');
   template.innerHTML = markup.trim();
   return template.content.firstElementChild;
+}
+
+function getChildBubbleKey(parentId, childId) {
+  return `${parentId}:${childId}`;
+}
+
+function isChipAction(action) {
+  return action?.kind === 'chip';
+}
+
+function hasChildActions(id) {
+  return Boolean(BUBBLES_CONFIG.find((bubble) => bubble.id === id)?.childActions?.length);
+}
+
+function clearChildHoverTimer() {
+  if (state.childHoverTimer != null) {
+    window.clearTimeout(state.childHoverTimer);
+    state.childHoverTimer = null;
+  }
+  state.childHoverCandidateId = null;
+}
+
+function syncChildMenuState(nextHoveredBubbleId) {
+  let changed = false;
+
+  if (!state.isPressed) {
+    if (state.childMenuParentId != null) {
+      state.childMenuParentId = null;
+      state.childMenuPointerLock = null;
+      changed = true;
+    }
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (
+    state.childMenuParentId != null &&
+    nextHoveredBubbleId != null &&
+    nextHoveredBubbleId !== state.childMenuParentId
+  ) {
+    state.childMenuParentId = null;
+    state.childMenuPointerLock = null;
+    state.hoveredChildBubble = null;
+    changed = true;
+  }
+
+  if (!nextHoveredBubbleId || !hasChildActions(nextHoveredBubbleId)) {
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (state.childMenuParentId === nextHoveredBubbleId) {
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (state.childHoverCandidateId === nextHoveredBubbleId) return changed;
+
+  clearChildHoverTimer();
+  state.childHoverCandidateId = nextHoveredBubbleId;
+  state.childHoverTimer = window.setTimeout(() => {
+    state.childHoverTimer = null;
+    state.childHoverCandidateId = null;
+
+    if (!state.isPressed || state.hoveredBubble !== nextHoveredBubbleId) return;
+    if (!hasChildActions(nextHoveredBubbleId)) return;
+
+    state.childMenuParentId = nextHoveredBubbleId;
+    state.childMenuPointerLock = { ...state.mousePos };
+    state.hoveredChildBubble = null;
+    scheduleRender();
+  }, CHILD_MENU_HOLD_MS);
+
+  return changed;
+}
+
+function getHoverState(point, bubbles, children, childZone) {
+  const sortedChildren = [...children].sort((a, b) => {
+    if (a.id === previousHoveredChildId) return -1;
+    if (b.id === previousHoveredChildId) return 1;
+    return (b.zIndex || 0) - (a.zIndex || 0);
+  });
+
+  for (const child of sortedChildren) {
+    if (isPointerInsideChild(point, child, previousHoveredChildId === child.id ? HOVER_LEASH_PX : 0)) {
+      return { bubbleId: child.parentId, childId: child.id };
+    }
+  }
+
+  if (childZone && isPointInsideRect(point, childZone)) {
+    return { bubbleId: childZone.parentId, childId: null };
+  }
+
+  const sortedBubbles = [...bubbles].sort((a, b) => {
+    if (a.id === previousHoveredId) return -1;
+    if (b.id === previousHoveredId) return 1;
+    return (b.zIndex || 0) - (a.zIndex || 0);
+  });
+
+  for (const bubble of sortedBubbles) {
+    if (isPointerInsideBubble(point, bubble)) {
+      return { bubbleId: bubble.id, childId: null };
+    }
+  }
+
+  return { bubbleId: null, childId: null };
+}
+
+function isPointerInsideChild(point, child, padding) {
+  if (child.shape === 'rect') {
+    const bounds = getNodeBounds(child);
+    return (
+      point.x >= bounds.left - padding &&
+      point.x <= bounds.right + padding &&
+      point.y >= bounds.top - padding &&
+      point.y <= bounds.bottom + padding
+    );
+  }
+
+  const radius = child.radius + padding;
+  const dx = point.x - child.targetX;
+  const dy = point.y - child.targetY;
+  return Math.hypot(dx, dy) <= radius;
+}
+
+function getNearestChildHover(point, children) {
+  for (const child of children) {
+    if (isPointerInsideChild(point, child, 24)) return child;
+  }
+  return null;
+}
+
+function isPointerInsideBubble(point, bubble) {
+  const stickyPadding = previousHoveredId === bubble.id ? HOVER_LEASH_PX : 0;
+  const hitRadius = bubble.baseVisualSize / 2;
+  const dx = point.x - bubble.targetX;
+  const dy = point.y - bubble.targetY;
+
+  if (previousHoveredId === bubble.id && bubble.isPill && state.childMenuParentId !== bubble.id) {
+    return (
+      dx >= -hitRadius - stickyPadding &&
+      dx <= hitRadius + bubble.expandedExtraWidth + stickyPadding + 10 &&
+      dy >= -hitRadius - stickyPadding &&
+      dy <= hitRadius + stickyPadding
+    );
+  }
+
+  return Math.hypot(dx, dy) <= hitRadius + 5 + stickyPadding;
+}
+
+function isPointInsideRect(point, rect) {
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function getNodeBounds(node) {
+  return {
+    left: node.targetX - (node.width / 2),
+    right: node.targetX + (node.width / 2),
+    top: node.targetY - (node.height / 2),
+    bottom: node.targetY + (node.height / 2),
+  };
+}
+
+function getNodeGap(nodeA, nodeB) {
+  if (nodeA.isChild || nodeB.isChild) return CHILD_LAYOUT_GAP;
+  return DEFAULT_BUBBLE_GAP;
+}
+
+function getCircleRepulsion(source, node, influencePadding, extraGap) {
+  const dx = node.targetX - source.targetX;
+  const dy = node.targetY - source.targetY;
+  const dist = Math.hypot(dx, dy) || 1;
+  const safeDist = source.radius + node.radius + extraGap;
+  const influenceZone = safeDist + influencePadding;
+  if (dist >= influenceZone) return null;
+
+  const pushFactor = influencePadding > 0
+    ? Math.pow((influenceZone - dist) / influenceZone, 1.1)
+    : 0;
+  const required = Math.max(0, safeDist - dist);
+  const angle = Math.atan2(dy || 0.0001, dx || 0.0001);
+  const distance = required + (pushFactor * 20);
+
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+  };
+}
+
+function getNodeRepulsion(source, node, influencePadding, extraGap) {
+  if (source.shape !== 'rect') {
+    return getCircleRepulsion(source, node, influencePadding, extraGap);
+  }
+
+  const bounds = getNodeBounds(source);
+  const closestX = clamp(node.targetX, bounds.left, bounds.right);
+  const closestY = clamp(node.targetY, bounds.top, bounds.bottom);
+  let dx = node.targetX - closestX;
+  let dy = node.targetY - closestY;
+
+  if (dx === 0 && dy === 0) {
+    dx = node.targetX >= source.targetX ? 1 : -1;
+    dy = 0;
+  }
+
+  const dist = Math.hypot(dx, dy) || 1;
+  const safeDist = (node.radius || (Math.max(node.width, node.height) / 2)) + extraGap;
+  const influenceZone = safeDist + influencePadding;
+  if (dist >= influenceZone) return null;
+
+  const pushFactor = influencePadding > 0
+    ? Math.pow((influenceZone - dist) / influenceZone, 1.1)
+    : 0;
+  const required = Math.max(0, safeDist - dist);
+  const angle = Math.atan2(dy, dx);
+  const distance = required + (pushFactor * 20);
+
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+  };
+}
+
+function buildChildBubbleLayout(parentBubble, hoveredChildBubbleId) {
+  const actions = parentBubble.childActions || [];
+  if (parentBubble.childLayout === 'chatgpt-chips' || parentBubble.childLayout === 'gemini-chips') {
+    return buildChildChipLayout(parentBubble, actions, hoveredChildBubbleId);
+  }
+
+  const baseAngle = Math.atan2(parentBubble.targetY - 18, parentBubble.targetX || 0.001);
+  const childRadius = CHILD_BUBBLE_SIZE / 2;
+  const distance = parentBubble.radius + childRadius + CHILD_FAN_DISTANCE;
+  const offsets = getFanAngleOffsets(actions.length, CHILD_BUBBLE_SIZE, distance);
+
+  return actions.map((action, index) => {
+    const angle = baseAngle + offsets[index];
+    const childId = getChildBubbleKey(parentBubble.id, action.id);
+    return {
+      ...action,
+      id: childId,
+      parentId: parentBubble.id,
+      actionIndex: index,
+      isChild: true,
+      width: CHILD_BUBBLE_SIZE,
+      height: CHILD_BUBBLE_SIZE,
+      radius: childRadius,
+      targetX: parentBubble.targetX + Math.cos(angle) * distance,
+      targetY: parentBubble.targetY + Math.sin(angle) * distance,
+      targetScale: hoveredChildBubbleId === childId ? 1.08 : 1,
+      zIndex: 60 + index,
+    };
+  });
+}
+
+function buildChildChipLayout(parentBubble, actions, hoveredChildBubbleId) {
+  const chipNodes = actions.map((action, index) => {
+    const width = measureChildChipWidth(action);
+    const height = CHILD_CHIP_HEIGHT;
+    const childId = getChildBubbleKey(parentBubble.id, action.id);
+    const baseCenterX = parentBubble.targetX + (action.layoutLeft || 0) + (width / 2);
+    const baseCenterY = parentBubble.targetY + (action.layoutTop || 0) + (height / 2);
+    const dx = baseCenterX - parentBubble.targetX;
+    const dy = baseCenterY - parentBubble.targetY;
+    const distance = Math.hypot(dx, dy) || 1;
+    const gapOffsetX = (dx / distance) * CHILD_CHIP_PARENT_GAP;
+    const gapOffsetY = (dy / distance) * CHILD_CHIP_PARENT_GAP;
+    const centerX = baseCenterX + gapOffsetX;
+    const centerY = baseCenterY + gapOffsetY;
+    const extraOffset = getChipParentClearanceOffset(parentBubble, centerX, centerY, width, height, CHILD_CHIP_PARENT_GAP);
+
+    return {
+      ...action,
+      id: childId,
+      parentId: parentBubble.id,
+      actionIndex: index,
+      isChild: true,
+      shape: 'rect',
+      width,
+      height,
+      radius: Math.max(width, height) / 2,
+      targetX: centerX + ((dx / distance) * extraOffset),
+      targetY: centerY + ((dy / distance) * extraOffset),
+      targetScale: hoveredChildBubbleId === childId ? 1.08 : 1,
+      zIndex: 60 + index,
+    };
+  });
+
+  for (let index = 1; index < chipNodes.length; index += 1) {
+    const previous = chipNodes[index - 1];
+    const current = chipNodes[index];
+    const previousBottom = previous.targetY + (previous.height / 2);
+    const desiredTop = previousBottom + CHILD_CHIP_VERTICAL_GAP;
+    current.targetY = desiredTop + (current.height / 2);
+  }
+
+  return chipNodes;
+}
+
+function getChipParentClearanceOffset(parentBubble, chipCenterX, chipCenterY, chipWidth, chipHeight, gap) {
+  const rectLeft = chipCenterX - (chipWidth / 2);
+  const rectRight = chipCenterX + (chipWidth / 2);
+  const rectTop = chipCenterY - (chipHeight / 2);
+  const rectBottom = chipCenterY + (chipHeight / 2);
+  const closestX = clamp(parentBubble.targetX, rectLeft, rectRight);
+  const closestY = clamp(parentBubble.targetY, rectTop, rectBottom);
+  const dx = closestX - parentBubble.targetX;
+  const dy = closestY - parentBubble.targetY;
+  const distance = Math.hypot(dx, dy);
+  const requiredDistance = parentBubble.radius + gap;
+  return Math.max(0, requiredDistance - distance);
+}
+
+function getFanAngleOffsets(count, childSize, distance) {
+  if (count <= 1) return [0];
+
+  const minimumChord = childSize + CHILD_SIBLING_GAP;
+  const safeRatio = Math.min(0.98, minimumChord / Math.max(1, 2 * distance));
+  const minimumStep = 2 * Math.asin(safeRatio);
+  const preferredStep = count === 2 ? 0.76 : count === 3 ? 0.7 : 0.64;
+  const step = Math.max(preferredStep, minimumStep);
+  const centerIndex = (count - 1) / 2;
+
+  return Array.from({ length: count }, (_, index) => (index - centerIndex) * step);
+}
+
+function getChildBranchBounds(parentBubble, childNodes) {
+  const nodes = [parentBubble, ...childNodes];
+  return nodes.reduce((bounds, node) => {
+    const nodeBounds = getNodeBounds(node);
+    return {
+      left: Math.min(bounds.left, nodeBounds.left),
+      right: Math.max(bounds.right, nodeBounds.right),
+      top: Math.min(bounds.top, nodeBounds.top),
+      bottom: Math.max(bounds.bottom, nodeBounds.bottom),
+    };
+  }, {
+    left: Number.POSITIVE_INFINITY,
+    right: Number.NEGATIVE_INFINITY,
+    top: Number.POSITIVE_INFINITY,
+    bottom: Number.NEGATIVE_INFINITY,
+  });
+}
+
+function getChildZone(parentBubble, childNodes) {
+  const bounds = getChildBranchBounds(parentBubble, childNodes);
+  return {
+    parentId: parentBubble.id,
+    left: bounds.left - CHILD_FAN_BOUNDS_PADDING,
+    right: bounds.right + CHILD_FAN_BOUNDS_PADDING,
+    top: bounds.top - CHILD_FAN_BOUNDS_PADDING,
+    bottom: bounds.bottom + CHILD_FAN_BOUNDS_PADDING,
+  };
 }
 
 function smoothstep(value) {
