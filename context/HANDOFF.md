@@ -1,6 +1,161 @@
 # Handoff
 
 ## Task title
+Set bubble2 bubble enter/exit durations to 400ms / 300ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so the main bubble field now uses:
+  - come out: `400ms`
+  - go back: `300ms`
+- Kept the existing easing and stagger behavior unchanged.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Browser verification on `http://127.0.0.1:62931/bubble2`:
+  - opening transform duration: `0.4s`
+  - closing transform duration: `0.3s`
+
+## Remaining issues / caveats
+- None for this timing-only adjustment.
+
+## Recommended next step
+1. If you want the child bubble menus to follow the same shorter enter/exit timing, adjust their shared durations separately.
+
+## Task title
+Set bubble2 pill title to 24px with 4px title-subtitle gap
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so expanded pill titles now render at `24px`.
+- Kept the title/subtitle gap explicitly at `4px` in the runtime pill typography mapping.
+- The current runtime pill typography now sets:
+  - title: `24 / pillScale`
+  - subtitle: `24 / pillScale`
+  - gap: `4 / pillScale`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - title size mapping uses `24`
+  - pill gap mapping uses `4`
+
+## Remaining issues / caveats
+- None for this scoped typography adjustment.
+
+## Recommended next step
+1. If you want title and subtitle differentiated again later, the next pass should split their sizes explicitly rather than adjusting both together.
+
+## Task title
+Increase bubble2 pill subtitle text to 24px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so expanded pill subtitles now render at `24px`.
+- The runtime pill typography mapping now sets:
+  - `--bubble2-subtitle-size` to `24 / pillScale`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) sets `--bubble2-subtitle-size` from `24`
+
+## Remaining issues / caveats
+- The CSS fallback in [src/styles/bubble2-page.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css) remains `18px`, but active rendered pill subtitles now receive the runtime `24px` value.
+
+## Recommended next step
+1. If you want the non-runtime fallback to match too, the next pass should change the CSS default subtitle variable from `18px` to `24px`.
+
+## Task title
+Adjust bubble2 pill spacing and child bubble size
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) for the requested spacing and size changes.
+- Expanded pill text-to-bubble spacing:
+  - set shared `PILL_TEXT_LEFT_PADDING` to `8`
+  - normalized Hiro’s override to `pillTextLeftPadding: 8`
+- Spotify text-to-pause spacing:
+  - added `pillActionGap: 12` to the Spotify bubble
+  - `getPillTextRightPadding(...)` now uses `bubble.pillActionGap ?? 10`
+- Child bubble size:
+  - changed shared `CHILD_BUBBLE_SIZE` from `56` to `60`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - `PILL_TEXT_LEFT_PADDING = 8`
+  - `CHILD_BUBBLE_SIZE = 60`
+  - Spotify `pillActionGap: 12`
+  - Hiro `pillTextLeftPadding: 8`
+
+## Remaining issues / caveats
+- The browser probe wrapper hit shell history expansion while trying to read computed styles, so this validation pass relied on syntax check plus direct source verification.
+
+## Recommended next step
+1. If you want finer visual tuning after seeing it live, the next pass should adjust Spotify action spacing and global pill left padding independently.
+
+## Task title
+Normalize bubble2 Health first child bubble to the shared action-bubble style
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the Health bubble’s first child action in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so it uses the same shared child-action icon/container path as the other action bubbles.
+- Replaced the one-off image asset config:
+  - from: `{ id: 'run', img: 'assets/run.svg', imageScale: 0.92 }`
+  - to: `{ id: 'run', kind: 'shoe', bg: '#ffffff', fg: '#111827' }`
+- Added the `shoe` icon case to `getChildActionIconMarkup(...)`, matching the icon used by the main `bubble` page.
+- Result:
+  - the Health first child bubble now uses the same container treatment
+  - the icon sizing inside the bubble now follows the same shared child-action icon rules as the other action bubbles
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Browser verification on `http://127.0.0.1:62931/bubble2`
+  - opened the Health child menu
+  - confirmed `4:run` now uses the shared action icon path:
+    - `hasSurface: true`
+    - `isImageOnly: false`
+    - `hasActionIcon: true`
+    - `hasImage: false`
+
+## Remaining issues / caveats
+- None for this scoped normalization.
+
+## Recommended next step
+1. If needed, the next pass should compare the remaining child action glyph weights across Health / Weather / Notes for visual consistency.
+
+## Task title
 Remove stagger delay from active local bubble motion in bubble2
 
 ## Completion status

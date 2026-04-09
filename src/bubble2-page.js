@@ -13,8 +13,8 @@ const BUBBLE_LAYOUT_ITERATIONS = 12;
 const BUBBLE_STAGGER_STEP_MS = 35;
 const DEFAULT_MOVE_DURATION_MS = 450;
 const ACTIVE_MOVE_DURATION_MS = 250;
-const APPEAR_MOVE_DURATION_MS = 500;
-const DISAPPEAR_MOVE_DURATION_MS = 400;
+const APPEAR_MOVE_DURATION_MS = 400;
+const DISAPPEAR_MOVE_DURATION_MS = 300;
 const FADE_IN_DURATION_MS = 400;
 const FADE_OUT_DURATION_MS = 300;
 const BUBBLE_ENTER_EASE = 'cubic-bezier(0.22, 1.16, 0.3, 1.02)';
@@ -26,11 +26,11 @@ const ORB_PRESSED_DURATION_MS = 450;
 const ORB_CENTER_X = 210;
 const ORB_CENTER_Y = 356;
 const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
-const PILL_TEXT_LEFT_PADDING = 6;
+const PILL_TEXT_LEFT_PADDING = 8;
 const PILL_TEXT_RIGHT_PADDING = 40;
 const CHILD_STAGGER_STEP_MS = 60;
 const CHILD_MENU_HOLD_MS = 3000;
-const CHILD_BUBBLE_SIZE = 56;
+const CHILD_BUBBLE_SIZE = 60;
 const CHILD_CHIP_FONT_SIZE = 20;
 const CHILD_CHIP_HEIGHT = 48;
 const CHILD_CHIP_PADDING_X = 16;
@@ -70,6 +70,7 @@ const BUBBLES_CONFIG = [
     pillTrailingIcon: 'pause',
     pillTrailingIconSize: 40,
     pillTrailingIconColor: '#1ED760',
+    pillActionGap: 12,
     subIconKind: 'spotify-badge',
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
@@ -170,7 +171,7 @@ const BUBBLES_CONFIG = [
     isPill: true,
     pillTitle: 'Hiro',
     pillSubtitle: 'Yesterday',
-    pillTextLeftPadding: 10,
+    pillTextLeftPadding: 8,
     subIconKind: 'call-badge',
     subIconSize: 41.532,
     subIconOffsetX: 53.74,
@@ -208,6 +209,10 @@ const BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
+const BUBBLE_STAGGER_TOTAL_MS = Math.max(0, (BUBBLES_CONFIG.length - 1) * BUBBLE_STAGGER_STEP_MS);
+const OPEN_PHASE_LATCH_MS = APPEAR_MOVE_DURATION_MS;
+const CLOSE_PHASE_LATCH_MS = DISAPPEAR_MOVE_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS;
+
 const state = {
   isPressed: false,
   hoveredBubble: null,
@@ -230,6 +235,8 @@ const state = {
   childHoverCandidateId: null,
   childMenuParentId: null,
   childMenuPointerLock: null,
+  openMotionUntil: 0,
+  closeMotionUntil: 0,
   renderQueued: false,
 };
 
@@ -465,6 +472,7 @@ function bindEvents() {
 
 function handlePointerDown(event) {
   event.preventDefault();
+  const now = performance.now();
   clearChildHoverTimer();
   if (refs.shell) {
     const rect = refs.shell.getBoundingClientRect();
@@ -482,6 +490,8 @@ function handlePointerDown(event) {
   }
   state.isPressed = true;
   state.pointerMovedSincePress = false;
+  state.openMotionUntil = now + OPEN_PHASE_LATCH_MS;
+  state.closeMotionUntil = 0;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
   state.childMenuParentId = null;
@@ -496,6 +506,7 @@ function handlePointerDown(event) {
   if (refs.orb?.setPointerCapture && event.pointerId != null) {
     refs.orb.setPointerCapture(event.pointerId);
   }
+  scheduleMotionPhaseRender(state.openMotionUntil);
   scheduleRender();
 }
 
@@ -525,6 +536,7 @@ function handlePointerMove(event) {
 
 function handlePointerRelease(event) {
   if (!state.isPressed) return;
+  const now = performance.now();
 
   if (refs.orb?.releasePointerCapture && event.pointerId != null) {
     try {
@@ -535,6 +547,8 @@ function handlePointerRelease(event) {
   }
 
   state.isPressed = false;
+  state.openMotionUntil = 0;
+  state.closeMotionUntil = now + CLOSE_PHASE_LATCH_MS;
   state.mousePos = {
     x: 0,
     y: 0,
@@ -556,6 +570,7 @@ function handlePointerRelease(event) {
   clearChildHoverTimer();
   previousHoveredId = null;
   previousHoveredChildId = null;
+  scheduleMotionPhaseRender(state.closeMotionUntil);
   scheduleRender();
 }
 
@@ -566,6 +581,13 @@ function scheduleRender() {
     state.renderQueued = false;
     render();
   });
+}
+
+function scheduleMotionPhaseRender(until) {
+  const delay = Math.max(0, Math.ceil(until - performance.now()));
+  window.setTimeout(() => {
+    scheduleRender();
+  }, delay);
 }
 
 function render() {
@@ -581,7 +603,8 @@ function render() {
     state.hoveredBubble = scene.hoveredId;
     state.hoveredChildBubble = scene.hoveredChildId;
   }
-  const isInitialReveal = state.isPressed && !state.pointerMovedSincePress;
+  const now = performance.now();
+  const isInitialReveal = state.isPressed && now < state.openMotionUntil;
 
   refs.panLayer.style.transitionDuration = '1000ms';
   refs.panLayer.style.transform =
@@ -593,7 +616,7 @@ function render() {
 
     const isHovered = scene.hoveredId === bubble.id;
     const isAppearing = isInitialReveal;
-    const isReturning = !state.isPressed;
+    const isReturning = !state.isPressed && now < state.closeMotionUntil;
     const staggerDelay = (isAppearing || isReturning)
       ? (node.index * BUBBLE_STAGGER_STEP_MS)
       : 0;
@@ -636,8 +659,8 @@ function render() {
     if (node.pillCopy) {
       node.pillCopy.style.left = `${bubble.baseSize}px`;
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
-      node.pillCopy.style.setProperty('--bubble2-title-size', `${22 / pillScale}px`);
-      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${18 / pillScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-title-size', `${24 / pillScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${24 / pillScale}px`);
       node.pillCopy.style.setProperty('--bubble2-pill-gap', `${4 / pillScale}px`);
       node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillScale}px`);
       node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillScale}px`);
@@ -1047,7 +1070,7 @@ function getPillTextRightPadding(bubble) {
   if (!bubble.pillTrailingIcon) return PILL_TEXT_RIGHT_PADDING;
   const actionSize = bubble.pillTrailingIconSize || 40;
   const actionRight = bubble.pillTrailingIconRight ?? 18;
-  return actionRight + actionSize + 10;
+  return actionRight + actionSize + (bubble.pillActionGap ?? 10);
 }
 
 function measureTextWidth(text, font) {

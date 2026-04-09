@@ -1,6 +1,124 @@
 /* ── Wordmark ── */
 #wordmark { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.12); font-size: 9px; letter-spacing: .44em; text-transform: uppercase; }
 
+/* ── Prototype Figma button demo ── */
+#prototype-figma-button-demo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 40;
+  width: 140px;
+  height: 56px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  --prototype-figma-button-accent-a: rgb(144 172 255);
+  --prototype-figma-button-accent-b: rgb(151 97 255);
+}
+
+#prototype-figma-button-demo .prototype-figma-button-shell,
+#prototype-figma-button-demo .prototype-figma-button-refraction,
+#prototype-figma-button-demo .prototype-figma-button-highlight,
+#prototype-figma-button-demo .prototype-figma-button-label,
+#prototype-figma-button-demo .prototype-figma-button-highlight-mask {
+  position: absolute;
+  inset: 0;
+}
+
+#prototype-figma-button-demo .prototype-figma-button-shell {
+  border-radius: 60px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #1f1f1f;
+  border: 1px solid rgba(129,129,129,0.5);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.02),
+    0 10px 30px rgba(0,0,0,0.22);
+}
+
+#prototype-figma-button-demo .prototype-figma-button-refraction {
+  mix-blend-mode: screen;
+  overflow: visible;
+  -webkit-mask-image: url('../assets/figma-proto-button-refraction-mask.svg');
+  mask-image: url('../assets/figma-proto-button-refraction-mask.svg');
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 140px 56px;
+  mask-size: 140px 56px;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+#prototype-figma-button-demo .prototype-figma-button-accent-field {
+  position: absolute;
+  inset: -32px -16px -36px -16px;
+  background:
+    radial-gradient(47% 74% at 18% 86%,
+      color-mix(in srgb, var(--prototype-figma-button-accent-b) 96%, white 4%) 0%,
+      color-mix(in srgb, var(--prototype-figma-button-accent-b) 86%, transparent) 30%,
+      color-mix(in srgb, var(--prototype-figma-button-accent-b) 38%, transparent) 56%,
+      transparent 80%),
+    radial-gradient(38% 62% at 84% 20%,
+      color-mix(in srgb, var(--prototype-figma-button-accent-a) 92%, white 8%) 0%,
+      color-mix(in srgb, var(--prototype-figma-button-accent-a) 56%, transparent) 40%,
+      transparent 76%),
+    radial-gradient(22% 32% at 26% 18%,
+      color-mix(in srgb, var(--prototype-figma-button-accent-a) 58%, white 42%) 0%,
+      transparent 72%),
+    linear-gradient(180deg,
+      rgba(20,20,24,0) 0%,
+      rgba(20,20,24,0.20) 100%);
+  filter: blur(22px) saturate(1.06);
+  opacity: 0.96;
+  transform: translate3d(0, 0, 0);
+}
+
+#prototype-figma-button-demo .prototype-figma-button-sharp-highlight {
+  position: absolute;
+  top: -18px;
+  right: -20px;
+  width: 64px;
+  height: 64px;
+  background-image: url('../assets/figma-proto-button-sharp-highlight.svg');
+  background-repeat: no-repeat;
+  background-size: 64px 64px;
+  background-position: center;
+  mix-blend-mode: screen;
+  opacity: 0.82;
+}
+
+#prototype-figma-button-demo .prototype-figma-button-highlight {
+  border-radius: 60px;
+  mix-blend-mode: screen;
+  box-shadow:
+    inset 0 0 6px 1px rgba(255,255,255,0.8),
+    inset 0 1px 0 rgba(255,255,255,0.26);
+}
+
+#prototype-figma-button-demo .prototype-figma-button-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: 1.26px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.08);
+}
+
+#prototype-figma-button-demo .prototype-figma-button-highlight-mask {
+  width: 140px;
+  height: 56px;
+  background-image: url('../assets/figma-proto-button-highlight-mask.svg');
+  background-repeat: no-repeat;
+  background-size: 140px 56px;
+  background-position: center;
+  mix-blend-mode: screen;
+  opacity: 0.98;
+}
+
 /* ── Stars ── */
 .star { position: absolute; border-radius: 50%; pointer-events: none; animation: star-pulse var(--sd,4s) var(--motion-ease) infinite; animation-delay: var(--sdl,0s); }
 @keyframes star-pulse { 0%,100%{opacity:var(--op,.05)} 50%{opacity:calc(var(--op,.05)*3)} }
