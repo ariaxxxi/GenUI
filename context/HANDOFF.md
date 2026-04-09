@@ -1,6 +1,29 @@
 # Handoff
 
 ## Task title
+Original Edge Pan Safety Range Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the original edge-avoidance panning logic in `src/bubble-page.js`.
+- Increased `PAN_MARGIN_PX` from `35` to `70` so hovered items near the canvas edge are pulled farther inward and read closer to center.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This is still edge-triggered panning, not full centering; items already comfortably inside the safe bounds will not move.
+
+## Recommended next step
+1. If this feels too strong or too weak, tune `PAN_MARGIN_PX` up or down without changing the rest of the pan logic.
+
+## Task title
 Child Chip Padding And Stack Gap Update
 
 ## Completion status
