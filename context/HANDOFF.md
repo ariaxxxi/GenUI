@@ -1,6 +1,367 @@
 # Handoff
 
 ## Task title
+Remove stagger delay from active local bubble motion in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so stagger now applies only to reveal and return states, not to active local interaction.
+- The original lag came from active motion still being treated as reveal until hover resolved, so per-bubble stagger delays were still being applied while hovering and pushing bubbles around.
+- The active-state split now keys off `state.pointerMovedSincePress`:
+  - reveal: stagger kept
+  - active hover / scaling / pill push / bounce-back: no stagger delay
+  - return: stagger kept
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - opening delays for bubbles `1, 3, 9, 4` remained:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - active-state delays for the same bubbles became:
+    - `0s`
+    - `0s`
+    - `0s`
+    - `0s`
+  - closing delays remained:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - active transform duration / easing:
+    - `0.25s`
+    - `ease-out`
+
+## Remaining issues / caveats
+- This fix only removes active-state stagger for the main bubbles. Child-bubble stagger behavior is unchanged.
+
+## Recommended next step
+1. If local motion still feels heavy after this, the next pass should reduce active transform duration or shadow/fade durations rather than touching reveal/return timing again.
+
+## Task title
+Fix bubble2 child-menu pan fitting so child branches actually drive pan
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the root cause of the child-menu pan-fit failure in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- The problem was in the shared child-branch bounds path:
+  - `getChildBranchBounds(...)` calls `getNodeBounds(...)`
+  - in `bubble2`, computed parent bubbles did not carry `width` / `height` fields like the main `bubble` page
+  - that made branch-bound calculations unreliable for child-menu fitting, so pan correction could silently no-op or under-correct
+- Implemented two fixes:
+  - made `getNodeBounds(...)` fall back to `targetWidth`, `targetHeight`, and `baseSize` when `width` / `height` are missing
+  - added explicit `width` / `height` fields to computed `bubble2` bubble nodes so they match the main page’s layout shape going forward
+- Result:
+  - when child branches open, they now contribute real bounds to the generic child-branch pan fit
+  - profile child bubbles and Gemini chip menus now produce the expected additional pan and settle inside the canvas
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - Profile child branch (`id=3`) now pans further and settles fully inside:
+    - settled pan: `matrix(1, 0, 0, 1, 52.123, 66.673)`
+    - `3:call`: left `24.0`, right `80.0`
+    - `3:message`: left `60.9`, right `116.9`
+    - `3:video`: left `127.5`, right `183.5`
+  - Gemini child branch (`id=8`) now pans far enough and settles fully inside:
+    - settled pan: `matrix(1, 0, 0, 1, -120.144, 0.454)`
+    - `8:plan`: left `192.8`, right `331.8`
+    - `8:summarize`: left `227.5`, right `402.5`
+    - `8:rewrite`: left `227.2`, right `363.2`
+
+## Remaining issues / caveats
+- Child-menu acquisition by long hover is still sensitive in dense layouts, so automated open probes for some parents can take multiple reacquisition attempts. The pan-fit itself is now working once the child branch is open.
+
+## Recommended next step
+1. If needed, the next pass should improve child-menu hover acquisition stability separately from pan fitting.
+
+## Task title
+Match bubble2 child chip container default surface styling to bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/styles/bubble2-page.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css) so `bubble2` child chip containers now receive the same shared default glass surface treatment as the main `bubble` page.
+- Ported the `bubble` page’s shared selector pattern:
+  - `.bubble-surface.is-pill, .bubble-child-surface`
+  - and the matching `::before` / `::after` pseudo-element rules
+- In `bubble2`, this means `.bubble2-child-surface` now gets the same default:
+  - transparent glass base
+  - gradient border mask via `::before`
+  - inner glow / lower bloom via `::after`
+- This change only affects the child chip container’s default surface styling. It does not change layout, sizing, or child-menu behavior.
+
+## Files changed
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser verification on `http://127.0.0.1:62931/bubble2`
+  - opened a ChatGPT child chip menu and inspected `.bubble2-child-surface`
+  - confirmed default chip surface had live pseudo-elements:
+    - `::before` content: `""`
+    - `::after` content: `""`
+    - `::after` opacity: `0.22`
+    - `::before` mask composite: `exclude, exclude`
+  - confirmed base surface remained transparent and retained chip box shadow
+
+## Remaining issues / caveats
+- None for this scoped styling port.
+
+## Recommended next step
+1. If you want further visual parity, the next pass should compare the selected/highlighted chip state between `bubble` and `bubble2`.
+
+## Task title
+Stabilize bubble2 reveal and return stagger to match bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so main bubble reveal and return now use the same stable stagger contract as the main `bubble` page.
+- Replaced the old conditional stagger logic that only applied during an initial no-move phase.
+- `bubble2` now uses a fixed per-bubble stagger step of `35ms`, matching the main page’s `0.035s` bubble stagger.
+- Return motion now also uses the same stagger ladder instead of having no stagger.
+- Enter / exit timing remains aligned with the main page:
+  - enter: `500ms` with `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - exit: `400ms` with `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - opening transition delays for bubbles `1, 3, 9, 4`:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - closing transition delays for the same bubbles:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - opening transform duration/ease:
+    - `0.5s`
+    - `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - closing transform duration/ease:
+    - `0.4s`
+    - `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+
+## Remaining issues / caveats
+- This change only stabilizes the main bubble reveal/return stagger. It does not change child-bubble stagger behavior.
+
+## Recommended next step
+1. If needed, the next pass should tune only active in-field motion timing separately from reveal/return, since those paths are now cleanly split.
+
+## Task title
+Use bubble-page generic child-branch pan fitting in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the child-layout-specific extra pan logic from [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- `bubble2` now matches the main `bubble` page’s child-menu panning model:
+  - child menus contribute to pan through one shared `getChildBranchBounds(...)` path
+  - no GPT/Gemini-only pan padding branch remains
+  - profile child bubbles, circular child fans, and chip menus all use the same branch-fit rule
+- Replaced chip width fallback behavior with a generic DOM-based measurement cache:
+  - chip widths now use the rendered child label width plus chip padding
+  - the cache is refreshed after scene build and again after fonts finish loading
+  - pan fit uses those real chip widths instead of a hardcoded extra-pan cushion
+- Kept the scaled node bounds fix in place so hovered child scale contributes to the same generic branch bounds.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - profile child fan stayed inside the canvas:
+    - `3:call`: left `41.4`, right `90.9`, top `232.3`, bottom `281.8`
+    - `3:message`: left `101.4`, right `141.2`, top `234.5`, bottom `274.2`
+  - ChatGPT chip branch stayed inside the canvas:
+    - `2:ideas`: left `10.7`, right `132.5`
+    - `2:explain`: left `34.2`, right `124.1`
+  - Gemini chip branch stayed inside the canvas:
+    - `8:plan`: left `271.3`, right `382.9`
+    - `8:summarize`: left `259.1`, right `372.5`
+
+## Remaining issues / caveats
+- The automated probe captured two visible child items in each tested branch at the sampled moment. The generic branch-fit behavior itself is working and no tested child item clipped outside the canvas.
+
+## Recommended next step
+1. If you want, the next pass should focus separately on child-menu acquisition/visibility timing rather than on panning, since the branch-fit logic is now generic.
+
+## Task title
+Retune bubble2 GPT and Gemini chip-menu pan padding to 48px
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced `CHILD_CHIP_FIT_PADDING_X` in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) from `88px` to `48px`.
+- This further decreases the extra auto-pan used to reveal ChatGPT and Gemini chip menus while keeping the same pan-only approach.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- None for this constant-only tuning change.
+
+## Recommended next step
+1. If needed, continue tuning the same padding constant rather than changing chip positions.
+
+## Task title
+Reduce extra chip-menu pan for bubble2 GPT and Gemini
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the extra horizontal chip-fit padding in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) from `128px` to `88px`.
+- This keeps the pan-only reveal behavior for ChatGPT and Gemini chip menus, but decreases how far the canvas auto-pans when those chip stacks open.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- This is a tuning change only. If the new pan amount is still slightly too much or too little, the next pass should continue adjusting `CHILD_CHIP_FIT_PADDING_X` rather than changing chip positions.
+
+## Recommended next step
+1. If needed, tune the chip pan envelope in small `8px` to `16px` steps against the live page.
+
+## Task title
+Shift bubble2 initial anchor positions vertically
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the initial `y` anchor positions in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- Applied the requested vertical offsets:
+  - all non-ChatGPT / non-Gemini bubbles moved down by `20px`
+  - ChatGPT and Gemini moved up by `10px`
+- This is only an initial layout-anchor change. The existing packing, sizing, and non-overlap logic remains unchanged.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- Final on-screen positions are still affected by the existing bubble packing solver, so these config values act as target anchors rather than absolute rendered coordinates.
+
+## Recommended next step
+1. If you want the cluster tuned further after seeing this shift, the next pass should adjust only specific bubble anchors rather than applying another global offset.
+
+## Task title
+Use auto pan to reveal bubble2 GPT and Gemini chip menus without moving chips locally
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the previous chip reveal approach with additional pan-layer correction in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- The chip layouts themselves are no longer shifted locally to fit the canvas.
+- The current behavior now matches the requested model:
+  - when ChatGPT or Gemini child chips open near an edge, the scene pans further to reveal them
+  - chip node positions remain on their original layout
+- The pan correction is layout-aware:
+  - `chatgpt-chips` prioritizes revealing the left-extending chip stack
+  - `gemini-chips` prioritizes revealing the right-extending chip stack
+  - top/bottom safety remains active for both
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - ChatGPT chip menu:
+    - pan: `matrix(1, 0, 0, 1, 133.207, 7.468)`
+    - `Give me ideas`: left `95.2`, right `287.3`
+    - `Explain this`: left `19.2`, right `184.3`
+    - `Surprise me`: left `35.4`, right `203.0`
+  - Gemini chip menu:
+    - pan: `matrix(1, 0, 0, 1, -139.333, -2.213)`
+    - `Plan my day`: left `177.6`, right `352.6`
+    - `Summarize this`: left `206.5`, right `426.9`
+    - `Rewrite this`: left `202.6`, right `369.2`, bottom `420`
+
+## Remaining issues / caveats
+- Gemini’s widest chip now sits slightly beyond the nominal `420px` right edge in the browser probe due to rendered label width, but the scene is panning substantially further than before and no local chip translation is used.
+
+## Recommended next step
+1. If you want a stricter visible inset for chip menus, the next pass should keep the same pan-only approach and tighten the chip width estimation used by the pan safety calculation.
+
+## Task title
+Fix bubble2 GPT and Gemini chip menus clipping at the canvas edge
+
+## Completion status
+- Completed
+
+## Summary
+- Added a chip-menu-only fit pass in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) after branch pan safety is computed.
+- The new logic applies only to `chatgpt-chips` and `gemini-chips` child layouts:
+  - measures the chip-only bounds
+  - shifts the chip branch just enough to keep it inside the `420x420` canvas after pan is chosen
+  - leaves circular child arcs unchanged
+- This preserves the parent-centered circular child behavior while fixing the chip layouts that were still clipping left/right.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - ChatGPT chip menu bounds after fix:
+    - `Give me ideas`: left `101.2`, right `293.3`
+    - `Explain this`: left `17.3`, right `195.6`
+    - `Surprise me`: left `34.6`, right `202.2`
+  - Gemini chip menu bounds after fix:
+    - `Plan my day`: left `153.1`, right `328.1`
+    - `Summarize this`: left `183.8`, right `404.3`
+    - `Rewrite this`: left `187.0`, right `353.7`, bottom `420`
+
+## Remaining issues / caveats
+- Gemini's lowest chip now lands flush with the canvas bottom edge in the current test case, but no longer clips outside the canvas.
+
+## Recommended next step
+1. If needed, the next pass should add a small bottom inset specifically for chip menus if you want a visible margin rather than edge-flush placement.
+
+## Task title
 Fix bubble2 child arc center to stay anchored on the parent bubble center
 
 ## Completion status

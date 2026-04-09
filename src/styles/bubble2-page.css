@@ -104,14 +104,16 @@ body.bubble2-page {
     background-color 220ms ease;
 }
 
-.bubble2-surface.is-pill {
+.bubble2-surface.is-pill,
+.bubble2-child-surface {
   background: transparent;
   box-shadow:
     0 0 40px rgba(255, 255, 255, 0.02),
     inset 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
-.bubble2-surface.is-pill::before {
+.bubble2-surface.is-pill::before,
+.bubble2-child-surface::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -136,7 +138,8 @@ body.bubble2-page {
   pointer-events: none;
 }
 
-.bubble2-surface.is-pill::after {
+.bubble2-surface.is-pill::after,
+.bubble2-child-surface::after {
   content: "";
   position: absolute;
   inset: 0;

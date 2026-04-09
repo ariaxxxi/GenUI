@@ -10,7 +10,7 @@ const PILL_LAYOUT_GAP = 10;
 const PILL_REPULSION_INFLUENCE = 28;
 const PILL_REPULSION_ITERATIONS = 12;
 const BUBBLE_LAYOUT_ITERATIONS = 12;
-const OPEN_STAGGER_STEP_MS = 25;
+const BUBBLE_STAGGER_STEP_MS = 35;
 const DEFAULT_MOVE_DURATION_MS = 450;
 const ACTIVE_MOVE_DURATION_MS = 250;
 const APPEAR_MOVE_DURATION_MS = 500;
@@ -58,7 +58,7 @@ const BUBBLES_CONFIG = [
   {
     id: 1,
     x: 9,
-    y: -107,
+    y: -87,
     zIndex: 20,
     img: 'https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3',
     fill: true,
@@ -84,7 +84,7 @@ const BUBBLES_CONFIG = [
   {
     id: 3,
     x: -87,
-    y: -148,
+    y: -128,
     zIndex: 15,
     img: 'assets/profile1.png',
     fill: true,
@@ -104,7 +104,7 @@ const BUBBLES_CONFIG = [
   {
     id: 9,
     x: 66,
-    y: -204,
+    y: -184,
     zIndex: 14,
     img: FIGMA_ASSETS.note,
     fill: true,
@@ -117,7 +117,7 @@ const BUBBLES_CONFIG = [
   {
     id: 4,
     x: 18,
-    y: -272,
+    y: -252,
     zIndex: 12,
     img: FIGMA_ASSETS.health,
     fill: true,
@@ -125,7 +125,7 @@ const BUBBLES_CONFIG = [
     pillTitle: '10,243 steps',
     pillSubtitle: '',
     childActions: [
-      { id: 'run', img: 'assets/run.svg', imageScale: 0.92 },
+      { id: 'run', kind: 'shoe', bg: '#ffffff', fg: '#111827' },
       { id: 'heart', kind: 'heart', bg: '#ffffff', fg: '#ff4d6d' },
       { id: 'water', kind: 'drop', bg: '#ffffff', fg: '#2aa8ff' },
     ],
@@ -133,7 +133,7 @@ const BUBBLES_CONFIG = [
   {
     id: 2,
     x: -106,
-    y: -22,
+    y: -32,
     zIndex: 13,
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
@@ -149,7 +149,7 @@ const BUBBLES_CONFIG = [
   {
     id: 8,
     x: 91,
-    y: 7,
+    y: -3,
     zIndex: 14,
     img: FIGMA_ASSETS.gemini,
     fill: true,
@@ -163,7 +163,7 @@ const BUBBLES_CONFIG = [
   {
     id: 5,
     x: 110,
-    y: -126,
+    y: -106,
     zIndex: 16,
     img: 'assets/profile2.png',
     fill: true,
@@ -184,7 +184,7 @@ const BUBBLES_CONFIG = [
   {
     id: 6,
     x: -21,
-    y: -203,
+    y: -183,
     zIndex: 10,
     img: FIGMA_ASSETS.map,
     fill: true,
@@ -196,7 +196,7 @@ const BUBBLES_CONFIG = [
   {
     id: 10,
     x: -88,
-    y: -230,
+    y: -210,
     zIndex: 12,
     img: FIGMA_ASSETS.weather,
     fill: true,
@@ -251,6 +251,16 @@ function init() {
   if (!refs.shell || !refs.panLayer) return;
 
   buildScene();
+  updateMeasuredChildChipWidths();
+  if (document.fonts?.ready) {
+    document.fonts.ready
+      .then(() => {
+        updateMeasuredChildChipWidths();
+      })
+      .catch(() => {
+        // Ignore font loading errors; fallback widths remain usable.
+      });
+  }
   bindEvents();
   render();
 }
@@ -412,6 +422,7 @@ function createChildNode(parentBubble, action) {
     root,
     surface,
     content,
+    label: content.querySelector?.('.bubble2-child-chip-label') || null,
     action,
     parentId: parentBubble.id,
   };
@@ -571,10 +582,6 @@ function render() {
     state.hoveredChildBubble = scene.hoveredChildId;
   }
   const isInitialReveal = state.isPressed && !state.pointerMovedSincePress;
-  const activeMoveDuration = state.mousePos.active
-    ? (isInitialReveal ? DEFAULT_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS)
-    : DEFAULT_MOVE_DURATION_MS;
-  const staggered = isInitialReveal ? OPEN_STAGGER_STEP_MS : 0;
 
   refs.panLayer.style.transitionDuration = '1000ms';
   refs.panLayer.style.transform =
@@ -587,7 +594,9 @@ function render() {
     const isHovered = scene.hoveredId === bubble.id;
     const isAppearing = isInitialReveal;
     const isReturning = !state.isPressed;
-    const staggerDelay = staggered ? node.index * staggered : 0;
+    const staggerDelay = (isAppearing || isReturning)
+      ? (node.index * BUBBLE_STAGGER_STEP_MS)
+      : 0;
     const transformDuration = isAppearing
       ? APPEAR_MOVE_DURATION_MS
       : (isReturning ? DISAPPEAR_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS);
@@ -616,8 +625,8 @@ function render() {
     node.root.style.transform =
       `translate3d(${format(translateX)}px, ${format(translateY)}px, 0) scale(${bubble.targetScale.toFixed(4)})`;
     node.root.style.filter = isDimmed ? 'brightness(0.42) saturate(0.68)' : 'none';
-    node.root.style.setProperty('--bubble2-move-duration', `${activeMoveDuration}ms`);
     node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
+    node.root.style.transitionDelay = `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
     node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
     node.root.style.transitionTimingFunction = `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
 
@@ -741,6 +750,8 @@ function computeScene() {
       targetY: state.isPressed ? bubble.y + dy : 0,
       baseVisualSize: visualSize,
       currentDepthScale: depthScale,
+      width: bubble.baseSize,
+      height: bubble.baseSize,
       radius: visualSize / 2,
       targetScale: state.isPressed ? depthScale : 0.2,
     };
@@ -802,6 +813,8 @@ function computeScene() {
       isExpanded,
       expandedExtraSourceWidth,
       targetWidth: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
+      width: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
+      height: bubble.baseSize,
       radius: (bubble.baseSize * finalTargetScale) / 2,
       targetScale: finalTargetScale,
     };
@@ -1044,9 +1057,33 @@ function measureTextWidth(text, font) {
 }
 
 function measureChildChipWidth(action) {
+  if (action.measuredWidth) return action.measuredWidth;
   const fontWeight = action.fontWeight || 400;
   const labelWidth = measureTextWidth(action.label || '', `${fontWeight} ${CHILD_CHIP_FONT_SIZE}px "DM Sans"`);
   return Math.ceil(labelWidth + (CHILD_CHIP_PADDING_X * 2));
+}
+
+function updateMeasuredChildChipWidths() {
+  let changed = false;
+
+  for (const refsForChild of refs.childNodes.values()) {
+    if (!isChipAction(refsForChild.action) || !refsForChild.label) continue;
+
+    const measuredLabelWidth = Math.ceil(
+      refsForChild.label.getBoundingClientRect().width ||
+      refsForChild.label.scrollWidth ||
+      0,
+    );
+    if (!measuredLabelWidth) continue;
+
+    const nextMeasuredWidth = measuredLabelWidth + (CHILD_CHIP_PADDING_X * 2);
+    if (refsForChild.action.measuredWidth !== nextMeasuredWidth) {
+      refsForChild.action.measuredWidth = nextMeasuredWidth;
+      changed = true;
+    }
+  }
+
+  if (changed) scheduleRender();
 }
 
 function enrichBubbleMetrics(bubble) {
@@ -1180,6 +1217,8 @@ function getChildActionIconMarkup(kind) {
       return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0a5.5 5.5 0 0 0-5.456 4.803A1.5 1.5 0 0 0 2.5 8H7v5.5a1.5 1.5 0 0 0 3 0V13a.5.5 0 0 0-1 0v.5a.5.5 0 0 1-1 0V8h5.5a1.5 1.5 0 0 0-.044-3.197A5.5 5.5 0 0 0 8 0Z"/></svg>';
     case 'radar':
       return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm0-1A6 6 0 1 1 8 2a6 6 0 0 1 0 12Zm0-2.5A3.5 3.5 0 1 0 8 4.5a3.5 3.5 0 0 0 0 7Zm0-1A2.5 2.5 0 1 1 8 5.5a2.5 2.5 0 0 1 0 5Zm0-2A.5.5 0 1 0 8 7a.5.5 0 0 0 0 1Z"/></svg>';
+    case 'shoe':
+      return '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8.5 1.5a.5.5 0 0 1 .5.5v2.086a1 1 0 0 0 .293.707l1.414 1.414a1 1 0 0 0 .707.293H14a1 1 0 0 1 1 1v1H1v-.5a2 2 0 0 1 2-2h2.086a1 1 0 0 0 .707-.293L7.5 4.5V2a.5.5 0 0 1 .5-.5Z"/></svg>';
     case 'heart':
       return '<i class="bi bi-heart-fill" aria-hidden="true"></i>';
     case 'drop':
@@ -1348,11 +1387,16 @@ function isPointInsideRect(point, rect) {
 }
 
 function getNodeBounds(node) {
+  const scale = node.targetScale || 1;
+  const width = node.width ?? node.targetWidth ?? node.baseSize ?? 0;
+  const height = node.height ?? node.targetHeight ?? node.baseSize ?? 0;
+  const halfWidth = (width * scale) / 2;
+  const halfHeight = (height * scale) / 2;
   return {
-    left: node.targetX - (node.width / 2),
-    right: node.targetX + (node.width / 2),
-    top: node.targetY - (node.height / 2),
-    bottom: node.targetY + (node.height / 2),
+    left: node.targetX - halfWidth,
+    right: node.targetX + halfWidth,
+    top: node.targetY - halfHeight,
+    bottom: node.targetY + halfHeight,
   };
 }
 
