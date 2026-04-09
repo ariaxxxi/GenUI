@@ -281,6 +281,7 @@ export function createMorphRender(ctx) {
       const appliedTy = s.ty + yOffset;
       el.style.width = `${s.w}px`;
       el.style.height = `${s.h}px`;
+      if (k === 'main') el.style.setProperty('--g-stage-h', `${s.h}px`);
       el.style.borderRadius = k === 'main' ? mainRadius : s.br;
       el.style.transform = `translate(${s.tx}px,${appliedTy}px)`;
       const forcedVisible = k === 'main' && shouldShowListOrbShell;
