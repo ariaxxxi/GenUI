@@ -58,7 +58,7 @@ const BUBBLES_CONFIG = [
   {
     id: 1,
     x: 9,
-    y: -87,
+    y: -102,
     zIndex: 20,
     img: 'https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3',
     fill: true,
@@ -70,7 +70,7 @@ const BUBBLES_CONFIG = [
     pillTrailingIcon: 'pause',
     pillTrailingIconSize: 40,
     pillTrailingIconColor: '#1ED760',
-    pillActionGap: 12,
+    pillActionGap: 16,
     subIconKind: 'spotify-badge',
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
@@ -85,13 +85,14 @@ const BUBBLES_CONFIG = [
   {
     id: 3,
     x: -87,
-    y: -128,
+    y: -143,
     zIndex: 15,
     img: 'assets/profile1.png',
     fill: true,
     isPill: true,
     pillTitle: 'Tony',
     pillSubtitle: 'I love it!',
+    pillTextRightPadding: 40,
     subIconKind: 'message-badge',
     subIconSize: 47.949,
     subIconOffsetX: 62.04,
@@ -104,8 +105,8 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 9,
-    x: 66,
-    y: -184,
+    x: 56,
+    y: -189,
     zIndex: 14,
     img: FIGMA_ASSETS.note,
     fill: true,
@@ -118,7 +119,7 @@ const BUBBLES_CONFIG = [
   {
     id: 4,
     x: 18,
-    y: -252,
+    y: -267,
     zIndex: 12,
     img: FIGMA_ASSETS.health,
     fill: true,
@@ -134,7 +135,7 @@ const BUBBLES_CONFIG = [
   {
     id: 2,
     x: -106,
-    y: -32,
+    y: -57,
     zIndex: 13,
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
@@ -150,7 +151,7 @@ const BUBBLES_CONFIG = [
   {
     id: 8,
     x: 91,
-    y: -3,
+    y: -28,
     zIndex: 14,
     img: FIGMA_ASSETS.gemini,
     fill: true,
@@ -164,7 +165,7 @@ const BUBBLES_CONFIG = [
   {
     id: 5,
     x: 110,
-    y: -106,
+    y: -121,
     zIndex: 16,
     img: 'assets/profile2.png',
     fill: true,
@@ -172,10 +173,11 @@ const BUBBLES_CONFIG = [
     pillTitle: 'Hiro',
     pillSubtitle: 'Yesterday',
     pillTextLeftPadding: 8,
+    pillTextRightPadding: 40,
     subIconKind: 'call-badge',
     subIconSize: 41.532,
-    subIconOffsetX: 53.74,
-    subIconOffsetY: 53.75,
+    subIconOffsetX: 66.5,
+    subIconOffsetY: 66.5,
     childActions: [
       { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
       { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
@@ -185,7 +187,7 @@ const BUBBLES_CONFIG = [
   {
     id: 6,
     x: -21,
-    y: -183,
+    y: -198,
     zIndex: 10,
     img: FIGMA_ASSETS.map,
     fill: true,
@@ -197,7 +199,7 @@ const BUBBLES_CONFIG = [
   {
     id: 10,
     x: -88,
-    y: -210,
+    y: -225,
     zIndex: 12,
     img: FIGMA_ASSETS.weather,
     fill: true,
@@ -344,7 +346,7 @@ function createBubbleNode(bubble, index) {
       const action = document.createElement('div');
       action.className = 'bubble2-pill-action';
       action.style.setProperty('--pill-action-size', `${bubble.pillTrailingIconSize || 40}px`);
-      action.style.setProperty('--pill-action-right', `${bubble.pillTrailingIconRight ?? 18}px`);
+      action.style.setProperty('--pill-action-right', `${bubble.pillTrailingIconRight ?? 40}px`);
       action.style.setProperty('--pill-action-color', bubble.pillTrailingIconColor || '#ffffff');
       action.innerHTML = getPillTrailingIconMarkup(bubble.pillTrailingIcon);
       pillCopy.appendChild(action);
@@ -666,7 +668,7 @@ function render() {
       node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillScale}px`);
       if (bubble.pillTrailingIcon) {
         node.pillCopy.style.setProperty('--pill-action-size', `${(bubble.pillTrailingIconSize || 40) / pillScale}px`);
-        node.pillCopy.style.setProperty('--pill-action-right', `${(bubble.pillTrailingIconRight ?? 18) / pillScale}px`);
+        node.pillCopy.style.setProperty('--pill-action-right', `${(bubble.pillTrailingIconRight ?? 40) / pillScale}px`);
       }
       node.pillCopy.classList.toggle('is-expanded', bubble.isExpanded);
     }
@@ -1067,9 +1069,10 @@ function measurePillExtraWidth(bubble) {
 }
 
 function getPillTextRightPadding(bubble) {
+  if (bubble.pillTextRightPadding != null) return bubble.pillTextRightPadding;
   if (!bubble.pillTrailingIcon) return PILL_TEXT_RIGHT_PADDING;
   const actionSize = bubble.pillTrailingIconSize || 40;
-  const actionRight = bubble.pillTrailingIconRight ?? 18;
+  const actionRight = bubble.pillTrailingIconRight ?? 40;
   return actionRight + actionSize + (bubble.pillActionGap ?? 10);
 }
 

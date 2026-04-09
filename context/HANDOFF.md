@@ -1,6 +1,57 @@
 # Handoff
 
 ## Task title
+Set bubble2 pill right padding to 12px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so the shared pill right-side inset now uses `12px`.
+- Normalized the trailing action icon inset fallback to `12px` as well, so pills with action icons use the same right-edge padding contract.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - `PILL_TEXT_RIGHT_PADDING = 12`
+  - trailing icon right inset fallback uses `12`
+
+## Remaining issues / caveats
+- This changes the default right inset for all pills, including action pills that rely on the shared fallback rather than a bubble-specific override.
+
+## Recommended next step
+1. If any single pill needs a different right inset later, add `pillTrailingIconRight` or a pill-specific right padding override in that bubble config.
+
+## Task title
+Increase bubble2 Spotify pill text-to-pause gap to 16px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so the Spotify pill now uses `pillActionGap: 16`.
+- This increases the spacing between the expanded pill text block and the trailing pause icon from `12px` to `16px`.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - Spotify bubble config sets `pillActionGap: 16`
+
+## Remaining issues / caveats
+- None for this spacing-only adjustment.
+
+## Recommended next step
+1. If you want this spacing standardized across other pill actions later, move it to a shared constant instead of keeping it bubble-specific.
+
+## Task title
 Set bubble2 bubble enter/exit durations to 400ms / 300ms
 
 ## Completion status
