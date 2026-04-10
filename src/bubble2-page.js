@@ -397,18 +397,14 @@ function createChildNode(parentBubble, action) {
   if (isChipAction(action)) surface.classList.add('is-chip');
   surface.innerHTML = `
     <div class="bubble2-child-selection" aria-hidden="true">
-      <div class="bubble2-child-selection-accent bubble2-child-selection-accent-left">
-        <div class="bubble2-child-selection-accent-left-base"></div>
-        <div class="bubble2-child-selection-accent-left-white-2"></div>
-        <div class="bubble2-child-selection-accent-left-white-1"></div>
+      <div class="bubble2-child-selection-sharp-pass">
+        <div class="bubble2-child-selection-sharp-highlight"></div>
       </div>
-      <div class="bubble2-child-selection-accent bubble2-child-selection-accent-right">
-        <div class="bubble2-child-selection-accent-right-base"></div>
-        <div class="bubble2-child-selection-accent-right-white-2"></div>
-        <div class="bubble2-child-selection-accent-right-white-1"></div>
+      <div class="bubble2-child-selection-accent-rim"></div>
+      <div class="bubble2-child-selection-highlight"></div>
+      <div class="bubble2-child-selection-highlight-mask">
+        <div class="bubble2-child-selection-highlight-mask-image"></div>
       </div>
-      <div class="bubble2-child-selection-inner-glow"></div>
-      <div class="bubble2-child-selection-ring"></div>
     </div>
   `;
 
@@ -720,6 +716,7 @@ function render() {
     node.surface.classList.toggle('is-highlighted', isHighlighted && !node.action.img);
     node.surface.style.setProperty('--g-stage-selected-rgb', getChildActionAccent(node.action));
     node.surface.style.setProperty('--g-stage-selected-secondary-rgb', 'rgb(0 0 0)');
+    node.surface.style.setProperty('--g-stage-h', `${height}px`);
     node.content.style.width = `${format(width)}px`;
     node.content.style.height = `${format(height)}px`;
     node.content.style.transform = isChip ? 'scale(1)' : (node.action.img ? 'scale(1)' : 'scale(0.88)');

@@ -6,7 +6,7 @@ A selected/highlighted button effect. Dark base with colored inner rim glow, a s
 
 ### Where to find it
 
-- **Live example:** `index.html` — `#prototype-figma-button-demo-group` contains two instances: a pill button (200×72, `#prototype-figma-button-demo`) and a square button (56×56, `#prototype-figma-square-demo`).
+- **Live example:** `index.html` — `#prototype-figma-button-demo-group` (hidden, `display:none`) contains two instances: a pill button (200×72, `#prototype-figma-button-demo`) and a square button (56×56, `#prototype-figma-square-demo`). The effect is also applied as the stage selected state via `#prototype-stage-selection` inside `#drop-main`, driven by `.prototype-stage-selected` class — CSS in `src/styles/shared.css`, classes prefixed `.g-stage-selected-*`.
 - **All CSS:** `src/styles/editor-decorative.css` — everything under `/* ── Prototype Figma button demo ── */`, classes prefixed `.prototype-figma-button-*`.
 - **Assets:** `src/assets/` — four files used by this effect:
   - `button-highlight-top-left.png` — soft white glow anchored top-left (420×168px @3x)
@@ -147,14 +147,21 @@ Add this block to your stylesheet. The only things to change per instance are th
   CRITICAL: this must be a direct child of .color-glow-shell,
   NOT nested inside .color-glow-refraction.
   If placed inside refraction, the SVG mask will hide it entirely.
-  Width/height match the container so the glow fills to the corner correctly.
+
+  Sizing: anchored to bottom-right at a fixed natural size derived from the
+  PNG asset ratio (140×56 = 2.5:1). Width and height grow with container
+  height using a base+fraction formula so the highlight stays proportionate
+  without flooding large containers. Blur also scales with height.
+
+  At h=56:  width≈168px, height≈67px, blur=0px
+  At h=300: width≈412px, height≈189px, blur≈8px
 */
 .color-glow .color-glow-sharp-pass {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: var(--color-glow-width);
-  height: var(--color-glow-height);
+  width: calc(112px + var(--color-glow-height) * 1.0);
+  height: calc(39px + var(--color-glow-height) * 0.5);
   overflow: visible;
 }
 
@@ -162,40 +169,36 @@ Add this block to your stylesheet. The only things to change per instance are th
   position: absolute;
   bottom: 0;
   right: 0;
-  width: var(--color-glow-width);
-  height: var(--color-glow-height);
+  width: calc(112px + var(--color-glow-height) * 1.0);
+  height: calc(39px + var(--color-glow-height) * 0.5);
   background-image: url('src/assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
-  background-size: var(--color-glow-width) var(--color-glow-height);
+  background-size: calc(112px + var(--color-glow-height) * 1.0) calc(39px + var(--color-glow-height) * 0.5);
   background-position: bottom right;
   mix-blend-mode: screen;
+  filter: blur(calc((var(--color-glow-height) - 56px) * 0.0328));
 }
 
-/* Colored inner rim: 4 directional inset shadows using the two accent colors */
+/*
+  Colored inner rim: 4 directional inset shadows using the two accent colors.
+  Uses fixed px values so the rim thickness stays constant regardless of
+  container size — it does not scale with height.
+  Values tuned at h=56px and locked there.
+*/
 .color-glow .color-glow-accent-rim {
   position: absolute;
   inset: 0;
   border-radius: var(--color-glow-radius);
   box-shadow:
-    inset calc(var(--color-glow-height) * 0.24) 0
-      calc(var(--color-glow-height) * 0.32)
-      calc(var(--color-glow-height) * -0.18)
+    inset 13px 0 14px -7px
       color-mix(in srgb, var(--color-glow-accent-a) 78%, white 22%),
-    inset calc(var(--color-glow-height) * -0.24) 0
-      calc(var(--color-glow-height) * 0.32)
-      calc(var(--color-glow-height) * -0.18)
+    inset -13px 0 14px -7px
       color-mix(in srgb, var(--color-glow-accent-b) 80%, white 20%),
-    inset 0 calc(var(--color-glow-height) * 0.18)
-      calc(var(--color-glow-height) * 0.24)
-      calc(var(--color-glow-height) * -0.16)
+    inset 0 9px 11px -7px
       color-mix(in srgb, var(--color-glow-accent-a) 52%, var(--color-glow-accent-b)),
-    inset 0 calc(var(--color-glow-height) * -0.18)
-      calc(var(--color-glow-height) * 0.24)
-      calc(var(--color-glow-height) * -0.16)
+    inset 0 -9px 11px -7px
       color-mix(in srgb, var(--color-glow-accent-b) 56%, var(--color-glow-accent-a)),
-    inset 0 0
-      calc(var(--color-glow-height) * 0.32)
-      calc(var(--color-glow-height) * -0.1)
+    inset 0 0 14px -5px
       rgba(255, 255, 255, 0.03);
   opacity: 0.96;
 }
@@ -215,10 +218,13 @@ Add this block to your stylesheet. The only things to change per instance are th
   Top-left white highlight.
   Rendered after content so it sits on top visually.
   The mask wrapper clips to the rounded rect boundary.
-  The image div is pinned top: 0; left: 0 at the container's natural size.
-  background-size: 100% 100% scales the PNG to fill that fixed rect exactly.
-  Do NOT use width/height: 100% here — use the explicit px values so the
-  image never stretches if the mask wrapper changes.
+  The image div is pinned top: 0; left: 0 and sized with the same
+  base+fraction formula as the bottom-right highlight.
+  overflow: hidden on the mask clips the PNG to the rounded rect —
+  any part outside the container is invisible, so large glows are safe.
+
+  At h=56:  width≈168px, height≈67px, blur=0px
+  At h=300: width≈412px, height≈189px, blur≈8px
 */
 .color-glow .color-glow-highlight-mask {
   position: absolute;
@@ -231,13 +237,14 @@ Add this block to your stylesheet. The only things to change per instance are th
   position: absolute;
   top: 0;
   left: 0;
-  width: var(--color-glow-width);
-  height: var(--color-glow-height);
+  width: calc(112px + var(--color-glow-height) * 1.0);
+  height: calc(39px + var(--color-glow-height) * 0.5);
   background-image: url('src/assets/button-highlight-top-left.png');
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: var(--color-glow-width) var(--color-glow-height);
+  background-size: calc(112px + var(--color-glow-height) * 1.0) calc(39px + var(--color-glow-height) * 0.5);
   mix-blend-mode: screen;
+  filter: blur(calc((var(--color-glow-height) - 56px) * 0.0328));
 }
 ```
 
@@ -260,10 +267,12 @@ Add this block to your stylesheet. The only things to change per instance are th
 
 **Bottom-right highlight invisible** — `.color-glow-sharp-pass` was placed inside `.color-glow-refraction`. The refraction div has an SVG `mask-image` applied to it; anything inside gets clipped by that mask shape, which excludes the corners. Always keep `.color-glow-sharp-pass` as a direct child of `.color-glow-shell`.
 
-**Highlights stretching** — The PNG assets (`button-highlight-top-left.png`, `figma-proto-button-highlight-bottom-mask.png`) are 420×168px @3x, which maps to 140×56px at 1x. They are designed to tile across the full container at any size. Always set `background-size` to `var(--color-glow-width) var(--color-glow-height)` so they scale with the container rather than rendering at their intrinsic pixel size.
+**Highlights stretching on large containers** — Do not use `background-size: 100% 100%`. The PNG assets are 420×168px @3x (140×56 CSS px natural size). Stretching them to fill a large container distorts the glow shape and creates visible banding. Instead use the `base + h * fraction` formula so the highlight grows slowly and clips naturally at the edges via `overflow: hidden`.
 
-**Highlight clipping** — `.color-glow-highlight-mask` has `overflow: hidden` and `border-radius` to clip the PNG to the rounded rect. If you remove it, the PNG corners bleed outside the button boundary.
+**Highlight clipping** — `.color-glow-highlight-mask` has `overflow: hidden` and `border-radius` to clip the PNG to the rounded rect. If you remove it, the PNG corners bleed outside the button boundary. The bottom-right highlight has no mask wrapper — it relies on the shell's `overflow: hidden`.
 
-**Accent rim not visible** — all inset box-shadow sizes are calculated as fractions of `--color-glow-height`. If height is 0 or the variable is missing, the rim disappears. Always set `--color-glow-height` explicitly.
+**Accent rim flooding large containers** — the rim box-shadow values are fixed px, not scaled by height. Do not make them proportional to height — they will flood the center on tall containers. The fixed values (13px offset, 14px blur, -7px spread) are tuned to always look like a thin edge glow regardless of container size.
+
+**Accent rim not visible** — if `--color-glow-accent-a` or `--color-glow-accent-b` are missing or fully transparent, the rim disappears. Always set both accent vars.
 
 **Asset paths** — the SVG mask assets use relative paths from the CSS file location (`src/styles/`), so they reference `../assets/…`. If you move the CSS, update those paths. If you use inline `style` attributes or a different stylesheet location, use paths relative to your HTML root instead (e.g. `src/assets/…`).

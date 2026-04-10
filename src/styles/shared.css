@@ -1,5 +1,11 @@
 /* Shared styles extracted during refactor. Page-specific styles remain in ai.css and editor.css for parity. */
 
+@property --g-stage-h {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 56px;
+}
+
 @property --g-stage-selected-rgb {
   syntax: "<color>";
   inherits: true;
@@ -45,7 +51,8 @@
   transition:
     opacity 180ms var(--motion-ease),
     --g-stage-selected-rgb 320ms var(--motion-ease),
-    --g-stage-selected-secondary-rgb 320ms var(--motion-ease);
+    --g-stage-selected-secondary-rgb 320ms var(--motion-ease),
+    --g-stage-h var(--anim-h, 450ms var(--motion-ease));
 }
 
 #drop-main.prototype-stage-selected #prototype-stage-selection {
@@ -57,8 +64,8 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: calc(var(--g-stage-h, 56px) * 3);
-  height: calc(var(--g-stage-h, 56px) * 1.2);
+  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
+  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
   pointer-events: none;
 }
 
@@ -66,14 +73,15 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: calc(var(--g-stage-h, 56px) * 3);
-  height: calc(var(--g-stage-h, 56px) * 1.2);
+  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
+  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
   background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
-  background-size: calc(var(--g-stage-h, 56px) * 3) calc(var(--g-stage-h, 56px) * 1.2);
+  background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
   background-position: bottom right;
   mix-blend-mode: screen;
-  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.1));
+  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
+  transition: filter 450ms var(--motion-ease);
 }
 
 /* Colored inner rim from accent colors */
@@ -83,15 +91,15 @@
   border-radius: inherit;
   pointer-events: none;
   box-shadow:
-    inset calc(var(--g-stage-h, 56px) * 0.24) 0 calc(var(--g-stage-h, 56px) * 0.32) calc(var(--g-stage-h, 56px) * -0.18)
+    inset 13px 0 14px -7px
       color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
-    inset calc(var(--g-stage-h, 56px) * -0.24) 0 calc(var(--g-stage-h, 56px) * 0.32) calc(var(--g-stage-h, 56px) * -0.18)
+    inset -13px 0 14px -7px
       color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
-    inset 0 calc(var(--g-stage-h, 56px) * 0.18) calc(var(--g-stage-h, 56px) * 0.24) calc(var(--g-stage-h, 56px) * -0.16)
+    inset 0 9px 11px -7px
       color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
-    inset 0 calc(var(--g-stage-h, 56px) * -0.18) calc(var(--g-stage-h, 56px) * 0.24) calc(var(--g-stage-h, 56px) * -0.16)
+    inset 0 -9px 11px -7px
       color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
-    inset 0 0 calc(var(--g-stage-h, 56px) * 0.32) calc(var(--g-stage-h, 56px) * -0.1)
+    inset 0 0 14px -5px
       rgba(255, 255, 255, 0.03);
   opacity: 0.96;
 }
@@ -121,14 +129,15 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(var(--g-stage-h, 56px) * 3);
-  height: calc(var(--g-stage-h, 56px) * 1.2);
+  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
+  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
   background-image: url('../assets/button-highlight-top-left.png');
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: calc(var(--g-stage-h, 56px) * 3) calc(var(--g-stage-h, 56px) * 1.2);
-  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.1));
+  background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
   mix-blend-mode: screen;
+  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
+  transition: filter 450ms var(--motion-ease);
 }
 
 @keyframes thinking-orb-breathe {
