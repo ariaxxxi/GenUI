@@ -9621,3 +9621,127 @@ Fix add-visual review findings
    - exit/reset during compose no longer snaps back into a stale delayed transition
    - long-press compose chip menu can reveal and navigate all chips provided by contact data
 2. Fix or harden `test/smoke.mjs` against the debug overlay so automated browser validation is reliable again.
+
+---
+
+## Task title
+Create standalone `bubble-genui` project for the bubble2 page
+
+## Completion status
+- Completed
+
+## Summary
+- Created a new independent project at `/Users/ariax/Github/bubble-genui`.
+- Copied only the live standalone `bubble2` page implementation and its required local assets:
+  - `index.html`
+  - `bubble2.html`
+  - `src/bubble2-page.js`
+  - `src/styles/bubble2-page.css`
+  - `assets/profile1.png`
+  - `assets/profile2.png`
+- Added a minimal static Node server and package scripts so the copied page runs without the rest of the GenUI repo.
+
+## Files changed
+- `/Users/ariax/Github/bubble-genui/index.html`
+- `/Users/ariax/Github/bubble-genui/bubble2.html`
+- `/Users/ariax/Github/bubble-genui/src/bubble2-page.js`
+- `/Users/ariax/Github/bubble-genui/src/styles/bubble2-page.css`
+- `/Users/ariax/Github/bubble-genui/assets/profile1.png`
+- `/Users/ariax/Github/bubble-genui/assets/profile2.png`
+- `/Users/ariax/Github/bubble-genui/package.json`
+- `/Users/ariax/Github/bubble-genui/server.mjs`
+- `/Users/ariax/Github/bubble-genui/README.md`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Started the standalone server with `node server.mjs` in `/Users/ariax/Github/bubble-genui`
+- Verified HTTP 200 responses for:
+  - `/`
+  - `/bubble2.html`
+  - `/src/bubble2-page.js`
+  - `/src/styles/bubble2-page.css`
+  - `/assets/profile1.png`
+
+## Remaining issues / caveats
+- The new project uses the same remote CDN/font/image URLs as the original `bubble2` page, so matching behavior still depends on network availability for those external assets.
+- The requested parent path did not exist, so `/Users/ariax/Github/` was created before `bubble-genui`.
+
+## Recommended next step
+1. Run `npm start` inside `/Users/ariax/Github/bubble-genui`.
+2. Open `http://localhost:4173/` and do a quick visual compare against the original `bubble2.html`.
+
+---
+
+## Task title
+Remove duplicate HTML entrypoint from `bubble-genui`
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the duplicate `bubble2.html` file from the standalone `bubble-genui` project.
+- Kept `index.html` as the only HTML entrypoint.
+- Updated the standalone README to point only to the root URL.
+
+## Files changed
+- `/Users/ariax/Github/bubble-genui/README.md`
+- `/Users/ariax/Github/bubble-genui/bubble2.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Verified `http://localhost:4173/` still returns HTTP 200.
+- Verified `http://localhost:4173/bubble2.html` now returns HTTP 404.
+
+## Remaining issues / caveats
+- None for this scope.
+
+## Recommended next step
+1. Keep using `http://localhost:4173/` as the only standalone page URL.
+
+---
+
+## Task title
+Remove the original bubble page and keep only bubble2 runtime
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the original bubble page runtime files:
+  - `bubble.html`
+  - `src/bubble-page.js`
+  - `src/styles/bubble-page.css`
+- Updated `server.mjs` so the legacy `/bubble` route now serves `bubble2` instead of the deleted page.
+- Kept the remaining `bubble2` runtime intact:
+  - `bubble2.html`
+  - `src/bubble2-page.js`
+  - `src/styles/bubble2-page.css`
+
+## Files changed
+- `server.mjs`
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check server.mjs`
+- `node --check src/bubble2-page.js`
+- Confirmed deleted files no longer exist:
+  - `bubble.html`
+  - `src/bubble-page.js`
+  - `src/styles/bubble-page.css`
+- Started the repo server on `PORT=5185`
+- Verified:
+  - `http://localhost:5185/bubble2` → HTTP 200
+  - `http://localhost:5185/bubble` → HTTP 200
+  - `http://localhost:5185/bubble.html` → HTTP 404
+  - `http://localhost:5185/src/bubble2-page.js` → HTTP 200
+
+## Remaining issues / caveats
+- The repo still contains historical references to the removed bubble page in `context/HANDOFF.md`; these were left intact as execution history, not active runtime code.
+- `context/task✅.md` is still an unstructured notes file rather than the documented `context/task.md` format, but this task was completed directly from the user request.
+
+## Recommended next step
+1. Use `http://localhost:5173/bubble2` as the explicit bubble demo URL going forward.
+2. If you no longer need the legacy alias, the next cleanup step is to remove `/bubble` route compatibility and keep only `/bubble2`.
