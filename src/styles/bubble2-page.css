@@ -5,6 +5,8 @@
   --bubble2-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
   --bubble2-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --bubble2-pill-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --bubble2-orb-accent-a: rgb(114 154 241);
+  --bubble2-orb-accent-b: rgb(197 160 240);
 }
 
 * {
@@ -347,81 +349,138 @@ body.bubble2-page {
   display: none;
 }
 
-.bubble2-child-selection-sharp-pass {
+.bubble2-child-selection-accent,
+.bubble2-child-selection-inner-glow,
+.bubble2-child-selection-ring {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
-  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
-  pointer-events: none;
-}
-
-.bubble2-child-selection-sharp-highlight {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
-  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
-  background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
-  background-repeat: no-repeat;
-  background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
-  background-position: bottom right;
-  mix-blend-mode: screen;
-  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
-  transition: filter 450ms var(--bubble2-ease);
-}
-
-.bubble2-child-selection-accent-rim {
-  position: absolute;
-  inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow:
-    inset 13px 0 14px -7px
-      color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
-    inset -13px 0 14px -7px
-      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
-    inset 0 9px 11px -7px
-      color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
-    inset 0 -9px 11px -7px
-      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
-    inset 0 0 14px -5px
-      rgba(255, 255, 255, 0.03);
-  opacity: 0.96;
 }
 
-.bubble2-child-selection-highlight {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  box-shadow:
-    inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
-}
-
-.bubble2-child-selection-highlight-mask {
-  position: absolute;
+.bubble2-child-selection-accent-left,
+.bubble2-child-selection-accent-right {
   inset: 0;
   overflow: hidden;
-  border-radius: inherit;
+}
+
+.bubble2-child-selection-accent-left-base,
+.bubble2-child-selection-accent-right-base,
+.bubble2-child-selection-accent-left-white-2,
+.bubble2-child-selection-accent-left-white-1,
+.bubble2-child-selection-accent-right-white-2,
+.bubble2-child-selection-accent-right-white-1 {
+  position: absolute;
+  border-radius: 999px;
   pointer-events: none;
 }
 
-.bubble2-child-selection-highlight-mask-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
-  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
-  background-image: url('../assets/button-highlight-top-left.png');
-  background-repeat: no-repeat;
-  background-position: left top;
-  background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
-  mix-blend-mode: screen;
-  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
-  transition: filter 450ms var(--bubble2-ease);
+.bubble2-child-selection-accent-left-base {
+  left: -52px;
+  top: -98px;
+  width: 166px;
+  height: 166px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 92%, white 8%) 0%,
+      color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 96%, white 4%) 18%,
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 70%, transparent) 38%,
+      color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 34%, transparent) 56%,
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 10%, transparent) 70%,
+      transparent 84%);
+  filter: blur(40px);
+}
+
+.bubble2-child-selection-accent-left-white-2 {
+  left: 1.27px;
+  top: -44.73px;
+  width: 59.463px;
+  height: 59.463px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.56) 28%,
+      rgba(255, 255, 255, 0.22) 50%,
+      rgba(255, 255, 255, 0.06) 68%,
+      rgba(255, 255, 255, 0) 84%);
+  filter: blur(24px);
+  mix-blend-mode: plus-lighter;
+}
+
+.bubble2-child-selection-accent-left-white-1 {
+  left: 15px;
+  top: -31px;
+  width: 32px;
+  height: 32px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(255, 255, 255, 0.72) 34%,
+      rgba(255, 255, 255, 0.24) 60%,
+      rgba(255, 255, 255, 0) 82%);
+  filter: blur(14px);
+  mix-blend-mode: plus-lighter;
+}
+
+.bubble2-child-selection-accent-right-base {
+  right: -51px;
+  bottom: -139px;
+  width: 166px;
+  height: 166px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 92%, white 8%) 0%,
+      color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 96%, white 4%) 18%,
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 70%, transparent) 38%,
+      color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 34%, transparent) 56%,
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 10%, transparent) 70%,
+      transparent 84%);
+  filter: blur(40px);
+}
+
+.bubble2-child-selection-accent-right-white-2 {
+  right: 2.27px;
+  bottom: -85.73px;
+  width: 59.463px;
+  height: 59.463px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(255, 255, 255, 0.56) 28%,
+      rgba(255, 255, 255, 0.22) 50%,
+      rgba(255, 255, 255, 0.06) 68%,
+      rgba(255, 255, 255, 0) 84%);
+  filter: blur(24px);
+  mix-blend-mode: plus-lighter;
+}
+
+.bubble2-child-selection-accent-right-white-1 {
+  right: 16px;
+  bottom: -72px;
+  width: 32px;
+  height: 32px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(255, 255, 255, 0.72) 34%,
+      rgba(255, 255, 255, 0.24) 60%,
+      rgba(255, 255, 255, 0) 82%);
+  filter: blur(14px);
+  mix-blend-mode: plus-lighter;
+}
+
+.bubble2-child-selection-inner-glow {
+  inset: 0;
+  box-shadow:
+    inset 0 0 24px color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 23%, transparent),
+    inset 0 -9px 20px color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 48%, transparent),
+    inset -7px 0 12px color-mix(in srgb, var(--g-stage-selected-rgb, rgb(144 172 255)) 25%, transparent),
+    inset 7px 0 13px color-mix(in srgb, var(--g-stage-selected-secondary-rgb, var(--g-stage-selected-rgb, rgb(144 172 255))) 20%, transparent),
+    inset 0 1px 9px rgba(255, 255, 255, 0.16);
+}
+
+.bubble2-child-selection-ring {
+  inset: 0;
+  box-shadow: none;
 }
 
 .bubble2-child-icon-wrap {
@@ -534,8 +593,143 @@ body.bubble2-page {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  isolation: isolate;
   transform-origin: center;
-  transition: transform 1000ms var(--bubble2-ease);
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.4));
+  transition: transform 1000ms var(--bubble2-ease), filter 400ms ease;
+}
+
+.bubble2-orb-selection,
+.bubble2-orb-sphere,
+.bubble2-orb-selection-accent-rim,
+.bubble2-orb-selection-highlight {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Gradient border rim — matches .drop::before glass-shell-stroke style */
+.bubble2-orb-sphere::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    170deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(180, 180, 180, 0.2) 50%,
+    rgba(133, 133, 133, 0.1) 97%,
+    rgba(133, 133, 133, 0.1) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Inner white glow — matches .drop::after */
+.bubble2-orb-sphere::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+
+.bubble2-orb-selection {
+  inset: 0;
+  z-index: 11;
+  overflow: hidden;
+}
+
+/* Color glow accent rim — same fixed-px values as color glow system */
+.bubble2-orb-selection-accent-rim {
+  inset: 0;
+  box-shadow:
+    inset 13px 0 14px -7px
+      color-mix(in srgb, var(--bubble2-orb-accent-a) 78%, white 22%),
+    inset -13px 0 14px -7px
+      color-mix(in srgb, var(--bubble2-orb-accent-b) 80%, white 20%),
+    inset 0 9px 11px -7px
+      color-mix(in srgb, var(--bubble2-orb-accent-a) 52%, var(--bubble2-orb-accent-b)),
+    inset 0 -9px 11px -7px
+      color-mix(in srgb, var(--bubble2-orb-accent-b) 56%, var(--bubble2-orb-accent-a)),
+    inset 0 0 14px -5px
+      rgba(255, 255, 255, 0.03);
+  opacity: 0.96;
+}
+
+/* Crisp white inner edge ring */
+.bubble2-orb-selection-highlight {
+  inset: 0;
+  box-shadow:
+    inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  mix-blend-mode: screen;
+}
+
+/* Bottom-right white highlight */
+.bubble2-orb-selection-sharp-pass {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: calc(112px + 80px * 1.0);
+  height: calc(39px + 80px * 0.5);
+  pointer-events: none;
+}
+
+.bubble2-orb-selection-sharp-highlight {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: calc(112px + 80px * 1.0);
+  height: calc(39px + 80px * 0.5);
+  background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
+  background-repeat: no-repeat;
+  background-size: calc(112px + 80px * 1.0) calc(39px + 80px * 0.5);
+  background-position: bottom right;
+  mix-blend-mode: screen;
+}
+
+/* Top-left white highlight */
+.bubble2-orb-selection-highlight-mask {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.bubble2-orb-selection-highlight-mask-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(112px + 80px * 1.0);
+  height: calc(39px + 80px * 0.5);
+  background-image: url('../assets/button-highlight-top-left.png');
+  background-repeat: no-repeat;
+  background-position: left top;
+  background-size: calc(112px + 80px * 1.0) calc(39px + 80px * 0.5);
+  mix-blend-mode: screen;
+}
+
+.bubble2-orb-sphere {
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.02);
+  transition:
+    transform 450ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    box-shadow 450ms cubic-bezier(0.35, 0.23, 0.13, 0.98);
+}
+
+.bubble2-orb.is-pressed .bubble2-orb-visual {
+  transform: scale(0.8);
 }
 
 .bubble2-orb-icon-shell {

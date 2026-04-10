@@ -9745,3 +9745,29 @@ Remove the original bubble page and keep only bubble2 runtime
 ## Recommended next step
 1. Use `http://localhost:5173/bubble2` as the explicit bubble demo URL going forward.
 2. If you no longer need the legacy alias, the next cleanup step is to remove `/bubble` route compatibility and keep only `/bubble2`.
+
+---
+
+## Task title
+Fix bubble2 pill text scaling up on hover-out collapse
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the `bubble2` pill collapse so the pill text keeps using the outgoing expanded-scale compensation while the text fades/slides out.
+- Added a short collapse lock for pill text sizing instead of immediately recomputing the text scale on hover-out.
+- This prevents the brief visual "text grows while the pill shrinks" artifact during pill-to-bubble transition.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- This pass only included code-level validation. I did not run a browser animation check in this turn.
+
+## Recommended next step
+1. Hover a pill on `bubble2`, move out, and verify the text now visually holds size during fade-out instead of popping larger.

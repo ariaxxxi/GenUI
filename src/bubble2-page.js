@@ -44,7 +44,6 @@ const CHILD_SIBLING_GAP = 14;
 const HOVER_LEASH_PX = 15;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
-  orb: 'https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d',
   chatgpt: 'https://www.figma.com/api/mcp/asset/6226094c-fe66-40cc-bfeb-a23992ea5c25',
   gemini: 'https://www.figma.com/api/mcp/asset/9d1608d4-5006-4ce7-9784-7dc5b7eb62c5',
   health: 'https://www.figma.com/api/mcp/asset/87b4cdef-3bb5-416a-bb0f-211d77a0d40b',
@@ -134,7 +133,7 @@ const BUBBLES_CONFIG = [
   },
   {
     id: 2,
-    x: -106,
+    x: -86,
     y: -57,
     zIndex: 13,
     img: FIGMA_ASSETS.chatgpt,
@@ -442,20 +441,20 @@ function createOrbNode() {
   const visual = document.createElement('div');
   visual.className = 'bubble2-orb-visual';
 
-  const iconShell = document.createElement('div');
-  iconShell.className = 'bubble2-orb-icon-shell';
-
-  const image = document.createElement('img');
-  image.className = 'bubble2-orb-icon-image';
-  image.src = FIGMA_ASSETS.orb;
-  image.alt = '';
-  image.draggable = false;
-  image.addEventListener('error', () => {
-    if (image.src !== FALLBACK_ICON) image.src = FALLBACK_ICON;
-  });
-
-  iconShell.appendChild(image);
-  visual.appendChild(iconShell);
+  visual.innerHTML = `
+    <div class="bubble2-orb-sphere" aria-hidden="true">
+      <div class="bubble2-orb-selection" aria-hidden="true">
+        <div class="bubble2-orb-selection-accent-rim"></div>
+        <div class="bubble2-orb-selection-highlight"></div>
+        <div class="bubble2-orb-selection-sharp-pass">
+          <div class="bubble2-orb-selection-sharp-highlight"></div>
+        </div>
+        <div class="bubble2-orb-selection-highlight-mask">
+          <div class="bubble2-orb-selection-highlight-mask-image"></div>
+        </div>
+      </div>
+    </div>
+  `;
   button.appendChild(visual);
 
   button.addEventListener('pointerdown', handlePointerDown);
@@ -632,8 +631,6 @@ function render() {
       : (isReturning ? BUBBLE_EXIT_EASE : 'ease-out');
     const translateX = bubble.targetX - bubble.baseSize / 2;
     const translateY = bubble.targetY - bubble.baseSize / 2;
-    const pillScale = Math.max(bubble.targetScale || 1, 0.0001);
-
     node.root.style.zIndex = String(isHovered ? 50 : bubble.zIndex);
     node.root.style.width = `${format(bubble.targetWidth)}px`;
     node.root.style.height = `${format(bubble.baseSize)}px`;
@@ -655,16 +652,19 @@ function render() {
     node.iconWrap.style.height = `${bubble.baseSize}px`;
 
     if (node.pillCopy) {
+      const pillContentScale = Math.max((bubble.targetScale ?? 1), 0.0001);
       node.pillCopy.style.left = `${bubble.baseSize}px`;
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
-      node.pillCopy.style.setProperty('--bubble2-title-size', `${24 / pillScale}px`);
-      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${24 / pillScale}px`);
-      node.pillCopy.style.setProperty('--bubble2-pill-gap', `${4 / pillScale}px`);
-      node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillScale}px`);
-      node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillScale}px`);
+      node.pillCopy.style.transitionDuration = bubble.isExpanded ? '' : '0ms';
+      node.pillCopy.style.opacity = bubble.isExpanded ? '' : '0';
+      node.pillCopy.style.setProperty('--bubble2-title-size', `${24 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${24 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-pill-gap', `${4 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillContentScale}px`);
       if (bubble.pillTrailingIcon) {
-        node.pillCopy.style.setProperty('--pill-action-size', `${(bubble.pillTrailingIconSize || 40) / pillScale}px`);
-        node.pillCopy.style.setProperty('--pill-action-right', `${(bubble.pillTrailingIconRight ?? 40) / pillScale}px`);
+        node.pillCopy.style.setProperty('--pill-action-size', `${(bubble.pillTrailingIconSize || 40) / pillContentScale}px`);
+        node.pillCopy.style.setProperty('--pill-action-right', `${(bubble.pillTrailingIconRight ?? 40) / pillContentScale}px`);
       }
       node.pillCopy.classList.toggle('is-expanded', bubble.isExpanded);
     }
@@ -982,7 +982,7 @@ function computeScene() {
     childZone,
     orb: {
       id: 'orb',
-      targetScale: state.isPressed ? (ORB_PRESSED_SIZE / ORB_BASE_SIZE) : 1,
+      targetScale: state.isPressed ? 0.8 : 1,
     },
     panOffset: {
       x: panX,
