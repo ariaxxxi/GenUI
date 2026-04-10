@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "context/task✅.md",
+                "file": "design.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "task✅"
+              "title": "design"
             }
           }
         ]
@@ -78,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "286c180afae61ed5",
@@ -186,6 +185,7 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
+    "context/task✅.md",
     "design.md",
     "src/assets/button-highlight-top-left.png",
     "src/assets/Button Highlight top left.png",

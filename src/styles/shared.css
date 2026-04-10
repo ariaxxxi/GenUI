@@ -57,8 +57,8 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 100%;
-  height: 100%;
+  width: calc(var(--g-stage-h, 56px) * 3);
+  height: calc(var(--g-stage-h, 56px) * 1.2);
   pointer-events: none;
 }
 
@@ -66,13 +66,14 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 100%;
-  height: 100%;
+  width: calc(var(--g-stage-h, 56px) * 3);
+  height: calc(var(--g-stage-h, 56px) * 1.2);
   background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background-size: calc(var(--g-stage-h, 56px) * 3) calc(var(--g-stage-h, 56px) * 1.2);
   background-position: bottom right;
   mix-blend-mode: screen;
+  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.1));
 }
 
 /* Colored inner rim from accent colors */
@@ -120,12 +121,13 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: calc(var(--g-stage-h, 56px) * 3);
+  height: calc(var(--g-stage-h, 56px) * 1.2);
   background-image: url('../assets/button-highlight-top-left.png');
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: 100% 100%;
+  background-size: calc(var(--g-stage-h, 56px) * 3) calc(var(--g-stage-h, 56px) * 1.2);
+  filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.1));
   mix-blend-mode: screen;
 }
 
