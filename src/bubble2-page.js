@@ -26,8 +26,11 @@ const ORB_PRESSED_DURATION_MS = 450;
 const ORB_CENTER_X = 210;
 const ORB_CENTER_Y = 356;
 const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
-const PILL_TEXT_LEFT_PADDING = 8;
-const PILL_TEXT_RIGHT_PADDING = 40;
+const PILL_TEXT_LEFT_PADDING = 16;
+const PILL_TEXT_RIGHT_PADDING = 64;
+const PILL_TRAILING_ICON_SIZE = 40;
+const PILL_TRAILING_ICON_RIGHT = 18;
+const PILL_ACTION_GAP = 16;
 const CHILD_STAGGER_STEP_MS = 60;
 const CHILD_MENU_HOLD_MS = 3000;
 const CHILD_BUBBLE_SIZE = 60;
@@ -67,9 +70,7 @@ const BUBBLES_CONFIG = [
     imageOutlineColor: '#1ED760',
     imageOutlineWidth: 3,
     pillTrailingIcon: 'pause',
-    pillTrailingIconSize: 40,
     pillTrailingIconColor: '#1ED760',
-    pillActionGap: 16,
     subIconKind: 'spotify-badge',
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
@@ -91,7 +92,6 @@ const BUBBLES_CONFIG = [
     isPill: true,
     pillTitle: 'Tony',
     pillSubtitle: 'I love it!',
-    pillTextRightPadding: 40,
     subIconKind: 'message-badge',
     subIconSize: 47.949,
     subIconOffsetX: 62.04,
@@ -171,8 +171,6 @@ const BUBBLES_CONFIG = [
     isPill: true,
     pillTitle: 'Hiro',
     pillSubtitle: 'Yesterday',
-    pillTextLeftPadding: 8,
-    pillTextRightPadding: 40,
     subIconKind: 'call-badge',
     subIconSize: 41.532,
     subIconOffsetX: 66.5,
@@ -344,8 +342,8 @@ function createBubbleNode(bubble, index) {
     if (bubble.pillTrailingIcon) {
       const action = document.createElement('div');
       action.className = 'bubble2-pill-action';
-      action.style.setProperty('--pill-action-size', `${bubble.pillTrailingIconSize || 40}px`);
-      action.style.setProperty('--pill-action-right', `${bubble.pillTrailingIconRight ?? 40}px`);
+      action.style.setProperty('--pill-action-size', `${bubble.pillTrailingIconSize ?? PILL_TRAILING_ICON_SIZE}px`);
+      action.style.setProperty('--pill-action-right', `${bubble.pillTrailingIconRight ?? PILL_TRAILING_ICON_RIGHT}px`);
       action.style.setProperty('--pill-action-color', bubble.pillTrailingIconColor || '#ffffff');
       action.innerHTML = getPillTrailingIconMarkup(bubble.pillTrailingIcon);
       pillCopy.appendChild(action);
@@ -663,8 +661,8 @@ function render() {
       node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillContentScale}px`);
       if (bubble.pillTrailingIcon) {
-        node.pillCopy.style.setProperty('--pill-action-size', `${(bubble.pillTrailingIconSize || 40) / pillContentScale}px`);
-        node.pillCopy.style.setProperty('--pill-action-right', `${(bubble.pillTrailingIconRight ?? 40) / pillContentScale}px`);
+        node.pillCopy.style.setProperty('--pill-action-size', `${(bubble.pillTrailingIconSize ?? PILL_TRAILING_ICON_SIZE) / pillContentScale}px`);
+        node.pillCopy.style.setProperty('--pill-action-right', `${(bubble.pillTrailingIconRight ?? PILL_TRAILING_ICON_RIGHT) / pillContentScale}px`);
       }
       node.pillCopy.classList.toggle('is-expanded', bubble.isExpanded);
     }
@@ -1068,9 +1066,9 @@ function measurePillExtraWidth(bubble) {
 function getPillTextRightPadding(bubble) {
   if (bubble.pillTextRightPadding != null) return bubble.pillTextRightPadding;
   if (!bubble.pillTrailingIcon) return PILL_TEXT_RIGHT_PADDING;
-  const actionSize = bubble.pillTrailingIconSize || 40;
-  const actionRight = bubble.pillTrailingIconRight ?? 40;
-  return actionRight + actionSize + (bubble.pillActionGap ?? 10);
+  const actionSize = bubble.pillTrailingIconSize ?? PILL_TRAILING_ICON_SIZE;
+  const actionRight = bubble.pillTrailingIconRight ?? PILL_TRAILING_ICON_RIGHT;
+  return actionRight + actionSize + (bubble.pillActionGap ?? PILL_ACTION_GAP);
 }
 
 function measureTextWidth(text, font) {
