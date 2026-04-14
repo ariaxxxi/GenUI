@@ -1,6 +1,196 @@
 # Handoff
 
 ## Task title
+Match Unity prototype motion easing to the web cubic-bezier
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs) so stage animation defaults now use the web motion token `cubic-bezier(0.35, 0.23, 0.13, 0.98)` instead of Unity’s generic `EaseInOut`.
+- Added animation normalization in `StageAnimationSettings.EnsureValid()` so old serialized prototype stages that still carry the earlier flat two-key default curve are auto-upgraded to the web motion curve on validation/load.
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so playback uses the exact web cubic-bezier evaluator for the prototype’s default motion curve, rather than relying only on `AnimationCurve.Evaluate(...)`.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed the web motion token in the web app is `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+  - confirmed `StageAnimationSettings` now creates and normalizes toward that curve
+  - confirmed `StageSystemController.Evaluate(...)` now routes default prototype motion through an exact cubic-bezier evaluator
+- Not performed here:
+  - Unity visual verification in editor / play mode
+
+## Remaining issues / caveats
+- Custom inspector-edited curves still remain custom; only the prototype default / legacy-default motion path is normalized to the web curve.
+
+## Recommended next step
+1. Recompile in Unity, trigger a few stage transitions, and compare the morph feel against the web reference. If any specific transition still feels off, the next pass should tune duration rather than easing.
+
+## Task title
+Align Unity list shell and stack to web reference geometry
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so the list stage now follows the web reference geometry instead of the previous generic approximation.
+- Added shape-specific shell offset handling:
+  - `list` shell now shifts upward by `20px`, matching the web `ty: -45` geometry for the `50x50` shell
+  - the shell offset is also interpolated during transitions, so list-to-other shape morphs do not snap vertically
+- Replaced the list stack base calculation with the web’s explicit centered `bottomY` model:
+  - `bottom center y = frameCenterY + (-45 - 8 - 28)`
+  - remaining pills stack upward from that anchor in `64px` steps (`56px` height + `8px` gap)
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed list shell offset now resolves through `ResolveShellOffset(StageShape.List) -> (0, 20)`
+  - confirmed `AnimateTransition(...)` now interpolates shell offset as well as shell size/radius
+  - confirmed list stack bottom anchor now uses the explicit `-45 - 8 - 28` web-derived offset
+- Not performed here:
+  - Unity editor visual verification
+
+## Remaining issues / caveats
+- If the scene still shows the pills and orb far apart after this patch, the next thing to check is whether there are multiple `GenUIStageSystem` instances in the scene hierarchy rendering on top of each other.
+
+## Recommended next step
+1. Recompile in Unity and check the hierarchy for duplicate `GenUIStageSystem` objects if the list stack still appears detached from the orb.
+
+## Task title
+Fix Unity list stage stack positioning
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so list pills are no longer laid out from frame top-left coordinates.
+- The list stage now uses a center-anchored stack above the orb, matching the web prototype’s layout model more closely:
+  - compute the frame center
+  - place the lowest pill just above the orb with `8px` clearance
+  - stack remaining pills upward with `56px` height and `8px` gap
+- Switched list pill placement from `SetTopLeft(...)` to `SetCenter(...)` and hardened the pill root/outline component setup with the safer `GetOrAdd<...>()` path.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `BuildListStage(...)` now calculates a centered stack layout
+  - confirmed `BuildListPill(...)` now places pills with `SetCenter(...)`
+- Not performed here:
+  - Unity visual verification in editor / play mode
+
+## Remaining issues / caveats
+- I have not visually rechecked the Unity scene from this environment, so this still needs editor confirmation against the reference.
+
+## Recommended next step
+1. Recompile in Unity, switch to the list stage, and verify the pills are centered above the orb instead of drifting to the top-left.
+
+## Task title
+Fix play-mode `CreateIconVisual` null reference during stage rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) to stop reusing dynamic UI children by name during stage content rebuilds.
+- The previous `CreateRect(...)` path searched for an existing child first. In play mode, `ClearChildren(...)` uses `Destroy(...)`, which only schedules destruction at end-of-frame, so a rebuild could pick up a stale child that was already on its way out.
+- `CreateRect(...)` now always creates a fresh rect for transient content nodes. Persistent hierarchy nodes still use `FindOrCreateRect(...)`.
+- Hardened the icon/content builders so they return safely if parent or typography data is missing and use `GetOrAdd<...>()` for the icon background, raw image, and text components.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `CreateRect(...)` no longer reuses existing children
+  - confirmed `CreateIconVisual(...)` now guards `parent`, `typography`, and component attachment
+  - confirmed `CreateTextureBlock(...)` and `CreateLabel(...)` now use the same safer creation path
+- Not performed here:
+  - Unity play-mode repro / verification
+
+## Remaining issues / caveats
+- This fix targets the most likely runtime cause from the provided stack trace. Final confirmation still needs a Unity play-mode run after script reload.
+
+## Recommended next step
+1. Let Unity recompile, enter Play mode again, and trigger the dot stage transition that previously failed. If a new stack trace appears, send the next one exactly as printed.
+
+## Task title
+Fix Unity `CanvasRenderer` and built-in font errors in `StageSystemController`
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) to handle the Unity version shown in the editor errors.
+- Replaced the hardcoded built-in font load with a version-tolerant fallback:
+  - try `LegacyRuntime.ttf` first
+  - fall back to `Arial.ttf` for older editors
+- Made the generated UI hierarchy explicitly ensure `CanvasRenderer` on rect-backed UI objects:
+  - new rects are created with `CanvasRenderer`
+  - existing rects are repaired when found
+  - `GetOrAdd<T>(...)` now also ensures `CanvasRenderer` before attaching UI components
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `EnsureResources()` now calls `LoadBuiltinFont()`
+  - confirmed `LoadBuiltinFont()` tries `LegacyRuntime.ttf` then `Arial.ttf`
+  - confirmed rect creation and lookup paths now ensure `CanvasRenderer`
+- Not performed here:
+  - Unity editor compile/import pass
+  - runtime scene load verification
+
+## Remaining issues / caveats
+- If the editor already instantiated a partially broken hierarchy before this patch, Unity may need a recompile / scene reload before the repaired creation path takes effect cleanly.
+- I still cannot run a real Unity editor validation pass from this environment.
+
+## Recommended next step
+1. Reopen the `GenUI-Unity` project or trigger a recompile, then open the prototype scene or the object with `StageSystemController` again and check whether the error list clears.
+
+## Task title
+Fix Unity `Font.GetGenerationSettings` compile error in `StageSystemController`
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) to stop calling `GetGenerationSettings(...)` on `Font`, which is not a valid Unity API.
+- Replaced the two failing text-measurement call sites with a local `CreateTextGenerationSettings(...)` helper that builds a `TextGenerationSettings` struct directly for width and height measurement.
+- Kept the existing measurement behavior intact:
+  - width uses overflow extents
+  - height uses wrap extents and the caller-provided line spacing
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - removed both invalid `uiFont.GetGenerationSettings(...)` calls
+  - confirmed `rg -n "GetGenerationSettings"` returns no matches in `StageSystemController.cs`
+- Not performed here:
+  - Unity editor compile/import pass
+
+## Remaining issues / caveats
+- This environment still cannot run a real Unity import/compile pass, so the final verification step needs to happen in the desktop Unity editor.
+
+## Recommended next step
+1. Reopen or recompile the `GenUI-Unity` project in Unity and check whether any additional API-level compile errors remain after this first blocker is cleared.
+
+## Task title
 Set bubble2 pill right padding to 12px
 
 ## Completion status
@@ -9771,3 +9961,59 @@ Fix bubble2 pill text scaling up on hover-out collapse
 
 ## Recommended next step
 1. Hover a pill on `bubble2`, move out, and verify the text now visually holds size during fade-out instead of popping larger.
+
+---
+
+## Task title
+Build standalone Unity prototype project for the GenUI morphing stage system
+
+## Completion status
+- Completed with one validation blocker
+
+## Summary
+- Created a separate Unity project scaffold at `/Users/ariax/Documents/Github/GenUI-Unity`.
+- Added a text-authored Unity runtime for a morphing stage container with inspector-defined stages, selected/accent styling, content-driven sizing, and public `OpenStage(...)` APIs.
+- Added a keyboard driver for play-mode stage switching with `1..9`, arrows, replay, and reset.
+- Added a custom inspector for stage authoring and an editor bootstrap that auto-creates `Assets/GenUIPrototype/Scenes/PrototypeStageSystem.unity` on first desktop-editor open.
+- Copied the existing web highlight textures and sample media into the Unity project `Resources/Art` folder so the shell styling and example stages have real assets.
+
+## Files changed
+- External project created under `/Users/ariax/Documents/Github/GenUI-Unity`
+- `/Users/ariax/Documents/Github/GenUI-Unity/ProjectSettings/ProjectVersion.txt`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Packages/manifest.json`
+- `/Users/ariax/Documents/Github/GenUI-Unity/README.md`
+- `/Users/ariax/Documents/Github/GenUI-Unity/.gitignore`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/NumberKeyStageDriver.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/RoundedRectMesh.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/RoundedRectGraphic.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/RoundedRectOutlineGraphic.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Editor/StageSystemControllerEditor.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Editor/PrototypeSceneBootstrap.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/button-highlight-top-left.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/figma-proto-button-highlight-bottom-mask.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/avatar1.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/avatar2.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/playlist1.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/playlist2.png`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Confirmed Unity editor installations exist locally under `/Applications/Unity/Hub/Editor/2022.3.38f1`
+- Confirmed the standalone project tree was created at `/Users/ariax/Documents/Github/GenUI-Unity`
+- Confirmed runtime/editor source files and copied art assets exist in the target Unity project
+- Attempted Unity batch project creation with:
+  - `Unity -batchmode -quit -createProject /Users/ariax/Documents/Github/GenUI-Unity`
+- Result:
+  - blocked by missing active headless/batch Unity license on this machine
+
+## Remaining issues / caveats
+- I could not run a Unity import/compile pass from the terminal because the installed editor does not have an active batch/headless license. The project is authored for normal desktop-editor open/import instead.
+- The prototype scene is generated by the editor bootstrap on first Unity open; it is not pre-saved from this environment because that also required a working Unity batch/editor execution path.
+- `context/task✅.md` remains stale and unrelated to this work; implementation was executed directly from the current user request and the approved design direction.
+
+## Recommended next step
+1. Open `/Users/ariax/Documents/Github/GenUI-Unity` in the desktop Unity editor.
+2. Let Unity import scripts and assets, then open or let it auto-create `Assets/GenUIPrototype/Scenes/PrototypeStageSystem.unity`.
+3. Select `GenUIStageSystem`, author stages in the inspector, press Play, and verify transitions with `1..9`, arrows, `Enter`/`Space`, and `Esc`.
