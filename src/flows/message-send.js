@@ -25,7 +25,7 @@ export function createMessageSendFlow(ctx) {
   const FLOW_START_THINK_MS = 1600;
   const DISAMBIGUATION_TO_COMPOSE_MS = 1000;
   const SENDING_ORB_FADE_MS = 360;
-  const SENDING_HOLD_MS = 1000;
+  const SENDING_HOLD_MS = 1500;
   const COMPOSE_MENU_HOLD_MS = 280;
   const COMPOSE_MENU_EXPAND_MS = 3000;
   const COMPOSE_MENU_CLOSE_MS = 260;
@@ -34,6 +34,7 @@ export function createMessageSendFlow(ctx) {
   const COMPOSE_CHIP_MAGIC_MS = 800;
   const COMPOSE_CHIP_MAGIC_REVEAL_MS = 260;
   const COMPOSE_CHIP_ORB_DELAY_MS = 300;
+  const COMPOSE_AUTO_CONFIRM_MS = 2000;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeChipMagicPending: false, composeChipMagicOrbActive: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "", sentToastEnterPending: false };
   const timers = { pause: null, dots: null, thinking: null, send: null, sent: null, composeExit: null, sendingEntry: null, controlsTrack: null, controlsExit: null, autoConfirm: null, startup: null, composeMenuHold: null, composeMenuExpand: null, composeMenuClose: null, composeChipOrbDelay: null };
@@ -510,8 +511,6 @@ export function createMessageSendFlow(ctx) {
     ctx.voice.voiceEngine.start("dictation");
     dropMain?.classList.remove("disambiguation-surface", "confirm-surface");
     dropMain?.classList.add("compose-surface");
-    const geo = render.composeGeo();
-    ctx.morph.morphTo(render.glassStateShape(GS.COMPOSE), { icon: "", primary: "", secondary: "", detail: "" }, geo);
     ctx.updateActive?.(render.glassStateShape(GS.COMPOSE));
     render.render(true);
     render.markStateCommitted();
@@ -536,6 +535,8 @@ export function createMessageSendFlow(ctx) {
     flow.composeChipMagicOrbActive = false;
     flow.showCheck = false;
     cancelComposeMenu({ immediate: true });
+    ctx.voice.clearVoiceVizStyles?.();
+    ctx.voice.voiceEngine.stop();
     ctx.input.blur();
     render.render(true);
 
@@ -669,7 +670,7 @@ export function createMessageSendFlow(ctx) {
     if (flow.state === GS.COMPOSE || flow.state === GS.DISAMBIGUATE) reset();
   }
 
-  function scheduleComposeIdleReturn(ms = 3500) {
+  function scheduleComposeIdleReturn(ms = COMPOSE_AUTO_CONFIRM_MS) {
     if (timers.autoConfirm) {
       clearTimeout(timers.autoConfirm);
       timers.autoConfirm = null;
@@ -767,14 +768,7 @@ export function createMessageSendFlow(ctx) {
       }
       flow.showCheck = false;
       flow.msg = text.trim();
-
-      timers.autoConfirm = setTimeout(() => {
-        if (flow.state === GS.COMPOSE && flow.active) {
-          flow.msg = String(flow.composeText || flow.msg || "").trim();
-          transitionTo(GS.CONFIRM, phrase("confirm_ready_send"));
-          ctx.input.blur();
-        }
-      }, 2000);
+      scheduleComposeIdleReturn(COMPOSE_AUTO_CONFIRM_MS);
     } else {
       flow.showCheck = false;
       flow.msg = "";

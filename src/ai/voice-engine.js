@@ -1,6 +1,8 @@
 export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz }) {
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
+  const VIZ_FADE_IN_MS = 320;
   let dictationStart = 0;
+  let vizVisibleSince = 0;
   let vizLevel = 0;
   let ttsSpeaking = false;
   let pausedModeForTts = '';
@@ -36,21 +38,72 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   };
 
   async function initVoiceAnalyser() {
-    return;
+    if (voiceEngine.analyser) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
+      voiceEngine.micStream = stream;
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.88;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      voiceEngine.audioCtx = ctx;
+      voiceEngine.analyser = analyser;
+    } catch {}
   }
 
   function getComposePulseField() {
     return document.querySelector('[data-compose-field]');
   }
 
+  function composeFieldAccent(level) {
+    const mix = (from, to) => Math.round(from + ((to - from) * level));
+    const primary = `rgb(${mix(144, 102)} ${mix(172, 208)} ${mix(255, 255)})`;
+    const secondary = `rgb(${mix(151, 255)} ${mix(97, 173)} ${mix(255, 244)})`;
+    return { primary, secondary };
+  }
+
+  function dictationVizFade() {
+    if (!vizVisibleSince) return 0;
+    const progress = Math.max(0, Math.min((Date.now() - vizVisibleSince) / VIZ_FADE_IN_MS, 1));
+    return 1 - Math.pow(1 - progress, 2);
+  }
+
   function applyVoiceVisualization(level, actionBtns) {
-    void level;
-    void actionBtns;
-    resetVizStyles({ clearDropMain: true });
+    const field = getComposePulseField();
+    const state = getGlassUi?.()?.state;
+    const composeState = getGlassState?.()?.COMPOSE;
+    if (voiceEngine.mode !== 'dictation' || !field || (composeState != null && state !== composeState)) {
+      vizVisibleSince = 0;
+      void actionBtns;
+      resetVizStyles({ clearDropMain: true });
+      return;
+    }
+    if (!vizVisibleSince) vizVisibleSince = Date.now();
+    const accent = composeFieldAccent(level);
+    field.style.transition = 'background 220ms var(--motion-ease), box-shadow 180ms var(--motion-ease), --g-stage-selected-rgb 180ms var(--motion-ease), --g-stage-selected-secondary-rgb 180ms var(--motion-ease)';
+    field.style.setProperty('--g-stage-selected-rgb', accent.primary);
+    field.style.setProperty('--g-stage-selected-secondary-rgb', accent.secondary);
+    field.style.setProperty('--g-compose-field-voice-shadow', shadow(level));
   }
 
   function startVoiceViz() {
-    applyVoiceVisualization(0, []);
+    if (!voiceEngine.analyser) return;
+    if (voiceEngine.vizRaf) cancelAnimationFrame(voiceEngine.vizRaf);
+    vizLevel = 0;
+    vizVisibleSince = 0;
+    const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
+    const tick = () => {
+      if (!voiceEngine.active || voiceEngine.mode === 'off') { voiceEngine.vizRaf = null; return; }
+      voiceEngine.analyser.getByteFrequencyData(data);
+      const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
+      const raw = Math.pow(Math.min(avg / 32, 1), 0.6);
+      const target = raw * dictationVizFade();
+      vizLevel += (target - vizLevel) * 0.18;
+      applyVoiceVisualization(vizLevel, []);
+      voiceEngine.vizRaf = requestAnimationFrame(tick);
+    };
+    voiceEngine.vizRaf = requestAnimationFrame(tick);
   }
 
   function resetVizStyles({ clearDropMain = true } = {}) {
@@ -60,6 +113,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (field) {
       field.style.transition = '';
       field.style.removeProperty('box-shadow');
+      field.style.removeProperty('--g-compose-field-voice-shadow');
+      field.style.removeProperty('--g-stage-selected-rgb');
+      field.style.removeProperty('--g-stage-selected-secondary-rgb');
     }
     if (clearDropMain) document.getElementById('drop-main')?.style.removeProperty('box-shadow');
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
@@ -67,10 +123,12 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   function stopVoiceViz() {
     if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
+    vizVisibleSince = 0;
     resetVizStyles({ clearDropMain: true });
   }
 
   function clearVoiceVizStyles() {
+    vizVisibleSince = 0;
     resetVizStyles({ clearDropMain: true });
   }
 
@@ -158,6 +216,11 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       if (previousMode !== mode) {
         if (mode === 'dictation') dictationStart = Date.now();
         resetVizStyles({ clearDropMain: true });
+        if (mode === 'dictation') {
+          initVoiceAnalyser().then(startVoiceViz);
+        } else {
+          stopVoiceViz();
+        }
       }
       updateMicIndicator();
       return;

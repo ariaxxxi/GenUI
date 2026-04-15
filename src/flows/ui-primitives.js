@@ -229,13 +229,24 @@ export function renderInputField({ text = "", placeholder = "Listening...", hasT
   return renderTextBubble({ text, placeholder, mode: "listening", hasText });
 }
 
-export function renderComposeField({ text = "", placeholder = "Speak your message...", active = false, magicPending = false } = {}) {
+export function renderComposeField({
+  text = "",
+  placeholder = "Speak your message...",
+  active = false,
+  magicPending = false,
+  selected = false,
+  entering = false,
+  stageHeight = null,
+} = {}) {
   const value = String(text || "").trim();
-  const fieldCls = `g-compose-field${active ? " active" : ""}${value ? " has-text" : ""}${magicPending ? " g-compose-field-magic-pending" : ""}`;
+  const fieldCls = `g-compose-field g-stage-selected-host${active ? " active" : ""}${value ? " has-text" : ""}${magicPending ? " g-compose-field-magic-pending" : ""}${selected ? " selected" : ""}${entering ? " g-compose-field-entering" : ""}`;
+  const inlineStyle = Number.isFinite(Number(stageHeight)) && Number(stageHeight) > 0
+    ? ` style="--g-stage-h:${Math.round(Number(stageHeight))}px;"`
+    : "";
   if (value) {
-    return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-text${magicPending ? " g-compose-text-pending" : ""}" data-compose-field-text>${esc(text)}</div></div>`;
+    return `<div class="${fieldCls}" data-compose-field${inlineStyle}>${renderSelectedChrome()}<div class="g-compose-field-text${magicPending ? " g-compose-text-pending" : ""}" data-compose-field-text>${esc(text)}</div></div>`;
   }
-  return `<div class="${fieldCls}" data-compose-field><div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
+  return `<div class="${fieldCls}" data-compose-field${inlineStyle}>${renderSelectedChrome()}<div class="g-compose-field-empty">${esc(placeholder)}</div></div>`;
 }
 
 export function renderInfoCard({
