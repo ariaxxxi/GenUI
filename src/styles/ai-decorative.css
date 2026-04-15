@@ -393,7 +393,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   top:0;
   width:100vw;
   height:100vh;
-  background-image:url('https://i.pinimg.com/736x/39/65/8b/39658ba96694f6c1a815e186c34107fb.jpg');
+  background-image:url('../assets/decorative-bg.jpg');
   background-size:cover;
   background-position:center;
   filter:blur(40px) brightness(0.8);

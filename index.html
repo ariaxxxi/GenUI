@@ -137,18 +137,14 @@
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
           <div id="prototype-stage-selection" aria-hidden="true">
-            <div class="g-stage-selected-accent g-stage-selected-accent-left">
-              <div class="g-stage-selected-accent-left-base"></div>
-              <div class="g-stage-selected-accent-left-white-2"></div>
-              <div class="g-stage-selected-accent-left-white-1"></div>
+            <div class="g-stage-selected-sharp-pass">
+              <div class="g-stage-selected-sharp-highlight"></div>
             </div>
-            <div class="g-stage-selected-accent g-stage-selected-accent-right">
-              <div class="g-stage-selected-accent-right-base"></div>
-              <div class="g-stage-selected-accent-right-white-2"></div>
-              <div class="g-stage-selected-accent-right-white-1"></div>
+            <div class="g-stage-selected-accent-rim"></div>
+            <div class="g-stage-selected-highlight"></div>
+            <div class="g-stage-selected-highlight-mask">
+              <div class="g-stage-selected-highlight-mask-image"></div>
             </div>
-            <div class="g-stage-selected-inner-glow"></div>
-            <div class="g-stage-selected-ring"></div>
           </div>
           <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
           <div id="c-primary"></div>
@@ -176,6 +172,94 @@
         <div class="drop" id="drop-left"></div>
         <div class="drop" id="drop-right"></div>
         <div id="list-pills"></div>
+      </div>
+    </div>
+    <div id="prototype-figma-button-demo-group" aria-hidden="true" style="display:none">
+      <div
+        id="prototype-figma-button-demo"
+        class="prototype-figma-button-demo"
+        data-static-accents="true"
+        style="
+          --prototype-figma-demo-highlight-blur: 12px;
+          --prototype-figma-button-accent-a: rgb(50 117 246);
+          --prototype-figma-button-accent-b: rgb(82 34 216);
+        "
+      >
+        <div class="prototype-figma-button-shell">
+          <div class="prototype-figma-button-refraction">
+            <div class="prototype-figma-button-refraction-filled-mask">
+              <div class="prototype-figma-button-refraction-blur prototype-figma-button-refraction-blur-right">
+                <div class="prototype-figma-button-refraction-blur-image-wrap">
+                  <img
+                    class="prototype-figma-button-refraction-blur-image"
+                    src="./src/assets/figma-proto-button-refraction-fill.svg"
+                    alt=""
+                  />
+                </div>
+              </div>
+              <div class="prototype-figma-button-refraction-blur prototype-figma-button-refraction-blur-left">
+                <div class="prototype-figma-button-refraction-blur-image-wrap">
+                  <img
+                    class="prototype-figma-button-refraction-blur-image"
+                    src="./src/assets/figma-proto-button-refraction-fill.svg"
+                    alt=""
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="prototype-figma-button-refraction-pass prototype-figma-button-refraction-pass-sharp">
+            <div class="prototype-figma-button-sharp-highlight"></div>
+          </div>
+          <div class="prototype-figma-button-accent-rim"></div>
+          <div class="prototype-figma-button-highlight"></div>
+          <div class="prototype-figma-button-label">Start</div>
+          <div class="prototype-figma-button-highlight-mask">
+            <div class="prototype-figma-button-highlight-mask-image" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+      <div
+        id="prototype-figma-square-demo"
+        class="prototype-figma-button-demo is-square"
+        data-static-accents="true"
+        style="
+          --prototype-figma-button-accent-a: rgb(50 117 246);
+          --prototype-figma-button-accent-b: rgb(82 34 216);
+        "
+      >
+        <div class="prototype-figma-button-shell">
+          <div class="prototype-figma-button-refraction">
+            <div class="prototype-figma-button-refraction-filled-mask">
+              <div class="prototype-figma-button-refraction-blur prototype-figma-button-refraction-blur-right">
+                <div class="prototype-figma-button-refraction-blur-image-wrap">
+                  <img
+                    class="prototype-figma-button-refraction-blur-image"
+                    src="./src/assets/figma-proto-button-refraction-fill.svg"
+                    alt=""
+                  />
+                </div>
+              </div>
+              <div class="prototype-figma-button-refraction-blur prototype-figma-button-refraction-blur-left">
+                <div class="prototype-figma-button-refraction-blur-image-wrap">
+                  <img
+                    class="prototype-figma-button-refraction-blur-image"
+                    src="./src/assets/figma-proto-button-refraction-fill.svg"
+                    alt=""
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="prototype-figma-button-refraction-pass prototype-figma-button-refraction-pass-sharp">
+            <div class="prototype-figma-button-sharp-highlight"></div>
+          </div>
+          <div class="prototype-figma-button-accent-rim"></div>
+          <div class="prototype-figma-button-highlight"></div>
+          <div class="prototype-figma-button-highlight-mask">
+            <div class="prototype-figma-button-highlight-mask-image" aria-hidden="true"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

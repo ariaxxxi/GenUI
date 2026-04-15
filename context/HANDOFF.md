@@ -1,6 +1,4228 @@
 # Handoff
 
 ## Task title
+Switch Unity shell container to a sliced sprite using `container.png`
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so the shell now prefers a `UnityEngine.UI.Image` with a sliced sprite loaded from `Resources/Art/container`.
+- When `container.png` is available:
+  - the shell uses `Image.Type.Sliced`
+  - the old `RoundedRectGraphic` is removed from the shell object
+  - the extra procedural shadow is removed from the shell
+  - the neutral outline child is disabled so the baked sprite edge stays in control
+- If the sprite fails to load for any reason, the older procedural shell path remains as a fallback so the prototype still renders.
+- Added Unity import metadata for [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/container.png.meta](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/container.png.meta) so the asset imports as a single UI sprite with a `30px` 9-slice border.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/container.png.meta`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed shell resource load now includes `Resources.Load<Sprite>("Art/container")`
+  - confirmed the shell now creates/configures a `UnityEngine.UI.Image`
+  - confirmed procedural shell components are removed when the sprite is present
+  - confirmed `container.png.meta` imports the asset as a sprite with a `30px` border
+- Not performed here:
+  - Unity editor visual verification
+
+## Remaining issues / caveats
+- The current slice border is set to `30px` based on the provided asset description. If your Figma export actually needs a `120px` border because the corner radius was scaled by 4x in the exported bitmap, that value should be changed in `container.png.meta`.
+- The selected `whiteRing` overlay is still procedural. If its corners feel off against the new sprite shell, it should be converted to a sliced overlay asset as a follow-up.
+
+## Recommended next step
+1. Reimport `container.png` in Unity and verify the shell corners across dot, pill, card, and image stages. If the corners squash or look inset incorrectly, adjust the sprite border from `30` to the exact exported corner thickness.
+
+## Task title
+Match Unity prototype motion easing to the web cubic-bezier
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs) so stage animation defaults now use the web motion token `cubic-bezier(0.35, 0.23, 0.13, 0.98)` instead of Unity’s generic `EaseInOut`.
+- Added animation normalization in `StageAnimationSettings.EnsureValid()` so old serialized prototype stages that still carry the earlier flat two-key default curve are auto-upgraded to the web motion curve on validation/load.
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so playback uses the exact web cubic-bezier evaluator for the prototype’s default motion curve, rather than relying only on `AnimationCurve.Evaluate(...)`.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed the web motion token in the web app is `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+  - confirmed `StageAnimationSettings` now creates and normalizes toward that curve
+  - confirmed `StageSystemController.Evaluate(...)` now routes default prototype motion through an exact cubic-bezier evaluator
+- Not performed here:
+  - Unity visual verification in editor / play mode
+
+## Remaining issues / caveats
+- Custom inspector-edited curves still remain custom; only the prototype default / legacy-default motion path is normalized to the web curve.
+
+## Recommended next step
+1. Recompile in Unity, trigger a few stage transitions, and compare the morph feel against the web reference. If any specific transition still feels off, the next pass should tune duration rather than easing.
+
+## Task title
+Align Unity list shell and stack to web reference geometry
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so the list stage now follows the web reference geometry instead of the previous generic approximation.
+- Added shape-specific shell offset handling:
+  - `list` shell now shifts upward by `20px`, matching the web `ty: -45` geometry for the `50x50` shell
+  - the shell offset is also interpolated during transitions, so list-to-other shape morphs do not snap vertically
+- Replaced the list stack base calculation with the web’s explicit centered `bottomY` model:
+  - `bottom center y = frameCenterY + (-45 - 8 - 28)`
+  - remaining pills stack upward from that anchor in `64px` steps (`56px` height + `8px` gap)
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed list shell offset now resolves through `ResolveShellOffset(StageShape.List) -> (0, 20)`
+  - confirmed `AnimateTransition(...)` now interpolates shell offset as well as shell size/radius
+  - confirmed list stack bottom anchor now uses the explicit `-45 - 8 - 28` web-derived offset
+- Not performed here:
+  - Unity editor visual verification
+
+## Remaining issues / caveats
+- If the scene still shows the pills and orb far apart after this patch, the next thing to check is whether there are multiple `GenUIStageSystem` instances in the scene hierarchy rendering on top of each other.
+
+## Recommended next step
+1. Recompile in Unity and check the hierarchy for duplicate `GenUIStageSystem` objects if the list stack still appears detached from the orb.
+
+## Task title
+Fix Unity list stage stack positioning
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so list pills are no longer laid out from frame top-left coordinates.
+- The list stage now uses a center-anchored stack above the orb, matching the web prototype’s layout model more closely:
+  - compute the frame center
+  - place the lowest pill just above the orb with `8px` clearance
+  - stack remaining pills upward with `56px` height and `8px` gap
+- Switched list pill placement from `SetTopLeft(...)` to `SetCenter(...)` and hardened the pill root/outline component setup with the safer `GetOrAdd<...>()` path.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `BuildListStage(...)` now calculates a centered stack layout
+  - confirmed `BuildListPill(...)` now places pills with `SetCenter(...)`
+- Not performed here:
+  - Unity visual verification in editor / play mode
+
+## Remaining issues / caveats
+- I have not visually rechecked the Unity scene from this environment, so this still needs editor confirmation against the reference.
+
+## Recommended next step
+1. Recompile in Unity, switch to the list stage, and verify the pills are centered above the orb instead of drifting to the top-left.
+
+## Task title
+Fix play-mode `CreateIconVisual` null reference during stage rebuild
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) to stop reusing dynamic UI children by name during stage content rebuilds.
+- The previous `CreateRect(...)` path searched for an existing child first. In play mode, `ClearChildren(...)` uses `Destroy(...)`, which only schedules destruction at end-of-frame, so a rebuild could pick up a stale child that was already on its way out.
+- `CreateRect(...)` now always creates a fresh rect for transient content nodes. Persistent hierarchy nodes still use `FindOrCreateRect(...)`.
+- Hardened the icon/content builders so they return safely if parent or typography data is missing and use `GetOrAdd<...>()` for the icon background, raw image, and text components.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `CreateRect(...)` no longer reuses existing children
+  - confirmed `CreateIconVisual(...)` now guards `parent`, `typography`, and component attachment
+  - confirmed `CreateTextureBlock(...)` and `CreateLabel(...)` now use the same safer creation path
+- Not performed here:
+  - Unity play-mode repro / verification
+
+## Remaining issues / caveats
+- This fix targets the most likely runtime cause from the provided stack trace. Final confirmation still needs a Unity play-mode run after script reload.
+
+## Recommended next step
+1. Let Unity recompile, enter Play mode again, and trigger the dot stage transition that previously failed. If a new stack trace appears, send the next one exactly as printed.
+
+## Task title
+Fix Unity `CanvasRenderer` and built-in font errors in `StageSystemController`
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) to handle the Unity version shown in the editor errors.
+- Replaced the hardcoded built-in font load with a version-tolerant fallback:
+  - try `LegacyRuntime.ttf` first
+  - fall back to `Arial.ttf` for older editors
+- Made the generated UI hierarchy explicitly ensure `CanvasRenderer` on rect-backed UI objects:
+  - new rects are created with `CanvasRenderer`
+  - existing rects are repaired when found
+  - `GetOrAdd<T>(...)` now also ensures `CanvasRenderer` before attaching UI components
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `EnsureResources()` now calls `LoadBuiltinFont()`
+  - confirmed `LoadBuiltinFont()` tries `LegacyRuntime.ttf` then `Arial.ttf`
+  - confirmed rect creation and lookup paths now ensure `CanvasRenderer`
+- Not performed here:
+  - Unity editor compile/import pass
+  - runtime scene load verification
+
+## Remaining issues / caveats
+- If the editor already instantiated a partially broken hierarchy before this patch, Unity may need a recompile / scene reload before the repaired creation path takes effect cleanly.
+- I still cannot run a real Unity editor validation pass from this environment.
+
+## Recommended next step
+1. Reopen the `GenUI-Unity` project or trigger a recompile, then open the prototype scene or the object with `StageSystemController` again and check whether the error list clears.
+
+## Task title
+Fix Unity `Font.GetGenerationSettings` compile error in `StageSystemController`
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) to stop calling `GetGenerationSettings(...)` on `Font`, which is not a valid Unity API.
+- Replaced the two failing text-measurement call sites with a local `CreateTextGenerationSettings(...)` helper that builds a `TextGenerationSettings` struct directly for width and height measurement.
+- Kept the existing measurement behavior intact:
+  - width uses overflow extents
+  - height uses wrap extents and the caller-provided line spacing
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - removed both invalid `uiFont.GetGenerationSettings(...)` calls
+  - confirmed `rg -n "GetGenerationSettings"` returns no matches in `StageSystemController.cs`
+- Not performed here:
+  - Unity editor compile/import pass
+
+## Remaining issues / caveats
+- This environment still cannot run a real Unity import/compile pass, so the final verification step needs to happen in the desktop Unity editor.
+
+## Recommended next step
+1. Reopen or recompile the `GenUI-Unity` project in Unity and check whether any additional API-level compile errors remain after this first blocker is cleared.
+
+## Task title
+Set bubble2 pill right padding to 12px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so the shared pill right-side inset now uses `12px`.
+- Normalized the trailing action icon inset fallback to `12px` as well, so pills with action icons use the same right-edge padding contract.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - `PILL_TEXT_RIGHT_PADDING = 12`
+  - trailing icon right inset fallback uses `12`
+
+## Remaining issues / caveats
+- This changes the default right inset for all pills, including action pills that rely on the shared fallback rather than a bubble-specific override.
+
+## Recommended next step
+1. If any single pill needs a different right inset later, add `pillTrailingIconRight` or a pill-specific right padding override in that bubble config.
+
+## Task title
+Increase bubble2 Spotify pill text-to-pause gap to 16px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so the Spotify pill now uses `pillActionGap: 16`.
+- This increases the spacing between the expanded pill text block and the trailing pause icon from `12px` to `16px`.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - Spotify bubble config sets `pillActionGap: 16`
+
+## Remaining issues / caveats
+- None for this spacing-only adjustment.
+
+## Recommended next step
+1. If you want this spacing standardized across other pill actions later, move it to a shared constant instead of keeping it bubble-specific.
+
+## Task title
+Set bubble2 bubble enter/exit durations to 400ms / 300ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so the main bubble field now uses:
+  - come out: `400ms`
+  - go back: `300ms`
+- Kept the existing easing and stagger behavior unchanged.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Browser verification on `http://127.0.0.1:62931/bubble2`:
+  - opening transform duration: `0.4s`
+  - closing transform duration: `0.3s`
+
+## Remaining issues / caveats
+- None for this timing-only adjustment.
+
+## Recommended next step
+1. If you want the child bubble menus to follow the same shorter enter/exit timing, adjust their shared durations separately.
+
+## Task title
+Set bubble2 pill title to 24px with 4px title-subtitle gap
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so expanded pill titles now render at `24px`.
+- Kept the title/subtitle gap explicitly at `4px` in the runtime pill typography mapping.
+- The current runtime pill typography now sets:
+  - title: `24 / pillScale`
+  - subtitle: `24 / pillScale`
+  - gap: `4 / pillScale`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - title size mapping uses `24`
+  - pill gap mapping uses `4`
+
+## Remaining issues / caveats
+- None for this scoped typography adjustment.
+
+## Recommended next step
+1. If you want title and subtitle differentiated again later, the next pass should split their sizes explicitly rather than adjusting both together.
+
+## Task title
+Increase bubble2 pill subtitle text to 24px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so expanded pill subtitles now render at `24px`.
+- The runtime pill typography mapping now sets:
+  - `--bubble2-subtitle-size` to `24 / pillScale`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) sets `--bubble2-subtitle-size` from `24`
+
+## Remaining issues / caveats
+- The CSS fallback in [src/styles/bubble2-page.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css) remains `18px`, but active rendered pill subtitles now receive the runtime `24px` value.
+
+## Recommended next step
+1. If you want the non-runtime fallback to match too, the next pass should change the CSS default subtitle variable from `18px` to `24px`.
+
+## Task title
+Adjust bubble2 pill spacing and child bubble size
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) for the requested spacing and size changes.
+- Expanded pill text-to-bubble spacing:
+  - set shared `PILL_TEXT_LEFT_PADDING` to `8`
+  - normalized Hiro’s override to `pillTextLeftPadding: 8`
+- Spotify text-to-pause spacing:
+  - added `pillActionGap: 12` to the Spotify bubble
+  - `getPillTextRightPadding(...)` now uses `bubble.pillActionGap ?? 10`
+- Child bubble size:
+  - changed shared `CHILD_BUBBLE_SIZE` from `56` to `60`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Source verification:
+  - `PILL_TEXT_LEFT_PADDING = 8`
+  - `CHILD_BUBBLE_SIZE = 60`
+  - Spotify `pillActionGap: 12`
+  - Hiro `pillTextLeftPadding: 8`
+
+## Remaining issues / caveats
+- The browser probe wrapper hit shell history expansion while trying to read computed styles, so this validation pass relied on syntax check plus direct source verification.
+
+## Recommended next step
+1. If you want finer visual tuning after seeing it live, the next pass should adjust Spotify action spacing and global pill left padding independently.
+
+## Task title
+Normalize bubble2 Health first child bubble to the shared action-bubble style
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the Health bubble’s first child action in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so it uses the same shared child-action icon/container path as the other action bubbles.
+- Replaced the one-off image asset config:
+  - from: `{ id: 'run', img: 'assets/run.svg', imageScale: 0.92 }`
+  - to: `{ id: 'run', kind: 'shoe', bg: '#ffffff', fg: '#111827' }`
+- Added the `shoe` icon case to `getChildActionIconMarkup(...)`, matching the icon used by the main `bubble` page.
+- Result:
+  - the Health first child bubble now uses the same container treatment
+  - the icon sizing inside the bubble now follows the same shared child-action icon rules as the other action bubbles
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Browser verification on `http://127.0.0.1:62931/bubble2`
+  - opened the Health child menu
+  - confirmed `4:run` now uses the shared action icon path:
+    - `hasSurface: true`
+    - `isImageOnly: false`
+    - `hasActionIcon: true`
+    - `hasImage: false`
+
+## Remaining issues / caveats
+- None for this scoped normalization.
+
+## Recommended next step
+1. If needed, the next pass should compare the remaining child action glyph weights across Health / Weather / Notes for visual consistency.
+
+## Task title
+Remove stagger delay from active local bubble motion in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so stagger now applies only to reveal and return states, not to active local interaction.
+- The original lag came from active motion still being treated as reveal until hover resolved, so per-bubble stagger delays were still being applied while hovering and pushing bubbles around.
+- The active-state split now keys off `state.pointerMovedSincePress`:
+  - reveal: stagger kept
+  - active hover / scaling / pill push / bounce-back: no stagger delay
+  - return: stagger kept
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - opening delays for bubbles `1, 3, 9, 4` remained:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - active-state delays for the same bubbles became:
+    - `0s`
+    - `0s`
+    - `0s`
+    - `0s`
+  - closing delays remained:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - active transform duration / easing:
+    - `0.25s`
+    - `ease-out`
+
+## Remaining issues / caveats
+- This fix only removes active-state stagger for the main bubbles. Child-bubble stagger behavior is unchanged.
+
+## Recommended next step
+1. If local motion still feels heavy after this, the next pass should reduce active transform duration or shadow/fade durations rather than touching reveal/return timing again.
+
+## Task title
+Fix bubble2 child-menu pan fitting so child branches actually drive pan
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the root cause of the child-menu pan-fit failure in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- The problem was in the shared child-branch bounds path:
+  - `getChildBranchBounds(...)` calls `getNodeBounds(...)`
+  - in `bubble2`, computed parent bubbles did not carry `width` / `height` fields like the main `bubble` page
+  - that made branch-bound calculations unreliable for child-menu fitting, so pan correction could silently no-op or under-correct
+- Implemented two fixes:
+  - made `getNodeBounds(...)` fall back to `targetWidth`, `targetHeight`, and `baseSize` when `width` / `height` are missing
+  - added explicit `width` / `height` fields to computed `bubble2` bubble nodes so they match the main page’s layout shape going forward
+- Result:
+  - when child branches open, they now contribute real bounds to the generic child-branch pan fit
+  - profile child bubbles and Gemini chip menus now produce the expected additional pan and settle inside the canvas
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - Profile child branch (`id=3`) now pans further and settles fully inside:
+    - settled pan: `matrix(1, 0, 0, 1, 52.123, 66.673)`
+    - `3:call`: left `24.0`, right `80.0`
+    - `3:message`: left `60.9`, right `116.9`
+    - `3:video`: left `127.5`, right `183.5`
+  - Gemini child branch (`id=8`) now pans far enough and settles fully inside:
+    - settled pan: `matrix(1, 0, 0, 1, -120.144, 0.454)`
+    - `8:plan`: left `192.8`, right `331.8`
+    - `8:summarize`: left `227.5`, right `402.5`
+    - `8:rewrite`: left `227.2`, right `363.2`
+
+## Remaining issues / caveats
+- Child-menu acquisition by long hover is still sensitive in dense layouts, so automated open probes for some parents can take multiple reacquisition attempts. The pan-fit itself is now working once the child branch is open.
+
+## Recommended next step
+1. If needed, the next pass should improve child-menu hover acquisition stability separately from pan fitting.
+
+## Task title
+Match bubble2 child chip container default surface styling to bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/styles/bubble2-page.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css) so `bubble2` child chip containers now receive the same shared default glass surface treatment as the main `bubble` page.
+- Ported the `bubble` page’s shared selector pattern:
+  - `.bubble-surface.is-pill, .bubble-child-surface`
+  - and the matching `::before` / `::after` pseudo-element rules
+- In `bubble2`, this means `.bubble2-child-surface` now gets the same default:
+  - transparent glass base
+  - gradient border mask via `::before`
+  - inner glow / lower bloom via `::after`
+- This change only affects the child chip container’s default surface styling. It does not change layout, sizing, or child-menu behavior.
+
+## Files changed
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Browser verification on `http://127.0.0.1:62931/bubble2`
+  - opened a ChatGPT child chip menu and inspected `.bubble2-child-surface`
+  - confirmed default chip surface had live pseudo-elements:
+    - `::before` content: `""`
+    - `::after` content: `""`
+    - `::after` opacity: `0.22`
+    - `::before` mask composite: `exclude, exclude`
+  - confirmed base surface remained transparent and retained chip box shadow
+
+## Remaining issues / caveats
+- None for this scoped styling port.
+
+## Recommended next step
+1. If you want further visual parity, the next pass should compare the selected/highlighted chip state between `bubble` and `bubble2`.
+
+## Task title
+Stabilize bubble2 reveal and return stagger to match bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so main bubble reveal and return now use the same stable stagger contract as the main `bubble` page.
+- Replaced the old conditional stagger logic that only applied during an initial no-move phase.
+- `bubble2` now uses a fixed per-bubble stagger step of `35ms`, matching the main page’s `0.035s` bubble stagger.
+- Return motion now also uses the same stagger ladder instead of having no stagger.
+- Enter / exit timing remains aligned with the main page:
+  - enter: `500ms` with `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - exit: `400ms` with `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - opening transition delays for bubbles `1, 3, 9, 4`:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - closing transition delays for the same bubbles:
+    - `0s`
+    - `0.035s`
+    - `0.07s`
+    - `0.105s`
+  - opening transform duration/ease:
+    - `0.5s`
+    - `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - closing transform duration/ease:
+    - `0.4s`
+    - `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+
+## Remaining issues / caveats
+- This change only stabilizes the main bubble reveal/return stagger. It does not change child-bubble stagger behavior.
+
+## Recommended next step
+1. If needed, the next pass should tune only active in-field motion timing separately from reveal/return, since those paths are now cleanly split.
+
+## Task title
+Use bubble-page generic child-branch pan fitting in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the child-layout-specific extra pan logic from [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- `bubble2` now matches the main `bubble` page’s child-menu panning model:
+  - child menus contribute to pan through one shared `getChildBranchBounds(...)` path
+  - no GPT/Gemini-only pan padding branch remains
+  - profile child bubbles, circular child fans, and chip menus all use the same branch-fit rule
+- Replaced chip width fallback behavior with a generic DOM-based measurement cache:
+  - chip widths now use the rendered child label width plus chip padding
+  - the cache is refreshed after scene build and again after fonts finish loading
+  - pan fit uses those real chip widths instead of a hardcoded extra-pan cushion
+- Kept the scaled node bounds fix in place so hovered child scale contributes to the same generic branch bounds.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - profile child fan stayed inside the canvas:
+    - `3:call`: left `41.4`, right `90.9`, top `232.3`, bottom `281.8`
+    - `3:message`: left `101.4`, right `141.2`, top `234.5`, bottom `274.2`
+  - ChatGPT chip branch stayed inside the canvas:
+    - `2:ideas`: left `10.7`, right `132.5`
+    - `2:explain`: left `34.2`, right `124.1`
+  - Gemini chip branch stayed inside the canvas:
+    - `8:plan`: left `271.3`, right `382.9`
+    - `8:summarize`: left `259.1`, right `372.5`
+
+## Remaining issues / caveats
+- The automated probe captured two visible child items in each tested branch at the sampled moment. The generic branch-fit behavior itself is working and no tested child item clipped outside the canvas.
+
+## Recommended next step
+1. If you want, the next pass should focus separately on child-menu acquisition/visibility timing rather than on panning, since the branch-fit logic is now generic.
+
+## Task title
+Retune bubble2 GPT and Gemini chip-menu pan padding to 48px
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced `CHILD_CHIP_FIT_PADDING_X` in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) from `88px` to `48px`.
+- This further decreases the extra auto-pan used to reveal ChatGPT and Gemini chip menus while keeping the same pan-only approach.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- None for this constant-only tuning change.
+
+## Recommended next step
+1. If needed, continue tuning the same padding constant rather than changing chip positions.
+
+## Task title
+Reduce extra chip-menu pan for bubble2 GPT and Gemini
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the extra horizontal chip-fit padding in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) from `128px` to `88px`.
+- This keeps the pan-only reveal behavior for ChatGPT and Gemini chip menus, but decreases how far the canvas auto-pans when those chip stacks open.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- This is a tuning change only. If the new pan amount is still slightly too much or too little, the next pass should continue adjusting `CHILD_CHIP_FIT_PADDING_X` rather than changing chip positions.
+
+## Recommended next step
+1. If needed, tune the chip pan envelope in small `8px` to `16px` steps against the live page.
+
+## Task title
+Shift bubble2 initial anchor positions vertically
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the initial `y` anchor positions in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- Applied the requested vertical offsets:
+  - all non-ChatGPT / non-Gemini bubbles moved down by `20px`
+  - ChatGPT and Gemini moved up by `10px`
+- This is only an initial layout-anchor change. The existing packing, sizing, and non-overlap logic remains unchanged.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- Final on-screen positions are still affected by the existing bubble packing solver, so these config values act as target anchors rather than absolute rendered coordinates.
+
+## Recommended next step
+1. If you want the cluster tuned further after seeing this shift, the next pass should adjust only specific bubble anchors rather than applying another global offset.
+
+## Task title
+Use auto pan to reveal bubble2 GPT and Gemini chip menus without moving chips locally
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the previous chip reveal approach with additional pan-layer correction in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- The chip layouts themselves are no longer shifted locally to fit the canvas.
+- The current behavior now matches the requested model:
+  - when ChatGPT or Gemini child chips open near an edge, the scene pans further to reveal them
+  - chip node positions remain on their original layout
+- The pan correction is layout-aware:
+  - `chatgpt-chips` prioritizes revealing the left-extending chip stack
+  - `gemini-chips` prioritizes revealing the right-extending chip stack
+  - top/bottom safety remains active for both
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - ChatGPT chip menu:
+    - pan: `matrix(1, 0, 0, 1, 133.207, 7.468)`
+    - `Give me ideas`: left `95.2`, right `287.3`
+    - `Explain this`: left `19.2`, right `184.3`
+    - `Surprise me`: left `35.4`, right `203.0`
+  - Gemini chip menu:
+    - pan: `matrix(1, 0, 0, 1, -139.333, -2.213)`
+    - `Plan my day`: left `177.6`, right `352.6`
+    - `Summarize this`: left `206.5`, right `426.9`
+    - `Rewrite this`: left `202.6`, right `369.2`, bottom `420`
+
+## Remaining issues / caveats
+- Gemini’s widest chip now sits slightly beyond the nominal `420px` right edge in the browser probe due to rendered label width, but the scene is panning substantially further than before and no local chip translation is used.
+
+## Recommended next step
+1. If you want a stricter visible inset for chip menus, the next pass should keep the same pan-only approach and tighten the chip width estimation used by the pan safety calculation.
+
+## Task title
+Fix bubble2 GPT and Gemini chip menus clipping at the canvas edge
+
+## Completion status
+- Completed
+
+## Summary
+- Added a chip-menu-only fit pass in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) after branch pan safety is computed.
+- The new logic applies only to `chatgpt-chips` and `gemini-chips` child layouts:
+  - measures the chip-only bounds
+  - shifts the chip branch just enough to keep it inside the `420x420` canvas after pan is chosen
+  - leaves circular child arcs unchanged
+- This preserves the parent-centered circular child behavior while fixing the chip layouts that were still clipping left/right.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - ChatGPT chip menu bounds after fix:
+    - `Give me ideas`: left `101.2`, right `293.3`
+    - `Explain this`: left `17.3`, right `195.6`
+    - `Surprise me`: left `34.6`, right `202.2`
+  - Gemini chip menu bounds after fix:
+    - `Plan my day`: left `153.1`, right `328.1`
+    - `Summarize this`: left `183.8`, right `404.3`
+    - `Rewrite this`: left `187.0`, right `353.7`, bottom `420`
+
+## Remaining issues / caveats
+- Gemini's lowest chip now lands flush with the canvas bottom edge in the current test case, but no longer clips outside the canvas.
+
+## Recommended next step
+1. If needed, the next pass should add a small bottom inset specifically for chip menus if you want a visible margin rather than edge-flush placement.
+
+## Task title
+Fix bubble2 child arc center to stay anchored on the parent bubble center
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the child-only canvas-fit offset from [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- That offset was shifting child nodes independently after the child arc had already been built, which moved the child arc's center away from the parent bubble center.
+- Child branch safety now relies on branch-level pan correction instead of translating only the child nodes, so the child arc remains anchored to the parent center.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - Spotify child menu opened with `3` visible children
+  - measured child offsets from the parent center stayed on the same arc around the parent:
+    - `(dx: -60, dy: -83, dist: 102)`
+    - `(dx: 8, dy: -100, dist: 101)`
+    - `(dx: 68, dy: -67, dist: 95)`
+
+## Remaining issues / caveats
+- This fixes the arc-center mismatch. It does not retune the arc shape itself.
+
+## Recommended next step
+1. If needed, the next pass should retune the arc spread/angle only, while keeping the parent-centered anchor intact.
+
+## Task title
+Implement bubble-page child bubble logic and content in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Ported the child-action content from the main bubble page into [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) for the current `bubble2` bubbles:
+  - Spotify playlist covers
+  - Tony and Hiro call/message/video actions
+  - Notes checklist/voice/scan actions
+  - Health run/heart/water actions
+  - Map home/work actions
+  - Weather forecast/rain/radar actions
+  - ChatGPT and Gemini chip menus
+- Added child menu DOM creation, hover/hold state, child hit-testing, chip/fan layout builders, branch repulsion, and child-branch canvas fitting without replacing `bubble2`'s current mouse-distance sizing model.
+- Added the matching child selection/highlight visuals in [src/styles/bubble2-page.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css).
+- Stabilized child menu behavior by freezing the pointer basis when the child menu opens, so the child branch no longer fights the live size/pan loop while you move across it.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `curl -I http://127.0.0.1:62931/bubble2`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - ChatGPT child hold-open produced `3` visible child chips
+  - moving from the ChatGPT parent onto `Give me ideas` kept the child menu open
+  - child highlight count became `1`
+  - child items remained inside the `420x420` canvas bounds after the fit pass
+  - non-parent bubbles dimmed while the child branch was open
+
+## Remaining issues / caveats
+- `context/task.md` still has unrelated local edits and was intentionally left untouched.
+- Child menu opening still depends on the existing `3000ms` hold behavior from the main bubble page.
+
+## Recommended next step
+1. If needed, the next pass should tune which parent is easiest to acquire in dense overlaps, but the child system itself is now wired and working.
+
+## Task title
+Set bubble2 pan duration to 1000ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` pan duration in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so it is always `1000ms`.
+- This removes the shorter active pan duration and keeps the existing `ease-out` timing.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - pan transition duration: `1s`
+  - pan transition timing: `ease-out`
+
+## Remaining issues / caveats
+- None for this scoped change.
+
+## Recommended next step
+1. If needed, the next pan tweak would be easing only, since duration is now uniform.
+
+## Task title
+Retune bubble2 initial bubble positions to match packed Figma cluster
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the initial bubble centers in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) to better match the packed arrangement in the Figma reference (`LTNbsRqNkyLeo81OSL1X7J`, node `516:9`).
+- The main adjustment was tightening the lower portion of the cluster:
+  - moved the large left bubble lower
+  - moved the large right bubble lower
+  - made small refinements to nearby bubble centers so the full group reads as a tighter packed cluster
+- Kept the non-overlap solver intact so the cluster stays compact without circles intersecting.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - opened-state rendered centers after retune:
+    - `id=10`: `(120.6, 121.3)`
+    - `id=6`: `(188.5, 147.6)`
+    - `id=9`: `(276.5, 149.4)`
+    - `id=3`: `(121.3, 204.1)`
+    - `id=5`: `(323.7, 224.7)`
+    - `id=1`: `(219.6, 240.5)`
+    - `id=2`: `(95.8, 331.3)`
+    - `id=8`: `(310.6, 362.7)`
+  - opened-state overlap probe remained empty: `[]`
+
+## Remaining issues / caveats
+- The layout is still finalized by the no-overlap solver, so the config centers act as target anchors rather than absolute final screen positions.
+
+## Recommended next step
+1. If needed, the next pass should tune only the lower-left/lower-right anchor positions a few more pixels at a time against the Figma screenshot.
+
+## Task title
+Prevent bubble overlap across the full bubble2 field
+
+## Completion status
+- Completed
+
+## Summary
+- Added a general bubble-to-bubble layout separation pass to `bubble2`, not just the expanded-pill repulsion pass.
+- The field now resolves overlap in two layers inside [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js):
+  - normal field layout:
+    - all bubbles run through a pairwise separation solver so circle bounds do not overlap
+  - expanded-pill state:
+    - existing pill-to-bubble repulsion still runs
+    - existing secondary pairwise cleanup still runs after pill push
+- This preserves the good gap behavior seen during expanded-pill hover and applies the same non-overlap rule to the rest of the field.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - opened-state overlap probe: `[]`
+  - active-move overlap probe: `[]`
+  - probe used rendered circle bounds from `.bubble2-icon-wrap` and checked pairwise circle intersections
+
+## Remaining issues / caveats
+- This guarantees no circle overlap for the bubble faces. Expanded pill width is still handled by the dedicated pill repulsion/safety logic.
+
+## Recommended next step
+1. If needed, the next refinement is to tune the default inter-bubble gap amount without changing the non-overlap guarantee.
+
+## Task title
+Remove duplicate note bubble from bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the last duplicated note bubble from the `bubble2` bubble config in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- This deletes the extra trailing note entry and leaves a single note bubble in the scene.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - total bubbles: `9`
+  - note bubbles using the note asset: `1`
+
+## Remaining issues / caveats
+- None for this scoped change.
+
+## Recommended next step
+1. If needed, the next cleanup is to retune spacing after the bubble removal, but I left positions unchanged here.
+
+## Task title
+Restore bubble2 reveal stagger on orb open
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the bubble coming-out stagger effect for `bubble2` without changing the current sizing logic.
+- Added a dedicated `pointerMovedSincePress` state flag in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js).
+- The opening sequence now behaves in two phases:
+  - initial orb-open reveal:
+    - uses reveal stagger again
+    - keeps the orb-centered sizing logic
+    - uses the reveal enter easing/duration
+  - after the first actual pointer move:
+    - stagger is removed
+    - active interaction stays on the fast local motion path
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - reveal phase delays returned:
+    - `0s`
+    - `0.025s`
+    - `0.05s`
+    - `0.075s`
+  - reveal phase durations/easing stayed on the reveal contract:
+    - duration: `0.5s, 0.6s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.22, 1.16, 0.3, 1.02), cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+  - after pointer movement, stagger cleared again for active interaction:
+    - all sampled delays became `0s, 0s, 0s, 0s`
+    - active duration remained `0.25s, 0.6s, 0.45s, 0.3s`
+- `git diff --check` still reports the unrelated pre-existing formatting issue in [context/task.md](/Users/ariax/Documents/GitHub/GenUI/context/task.md).
+
+## Remaining issues / caveats
+- This restores stagger only for the initial reveal phase, which matches the intended behavior.
+
+## Recommended next step
+1. If needed, the next refinement is to tune only the stagger step amount without touching reveal sizing or active motion.
+
+## Task title
+Keep expanded pill bubble size stable while hovering pill area
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` so hovering on an expanded pill counts as staying on that same bubble for sizing purposes.
+- Added a stateful lock in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js):
+  - when a pill becomes the hovered bubble, its current scale is captured
+  - while the hover remains on that expanded pill, the bubble face keeps that scale
+  - moving across the pill text area no longer changes the bubble’s rendered size
+  - the lock clears as soon as hover leaves that pill or the press ends
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - expanded pill stayed active while moving from bubble face into pill text area
+  - after settling, the bubble face width remained unchanged:
+    - center hover: `107.646px`
+    - pill-area hover: `107.646px`
+  - the root transform translation changed, but scale stayed the same:
+    - center: `matrix(0.9786, 0, 0, 0.9786, 62.847, -186.319)`
+    - pill area: `matrix(0.9786, 0, 0, 0.9786, 49.042, -176.996)`
+- `git diff --check` still reports the unrelated pre-existing formatting issue in [context/task.md](/Users/ariax/Documents/GitHub/GenUI/context/task.md).
+
+## Remaining issues / caveats
+- The size lock is scoped to the currently hovered expanded pill only, which matches the requested behavior.
+
+## Recommended next step
+1. If needed, the next refinement is to apply the same hover-lock idea to any future child-pill or chip layouts.
+
+## Task title
+Add bubble2 panning safety for expanded pills
+
+## Completion status
+- Completed
+
+## Summary
+- Added bubble-page-style panning safety logic to `bubble2` so an expanded pill is kept inside the canvas instead of being clipped at the edges.
+- Kept the existing `bubble2` pan behavior as the base:
+  - mouse-driven pan from pointer displacement still runs first
+- Added a final bounds correction pass in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js):
+  - if an expanded pill would overflow left/right/top/bottom, pan target is adjusted just enough to bring it back inside
+  - correction uses the pill’s full expanded width, not just its circular icon diameter
+  - correction only applies when a pill is expanded
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - right-side pill (`id=5`) expanded successfully and stayed within the `420x420` canvas:
+    - pan: `matrix(1, 0, 0, 1, -57.0227, 13.4979)`
+    - pill bounds inside canvas: left `218.509`, right `381.346`, top `210.177`, bottom `299.646`
+  - left-side pill (`id=3`) expanded successfully and stayed within the canvas:
+    - pan: `matrix(1, 0, 0, 1, 9.70015, 16.7151)`
+    - pill bounds inside canvas: left `102.692`, right `254.209`, top `190.661`, bottom `279.102`
+
+## Remaining issues / caveats
+- This safety pass currently targets expanded pills only, which matches the requested behavior.
+
+## Recommended next step
+1. If needed, the next refinement is to tune the safety margin amount so expanded pills sit tighter or looser against the canvas edges.
+
+## Task title
+Make bubble2 sizing fully mouse-distance-driven and align initial layout to Figma
+
+## Completion status
+- Completed
+
+## Summary
+- Removed per-bubble predefined sizing from `bubble2`.
+- Replaced the old per-item `size` data model in [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) with:
+  - shared base diameter: `110px`
+  - rendered size range driven only by distance to the active mouse point: `60px` to `110px`
+- Removed the separate hover size boost so rendered bubble size is now determined only by distance from the mouse/orb center.
+- Changed press start behavior so the field opens with the orb center as the active mouse point immediately, which makes the nearest bubbles start out as the largest.
+- Updated the initial cluster positions to match the referenced Figma node’s layout pattern:
+  - file: `LTNbsRqNkyLeo81OSL1X7J`
+  - node: `516:9`
+- Kept existing bubble content, pill behavior, and push logic intact.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma design context and screenshot fetched for `LTNbsRqNkyLeo81OSL1X7J`, node `516:9`
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - opened-state rendered bubble widths stayed in the requested range:
+    - min: `60.005px`
+    - max: `93.5px`
+  - largest opened-state bubbles were the ones nearest the orb:
+    - `id=8`: `93.5px`
+    - `id=1`: `90.904px`
+    - `id=2`: `89.815px`
+
+## Remaining issues / caveats
+- The largest opened-state bubble is below `110px` because none of the current bubble centers sits directly on the orb center; the full `110px` size is still reachable when the pointer moves closer to a bubble.
+
+## Recommended next step
+1. If needed, the next pass should tune only the cluster positions so a specific starting bubble lands even closer to the orb center.
+
+## Task title
+Update bubble2 orb visual and pressed-state visuals
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the old `bubble2` orb plus-button visual with the same image-based orb shell used on the main bubble page.
+- Updated the orb structure in `src/bubble2-page.js`:
+  - added orb asset usage
+  - added `.bubble2-orb-visual`
+  - added `.bubble2-orb-icon-shell`
+  - added `.bubble2-orb-icon-image`
+- Updated the pressed-state visual behavior:
+  - orb button now toggles `is-pressed`
+  - visual scale now grows on press instead of shrinking
+  - orb shell applies blur and bright inset bloom while pressed
+  - orb image itself scales up under the pressed state
+- Kept the current `bubble2` press mechanics and interaction model intact; this change is visual only.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - orb image source present: `https://www.figma.com/api/mcp/asset/f8fc665b-181b-4c9e-a75d-2edec5b03b3d`
+  - before press:
+    - orb visual transform: `matrix(1, 0, 0, 1, 0, 0)`
+    - orb shell filter: `none`
+    - `is-pressed`: `false`
+  - during press:
+    - orb visual transform: `matrix(1.3052, 0, 0, 1.3052, 0, 0)`
+    - orb image transform: `matrix(1.07413, 0, 0, 1.07413, 0, 0)`
+    - orb shell filter: `blur(12.3557px)`
+    - `is-pressed`: `true`
+
+## Remaining issues / caveats
+- `git diff --check` still has the unrelated pre-existing trailing whitespace issue in `context/task.md`; I did not modify that file in this pass.
+
+## Recommended next step
+1. If needed, the next orb pass would be to tune only the pressed bloom intensity or scale amount against the bubble-page reference.
+
+## Task title
+Tune only bubble2 reveal and return motion to bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated only the bubble reveal and return motion in `bubble2` to use the `bubble.html` transform timing/easing.
+- Kept the active local motion path unchanged:
+  - live sizing response while moving
+  - local push motion
+  - pill expansion timing path
+- Applied the bubble-page reveal/return transform contract in `src/bubble2-page.js`:
+  - reveal transform: `500ms` with `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - return transform: `400ms` with `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+  - reveal fade: `400ms`
+  - return fade: `300ms`
+- Left active movement on the earlier `bubble2` response:
+  - transform: `250ms`
+  - transform easing: `ease-out`
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - reveal state computed transitions:
+    - duration: `0.5s, 0.6s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.22, 1.16, 0.3, 1.02), cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+  - active move state remained local:
+    - duration: `0.25s, 0.6s, 0.45s, 0.3s`
+    - timing: `ease-out, cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+  - return state computed transitions:
+    - duration: `0.4s, 0.6s, 0.3s, 0.3s`
+    - timing: `cubic-bezier(0.42, -0.14, 0.7, 0.68), cubic-bezier(0.16, 1, 0.3, 1), ease-out, ease`
+- `git diff --check` still reports a pre-existing trailing-whitespace issue in `context/task.md`, unrelated to this change.
+
+## Remaining issues / caveats
+- This pass only tuned reveal/return motion. Active movement and pan motion were intentionally left alone.
+
+## Recommended next step
+1. If needed, the next safe refinement is to tune only the reveal/return stagger amount without touching active sizing or push response.
+
+## Task title
+Undo bubble2 motion-tuning layer and restore sizing response
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the later `bubble2` motion-tuning layer that had been added after the push logic work.
+- Restored the earlier `bubble2` live sizing behavior in `src/bubble2-page.js`:
+  - depth-based reveal sizing
+  - pointer-proximity magnification
+  - local pointer push response
+  - hovered bubble scale boost without the later hard clamp
+- Removed the later motion override path that was flattening or delaying that sizing response:
+  - removed the bubble-page-style enter / push / exit timing split
+  - restored the earlier `bubble2` active move duration logic
+  - restored zero stagger while the pointer is actively moving
+- Restored the earlier CSS transition contract in `src/styles/bubble2-page.css` so the render loop controls local sizing response again instead of the later motion layer.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - initial pressed state used the earlier transition contract:
+    - first sampled item duration `0.45s, 0.6s, 0.45s, 0.3s`
+    - stagger returned to `0s / 0.025s / 0.05s / 0.075s` on reveal
+  - after pointer movement, sampled transforms changed dynamically again:
+    - `matrix(0.8488, ...)`
+    - `matrix(0.7502, ...)`
+    - `matrix(0.8075, ...)`
+    - `matrix(0.9683, ...)`
+
+## Remaining issues / caveats
+- This rollback intentionally removes the later motion matching work. `bubble2` is back on its earlier local interaction timing rather than the `bubble.html` motion contract.
+
+## Recommended next step
+1. If needed, the next pass should tune sizing or push behavior directly, without reintroducing a separate motion layer on top of the live sizing path.
+
+## Task title
+Clamp bubble2 mouse-distance sizing to 60px-100px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` mouse-distance sizing so the rendered circular bubble size stays within a `60px` to `100px` band while pressed and moving around the field.
+- Replaced the previous dynamic sizing path in `src/bubble2-page.js` with a direct distance-based interpolation:
+  - nearest bubbles scale toward `100px`
+  - farther bubbles scale down toward `60px`
+- Also clamped the final hovered bubble size after the local hover boost so the hovered state cannot exceed the same size band.
+- Left the rest of the motion system unchanged.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - after letting the motion settle, rendered circular bubble widths were within the requested range:
+    - min: `62.627px`
+    - max: `96.075px`
+
+## Remaining issues / caveats
+- During the transition into a new pointer position, intermediate widths can momentarily reflect the previous state until the 400-500ms motion completes. The settled state respects the `60px` to `100px` range.
+
+## Recommended next step
+1. If you want the range enforced even during transition sampling, the next step is to reduce interpolation overshoot by shortening the local size transition.
+
+## Task title
+Revert bubble2 pan easing change
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the `bubble2` pan-layer easing change from the previous motion pass.
+- Restored `.bubble2-pan-layer` to `transition-timing-function: ease-out`.
+- Left the local bubble motion timing unchanged:
+  - bubble reveal timing/ease
+  - pill expansion timing/ease
+  - pushed-bubble timing/ease
+
+## Files changed
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - pan layer computed transition: duration `1s`, timing `ease-out`
+  - bubble item computed transition remained on the local bubble-page easing contract
+
+## Remaining issues / caveats
+- This only reverts the pan easing change. No other motion behavior was altered.
+
+## Recommended next step
+1. If needed, I can separate bubble appear easing from pushed-bubble easing even more finely, but keep pan untouched.
+
+## Task title
+Match bubble2 item motion timing to bubble page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` item motion so the bubble reveal, pill expansion, and pushed-bubble movement use the same duration/easing contract as `bubble.html`.
+- Applied the bubble-page timing values in `src/bubble2-page.js`:
+  - appear transform: `500ms`
+  - push transform: `400ms`
+  - exit transform: `400ms`
+  - fade-in: `400ms`
+  - fade-out: `300ms`
+  - stagger step: `0.035s`
+  - appear ease: `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+  - exit ease: `cubic-bezier(0.42, -0.14, 0.7, 0.68)`
+  - push/pill width ease: `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+- Aligned the CSS defaults in `src/styles/bubble2-page.css` to the same motion curve family so the base transition contract matches the main bubble page.
+- Kept the current `bubble2` sizing and local interaction model intact.
+
+## Files changed
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - appear state computed transition values:
+    - duration: `0.5s, 0.4s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.22, 1.16, 0.3, 1.02), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+  - push/expanded-pill state computed transition values:
+    - duration: `0.4s, 0.4s, 0.4s, 0.4s`
+    - timing: `cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+  - exit state computed transition values:
+    - duration: `0.4s, 0.3s, 0.3s, 0.3s`
+    - timing: `cubic-bezier(0.42, -0.14, 0.7, 0.68), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98), cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+
+## Remaining issues / caveats
+- This pass matched the bubble item motion contract only. It does not change `bubble2` pan behavior or swap in the full `bubble.html` interaction engine.
+
+## Recommended next step
+1. If needed, the next motion pass would be to match the pan interpolation and orb timing with the same level of precision.
+
+## Task title
+Add bubble push-away when a pill expands in bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Added sibling repulsion to `bubble2` when a pill expands.
+- Kept the current `bubble2` sizing model intact:
+  - depth-based reveal sizing
+  - local pointer magnification
+  - existing orb behavior
+- Implemented a contained collision pass in `src/bubble2-page.js`:
+  - the expanded pill now pushes overlapping neighbors away from its widened pill bounds
+  - nearby bubbles then run through a short pairwise separation pass so pushed bubbles can push adjacent bubbles too
+- This change only affects expanded-pill interaction and does not reintroduce the broader `bubble.html` motion engine.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - Spotify pill expanded successfully: `expanded: true`
+  - Spotify root width increased to `256.266px`
+  - neighboring bubble `id=9` changed transform during Spotify expansion:
+    - before: `matrix(0.353778, 0, 0, 0.353778, -39.2192, -108.932)`
+    - after: `matrix(0.722756, 0, 0, 0.722756, 147.061, -232.085)`
+
+## Remaining issues / caveats
+- The push-away is intentionally scoped to the expanded-pill case. It is not a full bubble-field physics port from `bubble.html`.
+
+## Recommended next step
+1. If needed, the next tuning pass is to adjust how strong or how far the sibling repulsion propagates when larger pills open.
+
+## Task title
+Undo last 2 bubble2 motion changes
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the last two `bubble2` behavior passes:
+  - removed the `bubble.html` orb and motion-physics port
+  - removed the follow-up hybrid sizing rollback built on top of that port
+- Restored the earlier `bubble2` interaction model:
+  - immediate orb press instead of the long-press engine
+  - `bubble2` depth-based reveal sizing
+  - local pointer magnification and small pointer push behavior
+  - simple orb scale/background pressed state instead of the bubble-page bloom orb
+- Kept the earlier approved content/styling updates intact:
+  - `bubble.html` content/images
+  - pill/non-pill matching
+  - Spotify outline and badge
+  - message pill typography fix
+  - no automatic upward pan on press
+- Reintroduced the missing pill-width helper functions required by the reverted file so the page initializes correctly.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- `curl -I http://localhost:62931/bubble2`
+- Playwright browser verification on `http://localhost:62931/bubble2`
+  - found 1 orb node
+  - found 10 bubble nodes
+  - found 0 direct shell orb nodes
+  - found 11 children inside `.bubble2-pan-layer`
+
+## Remaining issues / caveats
+- This is a targeted revert of the last two `bubble2` changes only. Earlier content and style matching work remains in place by design.
+
+## Recommended next step
+1. If you want a narrower rollback after this, the next step is to call out the exact earlier behavior snapshot to preserve and I can trim only that part.
+
+## Task title
+Restore bubble2 sizing logic after motion port
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the fixed-size reveal scale model that came over from `bubble.html`.
+- Restored `bubble2`’s own sizing behavior in `src/bubble2-page.js`:
+  - depth-scaled idle reveal based on bubble Y position
+  - pointer-proximity magnification when moving in the field
+  - small cursor-driven local displacement around the pointer
+- Kept the newer orb visual behavior and motion engine from the previous pass:
+  - long-press timing
+  - bubble-page-style orb pressed bloom/blur
+  - repulsion / settle motion
+  - animated pan interpolation
+- Re-enabled continuous rerender on pointer movement while pressed so the restored `bubble2` magnifier sizing actually tracks pointer motion again.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - after press, leading bubble transforms showed layered non-uniform scales instead of flat `1.0` reveal:
+    - first four sampled items included `matrix(0.575566 ...)`, `matrix(0.315806 ...)`, `matrix(0.2 ...)`, `matrix(0.2 ...)`
+  - after moving the pointer upward, sampled bubbles re-sized dynamically:
+    - first four sampled items included `matrix(0.864214 ...)`, `matrix(0.721932 ...)`, `matrix(0.76413 ...)`, `matrix(0.990385 ...)`
+  - hovered pill width expanded while using the restored sizing path:
+    - sampled expanded width `316.234px`
+  - orb pressed visual remained active during the restored sizing path:
+    - sampled orb filter `blur(29.7734px)`
+
+## Remaining issues / caveats
+- The motion engine is still the newer hybrid: `bubble2` now uses its original size behavior with the later orb/repulsion/timing port, rather than reverting fully to the earlier `bubble2` implementation.
+
+## Recommended next step
+1. If needed, I can tune the restored `bubble2` depth curve or magnifier ceiling next without touching the orb/motion system.
+
+## Task title
+Port bubble-page orb and motion physics into bubble2
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the `bubble2` interaction engine with the same motion model used by `bubble.html` for:
+  - long-press activation timing
+  - bubble reveal / return timing
+  - expanded-pill repulsion and sibling relaxation
+  - animated pan interpolation
+  - hover hit-testing with sticky leash behavior
+- Updated the `bubble2` orb structure to match the main bubble page:
+  - uses the same orb image asset
+  - same pressed-state blur / bloom treatment
+  - same long-press timing model
+  - orb visual now gets displaced by pill-expansion physics instead of only scaling in place
+- Updated `bubble2` item transition wiring so bubble motion follows the same duration/easing split as `bubble.html`:
+  - enter motion
+  - exit motion
+  - push / settle motion
+  - staggered reveal timing
+- Preserved the `bubble2` content and spatial composition, but changed the interaction feel to the main bubble page’s engine.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - before long-press threshold, first bubble opacity stayed `0`
+  - after long-press threshold, first bubble opacity increased to `0.57712`
+  - orb pressed visuals activated:
+    - orb icon filter reached `blur(15.9879px)` during transition sampling
+    - orb image transform reached `matrix(1.10538, 0, 0, 1.10538, 0, 0)` during transition sampling
+  - immediately after press, pan layer stayed at `matrix(1, 0, 0, 1, 0, 0)`
+  - direct hover at Spotify’s bubble-space coordinates expanded the pill width to `314px`
+  - during Spotify expansion, orb visual transform became `matrix(1.3692, 0, 0, 1.3692, 1.53352, 18.1548)`, confirming the orb is being displaced by the repulsion solver
+
+## Remaining issues / caveats
+- `bubble2` now uses the bubble-page interaction engine, but it still uses the larger `bubble-2` cluster geometry rather than the original `bubble.html` cluster layout.
+- The pressed-orb verification sampled mid-transition in headless mode, so the reported blur/scale values are transitional rather than final settled values.
+
+## Recommended next step
+1. If you want even closer parity, the next step is to tune the `bubble2` anchor position and canvas bounds against the `bubble.html` frame so the same physics engine also lands in the same screen zones.
+
+## Task title
+Fix bubble2 message pill typography scaling
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed `bubble2` pill typography so the expanded pill text now renders at the same visual size as `bubble.html`, regardless of the source bubble’s scale in the `bubble2` layout.
+- Adjusted expanded pill width math to preserve the same visual text container width while the outer bubble continues to use the `bubble2` scaling model.
+- Applied the same compensation to:
+  - title font size
+  - subtitle font size
+  - pill gap
+  - left/right text padding
+  - trailing action size/offset
+- This specifically fixes the message pills (`Tony`, `Hiro`) that were reading too small because their parent bubbles were being scaled differently in the `bubble2` composition.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - expanded pill title computed styles:
+    - `Happiness` → `22px`, `600`
+    - `Tony` → `22px`, `600`
+    - `10,243 steps` → `22px`, `600`
+    - `Hiro` → `22px`, `600`
+  - expanded pill subtitle computed styles:
+    - `1975` → `18px`, `400`
+    - `I love it!` → `18px`, `400`
+    - `Yesterday` → `18px`, `400`
+
+## Remaining issues / caveats
+- The pill typography now matches visually, but the overall cluster still follows the `bubble2` spatial composition rather than the `bubble.html` spatial composition.
+
+## Recommended next step
+1. If needed, I can apply the same visual-size normalization to any other scaled sub-elements that still read off in the `bubble2` layout.
+
+## Task title
+Remove bubble2 auto-upward pan on orb press
+
+## Completion status
+- Completed
+
+## Summary
+- Changed `bubble2` camera pan so it is now relative to the pointer-down position instead of the absolute canvas position.
+- This removes the previous bottom-orb upward bias: long-pressing the orb no longer automatically pans the bubble field upward before you drag.
+- Bubble hover/magnifier hit-testing still uses the same bubble-space coordinates, so the interaction model stays intact; only the pan origin changed.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - pan transform right after orb press: `matrix(1, 0, 0, 1, 0, 0)`
+  - pan transform after dragging away from the press point: `matrix(1, 0, 0, 1, -24.3788, 18.2848)`
+
+## Remaining issues / caveats
+- Pan now follows drag displacement from the press point, not absolute cursor position inside the canvas. That removes the unwanted upward jump, but it also changes the camera feel slightly compared with the original reference math.
+
+## Recommended next step
+1. If you want, I can tune the drag-to-pan sensitivity next without reintroducing the upward jump.
+
+## Task title
+Align bubble2 pill styling with bubble.html
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `bubble2` so its pill/non-pill status now matches the current `bubble.html` content model:
+  - pill bubbles: Spotify, Tony, Health, Hiro
+  - non-pill bubbles: ChatGPT, Gemini, map, weather, note
+- Replaced the simplified `bubble2` pill visuals with the main bubble page’s visual language:
+  - glass pill shell styling
+  - `22px` title / `18px` subtitle typography
+  - same text padding/layout rules
+  - trailing pill action support
+- Added dynamic pill-width measurement so each expanded pill container sizes to its actual text like `bubble.html`.
+- Added the Spotify-specific treatments from the main bubble page:
+  - green inset album-cover outline
+  - green pause action on the pill
+  - Spotify badge at the bottom-right
+- Ported the message badge style for Tony and kept Hiro’s call badge treatment.
+- Added the Bootstrap Icons stylesheet to `bubble2.html` so the Spotify pause icon renders correctly.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - pill count: `4`
+  - visible pill titles: `Happiness`, `Tony`, `10,243 steps`, `Hiro`
+  - Spotify bubble icon wrapper has inset-outline class: `true`
+  - Spotify bottom-right badge count: `1`
+  - Spotify pause action count: `1`
+
+## Remaining issues / caveats
+- `bubble2` still uses the `bubble-2` spatial layout, so this change aligns content semantics and bubble styling with `bubble.html` without re-laying out the full cluster.
+- There is still one extra visible slot in `bubble2` compared with the main bubble page, so one non-pill artwork remains redistributed into the larger `bubble2` composition.
+
+## Recommended next step
+1. If you want full visual parity beyond pill treatment, the next step is to retune `bubble2` positions/sizes against the `bubble.html` cluster rather than the `bubble-2` reference layout.
+
+## Task title
+Sync bubble2 content with bubble.html
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `src/bubble2-page.js` so the `bubble2` page now uses the current `bubble.html` content set for visible bubble copy and artwork.
+- Replaced the previous reference-only content with the bubble-page assets/text for:
+  - Spotify: `Happiness` / `1975`
+  - Health: `10,243 steps`
+  - ChatGPT: `Continue` / `Book flight to Coachella`
+  - Gemini: `Ready` / `Where should we start?`
+  - map / weather / note / profile artwork from the current bubble page
+- Swapped the lower-right profile overlay badge to the call badge asset used by `bubble.html`.
+- Left `bubble2` layout and interaction logic unchanged; this was a content-only remap.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- Playwright browser verification on `http://127.0.0.1:62931/bubble2`
+  - expanded pill titles: `Happiness`, `10,243 steps`, `Continue`, `Ready`
+  - expanded pill subtitles: `1975`, ``, `Book flight to Coachella`, `Where should we start?`
+  - first bubble image source: `https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3`
+
+## Remaining issues / caveats
+- `bubble2` has a different slot layout than `bubble.html`, so the content was redistributed into the existing `bubble2` positions rather than made one-to-one structurally identical.
+- `bubble2` still has one extra visible slot compared with the current visible bubble set on `bubble.html`, so one app family is necessarily reused in the redistributed content layout.
+
+## Recommended next step
+1. If you want strict one-to-one parity with `bubble.html`, decide whether `bubble2` should also drop to the same visible bubble count and app ordering.
+
+## Task title
+Build bubble2 page from bubble-2 reference
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new standalone `bubble2` page that translates `ref/bubble-2.jsx` into the repo’s vanilla HTML/CSS/JS stack.
+- Implemented the reference interaction model in `src/bubble2-page.js`:
+  - orb press toggles the field open
+  - pointer movement drives proportional camera pan
+  - nearby bubbles magnify and gently push apart
+  - pill bubbles expand with copy on stable hover
+  - badge and sub-icon overlays match the reference behavior
+- Added dedicated `bubble2` page styling in `src/styles/bubble2-page.css`.
+- Wired `/bubble2` and `bubble2.html` through `server.mjs` without changing the existing `bubble` page.
+
+## Files changed
+- `bubble2.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+- `server.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `curl -I http://127.0.0.1:62800/bubble2`
+- Playwright browser verification on `http://127.0.0.1:62800/bubble2`
+  - page loaded successfully
+  - rendered 10 bubble items
+  - orb mouse press changed the first bubble opacity from `0` to `0.393036`
+  - orb background changed from `rgb(218, 214, 229)` to `rgb(203, 197, 215)`
+
+## Remaining issues / caveats
+- The new page intentionally uses the reference’s remote image URLs, so visual fidelity depends on network access to those assets.
+- This is a standalone page and is not linked from the existing prototype surfaces yet.
+
+## Recommended next step
+1. If this page should be discoverable from existing demos, add a navigation entry or launch link from the relevant prototype surface.
+
+## Task title
+Original Edge Pan Safety Range Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the original edge-avoidance panning logic in `src/bubble-page.js`.
+- Increased `PAN_MARGIN_PX` from `35` to `70` so hovered items near the canvas edge are pulled farther inward and read closer to center.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This is still edge-triggered panning, not full centering; items already comfortably inside the safe bounds will not move.
+
+## Recommended next step
+1. If this feels too strong or too weak, tune `PAN_MARGIN_PX` up or down without changing the rest of the pan logic.
+
+## Task title
+Child Chip Padding And Stack Gap Update
+
+## Completion status
+- Completed
+
+## Summary
+- Increased chip padding to `14px` top/bottom and `16px` left/right.
+- Increased chip height to `48px` so the larger padding fits the current `20px` text cleanly.
+- Updated chip width measurement to use the new `16px` horizontal padding.
+- Normalized GPT and Gemini chip stack spacing to an exact `10px` vertical gap between chips.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The stack normalization preserves the top chip anchor and repositions lower chips beneath it.
+
+## Recommended next step
+1. If the whole chip branch should move after the new padding change, adjust only the first chip seed per branch and let the stack normalization place the rest.
+
+## Task title
+Child Chip Parent Clearance And Idle Shadow Tuning
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the ChatGPT middle chip label from `Explain something` to `Explain this`.
+- Reworked chip branch placement so chip layouts get an additional geometric rect-vs-circle clearance offset from the parent bubble instead of only a fixed center offset.
+- Dimmed the default chip container inner shadow so the idle state reads less bright.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The final chip branch spacing still depends on the seeded Figma offsets plus the computed parent-clearance offset.
+
+## Recommended next step
+1. If the top and bottom GPT chips should also sit farther from the parent bubble, increase `CHILD_CHIP_PARENT_GAP` or tune their individual `layoutLeft` / `layoutTop` seeds.
+
+## Task title
+Child Chip Typography And Parent Gap Adjustment
+
+## Completion status
+- Completed
+
+## Summary
+- Increased GPT and Gemini child chip text from `16px` to `20px`.
+- Increased chip height to `40px` so the larger text fits cleanly.
+- Added a `10px` outward offset from the parent bubble for chip branches so the chips no longer touch the parent bubble.
+- Updated chip width measurement to use the new `20px` DM Sans size.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The chip branch still uses per-chip Figma offset seeds; the new parent gap is applied on top of those values.
+
+## Recommended next step
+1. If the visual gap should vary by branch, adjust `CHILD_CHIP_PARENT_GAP` per layout instead of globally.
+
+## Task title
+ChatGPT And Gemini Child Chip Conversion
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced ChatGPT child action bubbles with text chips based on Figma node `493:68`.
+- Replaced Gemini child action bubbles with text chips based on Figma node `493:113`.
+- Added chip-specific child rendering, sizing, and rectangular hit-testing while preserving the existing child reveal/collapse motion.
+- Added explicit Figma-derived chip offsets for the ChatGPT and Gemini child layouts so they no longer use the circular fan geometry.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Figma MCP `get_design_context` and `get_screenshot` for nodes `493:68` and `493:113`
+
+## Remaining issues / caveats
+- Chip widths are measured from the current DM Sans font metrics in code, so they will track the live font rather than hardcoded screenshot widths.
+
+## Recommended next step
+1. If the chip branch spacing still needs tuning, do a visual pass against the live page and adjust the per-chip `layoutLeft` / `layoutTop` offsets only.
+
+## Task title
+SVG Asset MIME Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed static SVG serving in `server.mjs` by adding an explicit `.svg` MIME type.
+- This corrects the loading issue for `assets/run.svg`, which is already used by the health child bubble.
+- Restarted the local `server.mjs` process on port `8791` so the MIME fix is active in the running app.
+
+## Files changed
+- `server.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `curl -I http://localhost:8791/assets/run.svg`
+  - returned `Content-Type: image/svg+xml; charset=utf-8`
+
+## Remaining issues / caveats
+- None for the SVG path. Other uncommon asset types will still use the fallback MIME unless explicitly added later.
+
+## Recommended next step
+1. Reload the bubble page and confirm the health run icon now renders from `assets/run.svg`.
+
+## Task title
+Child Bubble Size Unification And Maps Icon Color
+
+## Completion status
+- Completed
+
+## Summary
+- Confirmed ChatGPT’s previous child bubble size was `56px`.
+- Updated `src/bubble-page.js` so all child bubbles now use a fixed `56px` size.
+- Changed the Google Maps home child icon color to white.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The older scale-based child size constants remain in the file but are no longer used by the sizing function.
+
+## Recommended next step
+1. If you want, I can do a small cleanup pass to remove the now-unused scale-based child-size constants.
+
+## Task title
+ChatGPT And Gemini Pill Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed pill expansion from ChatGPT in `src/bubble-page.js`.
+- Removed pill expansion from Gemini in `src/bubble-page.js`.
+- Moved the Gemini bubble down by `10px` in the resting layout.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The ChatGPT and Gemini copy strings remain in config but are now unused because those bubbles no longer enter pill state.
+
+## Recommended next step
+1. If those copy fields are no longer needed, remove them in a separate cleanup pass rather than mixing cleanup into behavior changes.
+
+## Task title
+Spotify Pause Icon Color Override
+
+## Completion status
+- Completed
+
+## Summary
+- Added a per-bubble trailing action color override in `src/bubble-page.js`.
+- Set Spotify’s pause icon color to `#1ED760`.
+- Updated `.bubble-pill-action` in `src/styles/bubble-page.css` to read from `--pill-action-color` instead of a hardcoded white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- JS/CSS config-only change
+
+## Remaining issues / caveats
+- Other pill trailing icons still default to white unless a color override is provided.
+
+## Recommended next step
+1. If more pills need custom action colors, add `pillTrailingIconColor` per bubble rather than branching in CSS.
+
+## Task title
+Orb Layer Order Update
+
+## Completion status
+- Completed
+
+## Summary
+- Moved the orb behind the bubble stack in `src/styles/bubble-page.css`.
+- Set `.bubble-pan-layer` to `z-index: 1`.
+- Set `.bubble-orb` to `z-index: 0`.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change; no JS syntax impact
+
+## Remaining issues / caveats
+- Interaction behavior is unchanged; this only affects visual stacking order.
+
+## Recommended next step
+1. If any bubble-adjacent element still appears under the orb, adjust that specific element’s z-index rather than raising the orb again.
+
+## Task title
+Long-Press Orb Growth And Blur Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the pressed orb behavior in `src/bubble-page.js` so long press scales the orb up to `120px` instead of shrinking it.
+- Updated the pressed orb behavior in `src/bubble-page.js` so long press scales the orb up to `110px`.
+- Added explicit orb size constants:
+  - base size: `80px`
+  - pressed size: `110px`
+- Updated the pressed orb blur in `src/styles/bubble-page.css` to `30px`.
+- Removed the dark outer orb shadow / outline.
+- Restored the pressed-state inner shadow / inset light layer using `#EFFAE9`.
+- Updated the orb anchor box in `src/styles/bubble-page.css` to keep the orb centered at the same canvas position with the larger base size.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The orb still retains its default non-pressed shell styling; only the pressed-state visual treatment changed.
+
+## Recommended next step
+1. If the enlarged orb now feels too dominant, tune only the pressed size constant before changing blur again.
+
+## Task title
+Standard Pill Size Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the forced shared expanded pill size behavior from `src/bubble-page.js`.
+- Expanded pills now return to using each bubble’s own width and height instead of the temporary fixed `80px` base.
+- Reverted the temporary per-pill badge scaling/offset scaling that was only needed for the forced standard size.
+- Kept the separate animation improvements intact.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pills still use the shared inset icon scale of `0.8`; only the forced common base size was removed.
+
+## Recommended next step
+1. If any specific pill still needs tuning, adjust that bubble’s own size or text padding rather than reintroducing a global forced pill size.
+
+## Task title
+Pill Inner Bubble Timing Sync
+
+## Completion status
+- Completed
+
+## Summary
+- Updated `.bubble-icon-wrap` in `src/styles/bubble-page.css` so its transform transition matches the pill shell resize timing exactly.
+- Changed inner bubble transform timing from `260ms` to `300ms` to align with the pill container’s width/height animation.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change; no JS syntax impact
+
+## Remaining issues / caveats
+- This syncs the inner bubble with the pill shell resize only. Push/pan timing remains separate.
+
+## Recommended next step
+1. If any remaining mismatch is visible, compare the pill copy fade/slide timing next rather than retuning the bubble scale again.
+
+## Task title
+Centered Standardized Pill Bubble Scaling
+
+## Completion status
+- Completed
+
+## Summary
+- Updated standardized pill scaling so the bubble graphic shrinks using its center as the anchor instead of visually collapsing from the top-left.
+- Kept the original bubble graphic box during expansion, then offset it into the standard `80px` pill slot and scale it down to the standard `64px` visual size.
+- Added `left` and `top` transitions to `.bubble-icon-wrap` so the centered offset animates smoothly.
+- Preserved the existing smooth height transition and badge-resize behavior from the previous pass.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The pill geometry is still driven by the shared expanded pill standard; this change fixes the anchor and transition behavior only.
+
+## Recommended next step
+1. If the resize still feels off, the next lever is the icon-wrap transition duration rather than the standardized pill dimensions.
+
+## Task title
+Standardized Expanded Pill Size
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the default pill icon-to-text gap in `src/bubble-page.js` from `10px` to `6px`.
+- Standardized all expanded pill-capable bubbles to the same shell size used by the current GPT/Gemini pills:
+  - expanded pill bubble base size: `80px`
+  - inset bubble visual size: `64px` via `0.8` scale
+- Updated expanded pill width calculation so the shell width is based on `80px + text width`, not the original bubble size.
+- Scaled bottom-right sub-icon size and offsets proportionally during pill expansion so larger original bubbles still collapse into the standard pill geometry cleanly.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the expanded pill state. Resting bubble sizes and positions are unchanged.
+
+## Recommended next step
+1. If any individual pill still feels oversized, tune its text padding or copy length rather than breaking the shared pill-size standard.
+
+## Task title
+Image Child Bubble Shell Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Updated child bubble rendering in `src/bubble-page.js` so image-based child actions opt out of the glass container shell.
+- Disabled the selected-state overlay for image child bubbles.
+- Let image child bubbles fill the circle directly by removing the icon-wrap inset scale.
+- Removed child shell background, glow, and border pseudo-elements for image children in `src/styles/bubble-page.css`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Functional icon child bubbles still use the glass container and selected-state treatment.
+
+## Recommended next step
+1. If image child bubbles need a different hover treatment later, add it separately without reintroducing the glass shell.
+
+## Task title
+Pill Width Measurement Tightening
+
+## Completion status
+- Completed
+
+## Summary
+- Updated pill width measurement in `src/bubble-page.js` to match the live pill typography styles.
+- Changed title measurement from `600 24px` to `600 22px`.
+- Changed subtitle measurement from `500 24px` to `400 18px`.
+- Reduced the extra width buffer from `6px` to `2px` so pill shells fit the text more tightly.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pill width is still intentionally based on the longer of title or subtitle plus the configured left/right padding.
+
+## Recommended next step
+1. If any single pill still feels too wide, tune that bubble’s text padding rather than loosening the shared measurement again.
+
+## Task title
+Pill Typography Size Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated shared pill typography in `src/styles/bubble-page.css`.
+- Set pill titles to `22px`.
+- Set pill subtitles to `18px`.
+- Reduced subtitle weight from `500` to `400`.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change; no JS syntax impact
+
+## Remaining issues / caveats
+- This applies to pill title/subtitle text. Other text like the calendar date and icon glyph sizes are unchanged.
+
+## Recommended next step
+1. If any individual pill now feels too compressed, retune its spacing or width rather than raising the shared font sizes again.
+
+## Task title
+ChatGPT And Gemini Pill Content Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated ChatGPT’s pill copy in `src/bubble-page.js` to:
+  - title: `Continue`
+  - subtitle: `Book flight to Coachella`
+- Updated Gemini to match ChatGPT’s bubble size at `80x80`.
+- Promoted Gemini to a pill bubble and set its copy to:
+  - title: `Ready`
+  - subtitle: `Where should we start?`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Gemini’s geometry position was preserved; only its size and pill content changed.
+
+## Recommended next step
+1. If Gemini’s larger size now needs a composition adjustment, retune only its `x`/`y` position in a separate pass.
+
+## Task title
+Spotify Cover Outline Visibility Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Moved the Spotify cover’s inset green outline from the image element to the icon wrapper in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- The outline now renders on the visible clipped surface layer instead of being lost on the scaled image.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The outline thickness is still controlled by Spotify bubble `7`’s `imageOutlineWidth` config value.
+
+## Recommended next step
+1. If the green ring is still too subtle, increase only `imageOutlineWidth` for bubble `7`.
+
+## Task title
+ChatGPT Bubble Rotation Adjustment
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the ChatGPT bubble rotation in `src/bubble-page.js` from `4deg` to `-4deg`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the resting/rendered angle. Interaction behavior and pill expansion are unchanged.
+
+## Recommended next step
+1. If you are still tuning composition by eye, keep future angle adjustments isolated to config values so they remain easy to revert.
+
+## Task title
+Pill Icon-To-Text Gap Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the default pill text left padding in `src/bubble-page.js` from `16px` to `10px`.
+- Updated profile 2’s pill-specific left padding override from `20px` to `10px` so it matches the new pill spacing.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes the measured pill width too, because the text-width calculation uses the same left padding value.
+
+## Recommended next step
+1. If any individual pill now feels too tight, add a per-bubble left padding override instead of increasing the global default again.
+
+## Task title
+ChatGPT Bubble Rotation Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the ChatGPT bubble rotation in `src/bubble-page.js` from `-9.16deg` to `4deg`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the resting/rendered angle. Interaction behavior and pill expansion are unchanged.
+
+## Recommended next step
+1. If you want the angle to match Figma exactly again later, re-pull the node after the next geometry change instead of stacking manual tweaks.
+
+## Task title
+Profile 2 Badge Swap And Spotify Cover Outline
+
+## Completion status
+- Completed
+
+## Summary
+- Removed profile 2’s trailing pill call icon from `src/bubble-page.js`.
+- Added a bottom-right `call-badge` sub-icon to profile 2 instead.
+- Added a Spotify-specific inset outline on the main album cover using `#1ED760`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The Spotify cover outline is implemented as an inset box-shadow on the cover image layer, so its perceived thickness depends on the cover scale and border clipping.
+
+## Recommended next step
+1. If the Spotify outline reads too thin or too thick in-browser, tune only `imageOutlineWidth` on bubble `7`.
+
+## Task title
+Red Accent Color Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the red note-related icon color to `#FF5252`.
+- Changed the note child action foregrounds in `src/bubble-page.js` from `#ff1d1d` to `#ff5252`.
+- Changed the fallback `.note-icon` background in `src/styles/bubble-page.css` from `#ff1d1d` to `#ff5252`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The main note bubble currently uses the Figma image asset, so this mainly affects note-related child icon accents and the CSS fallback note graphic.
+
+## Recommended next step
+1. If other red accents should match too, list the specific bubble or child actions to retint rather than broadening all warm colors.
+
+## Task title
+Figma Node 1261:561 Geometry Sync
+
+## Completion status
+- Completed
+
+## Summary
+- Fetched live geometry from Figma MCP for node `1261:561` in file `UfVYVYDJetggVnGNcKt9zx`.
+- Updated `src/bubble-page.js` main bubble sizes and positions to match the current Figma frame for:
+  - weather
+  - maps
+  - health
+  - notes
+  - profile 1
+  - Spotify
+  - ChatGPT
+  - profile 2
+  - Gemini
+- Updated profile and Spotify badge sizes/offsets from the Figma node geometry.
+- Updated orb center and orb size to match the current Figma frame.
+- Updated the orb anchor box in `src/styles/bubble-page.css` to the new Figma position and size.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- numeric layout gap check: minimum main-bubble gap `7.85px`
+
+## Remaining issues / caveats
+- This pass updates geometry only. Existing app assets, copy, and interaction behavior were preserved even where the current Figma screenshot uses different content.
+
+## Recommended next step
+1. If you want full 1:1 parity with the current Figma frame, update the content assets and text for any bubbles that intentionally differ from the screenshot.
+
+## Task title
+Pill Sub-Icon Inset Scaling
+
+## Completion status
+- Completed
+
+## Summary
+- Updated pill-expansion behavior for bottom-right bubble badges in `src/bubble-page.js`.
+- When a bubble with a bottom-right sub-icon expands into a pill, the sub-icon now scales to `0.8`.
+- Set the sub-icon transform anchor to its top-left corner in `src/styles/bubble-page.css` so the badge stays visually pinned while shrinking.
+- Added a smooth transform transition for the sub-icon.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This applies only to bubbles that render a `subIconKind` badge in the bottom-right.
+
+## Recommended next step
+1. If the badge still feels too large inside the pill, tune only the sub-icon scale value rather than moving its offsets.
+
+## Task title
+Child Highlight Secondary Accent To Black
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the child selected-state accent wiring in `src/bubble-page.js`.
+- Kept the primary accent tied to the child icon color.
+- Changed the secondary accent variable to black:
+  - `--g-stage-selected-secondary-rgb: rgb(0 0 0)`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the child selected-state overlay accent pairing. Other container treatments are unchanged.
+
+## Recommended next step
+1. If the black secondary accent feels too heavy, try a dark neutral instead of pure black without changing the primary accent.
+
+## Task title
+Container Selected-State 1:1 Port
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the previous approximate child selected-state styling with a 1:1 port of the live `index.html` container selected-state implementation from `src/styles/shared.css`.
+- Added the same registered accent properties used by the main prototype stage:
+  - `@property --g-stage-selected-rgb`
+  - `@property --g-stage-selected-secondary-rgb`
+- Matched the child selected overlay to the exact production values for:
+  - transition timings
+  - accent bloom positions and sizes
+  - white hotspot positions and sizes
+  - radial gradient stops
+  - blur radii
+  - inner glow stack
+- Kept the child accent color driven from the child icon color.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass ports the selected-state overlay literally for child containers. Pill containers still use the existing shell treatment and do not mount the selected overlay stack.
+
+## Recommended next step
+1. If you want pill containers to use the same selected overlay too, add the same overlay DOM structure to pill surfaces rather than restyling the current shell.
+
+## Task title
+Pan Duration Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the pan interpolation duration in `src/bubble-page.js` from `1000ms` to `1500ms`.
+- Left pill push timing and other bubble motion durations unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The pan now lags further behind the pill push motion, which still runs at its shorter existing duration.
+
+## Recommended next step
+1. If the separation feels too slow, reduce pan duration slightly rather than coupling it back to push timing.
+
+## Task title
+Long-Press Orb Pressed-State Styling
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the long-press orb state in `src/bubble-page.js` to toggle a pressed class on the orb shell.
+- Changed the orb pressed-state scale target from `0.92` to `0.7`.
+- Added smooth pressed-state styling in `src/styles/bubble-page.css` for:
+  - `blur(20px)` on the orb surface
+  - inset white light using `inset 0 4px 0 40px`
+  - smooth transitions on the orb surface and image layers
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The requested inset shadow value is implemented as CSS `box-shadow: inset 0 4px 0 40px rgba(255, 255, 255, 0.95)`, which is the closest valid CSS form.
+
+## Recommended next step
+1. If the blur feels too heavy on device, reduce it slightly rather than changing the pressed-state scale again.
+
+## Task title
+Push Motion Physics Easing Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Reverted the dedicated push-motion easing change in `src/bubble-page.js`.
+- Restored bubble push/settle transform motion to the shared easing path.
+- Restored JS pan interpolation to:
+  - `cubic-bezier(0.35,0.23,0.13,0.98)`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Push/settle motion and pan are back to the shared interaction easing rather than a dedicated physics-specific curve.
+
+## Recommended next step
+1. If you still want a more physical push feel later, try a subtler dedicated curve and test it against the current shared easing rather than replacing it outright.
+
+## Task title
+Profile 2 Overlay Icon Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the lower-right overlay badge icon from profile 2 in `src/bubble-page.js`.
+- Kept profile 2’s pill text and trailing inbound-call action unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Profile 1 still uses its existing overlay badge icon.
+
+## Recommended next step
+1. If the two profiles should behave consistently, decide whether profile 1 should also lose its overlay badge in a separate pass.
+
+## Task title
+Separate Pan Duration Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Split pan timing from pill push timing in `src/bubble-page.js`.
+- Restored pan interpolation duration to `1000ms`.
+- Left pill movement / push response at `400ms`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pan and pushed-bubble motion now use the same easing curve but different durations.
+
+## Recommended next step
+1. If the separation feels visually disconnected, retune the pan easing or add a slight delay offset in a separate pass.
+
+## Task title
+Shared Pill Easing Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared pill expansion / push / settle easing back to:
+  - `cubic-bezier(0.35,0.23,0.13,0.98)`
+- Matched the JS pan interpolation to the same curve.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The separate reveal overshoot curve is still distinct from this shared interaction easing.
+
+## Recommended next step
+1. If you want all motion to share one curve, replace the reveal overshoot easing separately.
+
+## Task title
+Pill Expansion Duration Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced pill movement / push response duration in `src/bubble-page.js` from `1000ms` to `400ms`.
+- Reduced pill width expansion duration in `src/styles/bubble-page.css` from `400ms` to `300ms`.
+- Left reveal/collapse motion durations unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pill text fade/slide timing is unchanged, so the text may still complete on its own `250ms` / `350ms` timings.
+
+## Recommended next step
+1. If the pill still feels slow, reduce the text slide timing alongside the shell timings in a separate pass.
+
+## Task title
+Faster Pill Push Easing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared pill expansion / push / settle easing to:
+  - `cubic-bezier(0.18,0.35,0.24,0.95)`
+- Applied the same curve to JS-driven pan interpolation so pushed-away motion and camera tracking stay matched.
+- Left the separate bubble reveal overshoot curve unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Reveal and collapse still use their own dedicated transform curves for non-push motion states.
+
+## Recommended next step
+1. If pill expansion still feels late, reduce `PUSH_DURATION_MS` rather than pushing this easing further.
+
+## Task title
+Bubble Reveal And Collapse Duration Split
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main and child bubble motion durations in `src/bubble-page.js` to:
+  - come out: `500ms`
+  - disappear: `400ms`
+- Left push/pan response at `1000ms`.
+- Split fade timing to:
+  - fade in: `400ms`
+  - fade out: `300ms`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Opacity still uses the existing shared fade duration, so the visual fade may outlast the `300ms` collapse movement.
+
+## Recommended next step
+1. If you want collapse to finish visually in `300ms` as well, split fade timing into enter/exit durations in a separate pass.
+
+## Task title
+Shared Pill And Push Easing Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared interaction easing for pill expansion and push/settle motion to:
+  - `cubic-bezier(0.35,0.23,0.13,0.98)`
+- Applied the same easing to JS-driven pan interpolation so camera tracking matches the pill/push motion.
+- Left the separate bubble reveal overshoot curve unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The come-out reveal motion still uses its own dedicated overshoot curve instead of the shared easing.
+
+## Recommended next step
+1. If you want all bubble motion to feel uniform, replace the separate reveal curve with the shared easing in a separate pass.
+
+## Task title
+Faster Bubble Reveal + Stronger Overshoot
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the bubble reveal movement duration in `src/bubble-page.js` from `450ms` to `700ms`.
+- Reduced the bubble reveal overshoot slightly:
+  - `cubic-bezier(0.22, 1.16, 0.3, 1.02)`
+- Collapse hesitation and push/pan timing are unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The collapse hesitation curve is unchanged.
+
+## Recommended next step
+1. If you want enter and exit to feel more unified, retune the collapse curve to a softer counterpart in a separate pass.
+
+## Task title
+Expanded Pill Bubble Inset Scale Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the inner bubble/icon scale inside expanded pill states in `src/bubble-page.js` from `0.9` to `0.8`.
+- This makes hovered pill bubbles read more clearly as nested inside the pill container.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This affects all expanded pill bubbles that use the shared inset-content treatment.
+
+## Recommended next step
+1. If one specific pill should keep a larger inset icon, add a per-bubble pill inset scale override in a separate pass.
+
+## Task title
+Bubble Enter Overshoot + Exit Hesitation
+
+## Completion status
+- Completed
+
+## Summary
+- Added a subtle overshoot easing curve to bubble reveal motion in `src/bubble-page.js`.
+- Added a slight back-in / hesitation easing curve to bubble collapse motion.
+- Applied the same reveal/collapse easing treatment to child bubbles.
+- Left hover push/pan physics on the existing standard easing.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The easing is applied via inline transition timing functions on the transform property, while width/opacity/filter still use the default bubble easing.
+
+## Recommended next step
+1. If you want the anticipation to be stronger, increase the negative y value in `BUBBLE_EXIT_EASE` slightly rather than extending the duration.
+
+## Task title
+Profile 2 Pill Spacing Override
+
+## Completion status
+- Completed
+
+## Summary
+- Added per-bubble pill spacing overrides in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- Set profile 2’s text-left padding to `20px`.
+- Set profile 2’s trailing inbound-call icon offset from the right edge to `20px`.
+- Left the default pill spacing unchanged for other bubbles.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The profile-specific spacing uses inline CSS variables on the pill copy/action elements.
+
+## Recommended next step
+1. If more bubble-specific pill spacing variants are needed, promote these overrides into named modifier classes instead of inline variables.
+
+## Task title
+Bubble Stagger Emphasis Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the main bubble stagger step in `src/bubble-page.js` from `0.02s` to `0.035s`.
+- Increased the child bubble stagger step in `src/bubble-page.js` from `0.028s` to `0.042s`.
+- Left the underlying movement and fade durations unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This makes ordering more obvious but also slightly increases the total visible reveal/collapse window across a full set.
+
+## Recommended next step
+1. If you want even more separation, increase only the main bubble stagger further and leave child stagger as-is to avoid over-dramatizing the submenus.
+
+## Task title
+Pill Copy Vertical Gap Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the shared pill title/subtitle gap in `src/styles/bubble-page.css` from `2px` to `4px`.
+
+## Files changed
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Visual CSS-only change
+
+## Remaining issues / caveats
+- This affects all pill bubbles, not just a single app/profile pill.
+
+## Recommended next step
+1. If only one pill type should have different copy spacing, split the pill copy layout into per-bubble modifier classes.
+
+## Task title
+Profile 2 Trailing Call Icon Size Override
+
+## Completion status
+- Completed
+
+## Summary
+- Added per-bubble trailing pill action sizing in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- Set profile 2’s inbound-call trailing icon to `24px`.
+- Kept Spotify’s pause action at `40px`.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Pills with trailing actions still share the same reserved text padding unless further tuned per bubble.
+
+## Recommended next step
+1. If you want profile 2’s text block to reclaim the unused space from the smaller icon, make action padding dynamic per bubble in a separate pass.
+
+## Task title
+Child Bubble Minimum Size Floor Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the minimum child bubble size floor in `src/bubble-page.js` from `40px` to `50px`.
+- Child bubbles still scale at `0.7` of the parent size above that floor.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This affects only the lower bound. Larger child bubbles still follow the same parent-relative scaling rule.
+
+## Recommended next step
+1. If the larger floor makes tight branches feel crowded, retune sibling gap or fan distance in a separate pass.
+
+## Task title
+Profile 2 Subtitle + Inbound Call Action
+
+## Completion status
+- Completed
+
+## Summary
+- Updated profile 2’s pill subtitle to `Yesterday`.
+- Added a trailing pill action for profile 2 using Bootstrap Icons:
+  - `bi-telephone-inbound-fill`
+- Reused the same right-side pill action slot and styling used by the Spotify pause icon.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Profile 2 still uses the existing pill layout geometry and spacing reserved for trailing actions.
+
+## Recommended next step
+1. If the inbound-call icon should have a different color or size than Spotify’s pause icon, split pill action styling by action type in a separate pass.
+
+## Task title
+Profile Action Bootstrap Icon Swap
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the profile child action icons in `src/bubble-page.js` to the requested Bootstrap filled variants:
+  - call -> `bi-telephone-fill`
+  - chat -> `bi-chat-fill`
+  - video -> `bi-camera-video-fill`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- These icons use the existing Bootstrap Icons font dependency already loaded by `bubble.html`.
+
+## Recommended next step
+1. If you want the profile actions to differ between profile 1 and profile 2, split their child action arrays in a separate pass.
+
+## Task title
+Child Bubble Minimum Size Clamp
+
+## Completion status
+- Completed
+
+## Summary
+- Added a minimum child bubble size floor in `src/bubble-page.js`.
+- Child bubbles still scale at `0.7` of the parent bubble, but they now never render below `40px`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This affects only the lower bound. Larger child bubbles still follow the existing parent-scale rule.
+
+## Recommended next step
+1. If you want tighter visual consistency, add a maximum child bubble size cap in a separate pass.
+
+## Task title
+Profile 2 Incoming Call Pill
+
+## Completion status
+- Completed
+
+## Summary
+- Changed profile 2 to a pill-capable incoming call state in `src/bubble-page.js`.
+- Added profile 2 pill copy:
+  - title `Hiro`
+  - subtitle `Incoming call, 12:37`
+- Replaced profile 2’s overlay icon with the provided call badge asset from Microsoft Store.
+- Softened pill subtitle color in `src/styles/bubble-page.css` to a slightly gray white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The new profile 2 call state reuses the existing pill behavior and geometry rather than a dedicated incoming-call layout variant.
+
+## Recommended next step
+1. If you want profile 2’s incoming-call state to feel more specific, add a dedicated trailing accept/decline action layout in a separate pass.
+
+## Task title
+Child Action Icon Mapping Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated ChatGPT child actions to:
+  - compose -> Bootstrap `bi-pencil-square`
+  - voice -> Bootstrap `bi-mic-fill`
+  - summarize -> existing star icon kept
+- Updated Google Maps child actions to:
+  - home -> Bootstrap `bi-house-door-fill`
+  - work -> Bootstrap `bi-suitcase-lg-fill`
+- Updated Gemini child actions so the second action is now a microphone instead of a pencil.
+- Updated Health child actions to:
+  - heart -> Bootstrap `bi-heart-fill` in pink
+  - water -> Bootstrap `bi-droplet-fill` in blue
+  - run -> local asset `assets/run.svg`
+- Added CSS support for Bootstrap-icon-based child actions alongside the existing SVG/icon-image paths.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Bootstrap-icon child actions use a fixed `1.75rem` font size, while image-based child actions still size via the image wrapper.
+
+## Recommended next step
+1. If you want stricter size parity between icon-font children and image/SVG children, move icon-font sizing to a per-bubble CSS variable driven from JS.
+
+## Task title
+Design.md Prototype Shell Applied To Bubble Containers
+
+## Completion status
+- Completed
+
+## Summary
+- Read `/Users/ariax/.codex/worktrees/02b2/GenUI/design.md` and updated pill and child bubble containers to use that prototype shell treatment.
+- Moved pill container styling away from inline JS fill/stroke overrides and into CSS-driven shell styling.
+- Applied the `design.md` shell characteristics to pill and child containers:
+  - transparent base
+  - soft outer bloom
+  - masked 1px gradient border
+  - inner white wash / glow layer
+- Kept pill text white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The child shell still keeps its extra outer drop shadow in addition to the prototype shell bloom.
+
+## Recommended next step
+1. If you want an even stricter match to `design.md`, remove the extra child drop shadow and rely only on the shell bloom.
+
+## Task title
+Child Bubble Icon Disc Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the inner white circular background from functional child bubble icons.
+- Kept only the outer Figma-style child container shell.
+- Switched child icon rendering to transparent inner backgrounds and normalized dark icon colors to white so they remain visible on the darker shell.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Image-based child bubbles such as Spotify playlist covers still render as images rather than icon glyphs, so this change mainly affects the functional-icon children.
+
+## Recommended next step
+1. If any specific child icon still feels too dim, tune its `fg` color in the bubble config rather than reintroducing an inner background.
+
+## Task title
+Figma Prototype Container Style Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the previous white-shell pill/container styling with the Figma node `484:52` treatment for both pill bubbles and child bubble containers.
+- Applied these container values:
+  - border `1px solid rgba(255,255,255,0.36)`
+  - background `rgba(255,255,255,0.05)`
+  - inset shadow `0 0 20px rgba(255,255,255,0.15)`
+- Restored pill text and trailing action color to white.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Child bubbles still keep the existing outer drop shadow in addition to the new Figma-style inset shell.
+
+## Recommended next step
+1. If you want the shell to match Figma even more tightly, remove or retune the extra outer drop shadow on child containers.
+
+## Task title
+Spotify Pause Control Size Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the Spotify pill pause control to `40px`.
+- Expanded the reserved right-side padding for pills with trailing actions so the larger pause icon does not collide with text.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The larger pause icon is still positioned with the existing `right: 18px` offset.
+
+## Recommended next step
+1. If the larger icon feels too close to the pill edge, increase the right offset in a separate pass.
+
+## Task title
+Prototype-Style Pill And Child Containers
+
+## Completion status
+- Completed
+
+## Summary
+- Updated pill containers to a white prototype-style shell in `src/bubble-page.js` and `src/styles/bubble-page.css`.
+- Changed pill text and action colors to dark values so they remain legible on the white container.
+- Updated child bubble containers to use the same white shell treatment.
+- Scaled the inner content of child bubbles down to `0.88` so the white container remains visible around the edge.
+- Scaled the inner bubble content of expanded pill bubbles down to `0.9` so the bubble appears inset inside the pill container.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass changes the visual treatment of all pill containers, not just Spotify.
+
+## Recommended next step
+1. If the white container feels too flat, add a subtle outer stroke or shadow tuned against the black canvas in a separate pass.
+
+## Task title
+Bootstrap Pause Icon In Spotify Pill
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the Spotify pill pause glyph with the requested Bootstrap Icons markup:
+  - `<i class="bi bi-pause-fill"></i>`
+- Added the Bootstrap Icons stylesheet to `bubble.html`.
+- Set the trailing pause control to `24 x 24` in `src/styles/bubble-page.css`.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The pause icon now depends on the Bootstrap Icons CDN being reachable in the browser.
+
+## Recommended next step
+1. If external icon font dependency is a concern, replace the Bootstrap Icon with a local asset or inline SVG in a separate pass.
+
+## Task title
+Non-Pill Hover Stroke
+
+## Completion status
+- Completed
+
+## Summary
+- Added a white hover stroke for main bubbles that are not pills.
+- Applied the stroke on the bubble surface layer so it follows the circular shape cleanly and does not affect pill bubbles.
+- Added a short box-shadow transition for smoother stroke appearance.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The stroke is currently `2px` white inset and applies only to hovered non-pill main bubbles, not child bubbles.
+
+## Recommended next step
+1. If you want the stroke to feel softer, reduce opacity or add a subtle outer glow in a separate pass.
+
+## Task title
+Spotify Pill Spacing + Pause Action
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main Spotify bubble image in `src/bubble-page.js` to:
+  - `https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3`
+- Changed Spotify pill copy to:
+  - title `Happiness`
+  - subtitle `1975`
+- Set pill title/subtitle spacing to an explicit `2px` gap.
+- Added a right-aligned pause icon inside the Spotify pill, vertically centered.
+- Updated the bottom-right Spotify badge overlay to use the provided Spotify icon image asset.
+- Added a bubble-specific hover exception so Spotify does not scale up while hovered when it expands into a pill.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The Spotify badge is still custom CSS rather than an image asset, so it is visually aligned with the existing badge system rather than pixel-matched to a sourced icon file.
+
+## Recommended next step
+1. If you want the badge to match a specific Spotify icon asset exactly, provide that asset and swap it into the `spotify-badge` renderer.
+
+## Task title
+Hovered App Scale + Sibling Fade Tuning
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main bubble hover state in `src/bubble-page.js` so the active app bubble scales to `1.1`.
+- Added a soft fade for non-hovered main bubbles while a bubble is hovered:
+  - sibling opacity `0.9`
+- Kept the stronger branch dimming behavior unchanged when a child menu is open.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Child bubble hover scale remains `1.08`.
+
+## Recommended next step
+1. If the larger hover state starts crowding nearby pills, retune push strength or default bubble gap in a separate pass.
+
+## Task title
+Child Fan Sibling Gap Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the spacing logic between sibling child bubbles in `src/bubble-page.js`.
+- Replaced the fixed fan-angle presets with a size-aware angle calculation based on child diameter, fan radius, and a required edge gap.
+- Added `CHILD_SIBLING_GAP = 14` so adjacent child bubbles keep visible separation instead of touching at the edges.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass guarantees separation mathematically in the fan layout, but it does not retune branch placement against the outer canvas edge.
+
+## Recommended next step
+1. If branches now feel too wide near the frame edge, reduce `CHILD_BUBBLE_SCALE` or make `CHILD_FAN_DISTANCE` adaptive by child count.
+
+## Task title
+Parent-Scaled Child Bubble Sizing
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the fixed child bubble size with a parent-relative rule in `src/bubble-page.js`.
+- Child bubbles now render at `0.7` of their parent bubble's larger dimension instead of using a shared static size.
+- Updated both fan-out layout math and child render sizing to use the per-parent computed size so spacing, collision, and animation stay consistent.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Child branch spacing still uses the existing fixed `CHILD_FAN_DISTANCE` and `CHILD_LAYOUT_GAP`, so very large parents will produce noticeably larger child branches.
+
+## Recommended next step
+1. If the larger branches feel too loose on the biggest parent bubbles, scale `CHILD_FAN_DISTANCE` by parent size as a separate pass.
+
+## Task title
+Figma Geometry + Bootstrap Child Icon Pass
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main bubble positions and sizes in `src/bubble-page.js` from Figma node `1261:561` geometry rather than the previous screenshot-tuned values.
+- Kept the two profile bubbles on local assets:
+  - bubble `5` -> `assets/profile1.png`
+  - bubble `9` -> `assets/profile2.png`
+- Updated the shell dimensions and orb anchor in CSS to the Figma frame/orb values:
+  - canvas `420 x 410.337`
+  - orb anchor `left: 173.999725`, `top: 332.144043`, `size: 73 x 72`
+- Swapped the orb visual in `bubble.html` to the Figma orb asset so the resting orb matches the current bubble layout source.
+- Changed the health pill copy so it only shows the step text:
+  - title `10,243 steps`
+  - no subtitle
+- Updated Spotify child bubbles to the requested playlist covers:
+  - `https://misc.scdn.co/liked-songs/liked-songs-300.jpg`
+  - `https://www.indieground.net/images/blog/2024/indieblog-best-album-covers-2010s-07.jpg`
+  - `https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg`
+- Replaced child action icon markup with Bootstrap-style filled SVG icons.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `bubble.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- `curl -I http://localhost:8791/bubble`
+
+## Remaining issues / caveats
+- This pass uses the Figma MCP geometry and asset URLs already fetched for node `1261:561`, but I did not run an automated visual diff against the Figma screenshot in this turn.
+- Main bubble icons are still image assets from Figma or local files where requested. The Bootstrap filled-icon swap applies to the child action bubbles.
+
+## Recommended next step
+1. If a stricter visual pass is needed, run a screenshot comparison against the current Figma node and nudge any remaining sub-pixel offsets in the main bubble coordinates.
+
+## Task title
+Screenshot-Matched Bubble Size + Position Pass
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the main bubble layout to match the latest provided screenshot rather than the earlier calendar-based composition.
+- Applied explicit screenshot-matched width mapping for the visible app bubbles:
+  - note `64`
+  - map `90`
+  - weather `104`
+  - left profile `102`
+  - health `72`
+  - spotify `98`
+  - chatgpt `90`
+  - right profile `94`
+  - gemini `56`
+- Repositioned the visible bubbles to the screenshot composition and removed the calendar bubble from the rendered set because it is not present in the screenshot reference.
+- Kept the two profile bubbles on local assets:
+  - bubble `5` -> `assets/profile1.png`
+  - bubble `9` -> `assets/profile2.png`
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Numeric layout validation for the screenshot-matched geometry
+  - no overlaps
+  - smallest remaining gap: `2.24px` between bubbles `4` and `9`
+- Browser validation on `http://localhost:8791/bubble`
+  - rendered main bubble IDs are `2,3,4,5,6,7,8,9,10`
+  - bubble `5` uses `assets/profile1.png`
+  - bubble `9` uses `assets/profile2.png`
+
+## Remaining issues / caveats
+- This pass uses the user-provided screenshot as the source of truth. Since the reference is a raster image, the result is a manual geometry match rather than a fresh Figma-node extraction.
+
+## Recommended next step
+1. If you want another accuracy pass, provide a fresh screenshot after reviewing the current composition and I can tune the remaining small gaps bubble-by-bubble.
+
+## Task title
+Local Profile Asset Swap + Resting Layout Separation
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the two profile bubbles with local repo assets:
+  - bubble `5` now uses `assets/profile1.png`
+  - bubble `9` now uses `assets/profile2.png`
+- Kept the existing Figma-derived bubble composition as the base layout and applied a minimal position correction to bubble `8` so resting bubbles no longer overlap or touch.
+- Preserved the rest of the page behavior and child-bubble interactions.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Numeric layout validation on the normalized bubble geometry
+  - no resting overlaps
+  - smallest remaining gap was `7.29px` between bubbles `9` and `10`
+- Browser validation on `http://localhost:8791/bubble`
+  - bubble `5` image source resolved to `assets/profile1.png`
+  - bubble `9` image source resolved to `assets/profile2.png`
+
+## Remaining issues / caveats
+- Figma MCP was rate-limited on this pass, so I could not fetch fresh node geometry or screenshots. The update uses the existing Figma-derived layout already in the page and adjusts it minimally to keep clean separation.
+
+## Recommended next step
+1. If you want a stricter second pass against the live Figma node once the MCP limit resets, re-run the layout with fresh geometry and compare the current non-overlapping positions to the exact node coordinates.
+
+## Task title
+Exact Main Bubble Width Mapping
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced range-based main bubble normalization with explicit per-bubble target widths.
+- Main app bubble widths now map exactly to: `73, 73, 100, 100, 100, 73, 100, 100, 100, 62`.
+- Heights and attached sub-icons still scale proportionally from each bubble's original dimensions.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This is now an explicit width map for the current ten bubbles, not a generic normalization rule.
+
+## Recommended next step
+1. If more main bubbles are added later, extend `TARGET_BUBBLE_WIDTHS` for each new bubble instead of reintroducing a global size range implicitly.
+
+## Task title
+Main Bubble Size Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the main app bubble normalization range to the previous `55–80px`.
+- Left child bubble size, dwell timing, and fan-out behavior unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only main app bubble normalization. It does not retune coordinates or child branch spacing after the size shift.
+
+## Recommended next step
+1. If the restored main bubble size changes composition balance, adjust coordinates or fan-out spacing rather than bypassing normalization.
+
+## Task title
+Child Menu Dwell Reduction + Main Bubble Size Revert
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced child-menu dwell activation from `5s` to `3s`.
+- Restored the main bubble size normalization range from `55–80px` back to `40–100px`.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Restoring the larger main-bubble range changes the overall layout density again, so child branches may feel slightly roomier than in the previous pass.
+
+## Recommended next step
+1. If you meant child bubble size instead of main bubble size, change `CHILD_BUBBLE_SIZE` separately without touching the main normalization range.
+
+## Task title
+Child Parent Gap Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the parent-to-child fan-out distance so child bubbles now target a `20px` edge gap from their parent.
+- Kept the current `50px` child bubble size and the same branch behavior.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Increasing the parent-child gap changes branch spread and may require a visual retune if some child menus now sit too close to neighboring bubbles.
+
+## Recommended next step
+1. If any branch now collides with nearby bubbles too early, increase fan angle spread before increasing repulsion strength.
+
+## Task title
+Main Bubble Size Range Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated main bubble size normalization from `40–100px` to `55–80px`.
+- Kept the same data-driven normalization path, so bubble assets and sub-icons still scale from the shared config.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Tightening the max size changes the overall composition density, so some child branches or pill layouts may need a visual retune if they now feel too close.
+
+## Recommended next step
+1. If spacing now feels compressed, tune bubble coordinates or fan-out spacing rather than bypassing the normalization layer.
+
+## Task title
+Child Parent Gap Reduction
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the parent-to-child fan-out distance so child bubbles now target a `10px` edge gap from their parent.
+- Kept the current `50px` child bubble size and the same fan-out / push-away behavior.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The geometric gap now targets `10px`, but visual spacing can still read slightly tighter or looser depending on scale and image crop.
+
+## Recommended next step
+1. If the child branch still feels crowded, increase the fan angle spread before increasing the parent-child distance again.
+
+## Task title
+Child Bubble Size Increase
+
+## Completion status
+- Completed
+
+## Summary
+- Increased child bubble size from `30px` to `50px` by updating the shared child size constant.
+- Kept the same child fan-out interaction, physics integration, and app-specific child content.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Larger child bubbles increase branch density, so some fan-out layouts may need spacing retuning in a later visual pass.
+
+## Recommended next step
+1. If any child branches now feel crowded, increase `CHILD_FAN_DISTANCE` or `CHILD_LAYOUT_GAP` rather than hardcoding per-app offsets.
+
+## Task title
+Context Child Bubble Fan-Out
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new dwell interaction: after `5s` of stable hover on a bubble, a data-driven branch of `2-4` small `30px` child bubbles fans out from that bubble.
+- Child bubbles are app-related actions:
+  - Spotify opens playlist-cover bubbles
+  - Google Maps opens `home` and `work`
+  - profile bubbles open `call`, `message`, and `video`
+  - other app bubbles use matching action icons
+- Active child branches push the rest of the app bubbles away through the same layout/physics system and dim unrelated bubbles.
+- Hovering onto a child bubble keeps the branch open. Leaving both the parent bubble and its child area collapses the branch and hides the children.
+- When a child branch is open on a pill-capable bubble, the pill yields to the child menu so the layout stays clean.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - hovering Spotify for `5s` opened `7:playlist-1`, `7:playlist-2`, and `7:playlist-3`
+  - unrelated bubbles dimmed (`dimmedCount: 9`)
+  - leaving the branch collapsed the child bubbles (`visibleChildren: []`)
+  - moving from Spotify onto `7:playlist-2` kept the branch open
+
+## Remaining issues / caveats
+- The child branch layout uses an outward fan heuristic from the parent bubble and a repulsion pass for nearby bubbles. It is stable and visually clean in the current layout, but it is not a full constraint solver.
+
+## Recommended next step
+1. If you want child bubbles to be actionable next, add a selected/pressed state and map each child action to a real callback or route while keeping the current data-driven config shape.
+
+## Task title
+Gemini Pill Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed pill behavior from the Gemini bubble.
+- Gemini now remains an icon-only bubble and no longer expands to show copy.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- None for this specific change.
+
+## Recommended next step
+1. If more bubbles should be icon-only, remove their `isPill` and copy fields in the same config layer.
+
+## Task title
+Bubble Fade-In Delay Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the bubble fade-in delay on expand.
+- Kept bubble movement at `600ms` and opacity fade timing at `400ms`.
+- Left collapse timing and the `1000ms` push / pan path unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the open-state opacity delay. Stagger timing still applies uniformly across transform and opacity.
+
+## Recommended next step
+1. If the bubbles should appear even snappier, reduce `FADE_DURATION_MS` rather than reintroducing an opacity delay.
+
+## Task title
+Pill Gap Reduction + Pill Removal
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced expanded pill clearance so neighboring bubbles settle to a `10px` gap.
+- Removed pill behavior from the weather bubble and the Michael bubble, leaving them as image bubbles only.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The `10px` spacing is enforced by the current heuristic repulsion solver, so exact visual spacing can still vary slightly during motion.
+
+## Recommended next step
+1. If you want the `10px` gap to be visually exact at rest for every layout case, the pill collision system should move from heuristic repulsion to a stricter constraint pass.
+
+## Task title
+Bubble Fade Timing Split
+
+## Completion status
+- Completed
+
+## Summary
+- Kept bubble travel at `600ms` for open and close motion.
+- Added a `200ms` fade-in delay when bubbles come out.
+- Set bubble fade-out to `400ms` during the `600ms` collapse motion.
+- Left the `1000ms` push / pan timing path unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass changes only per-bubble opacity timing. It does not retune pill-copy opacity timing or the stagger interval.
+
+## Recommended next step
+1. If the open still feels too empty in the first `200ms`, tune `FADE_IN_DELAY_MS` without changing the `600ms` move duration.
+
+## Task title
+Bubble Collapse Stagger Order
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the collapse stagger ordering so bubbles return in the same sequence they expanded.
+- The first bubble to come out is now also the first bubble to go back.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This changes only the stagger order. It does not retune the stagger interval or durations.
+
+## Recommended next step
+1. If the return motion still feels off, tune the `0.02s` stagger step separately from the ordering.
+
+## Task title
+Pill Width Fit + Expanded Overlap Clearance
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the fixed pill text allowance with measured per-bubble copy width so expanded pills size to their actual title/subtitle content.
+- Increased right-side copy padding and aligned the rendered padding with the measured width so long subtitles no longer clip.
+- Strengthened the expanded-pill collision solve by increasing the clearance gap, increasing the initial influence radius, and running more separation passes so neighboring bubbles move fully out of the pill path.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - bubble `8` expanded successfully
+  - expanded width style was `339px`
+  - title and subtitle both fit within the pill bounds
+  - overlap set was empty (`[]`)
+
+## Remaining issues / caveats
+- The no-overlap solve is still heuristic rather than a full constraint solver. If the layout gets denser or more pills can expand at once, the spacing constants may need another pass.
+
+## Recommended next step
+1. If you want the expanded pills to keep even more breathing room, tune `PILL_COLLISION_PADDING`, `PILL_LAYOUT_GAP`, and `PILL_INITIAL_INFLUENCE_PADDING` together instead of widening only the text block.
+
+## Task title
+Bubble Gemini Fit Adjustment
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the Gemini bubble image so it fills the circular crop more tightly.
+- Added per-bubble image scaling support and applied it to Gemini only, leaving the other bubble assets unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This is a scale-based fit adjustment on the supplied PNG; if the source asset itself changes, the exact scale factor may need retuning.
+
+## Recommended next step
+1. If any other image-backed bubbles need tighter crop control, reuse the same per-bubble `imageScale` field instead of adding one-off CSS rules.
+
+## Task title
+Bubble Orb Smooth Physics Motion
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the orb jump by splitting orb motion into two layers:
+  - outer orb button follows camera pan
+  - inner orb visual animates the orb's physics displacement and scale
+- Added a `1000ms` transform transition to the inner orb visual so orb push/bounce motion now eases like the other bubbles instead of snapping to the new offset.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - outer orb transform carried pan offset
+  - inner orb visual transform carried its own non-zero physics offset and scale
+
+## Remaining issues / caveats
+- The orb now uses a CSS transition for its physics layer, while camera pan is still driven by runtime interpolation. That split is intentional and should remain unless the whole motion system is unified.
+
+## Recommended next step
+1. If the orb should feel heavier than the bubbles, increase only the inner orb visual transition duration or reduce its displacement amount.
+
+## Task title
+Bubble Size Range Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the bubble size normalization range from `60–120px` to `40–100px`.
+- Kept the same data-driven normalization path, so all bubble assets and attached sub-icons continue to scale through the same logic.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- Shrinking the lower bound may make the smallest bubbles harder to target visually; interaction hit-testing behavior itself was not changed in this pass.
+
+## Recommended next step
+1. If the smallest bubbles now feel too hard to hover, increase hover hit padding without changing visual size.
+
+## Task title
+Bubble Typography Update
+
+## Completion status
+- Completed
+
+## Summary
+- Loaded `DM Sans` for the bubble page.
+- Updated all visible text on the page to `24px`, including:
+  - pill title text
+  - pill subtitle text
+  - calendar date text
+
+## Files changed
+- `bubble.html`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Verified `DM Sans` font load link in `bubble.html`
+- Verified `24px` text rules in `src/styles/bubble-page.css`
+
+## Remaining issues / caveats
+- This pass only changes typography on the bubble page. It does not retune pill spacing after the font-size increase.
+
+## Recommended next step
+1. If the larger text causes crowding in expanded pills, adjust pill spacing and line-height next.
+
+## Task title
+Bubble Timing Split
+
+## Completion status
+- Completed
+
+## Summary
+- Split bubble timing so appear/disappear motion uses `450ms`, while hover-driven push / pan settling continues to use `1000ms`.
+- Kept the stagger ordering unchanged.
+- Applied the shorter timing to the per-bubble transition path and left the pan animation runtime on the slower path.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass only changes timing selection. It does not retune easing curves or stagger intervals.
+
+## Recommended next step
+1. If the open/close motion still feels off, tune the stagger step (`0.02s`) separately from the base duration.
+
+## Task title
+Bubble Orb Physics Render Fix
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the bubble page so the orb now visually follows the physics engine instead of staying pinned at the anchor.
+- The orb was already included in the layout/repulsion calculations, but the renderer only applied camera pan plus scale and ignored the orb's computed `targetX` / `targetY`.
+- Updated the orb transform path to include both physics displacement and camera pan.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - orb computed transform after pressure was `matrix(0.92, 0, 0, 0.92, -21.0076, 5.50565)`, confirming non-zero displacement
+
+## Remaining issues / caveats
+- None for this specific fix.
+
+## Recommended next step
+1. If desired, tune orb repulsion strength separately from other bubbles so it feels heavier or lighter than the icons.
+
+## Task title
+Bubble Size Clamp + Orb Visual Update
+
+## Completion status
+- Completed
+
+## Summary
+- Added a data-driven size normalization step so bubble dimensions are constrained to a minimum of `60px` and a maximum of `120px`.
+- Kept bubble centers and interaction behavior unchanged while scaling only the rendered bubble dimensions and any attached sub-icon offsets/sizes.
+- Updated the resting orb visual to match the new supplied orb image more closely using a softer gray-blue sphere treatment with a bright top-left highlight.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The orb is still rendered as CSS gradients rather than a binary image asset; it is visually matched to the provided reference rather than embedded as an external file.
+
+## Recommended next step
+1. If you want the orb to use an exact image file instead of a CSS recreation, add the source asset to the repo and point the orb visual at it directly.
+
+## Task title
+Bubble Pan Stability + Slower Push Motion
+
+## Completion status
+- Completed
+
+## Summary
+- Increased bubble push / bounce-back movement timing to `1000ms` so panning interactions feel slower and less abrupt.
+- Replaced DOM-based hover detection with stable coordinate hit-testing in cluster space.
+- Implemented hysteresis for hover retention:
+  - `15px` sticky radius on the active circular bubble
+  - expanded pill hit-testing uses a larger rectangular bounds check
+- Added `35px` pan margins so edge panning over-corrects instead of stopping exactly at the clipping boundary.
+- Switched pan tracking to an explicit animated runtime pan state so hover hit-testing uses the current camera offset instead of relying on DOM hover events.
+
+## Files changed
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser validation with Playwright on `http://localhost:8791/bubble`
+  - long press expands the cluster
+  - moving to the right-edge weather bubble keeps one pill expanded after `1200ms` of pan/settling (`expandedCount: 1`)
+
+## Remaining issues / caveats
+- Bubble transform motion now uses `1000ms` globally for push / bounce-back. If only some motion paths should be slow while others stay fast, that timing needs a narrower split by interaction type.
+
+## Recommended next step
+1. Do a visual timing pass and decide whether `1000ms` should apply to all bubble transform motion or only to panning-induced movement.
+
+## Task title
+Bubble ChatGPT Asset Update
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the ChatGPT bubble asset to the user-provided Microsoft Store image URL.
+- Kept the current layout, long-press interaction, and stagger behavior unchanged.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The ChatGPT icon now depends on the external Microsoft Store image host remaining available.
+
+## Recommended next step
+1. If you want this icon to be durable offline, mirror it into the repo and point the bubble config at a local asset.
+
+## Task title
+Bubble Stagger Timing Restore
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the staggered bubble timing so expansion cascades out in sequence and collapse reverses the order, matching the original interaction feel more closely.
+- Kept the current long-press interaction and layout unchanged; this pass only reintroduced per-bubble transition delay timing.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- This pass restores stagger timing only. It does not retune easing, duration, or expanded-state geometry.
+
+## Recommended next step
+1. If needed, do a visual timing pass in the browser and tune only the delay curve or base duration.
+
+## Task title
+Bubble Page Asset Swap
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the bubble page to use the user-provided image assets for the weather, Google Maps, Gemini, notes, and Spotify bubbles.
+- Kept the restored long-press interaction and existing bubble expansion behavior unchanged.
+- Changed the renderer to prioritize explicit `img` assets in bubble config, so these bubbles now render from provided URLs instead of the locally drawn icon treatments.
+
+## Files changed
+- `src/bubble-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+
+## Remaining issues / caveats
+- The page still depends on the availability of the external asset hosts for these icons.
+
+## Recommended next step
+1. If any remote icon host is unstable, mirror the approved assets into the repo and point the bubble config at local files.
+
+## Task title
+Bubble Interaction Restore After Figma Layout Pass
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the orb-triggered hold interaction that was accidentally removed during the Figma layout update.
+- Kept the Figma-aligned expanded target positions and sizing, but put the interaction model back:
+  - centered orb at rest
+  - hold on the orb to expand the cluster
+  - release to collapse
+  - hover a bubble while expanded to trigger the existing pill-style expansion behavior
+- Replaced the static absolute-layout implementation with the prior interaction architecture so layout changes no longer remove behavior.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- Browser interaction verification with Playwright on `http://localhost:8791/bubble`
+  - before hold: first bubble opacity `0`
+  - after hold: first bubble opacity transitioned above `0`
+
+## Remaining issues / caveats
+- The expanded target layout follows the Figma-derived coordinates, but because the page keeps the pre-existing interactive pill-expansion behavior, hovered bubbles can temporarily diverge from the exact static Figma composition by design.
+
+## Recommended next step
+1. If needed, tune only the expanded-state coordinates and z-order further without touching the restored interaction model.
+
+## Task title
+Bubble Page Figma Layout Alignment
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the `bubble` page layout to match Figma node `1261:561` in file `UfVYVYDJetggVnGNcKt9zx`.
+- Replaced the previous interactive bubble-spread composition with a fixed absolute layout based on the Figma node geometry.
+- Matched the Figma frame treatment:
+  - `420x420` canvas
+  - `31px` corner radius
+  - `#646464` stroke
+  - black background
+- Matched the relative bubble positions, overlap order, and sizes from the Figma node using the coordinates returned by `get_design_context`.
+- Rebuilt several icons as local CSS/SVG treatments (`calendar`, `notes`, `weather`, `health`, `spotify`, `gemini`, and the orb) so the page does not depend on unstable third-party image responses for those bubbles.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Figma MCP: `get_design_context(fileKey=\"UfVYVYDJetggVnGNcKt9zx\", nodeId=\"1261:561\")`
+- `node --check src/bubble-page.js`
+- `curl -I http://localhost:8791/bubble`
+- Browser screenshot pass with Playwright against `http://localhost:8791/bubble`
+
+## Remaining issues / caveats
+- Figma MCP `get_screenshot` hit the Starter plan rate limit during this pass, so final verification used the design-context geometry plus the user-provided reference image.
+- The Figma MCP asset URLs returned by design context were not directly fetchable from this environment, so some icons were reconstructed locally instead of using Figma-exported image files.
+- The composition geometry matches the Figma node; a few icon illustrations are approximations rather than the exact source artwork.
+
+## Recommended next step
+1. If exact icon artwork is required beyond the current geometry match, provide exported assets for the affected bubbles or re-run with Figma screenshot/asset access available.
+
+## Task title
+Bubble Page From Reference JSX
+
+## Completion status
+- Completed
+
+## Summary
+- Added a dedicated `bubble` page that recreates the interaction and layout from `ref/bubble.jsx` as a real repo page instead of a fragile browser-side JSX preview.
+- Rebuilt the reference in plain HTML, CSS, and ES modules to respect the repo's no-framework, no-bundler architecture.
+- Preserved the core interaction model from the JSX reference:
+  - center orb press expands the bubble cluster
+  - hovered pill bubbles widen and reveal title/subtitle copy
+  - pill expansion pushes neighboring bubbles through the same physics rules
+  - active bubble panning keeps expanded content inside the `420x420` frame
+- Added a direct `/bubble` route alongside the existing `/ai` and `/prototype` routes.
+
+## Files changed
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `server.mjs`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble-page.js`
+- `curl -I http://localhost:8791/bubble.html`
+- Verified server route mapping in `server.mjs` for `/bubble`
+
+## Remaining issues / caveats
+- I did not run an automated visual browser diff in this environment.
+- The previous temporary preview file under `ref/` was left untouched because the requested deliverable is now the real `bubble` page.
+
+## Recommended next step
+1. Open `/bubble` in the browser and do a visual pass against `ref/bubble.jsx` for any final spacing or image-asset tuning.
+
+## Task title
 Flight Recommendation Chip Figma Layout Update
 
 ## Completion status
@@ -5626,3 +9848,209 @@ Fix add-visual review findings
    - exit/reset during compose no longer snaps back into a stale delayed transition
    - long-press compose chip menu can reveal and navigate all chips provided by contact data
 2. Fix or harden `test/smoke.mjs` against the debug overlay so automated browser validation is reliable again.
+
+---
+
+## Task title
+Create standalone `bubble-genui` project for the bubble2 page
+
+## Completion status
+- Completed
+
+## Summary
+- Created a new independent project at `/Users/ariax/Github/bubble-genui`.
+- Copied only the live standalone `bubble2` page implementation and its required local assets:
+  - `index.html`
+  - `bubble2.html`
+  - `src/bubble2-page.js`
+  - `src/styles/bubble2-page.css`
+  - `assets/profile1.png`
+  - `assets/profile2.png`
+- Added a minimal static Node server and package scripts so the copied page runs without the rest of the GenUI repo.
+
+## Files changed
+- `/Users/ariax/Github/bubble-genui/index.html`
+- `/Users/ariax/Github/bubble-genui/bubble2.html`
+- `/Users/ariax/Github/bubble-genui/src/bubble2-page.js`
+- `/Users/ariax/Github/bubble-genui/src/styles/bubble2-page.css`
+- `/Users/ariax/Github/bubble-genui/assets/profile1.png`
+- `/Users/ariax/Github/bubble-genui/assets/profile2.png`
+- `/Users/ariax/Github/bubble-genui/package.json`
+- `/Users/ariax/Github/bubble-genui/server.mjs`
+- `/Users/ariax/Github/bubble-genui/README.md`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Started the standalone server with `node server.mjs` in `/Users/ariax/Github/bubble-genui`
+- Verified HTTP 200 responses for:
+  - `/`
+  - `/bubble2.html`
+  - `/src/bubble2-page.js`
+  - `/src/styles/bubble2-page.css`
+  - `/assets/profile1.png`
+
+## Remaining issues / caveats
+- The new project uses the same remote CDN/font/image URLs as the original `bubble2` page, so matching behavior still depends on network availability for those external assets.
+- The requested parent path did not exist, so `/Users/ariax/Github/` was created before `bubble-genui`.
+
+## Recommended next step
+1. Run `npm start` inside `/Users/ariax/Github/bubble-genui`.
+2. Open `http://localhost:4173/` and do a quick visual compare against the original `bubble2.html`.
+
+---
+
+## Task title
+Remove duplicate HTML entrypoint from `bubble-genui`
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the duplicate `bubble2.html` file from the standalone `bubble-genui` project.
+- Kept `index.html` as the only HTML entrypoint.
+- Updated the standalone README to point only to the root URL.
+
+## Files changed
+- `/Users/ariax/Github/bubble-genui/README.md`
+- `/Users/ariax/Github/bubble-genui/bubble2.html`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Verified `http://localhost:4173/` still returns HTTP 200.
+- Verified `http://localhost:4173/bubble2.html` now returns HTTP 404.
+
+## Remaining issues / caveats
+- None for this scope.
+
+## Recommended next step
+1. Keep using `http://localhost:4173/` as the only standalone page URL.
+
+---
+
+## Task title
+Remove the original bubble page and keep only bubble2 runtime
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the original bubble page runtime files:
+  - `bubble.html`
+  - `src/bubble-page.js`
+  - `src/styles/bubble-page.css`
+- Updated `server.mjs` so the legacy `/bubble` route now serves `bubble2` instead of the deleted page.
+- Kept the remaining `bubble2` runtime intact:
+  - `bubble2.html`
+  - `src/bubble2-page.js`
+  - `src/styles/bubble2-page.css`
+
+## Files changed
+- `server.mjs`
+- `bubble.html`
+- `src/bubble-page.js`
+- `src/styles/bubble-page.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check server.mjs`
+- `node --check src/bubble2-page.js`
+- Confirmed deleted files no longer exist:
+  - `bubble.html`
+  - `src/bubble-page.js`
+  - `src/styles/bubble-page.css`
+- Started the repo server on `PORT=5185`
+- Verified:
+  - `http://localhost:5185/bubble2` → HTTP 200
+  - `http://localhost:5185/bubble` → HTTP 200
+  - `http://localhost:5185/bubble.html` → HTTP 404
+  - `http://localhost:5185/src/bubble2-page.js` → HTTP 200
+
+## Remaining issues / caveats
+- The repo still contains historical references to the removed bubble page in `context/HANDOFF.md`; these were left intact as execution history, not active runtime code.
+- `context/task✅.md` is still an unstructured notes file rather than the documented `context/task.md` format, but this task was completed directly from the user request.
+
+## Recommended next step
+1. Use `http://localhost:5173/bubble2` as the explicit bubble demo URL going forward.
+2. If you no longer need the legacy alias, the next cleanup step is to remove `/bubble` route compatibility and keep only `/bubble2`.
+
+---
+
+## Task title
+Fix bubble2 pill text scaling up on hover-out collapse
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the `bubble2` pill collapse so the pill text keeps using the outgoing expanded-scale compensation while the text fades/slides out.
+- Added a short collapse lock for pill text sizing instead of immediately recomputing the text scale on hover-out.
+- This prevents the brief visual "text grows while the pill shrinks" artifact during pill-to-bubble transition.
+
+## Files changed
+- `src/bubble2-page.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+
+## Remaining issues / caveats
+- This pass only included code-level validation. I did not run a browser animation check in this turn.
+
+## Recommended next step
+1. Hover a pill on `bubble2`, move out, and verify the text now visually holds size during fade-out instead of popping larger.
+
+---
+
+## Task title
+Build standalone Unity prototype project for the GenUI morphing stage system
+
+## Completion status
+- Completed with one validation blocker
+
+## Summary
+- Created a separate Unity project scaffold at `/Users/ariax/Documents/Github/GenUI-Unity`.
+- Added a text-authored Unity runtime for a morphing stage container with inspector-defined stages, selected/accent styling, content-driven sizing, and public `OpenStage(...)` APIs.
+- Added a keyboard driver for play-mode stage switching with `1..9`, arrows, replay, and reset.
+- Added a custom inspector for stage authoring and an editor bootstrap that auto-creates `Assets/GenUIPrototype/Scenes/PrototypeStageSystem.unity` on first desktop-editor open.
+- Copied the existing web highlight textures and sample media into the Unity project `Resources/Art` folder so the shell styling and example stages have real assets.
+
+## Files changed
+- External project created under `/Users/ariax/Documents/Github/GenUI-Unity`
+- `/Users/ariax/Documents/Github/GenUI-Unity/ProjectSettings/ProjectVersion.txt`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Packages/manifest.json`
+- `/Users/ariax/Documents/Github/GenUI-Unity/README.md`
+- `/Users/ariax/Documents/Github/GenUI-Unity/.gitignore`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemTypes.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/NumberKeyStageDriver.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/RoundedRectMesh.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/RoundedRectGraphic.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/RoundedRectOutlineGraphic.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Editor/StageSystemControllerEditor.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Editor/PrototypeSceneBootstrap.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/button-highlight-top-left.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/figma-proto-button-highlight-bottom-mask.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/avatar1.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/avatar2.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/playlist1.png`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/playlist2.png`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Confirmed Unity editor installations exist locally under `/Applications/Unity/Hub/Editor/2022.3.38f1`
+- Confirmed the standalone project tree was created at `/Users/ariax/Documents/Github/GenUI-Unity`
+- Confirmed runtime/editor source files and copied art assets exist in the target Unity project
+- Attempted Unity batch project creation with:
+  - `Unity -batchmode -quit -createProject /Users/ariax/Documents/Github/GenUI-Unity`
+- Result:
+  - blocked by missing active headless/batch Unity license on this machine
+
+## Remaining issues / caveats
+- I could not run a Unity import/compile pass from the terminal because the installed editor does not have an active batch/headless license. The project is authored for normal desktop-editor open/import instead.
+- The prototype scene is generated by the editor bootstrap on first Unity open; it is not pre-saved from this environment because that also required a working Unity batch/editor execution path.
+- `context/task✅.md` remains stale and unrelated to this work; implementation was executed directly from the current user request and the approved design direction.
+
+## Recommended next step
+1. Open `/Users/ariax/Documents/Github/GenUI-Unity` in the desktop Unity editor.
+2. Let Unity import scripts and assets, then open or let it auto-create `Assets/GenUIPrototype/Scenes/PrototypeStageSystem.unity`.
+3. Select `GenUIStageSystem`, author stages in the inspector, press Play, and verify transitions with `1..9`, arrows, `Enter`/`Space`, and `Esc`.

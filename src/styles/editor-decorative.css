@@ -1,6 +1,235 @@
 /* ── Wordmark ── */
 #wordmark { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.12); font-size: 9px; letter-spacing: .44em; text-transform: uppercase; }
 
+/* ── Prototype Figma button demo ── */
+#prototype-figma-button-demo-group {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.prototype-figma-button-demo {
+  position: relative;
+  width: var(--prototype-figma-demo-width);
+  height: var(--prototype-figma-demo-height);
+  flex: 0 0 auto;
+  --prototype-figma-demo-width: 200px;
+  --prototype-figma-demo-height: 72px;
+  --prototype-figma-demo-radius: calc(var(--prototype-figma-demo-height) / 2);
+  --prototype-figma-demo-mask-image: url('../assets/figma-proto-button-refraction-mask.svg');
+  --prototype-figma-demo-mask-width: 200px;
+  --prototype-figma-demo-mask-height: 72px;
+  --prototype-figma-demo-blur-size: calc((var(--prototype-figma-demo-width) * 0.65) + (var(--prototype-figma-demo-height) * 0.8));
+  --prototype-figma-demo-right-x: calc(var(--prototype-figma-demo-width) - (var(--prototype-figma-demo-blur-size) * 0.3235));
+  --prototype-figma-demo-right-y: calc(-1 * (var(--prototype-figma-demo-blur-size) * 0.353));
+  --prototype-figma-demo-left-x: calc(-1 * (var(--prototype-figma-demo-blur-size) * 0.647));
+  --prototype-figma-demo-left-y: calc(-1 * (var(--prototype-figma-demo-blur-size) * 0.353));
+  --prototype-figma-demo-filled-opacity: 0.68;
+  --prototype-figma-demo-sharp-x: calc(var(--prototype-figma-demo-width) - 24px);
+  --prototype-figma-demo-sharp-y: calc(var(--prototype-figma-demo-height) - 29px);
+  --prototype-figma-demo-highlight-blur: 0px;
+  --prototype-figma-button-accent-a: rgb(144 172 255);
+  --prototype-figma-button-accent-b: rgb(151 97 255);
+}
+
+.prototype-figma-button-demo.is-square {
+  width: 56px;
+  height: 56px;
+  --prototype-figma-demo-width: 56px;
+  --prototype-figma-demo-height: 56px;
+  --prototype-figma-demo-radius: 28px;
+  --prototype-figma-demo-mask-width: 56px;
+  --prototype-figma-demo-mask-height: 56px;
+  --prototype-figma-demo-blur-size: 104px;
+  --prototype-figma-demo-right-x: 32px;
+  --prototype-figma-demo-right-y: -36px;
+  --prototype-figma-demo-left-x: -80px;
+  --prototype-figma-demo-left-y: -36px;
+  --prototype-figma-demo-filled-opacity: 0.74;
+  --prototype-figma-demo-sharp-x: 36px;
+  --prototype-figma-demo-sharp-y: 30px;
+}
+
+.prototype-figma-button-demo.no-label .prototype-figma-button-label {
+  display: none;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-shell,
+.prototype-figma-button-demo .prototype-figma-button-refraction,
+.prototype-figma-button-demo .prototype-figma-button-accent-rim,
+.prototype-figma-button-demo .prototype-figma-button-highlight,
+.prototype-figma-button-demo .prototype-figma-button-label,
+.prototype-figma-button-demo .prototype-figma-button-highlight-mask {
+  position: absolute;
+  inset: 0;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-shell {
+  border-radius: var(--prototype-figma-demo-radius);
+  overflow: hidden;
+  isolation: isolate;
+  background: #1f1f1f;
+  border: 1px solid rgba(129,129,129,0.5);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.02),
+    0 10px 30px rgba(0,0,0,0.16);
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: var(--prototype-figma-demo-mask-image);
+  mask-image: var(--prototype-figma-demo-mask-image);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: var(--prototype-figma-demo-mask-width) var(--prototype-figma-demo-mask-height);
+  mask-size: var(--prototype-figma-demo-mask-width) var(--prototype-figma-demo-mask-height);
+  -webkit-mask-position: center;
+  mask-position: center;
+  overflow: visible;
+  opacity: var(--prototype-figma-demo-filled-opacity);
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-filled-mask {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: url('../assets/figma-proto-button-refraction-center-mask.svg');
+  mask-image: url('../assets/figma-proto-button-refraction-center-mask.svg');
+  -webkit-mask-mode: luminance;
+  mask-mode: luminance;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: var(--prototype-figma-demo-mask-width) var(--prototype-figma-demo-mask-height);
+  mask-size: var(--prototype-figma-demo-mask-width) var(--prototype-figma-demo-mask-height);
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-filled-mask::before {
+  display: none;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-pass {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-blur {
+  display: none;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-blur-right {
+  transform: translate(var(--prototype-figma-demo-right-x), var(--prototype-figma-demo-right-y));
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-blur-left {
+  transform: translate(var(--prototype-figma-demo-left-x), var(--prototype-figma-demo-left-y));
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-blur-image-wrap {
+  position: absolute;
+  inset: -41.67%;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-blur-image {
+  display: none;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-refraction-pass-sharp {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 200px;
+  height: 72px;
+  overflow: visible;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-sharp-highlight {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 200px;
+  height: 72px;
+  background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
+  background-repeat: no-repeat;
+  background-size: 200px 72px;
+  background-position: bottom right;
+  mix-blend-mode: screen;
+  opacity: 1;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-accent-rim {
+  border-radius: var(--prototype-figma-demo-radius);
+  box-shadow:
+    inset calc(var(--prototype-figma-demo-height) * 0.24) 0 calc(var(--prototype-figma-demo-height) * 0.32) calc(var(--prototype-figma-demo-height) * -0.18)
+      color-mix(in srgb, var(--prototype-figma-button-accent-a) 78%, white 22%),
+    inset calc(var(--prototype-figma-demo-height) * -0.24) 0 calc(var(--prototype-figma-demo-height) * 0.32) calc(var(--prototype-figma-demo-height) * -0.18)
+      color-mix(in srgb, var(--prototype-figma-button-accent-b) 80%, white 20%),
+    inset 0 calc(var(--prototype-figma-demo-height) * 0.18) calc(var(--prototype-figma-demo-height) * 0.24) calc(var(--prototype-figma-demo-height) * -0.16)
+      color-mix(in srgb, var(--prototype-figma-button-accent-a) 52%, var(--prototype-figma-button-accent-b)),
+    inset 0 calc(var(--prototype-figma-demo-height) * -0.18) calc(var(--prototype-figma-demo-height) * 0.24) calc(var(--prototype-figma-demo-height) * -0.16)
+      color-mix(in srgb, var(--prototype-figma-button-accent-b) 56%, var(--prototype-figma-button-accent-a)),
+    inset 0 0 calc(var(--prototype-figma-demo-height) * 0.32) calc(var(--prototype-figma-demo-height) * -0.1)
+      rgba(255,255,255,0.03);
+  opacity: 0.96;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-highlight {
+  border-radius: var(--prototype-figma-demo-radius);
+  mix-blend-mode: screen;
+  box-shadow:
+    inset 0 0 6px 1px rgba(255,255,255,0.8),
+    inset 0 1px 0 rgba(255,255,255,0.16);
+}
+
+.prototype-figma-button-demo .prototype-figma-button-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: 1.26px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.08);
+}
+
+.prototype-figma-button-demo .prototype-figma-button-highlight-mask {
+  width: 200px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: var(--prototype-figma-demo-radius);
+}
+
+.prototype-figma-button-demo .prototype-figma-button-highlight-mask::before {
+  display: none;
+}
+
+.prototype-figma-button-demo .prototype-figma-button-highlight-mask-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 72px;
+  background-image: url("../assets/button-highlight-top-left.png");
+  background-repeat: no-repeat;
+  background-position: left top;
+  background-size: 100% 100%;
+  mix-blend-mode: screen;
+}
+
 /* ── Stars ── */
 .star { position: absolute; border-radius: 50%; pointer-events: none; animation: star-pulse var(--sd,4s) var(--motion-ease) infinite; animation-delay: var(--sdl,0s); }
 @keyframes star-pulse { 0%,100%{opacity:var(--op,.05)} 50%{opacity:calc(var(--op,.05)*3)} }
@@ -198,7 +427,7 @@
   top:0;
   width:100vw;
   height:100vh;
-  background-image:url('https://i.pinimg.com/736x/39/65/8b/39658ba96694f6c1a815e186c34107fb.jpg');
+  background-image:url('../assets/decorative-bg.jpg');
   background-size:cover;
   background-position:center;
   filter:blur(40px) brightness(0.8);

@@ -213,6 +213,26 @@ export function createMorphRender(ctx) {
     return fallback;
   }
 
+  function syncPrototypeFigmaButtonDemo(stageId = null, scenario = null) {
+    const previews = document.querySelectorAll('.prototype-figma-button-demo');
+    const activeScenario = scenario || callbacks.selectedScenario?.() || null;
+    const stage = stageId ? callbacks.stageById?.(stageId) : null;
+    const accentColor = stageId
+      ? (callbacks.stageAccentColorForShape?.(activeScenario, stageId) || stage?.accentColor)
+      : null;
+    const accentSecondaryColor = stageId
+      ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
+      : null;
+    if (!previews.length) return;
+    const accentA = hexToCssColor(accentColor, 'rgb(144 172 255)');
+    const accentB = hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)');
+    previews.forEach((preview) => {
+      if (preview.dataset.staticAccents === 'true') return;
+      preview.style.setProperty('--prototype-figma-button-accent-a', accentA);
+      preview.style.setProperty('--prototype-figma-button-accent-b', accentB);
+    });
+  }
+
   function syncPrototypeStageSelection(stageId = null, scenario = null) {
     const main = DROPS.main;
     const selectionOverlay = document.getElementById('prototype-stage-selection');
@@ -261,6 +281,7 @@ export function createMorphRender(ctx) {
       const appliedTy = s.ty + yOffset;
       el.style.width = `${s.w}px`;
       el.style.height = `${s.h}px`;
+      if (k === 'main') el.style.setProperty('--g-stage-h', `${s.h}px`);
       el.style.borderRadius = k === 'main' ? mainRadius : s.br;
       el.style.transform = `translate(${s.tx}px,${appliedTy}px)`;
       const forcedVisible = k === 'main' && shouldShowListOrbShell;
@@ -279,6 +300,7 @@ export function createMorphRender(ctx) {
     const stage = document.getElementById('stage');
     if (stage) stage.style.height = `${alignedStageHeight}px`;
     state.lastMainGeo = appliedMainGeo ? { ...appliedMainGeo } : { ...geo.main };
+    syncPrototypeFigmaButtonDemo(stageId, scenario);
     syncPrototypeStageSelection(stageId, scenario);
   }
 

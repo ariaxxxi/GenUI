@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "AGENTS.md",
+                "file": "design.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "AGENTS"
+              "title": "design"
             }
           }
         ]
@@ -185,6 +185,25 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
+    "bubble.html",
+    "context/task✅.md",
+    "design.md",
+    "src/assets/button-highlight-top-left.png",
+    "src/assets/Button Highlight top left.png",
+    "src/assets/figma-proto-button-refraction-mask-zero-spread.svg",
+    "src/assets/figma-proto-button-refraction-center-mask.svg",
+    "src/assets/figma-proto-button-highlight-bottom-mask.png",
+    "src/assets/Button Refraction.png",
+    "src/assets/Button Refraction.svg",
+    "src/assets/figma-proto-button-highlight-bottom-mask.svg",
+    "src/assets/figma-proto-button-br-highlight-mask.svg",
+    "src/assets/figma-proto-button-br-highlight-fill.svg",
+    "src/bubble2-page.js",
+    "src/styles/bubble2-page.css",
+    "bubble2.html",
+    "ref/bubble-2.jsx",
+    "ref/bubble copy.jsx",
+    "AGENTS.md",
     "test/smoke.js",
     "src/shapes.legacy.js",
     "Untitled.canvas",
@@ -192,10 +211,7 @@
     "src/shared/scenario-session.js",
     "src/shared/list-placeholders.js",
     "src/shared/detail-measure.js",
-    "src/flows/message-send-render-layout.js",
-    "src/flows/message-send-render-content.js",
     "context/ARCHITECTURE.md",
-    "AGENTS.md",
     "fluidui_rules.md",
     "AI_PAGE_PROJECT_STRUCTURE.md",
     "context/DECISIONS.md",
