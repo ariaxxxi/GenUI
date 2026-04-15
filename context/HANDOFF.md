@@ -1,6 +1,43 @@
 # Handoff
 
 ## Task title
+Switch Unity shell container to a sliced sprite using `container.png`
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs) so the shell now prefers a `UnityEngine.UI.Image` with a sliced sprite loaded from `Resources/Art/container`.
+- When `container.png` is available:
+  - the shell uses `Image.Type.Sliced`
+  - the old `RoundedRectGraphic` is removed from the shell object
+  - the extra procedural shadow is removed from the shell
+  - the neutral outline child is disabled so the baked sprite edge stays in control
+- If the sprite fails to load for any reason, the older procedural shell path remains as a fallback so the prototype still renders.
+- Added Unity import metadata for [/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/container.png.meta](/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/container.png.meta) so the asset imports as a single UI sprite with a `30px` 9-slice border.
+
+## Files changed
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Runtime/StageSystemController.cs`
+- `/Users/ariax/Documents/Github/GenUI-Unity/Assets/GenUIPrototype/Resources/Art/container.png.meta`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed shell resource load now includes `Resources.Load<Sprite>("Art/container")`
+  - confirmed the shell now creates/configures a `UnityEngine.UI.Image`
+  - confirmed procedural shell components are removed when the sprite is present
+  - confirmed `container.png.meta` imports the asset as a sprite with a `30px` border
+- Not performed here:
+  - Unity editor visual verification
+
+## Remaining issues / caveats
+- The current slice border is set to `30px` based on the provided asset description. If your Figma export actually needs a `120px` border because the corner radius was scaled by 4x in the exported bitmap, that value should be changed in `container.png.meta`.
+- The selected `whiteRing` overlay is still procedural. If its corners feel off against the new sprite shell, it should be converted to a sliced overlay asset as a follow-up.
+
+## Recommended next step
+1. Reimport `container.png` in Unity and verify the shell corners across dot, pill, card, and image stages. If the corners squash or look inset incorrectly, adjust the sprite border from `30` to the exact exported corner thickness.
+
+## Task title
 Match Unity prototype motion easing to the web cubic-bezier
 
 ## Completion status
