@@ -288,8 +288,42 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
 #drop-main:not(.listening-orb):not(.magic-glow) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
+.ai-flow-orb-disambiguation-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 300ms var(--motion-ease), transform 300ms var(--motion-ease);
+}
+.ai-flow-orb-disambiguation-icon svg {
+  width: 48%;
+  height: 48%;
+  filter: drop-shadow(0 1px 6px rgba(0,0,0,0.4));
+}
+
 #drop-main.disambiguation-surface {
   overflow: visible !important;
+}
+#drop-main.disambiguation-surface .ai-flow-orb-disambiguation-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+#drop-main.disambiguation-surface #siri-orb .ai-flow-orb-selection,
+#drop-main.disambiguation-surface #siri-orb .g-stage-selected-accent-rim,
+#drop-main.disambiguation-surface #siri-orb .g-stage-selected-highlight,
+#drop-main.disambiguation-surface #siri-orb .g-stage-selected-sharp-pass,
+#drop-main.disambiguation-surface #siri-orb .g-stage-selected-highlight-mask {
+  opacity: 0;
+  transition: opacity 250ms var(--motion-ease);
+  animation: none !important;
+}
+#drop-main.disambiguation-surface #siri-orb .ai-flow-orb-sphere::before {
+  opacity: 0;
+  transition: opacity 250ms var(--motion-ease);
 }
 #drop-main.compose-surface {
   overflow: visible !important;
