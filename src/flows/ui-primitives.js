@@ -13,6 +13,17 @@ function renderTextLine(cls, value) {
   return `<div class="${cls}">${esc(text)}</div>`;
 }
 
+function normalizeCssColor(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (/^(rgb|rgba|hsl|hsla|color-mix|#)/i.test(text)) return text;
+  return `rgb(${text})`;
+}
+
+function renderSelectedChrome() {
+  return `<span class="g-selection-chrome" aria-hidden="true"><span class="g-stage-selected-sharp-pass"><span class="g-stage-selected-sharp-highlight"></span></span><span class="g-stage-selected-accent-rim"></span><span class="g-stage-selected-highlight"></span><span class="g-stage-selected-highlight-mask"><span class="g-stage-selected-highlight-mask-image"></span></span></span>`;
+}
+
 function renderFlightMetaRow(stops = "", price = "", priceColor = "") {
   const stopText = String(stops || "").trim();
   const priceText = String(price || "").trim();
@@ -47,14 +58,8 @@ export function renderSelectionList({ items = [], selectedIndex = 0, rowDataAttr
     const hasMeta = !!(subtitle || detail);
     const iconText = item?.avatar ? "" : (item?.initials || item?.avatarText || item?.icon || "");
     const avatar = renderAvatar({ avatar: item?.avatar || "", initials: iconText, name: title, kind: item?.avatarKind || "default" });
-    return `<div class="g-contact-row ${index === selectedIndex ? "selected" : ""} ${hasMeta ? "has-meta" : ""}" ${attrName}="${index}">${avatar}<div class="g-contact-body">${renderTextLine("g-contact-name", title)}${renderTextLine("g-contact-subtitle", subtitle)}${renderTextLine("g-contact-detail", detail)}</div></div>${index < items.length - 1 ? '<div class="rich-divider"></div>' : ""}`;
+    return `<div class="g-contact-row g-stage-selected-host ${index === selectedIndex ? "selected" : ""} ${hasMeta ? "has-meta" : ""}" ${attrName}="${index}">${renderSelectedChrome()}${avatar}<div class="g-contact-body">${renderTextLine("g-contact-name", title)}${renderTextLine("g-contact-subtitle", subtitle)}${renderTextLine("g-contact-detail", detail)}</div></div>${index < items.length - 1 ? '<div class="rich-divider"></div>' : ""}`;
   }).join("")}</div>`;
-}
-
-// Reusable edge-light scaffold. Host containers can recolor it with
-// --g-accent-rgb / --g-accent-secondary-rgb and toggle .selected / .is-accented.
-export function renderAccentOrbitChrome() {
-  return `<span class="g-accent-orbit" aria-hidden="true"><span class="g-accent-orbit-fill"></span><span class="g-accent-orbit-left-spot"></span><span class="g-accent-orbit-inner-glow"></span><span class="g-accent-orbit-middle"></span><span class="g-accent-orbit-ring"></span></span>`;
 }
 
 export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, variant = "fan", options = {}) {
@@ -116,9 +121,8 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     const rotStart = Number.isFinite(Number(item?.rotStart)) ? Number(item.rotStart) : (index % 2 === 0 ? -10 : 10);
     const delay = Number.isFinite(Number(item?.delay)) ? Number(item.delay) : Math.max(0, (index * 42) - (selected ? 28 : 0));
     const finalScale = selected ? 1 : 0.98;
-    const accentRgb = String(item?.accentRgb || "").trim();
-    const accentSecondaryRgb = String(item?.accentSecondaryRgb || "").trim();
-    const orbitMs = Number.isFinite(Number(item?.orbitMs)) ? Math.max(600, Math.round(Number(item.orbitMs))) : null;
+    const accentRgb = normalizeCssColor(item?.accentRgb || "");
+    const accentSecondaryRgb = normalizeCssColor(item?.accentSecondaryRgb || "");
     const styleVars = [
       `--pill-x:${Math.round(Number(item?.x) || 0)}px`,
       `--pill-y:${Math.round(Number(item?.y) || 0)}px`,
@@ -128,15 +132,14 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     ];
     if (Number.isFinite(Number(item?.xStart))) styleVars.push(`--pill-x-start:${Math.round(Number(item.xStart))}px`);
     if (Number.isFinite(Number(item?.yStart))) styleVars.push(`--pill-y-start:${Math.round(Number(item.yStart))}px`);
-    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
-    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
-    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
-    return `<div class="g-disambiguation-pill g-accent-orbit-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderAccentOrbitChrome()}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
+    if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
+    return `<div class="g-disambiguation-pill g-stage-selected-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderSelectedChrome()}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
   }).join("")}</div>`;
 }
 
 export function renderChipBar({ chips = [], selectedIndex = 0, navigable = true, collapsed = false } = {}) {
-  return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${esc(chip.label || "")}</div>`).join("")}</div></div>`;
+  return `<div class="g-chips-wrap ${collapsed ? "collapsed" : ""}"><div class="g-chips">${chips.map((chip, index) => `<div class="g-chip g-stage-selected-host ${navigable && index === selectedIndex ? "selected" : ""}" data-chip-id="${esc(chip.id || index)}">${renderSelectedChrome()}<span class="g-chip-label">${esc(chip.label || "")}</span></div>`).join("")}</div></div>`;
 }
 
 const COMPOSE_CHIP_MOTION_PRESETS = [
@@ -164,9 +167,8 @@ function composeChipMotionVars(index) {
 export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
   return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
-    const accentRgb = String(chip?.accentRgb || "255 255 255").trim();
-    const accentSecondaryRgb = String(chip?.accentSecondaryRgb || accentRgb).trim();
-    const orbitMs = Number.isFinite(Number(chip?.orbitMs)) ? Math.max(600, Math.round(Number(chip.orbitMs))) : null;
+    const accentRgb = normalizeCssColor(chip?.accentRgb || "255 255 255");
+    const accentSecondaryRgb = normalizeCssColor(chip?.accentSecondaryRgb || accentRgb);
     const motion = composeChipMotionVars(index);
     const styleVars = [
       `--chip-order:${motion.order}`,
@@ -175,20 +177,18 @@ export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = f
       `--chip-travel-start:${motion.travelStart}px`,
       `--chip-travel-end:${motion.travelEnd}px`,
     ];
-    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
-    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
-    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
-    return `<div class="g-compose-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}"${styleAttr}>${renderAccentOrbitChrome()}<span class="g-compose-chip-label">${esc(chip.label || "")}</span></div>`;
+    return `<div class="g-compose-chip g-stage-selected-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}"${styleAttr}>${renderSelectedChrome()}<span class="g-compose-chip-label">${esc(chip.label || "")}</span></div>`;
   }).join("")}</div>`;
 }
 
 export function renderFlightRecommendationChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 1 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
   return `<div data-glass-body class="g-flight-recommendation-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
-    const accentRgb = String(chip?.accentRgb || "244 247 255").trim();
-    const accentSecondaryRgb = String(chip?.accentSecondaryRgb || accentRgb).trim();
-    const orbitMs = Number.isFinite(Number(chip?.orbitMs)) ? Math.max(600, Math.round(Number(chip.orbitMs))) : null;
+    const accentRgb = normalizeCssColor(chip?.accentRgb || "244 247 255");
+    const accentSecondaryRgb = normalizeCssColor(chip?.accentSecondaryRgb || accentRgb);
     const motion = composeChipMotionVars(index);
     const styleVars = [
       `--chip-order:${motion.order}`,
@@ -197,9 +197,8 @@ export function renderFlightRecommendationChipStack({ chips = [], selectedIndex 
       `--chip-travel-start:${motion.travelStart}px`,
       `--chip-travel-end:${motion.travelEnd}px`,
     ];
-    if (accentRgb) styleVars.push(`--g-accent-rgb:${esc(accentRgb)}`);
-    if (accentSecondaryRgb) styleVars.push(`--g-accent-secondary-rgb:${esc(accentSecondaryRgb)}`);
-    if (orbitMs !== null) styleVars.push(`--g-accent-orbit-ms:${orbitMs}ms`);
+    if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
+    if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
     const title = String(chip?.name || chip?.title || "").trim();
     const reason = String(chip?.reason || "").trim();
@@ -213,7 +212,7 @@ export function renderFlightRecommendationChipStack({ chips = [], selectedIndex 
       cls: "g-flight-recommendation-chip-thumb",
       kind: "default",
     });
-    return `<div class="g-flight-recommendation-chip g-accent-orbit-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderAccentOrbitChrome()}<div class="g-flight-recommendation-chip-main">${avatar}<div class="g-flight-recommendation-chip-body">${renderTextLine("g-flight-recommendation-chip-reason", reason)}${renderTextLine("g-flight-recommendation-chip-time", title)}</div>${price ? `<div class="${priceClass}">${esc(price)}</div>` : ""}</div></div>`;
+    return `<div class="g-flight-recommendation-chip g-stage-selected-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-flight-rec-opt="${index}" aria-label="${esc(title)}"${styleAttr}>${renderSelectedChrome()}<div class="g-flight-recommendation-chip-main">${avatar}<div class="g-flight-recommendation-chip-body">${renderTextLine("g-flight-recommendation-chip-reason", reason)}${renderTextLine("g-flight-recommendation-chip-time", title)}</div>${price ? `<div class="${priceClass}">${esc(price)}</div>` : ""}</div></div>`;
   }).join("")}</div>`;
 }
 
@@ -317,13 +316,13 @@ export function renderFlightRecommendationStage({
     const detail = String(option?.detail || "").trim();
     const eyebrow = String(option?.eyebrow || "").trim();
     const selected = index === selectedIndex;
-    return `<div class="g-flight-rec-option ${summary ? "g-flight-rec-summary" : "g-flight-rec-support"} ${selected ? "selected" : ""}" data-flight-rec-opt="${index}">${eyebrow ? `<div class="g-flight-rec-eyebrow">${esc(eyebrow)}</div>` : ""}<div class="g-flight-rec-row">${renderAvatar({ avatar: option?.avatar || "", initials: option?.initials || option?.icon || "", name: title, cls: "g-flight-rec-ava", kind: option?.avatarKind || "default" })}<div class="g-flight-rec-copy">${renderTextLine("g-flight-rec-title", title)}${renderTextLine("g-flight-rec-subtitle", subtitle)}</div>${renderTextLine("g-flight-rec-detail", detail)}</div></div>`;
+    return `<div class="g-flight-rec-option g-stage-selected-host ${summary ? "g-flight-rec-summary" : "g-flight-rec-support"} ${selected ? "selected" : ""}" data-flight-rec-opt="${index}">${renderSelectedChrome()}${eyebrow ? `<div class="g-flight-rec-eyebrow">${esc(eyebrow)}</div>` : ""}<div class="g-flight-rec-row">${renderAvatar({ avatar: option?.avatar || "", initials: option?.initials || option?.icon || "", name: title, cls: "g-flight-rec-ava", kind: option?.avatarKind || "default" })}<div class="g-flight-rec-copy">${renderTextLine("g-flight-rec-title", title)}${renderTextLine("g-flight-rec-subtitle", subtitle)}</div>${renderTextLine("g-flight-rec-detail", detail)}</div></div>`;
   };
   return `<div data-glass-body class="g-flight-rec-shell ${open ? "open" : ""}">${renderOption(rows[0], 0, true)}<div class="g-flight-rec-expand">${rows.slice(1).map((option, index) => renderOption(option, index + 1, false)).join("")}</div></div>`;
 }
 
 export function renderActionRow({ actions = [], selectedIndex = 0 } = {}) {
-  return `<div class="g-action-row enter">${actions.map((action, idx) => `<div class="g-action-btn ${idx === selectedIndex ? "selected" : ""}" data-action-id="${esc(action.id || idx)}">${action.iconHtml || esc(action.emoji || "")}</div>`).join("")}</div>`;
+  return `<div class="g-action-row enter">${actions.map((action, idx) => `<div class="g-action-btn g-stage-selected-host ${idx === selectedIndex ? "selected" : ""}" data-action-id="${esc(action.id || idx)}">${renderSelectedChrome()}<span class="g-action-btn-icon">${action.iconHtml || esc(action.emoji || "")}</span></div>`).join("")}</div>`;
 }
 
 export function renderCompactStatus({ type = "loading", label = "", icon = "", dotsId = "g-thinking-dots", enter = false } = {}) {

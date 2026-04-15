@@ -497,8 +497,10 @@ input?.addEventListener("input", (e) => {
 });
 let composeMenuPointerActive = false;
 let composeMenuPointerId = null;
+let composeMenuPointerTargetEl = null;
 let flightRecommendationPointerActive = false;
 let flightRecommendationPointerId = null;
+let flightRecommendationPointerTargetEl = null;
 const isComposeMenuPointerTarget = (target) => {
   const leftSidebar = document.getElementById("left-sidebar");
   const simPanel = document.getElementById("sim-panel");
@@ -599,9 +601,13 @@ document.addEventListener("pointerdown", (e) => {
   if (!messageFlow.startComposeMenuHold({ pointerOriginY: e.clientY })) return;
   composeMenuPointerActive = true;
   composeMenuPointerId = e.pointerId;
+  composeMenuPointerTargetEl = e.target instanceof Element ? e.target : null;
+  if (composeMenuPointerTargetEl?.setPointerCapture) {
+    try { composeMenuPointerTargetEl.setPointerCapture(e.pointerId); } catch {}
+  }
   if (document.activeElement === input) input?.blur();
   e.preventDefault();
-});
+}, true);
 document.addEventListener("pointerdown", (e) => {
   if (e.button !== 0) return;
   if (!flightFlow.isActive()) return;
@@ -609,35 +615,47 @@ document.addEventListener("pointerdown", (e) => {
   if (!flightFlow.startRecommendationHold?.({ pointerOriginY: e.clientY })) return;
   flightRecommendationPointerActive = true;
   flightRecommendationPointerId = e.pointerId;
+  flightRecommendationPointerTargetEl = e.target instanceof Element ? e.target : null;
+  if (flightRecommendationPointerTargetEl?.setPointerCapture) {
+    try { flightRecommendationPointerTargetEl.setPointerCapture(e.pointerId); } catch {}
+  }
   if (document.activeElement === input) input?.blur();
   e.preventDefault();
-});
+}, true);
 document.addEventListener("pointermove", (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
   if (messageFlow.updateComposeMenuPointerGesture(e.clientY)) e.preventDefault();
-});
+}, true);
 document.addEventListener("pointermove", (e) => {
   if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
   if (flightFlow.updateRecommendationPointerGesture?.(e.clientY)) e.preventDefault();
-});
+}, true);
 const releaseComposeMenuPointer = (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
+  if (composeMenuPointerTargetEl?.releasePointerCapture) {
+    try { composeMenuPointerTargetEl.releasePointerCapture(e.pointerId); } catch {}
+  }
   composeMenuPointerActive = false;
   composeMenuPointerId = null;
+  composeMenuPointerTargetEl = null;
   messageFlow.endComposeMenuHold({ commitSelection: true });
   e.preventDefault();
 };
-document.addEventListener("pointerup", releaseComposeMenuPointer);
-document.addEventListener("pointercancel", releaseComposeMenuPointer);
+document.addEventListener("pointerup", releaseComposeMenuPointer, true);
+document.addEventListener("pointercancel", releaseComposeMenuPointer, true);
 const releaseFlightRecommendationPointer = (e) => {
   if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
+  if (flightRecommendationPointerTargetEl?.releasePointerCapture) {
+    try { flightRecommendationPointerTargetEl.releasePointerCapture(e.pointerId); } catch {}
+  }
   flightRecommendationPointerActive = false;
   flightRecommendationPointerId = null;
+  flightRecommendationPointerTargetEl = null;
   flightFlow.endRecommendationHold?.({ commitSelection: false });
   e.preventDefault();
 };
-document.addEventListener("pointerup", releaseFlightRecommendationPointer);
-document.addEventListener("pointercancel", releaseFlightRecommendationPointer);
+document.addEventListener("pointerup", releaseFlightRecommendationPointer, true);
+document.addEventListener("pointercancel", releaseFlightRecommendationPointer, true);
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => {
   el.addEventListener("keydown", (e) => e.stopImmediatePropagation());
   el.addEventListener("keypress", (e) => e.stopImmediatePropagation());

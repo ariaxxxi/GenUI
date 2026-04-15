@@ -80,9 +80,9 @@ export const SHAPES = {
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
   magic: {
-    main: { w: 60, h: 60, br: '30px', tx: -30, ty: -60, op: 1 },
-    left: { w: 60, h: 60, br: '30px', tx: -30, ty: -60, op: 0 },
-    right: { w: 60, h: 60, br: '30px', tx: -30, ty: -60, op: 0 },
+    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 1 },
+    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
+    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
   dot: {
     main: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 1 },

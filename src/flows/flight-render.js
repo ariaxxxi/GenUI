@@ -22,7 +22,6 @@ export function createFlightRender({
   const THINKING_HOLD_MS = 3000;
   const DISAMBIGUATION_ENTER_MS = 800;
   const DISAMBIGUATION_EXIT_MS = 600;
-  const DISAMBIGUATION_ORB_SCALE = 0.625;
   const TOP = 10;
   const BOTTOM = 10;
   const MIN_H = 100;
@@ -147,30 +146,6 @@ export function createFlightRender({
       pillShape: SHAPES.pill || SHAPES.card,
       fallbackLabel: labelText,
     });
-  }
-
-  function recommendationDisambiguationGeo() {
-    const base = SHAPES.listening?.main || SHAPES.circle?.main || {};
-    const baseW = Number(base.w) || 80;
-    const baseH = Number(base.h) || 80;
-    const nextW = Math.round(baseW * DISAMBIGUATION_ORB_SCALE);
-    const nextH = Math.round(baseH * DISAMBIGUATION_ORB_SCALE);
-    const baseTx = Number(base.tx) || -(baseW / 2);
-    const baseTy = Number(base.ty) || -(baseH / 2);
-    return {
-      ...SHAPES.listening,
-      main: {
-        ...(SHAPES.listening?.main || {}),
-        w: nextW,
-        h: nextH,
-        br: `${Math.round(nextW / 2)}px`,
-        tx: Math.round(baseTx + ((baseW - nextW) / 2)),
-        ty: Math.round(baseTy + ((baseH - nextH) / 2)),
-        op: 1,
-      },
-      left: { ...(SHAPES.listening?.left || {}), op: 0 },
-      right: { ...(SHAPES.listening?.right || {}), op: 0 },
-    };
   }
 
   function optionRows(options) {
@@ -431,7 +406,7 @@ export function createFlightRender({
     const isDatesStep = step.type === "dates";
     if (stageEl) {
       stageEl.classList.toggle("flight-destination-active", isDestinationStep);
-      stageEl.classList.toggle("flight-voice-viz", isDestinationStep || isDatesStep);
+      stageEl.classList.remove("flight-voice-viz");
     }
     stopSiriOrb();
     hideRich();
@@ -468,7 +443,7 @@ export function createFlightRender({
     } else if (step.type === "recommendation" && flow.recommendationMode === "alternatives") {
       morphTo("card-list", { icon: "", primary: "", secondary: "" }, dynamicGeo("card-list", html));
     } else if (step.type === "recommendation") {
-      morphTo("listening", { icon: "", primary: "", secondary: "", detail: "" }, recommendationDisambiguationGeo());
+      morphTo("listening", { icon: "", primary: "", secondary: "", detail: "" });
     } else if (step.type === "confirm") {
       morphTo("card", { icon: "", primary: "", secondary: "" }, dynamicGeo("card", html, { controlsLift: flow.showConfirmDetails ? 0 : 78, maxHeight: confirmSafeMaxHeight() }));
     } else if (step.type === "done") {

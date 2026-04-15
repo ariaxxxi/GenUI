@@ -44,14 +44,13 @@ export function createMessageSendRender({
   const COMPOSE_FIELD_ACTIVE_H = 94;
   const COMPOSE_FIELD_MAX_H = 220;
   const COMPOSE_FIELD_SIDE_PADDING = 28;
-  const CONFIRM_TO_SENDING_MS = 600;
-  const CONFIRM_AWAIT_ORB_SIZE = 44;
-  const CONFIRM_AWAIT_ORB_GAP = 16;
-  const CONFIRM_AWAIT_ORB_SHIFT = CONFIRM_AWAIT_ORB_SIZE + CONFIRM_AWAIT_ORB_GAP;
+  const COMPOSE_AWAIT_ORB_SIZE = 50;
+  const COMPOSE_AWAIT_ORB_GAP = 16;
+  const COMPOSE_AWAIT_ORB_SHIFT = COMPOSE_AWAIT_ORB_SIZE + COMPOSE_AWAIT_ORB_GAP;
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
   const DISAMBIGUATION_ENTER_MS = 800;
-  const DISAMBIGUATION_ORB_SCALE = 0.625;
+  const DISAMBIGUATION_EXIT_MS = 600;
   const heightByState = { [GS.COMPOSE]: 240, [GS.CONFIRM]: 180 };
   let measureRaf = null;
   let settleTimer = null;
@@ -59,25 +58,21 @@ export function createMessageSendRender({
   let renderToken = 0;
   let prevState = GS.IDLE;
   let prevComposeHasText = false;
-  let prevSendTransitionActive = false;
-  let manualComposeEntry = false;
   let disambiguationPhase = "settled";
   let composeRevealTimer = null;
   let composePlaceholderDelayActive = false;
-  let confirmTransitionFrozenTextWidth = null;
+  let outgoingDisambiguationHtml = "";
+  let outgoingDisambiguationTimer = null;
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
-    if (state === GS.THINKING || state === GS.SENDING) return "magic";
+    if (state === GS.THINKING) return "magic";
+    if (state === GS.SENDING) return "listening";
     if (state === GS.DISAMBIGUATE) return "listening";
     if (state === GS.COMPOSE) return "card-form";
     if (state === GS.CONFIRM) return "card-form";
     if (state === GS.SENT) return "pill";
     return "circle";
-  }
-
-  function isConfirmToSendTransition(flow = getFlow()) {
-    return !!(flow?.active && flow.sentTransitionActive && flow.state === GS.SENDING);
   }
 
   function isCardState(state = getFlow().state) {
@@ -100,7 +95,7 @@ export function createMessageSendRender({
       : !!String(flow.composeText || "").trim();
     const w = measureComposeFieldWidth(hasText);
     const h = measureComposeFieldHeight(hasText, w);
-    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? CONFIRM_AWAIT_ORB_SHIFT : 0);
+    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? COMPOSE_AWAIT_ORB_SHIFT : 0);
     return {
       ...SHAPES["card-form"],
       main: {
@@ -176,32 +171,14 @@ export function createMessageSendRender({
     });
   }
 
-  function measureConfirmTransitionTextWidthPx() {
-    const liveText = C.rich.querySelector("[data-compose-field-text]");
-    const liveTextWidth = Math.round(liveText?.getBoundingClientRect?.().width || 0);
-    if (liveTextWidth > 0) return liveTextWidth;
-    const liveField = C.rich.querySelector("[data-compose-field]");
-    const liveFieldWidth = Math.round(liveField?.getBoundingClientRect?.().width || 0);
-    if (liveFieldWidth > 28) return Math.max(0, liveFieldWidth - 28);
-    const value = String(getFlow().msg || getFlow().composeText || "").trim();
-    if (!value) return Math.max(0, COMPOSE_FIELD_W - 28);
-    const fieldWidth = measureComposeFieldWidth(true);
-    return Math.max(0, Math.round(fieldWidth - 28));
-  }
-
-  function confirmTransitionTextWidthPx() {
-    return confirmTransitionFrozenTextWidth ?? measureConfirmTransitionTextWidthPx();
-  }
-
   function syncDropMainOrbClasses(shape) {
     const flow = getFlow();
     const dropMain = document.getElementById("drop-main");
     if (!dropMain) return;
-    const confirmAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
-    const showListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrb);
-    const showHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrb);
-    dropMain.classList.toggle("confirm-await-orb", confirmAwaitOrb);
-    dropMain.classList.remove("sent-transition");
+    const showComposeAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
+    const showListeningOrb = flow.active && (shape === "listening" || showComposeAwaitOrb);
+    const showHomeGlow = flow.active && shape === "magic";
+    dropMain.classList.toggle("compose-await-orb", showComposeAwaitOrb);
     dropMain.classList.toggle("listening-orb", showListeningOrb);
     dropMain.classList.toggle("home-glow", showHomeGlow);
   }
@@ -221,6 +198,11 @@ export function createMessageSendRender({
     disambiguationTimer = null;
   }
 
+  function cancelOutgoingDisambiguationTimer() {
+    if (outgoingDisambiguationTimer) clearTimeout(outgoingDisambiguationTimer);
+    outgoingDisambiguationTimer = null;
+  }
+
   function syncDisambiguationPhaseUi() {
     const cluster = C.rich.querySelector(".g-disambiguation-pills:not(.exiting-to-compose)");
     if (!cluster) return false;
@@ -238,28 +220,41 @@ export function createMessageSendRender({
     return { items: layoutDisambiguationPillItems(contacts, getFlow().sel) };
   }
 
-  function disambiguationGeo() {
-    const base = SHAPES.listening?.main || SHAPES.circle?.main || {};
-    const baseW = Number(base.w) || 80;
-    const baseH = Number(base.h) || 80;
-    const nextW = Math.round(baseW * DISAMBIGUATION_ORB_SCALE);
-    const nextH = Math.round(baseH * DISAMBIGUATION_ORB_SCALE);
-    const baseTx = Number(base.tx) || -(baseW / 2);
-    const baseTy = Number(base.ty) || -(baseH / 2);
-    return {
-      ...SHAPES.listening,
-      main: {
-        ...(SHAPES.listening?.main || {}),
-        w: nextW,
-        h: nextH,
-        br: `${Math.round(nextW / 2)}px`,
-        tx: Math.round(baseTx + ((baseW - nextW) / 2)),
-        ty: Math.round(baseTy + ((baseH - nextH) / 2)),
-        op: 1,
-      },
-      left: { ...(SHAPES.listening?.left || {}), op: 0 },
-      right: { ...(SHAPES.listening?.right || {}), op: 0 },
-    };
+  function primeDisambiguationExitLayer() {
+    const flow = getFlow();
+    const contacts = Array.isArray(flow.disambiguateContacts) ? flow.disambiguateContacts : [];
+    if (!contacts.length) {
+      outgoingDisambiguationHtml = "";
+      cancelOutgoingDisambiguationTimer();
+      return false;
+    }
+    const layout = layoutDisambiguationContacts(contacts);
+    const maxY = layout.items.reduce((acc, item) => Math.max(acc, Math.round(Number(item?.y) || 0)), -72);
+    const items = layout.items.map((contact, index) => ({
+      avatar: contact.avatar,
+      initials: contact.initials,
+      name: contact.name,
+      x: contact.x,
+      y: contact.y,
+      xStart: Math.round(Number(contact?.x) || 0),
+      yStart: maxY + 84 + (index * 18),
+      rotStart: contact.rotStart,
+      delay: contact.delay,
+    }));
+    outgoingDisambiguationHtml = renderDisambiguationPills({
+      phase: "settled",
+      selectedIndex: flow.sel,
+      items,
+      rowDataAttr: "data-g-contact",
+      clusterClass: "g-disambiguation-pills prototype-disambiguation-pills exiting-to-compose",
+    });
+    cancelOutgoingDisambiguationTimer();
+    outgoingDisambiguationTimer = setTimeout(() => {
+      outgoingDisambiguationTimer = null;
+      outgoingDisambiguationHtml = "";
+      if (getFlow().active) render(false);
+    }, DISAMBIGUATION_EXIT_MS);
+    return true;
   }
 
   function contentHeightPx() {
@@ -284,50 +279,30 @@ export function createMessageSendRender({
 
   function buildContent() {
     const flow = getFlow();
-    const sendTransitionActive = isConfirmToSendTransition(flow);
-    const buildConfirmStage = (extraClass = "") => {
+    const buildConfirmStage = () => {
       const contact = flow.contact;
-      const classes = ["g-compose-stage", "has-text", "confirm-mode", extraClass].filter(Boolean).join(" ");
-      const styleAttr = extraClass === "confirm-exit-to-sent"
-        ? ` style="--g-confirm-text-freeze-w:${confirmTransitionTextWidthPx()}px;"`
-        : "";
-      return `<div data-glass-body class="${classes}"${styleAttr}>${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: true })}<div class="g-compose-field-wrap">${renderComposeField({ text: flow.msg || "", active: true })}</div></div>`;
+      return `<div data-glass-body class="g-compose-stage has-text confirm-mode">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: true })}<div class="g-compose-field-wrap">${renderComposeField({ text: flow.msg || "", active: true })}</div></div>`;
     };
     const buildComposeStage = () => {
       const contact = flow.contact;
       const hasText = !!String(flow.composeText || "").trim();
-      const chipsHtml = renderComposeChipStack({
-        chips: (flow.composeVisualChips || []).map((chip, idx) => ({ id: String(chip.originalIndex ?? idx), label: chip.label })),
-        selectedIndex: flow.sel,
-        open: !!flow.composeMenuOpen,
-        closing: !!flow.composeMenuClosing,
-        visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
-      });
+      const hideHeader = (flow.composeMenuOpen && !flow.composeMenuClosing) || !!flow.composeChipMagicPending;
+      const shouldRenderChipStack = !!flow.composeMenuOpen || !!flow.composeMenuClosing || (Number(flow.composeMenuVisibleCount) || 0) > 0;
+      const chipsHtml = shouldRenderChipStack
+        ? renderComposeChipStack({
+            chips: (flow.composeVisualChips || []).map((chip, idx) => ({ id: String(chip.originalIndex ?? idx), label: chip.label })),
+            selectedIndex: flow.sel,
+            open: !!flow.composeMenuOpen,
+            closing: !!flow.composeMenuClosing,
+            visibleCount: Number.isFinite(flow.composeMenuVisibleCount) ? flow.composeMenuVisibleCount : 0,
+          })
+        : "";
       const inputHtml = renderComposeField({ text: flow.composeText, placeholder: "Speak your message...", active: hasText, magicPending: !!flow.composeChipMagicPending });
       const maybeCheckRow = flow.showCheck ? renderActionRow({ actions: [{ id: "confirm", emoji: "✅" }], selectedIndex: 0 }) : "";
-      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !(flow.composeMenuOpen && !flow.composeMenuClosing) })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
-    };
-    const buildOutgoingDisambiguationStage = () => {
-      const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
-      return renderDisambiguationPills({
-        phase: "settled",
-        selectedIndex: flow.sel,
-        items: layout.items.map((contact) => ({
-          avatar: contact.avatar,
-          initials: contact.initials,
-          name: contact.name,
-          x: contact.x,
-          y: contact.y,
-          rotStart: contact.rotStart,
-          delay: contact.delay,
-        })),
-        rowDataAttr: "data-g-contact",
-        clusterClass: "g-disambiguation-pills exiting-to-compose",
-      });
+      return `<div data-glass-body class="g-compose-stage ${flow.composeMenuOpen ? "menu-open" : ""} ${hasText ? "has-text" : ""} ${composePlaceholderDelayActive ? "placeholder-delayed" : ""}">${renderComposeHeader({ avatar: contact?.avatar, initials: contact?.initials, name: contact?.name || "", visible: !hideHeader })}<div class="g-compose-field-wrap">${chipsHtml}${inputHtml}</div>${maybeCheckRow}</div>`;
     };
     if (flow.state === GS.IDLE) return "";
-    if (sendTransitionActive) return `${renderSendingStatus({ label: "sending..." })}<div class="g-confirm-to-sent-layer">${buildConfirmStage("confirm-exit-to-sent")}</div>`;
-    if (flow.state === GS.THINKING) return renderCompactStatus({ type: "loading", label: "·", dotsId: "g-thinking-dots" });
+    if (flow.state === GS.THINKING) return "";
     if (flow.state === GS.SENDING) return renderSendingStatus({ label: "sending..." });
     if (flow.state === GS.DISAMBIGUATE) {
       const layout = layoutDisambiguationContacts(flow.disambiguateContacts || []);
@@ -347,14 +322,6 @@ export function createMessageSendRender({
       });
     }
     if (flow.state === GS.COMPOSE) {
-      const hasComposeText = !!String(flow.composeText || "").trim();
-      const shouldShowOutgoingDisambiguation = manualComposeEntry
-        && !hasComposeText
-        && !flow.composeChipMagicPending
-        && !flow.composeMenuOpen
-        && !flow.composeMenuHolding
-        && !flow.composeMenuClosing;
-      if (shouldShowOutgoingDisambiguation) return `${buildOutgoingDisambiguationStage()}${buildComposeStage()}`;
       return buildComposeStage();
     }
     if (flow.state === GS.CONFIRM) return buildConfirmStage();
@@ -366,20 +333,18 @@ export function createMessageSendRender({
     const flow = getFlow();
     renderToken += 1;
     const token = renderToken;
-    const sendTransitionActive = isConfirmToSendTransition(flow);
-    if (sendTransitionActive && !prevSendTransitionActive) confirmTransitionFrozenTextWidth = measureConfirmTransitionTextWidthPx();
-    else if (!sendTransitionActive) confirmTransitionFrozenTextWidth = null;
-    const shape = sendTransitionActive ? "magic" : glassStateShape(flow.state);
-    const confirmAwaitOrbActive = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
-    const shouldShowListeningOrb = flow.active && (shape === "listening" || confirmAwaitOrbActive);
-    const shouldShowHomeGlow = flow.active && (shape === "listening" || shape === "magic" || confirmAwaitOrbActive);
+    const shape = glassStateShape(flow.state);
+    const showComposeAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
+    const shouldShowListeningOrb = flow.active && (shape === "listening" || showComposeAwaitOrb);
+    const shouldShowHomeGlow = flow.active && shape === "magic";
     const screenSpec = buildScreenSpec();
     const dropMain = document.getElementById("drop-main");
     const composeHasText = (flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim()) || (flow.state === GS.CONFIRM && !!String(flow.msg || "").trim());
-    const composeVoiceVizActive = flow.state === GS.COMPOSE && !!String(flow.composeText || "").trim() && !flow.composeMenuOpen;
     const enteringDisambiguation = flow.state === GS.DISAMBIGUATE && prevState !== GS.DISAMBIGUATE;
     const enteringComposeFromDisambiguation = flow.state === GS.COMPOSE && prevState === GS.DISAMBIGUATE;
+    const enteringSendingFromConfirm = flow.state === GS.SENDING && prevState === GS.CONFIRM;
     const enteringComposeText = flow.state === GS.COMPOSE && composeHasText && !prevComposeHasText;
+    const muteOrbChrome = false;
     composePlaceholderDelayActive = enteringComposeFromDisambiguation && !composeHasText;
     document.body.classList.toggle("glass-flow-active", flow.active);
     if (enteringDisambiguation) {
@@ -395,33 +360,31 @@ export function createMessageSendRender({
       disambiguationPhase = "settled";
       cancelDisambiguationTimer();
     }
-    const preserveSentTransitionLayer = sendTransitionActive && prevSendTransitionActive;
-    if (!preserveSentTransitionLayer) {
-      const nextContent = buildContent();
-      if (C.rich.innerHTML !== nextContent) C.rich.innerHTML = nextContent;
-    }
+    const nextContent = buildContent();
+    const nextMarkup = outgoingDisambiguationHtml ? `${nextContent}${outgoingDisambiguationHtml}` : nextContent;
+    if (C.rich.innerHTML !== nextMarkup) C.rich.innerHTML = nextMarkup;
     if (flow.state === GS.DISAMBIGUATE) syncDisambiguationPhaseUi();
-    if (flow.sentToastEnterPending && flow.state === GS.SENT && !sendTransitionActive) flow.sentToastEnterPending = false;
+    if (flow.sentToastEnterPending && flow.state === GS.SENT) flow.sentToastEnterPending = false;
     prevState = flow.state;
     prevComposeHasText = composeHasText;
     dropMain?.classList.toggle("disambiguation-surface", flow.active && flow.state === GS.DISAMBIGUATE);
     dropMain?.classList.toggle("compose-surface", flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM));
-    dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM && !sendTransitionActive);
-    dropMain?.classList.toggle("compose-text-active", flow.active && composeVoiceVizActive);
-    dropMain?.classList.toggle("compose-chip-sizing", flow.active && flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
-    dropMain?.classList.toggle("confirm-await-orb", confirmAwaitOrbActive);
+    dropMain?.classList.toggle("confirm-surface", flow.active && flow.state === GS.CONFIRM);
+    dropMain?.classList.toggle("sending-surface", flow.active && flow.state === GS.SENDING);
+    dropMain?.classList.toggle("compose-await-orb", showComposeAwaitOrb);
     dropMain?.classList.toggle("listening-orb", shouldShowListeningOrb);
     dropMain?.classList.toggle("home-glow", shouldShowHomeGlow);
+    dropMain?.classList.toggle("flow-orb-muted", muteOrbChrome);
+    dropMain?.classList.toggle("sending-orb-fade-in", enteringSendingFromConfirm);
     C.rich.classList.toggle("visible", flow.active);
-    const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM || sendTransitionActive);
+    const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);
-    C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT && !sendTransitionActive);
+    C.rich.classList.toggle("glass-sent", flow.active && flow.state === GS.SENT);
     C.rich.classList.toggle("glass-disambiguation", flow.active && flow.state === GS.DISAMBIGUATE);
     C.rich.classList.toggle("glass-compose", isComposeSurface);
-    C.rich.classList.toggle("sent-transition", sendTransitionActive);
+    C.rich.classList.remove("sent-transition");
     C.rich.classList.toggle("compose-entering", enteringComposeFromDisambiguation);
     C.rich.dataset.glassState = flow.active ? String(flow.state) : "";
-    document.body.classList.toggle("message-confirm-to-sent", sendTransitionActive);
     cancelComposeRevealTimer();
     if (enteringComposeText) {
       C.rich.style.opacity = "0";
@@ -439,7 +402,7 @@ export function createMessageSendRender({
     cancelMeasure();
     cancelSettle();
 
-    if (flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM) && !sendTransitionActive) {
+    if (flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM)) {
       const apply = (force = false) => {
         const geo = composeGeo();
         const currentGeo = getCurrentMainGeometry() || {};
@@ -470,23 +433,9 @@ export function createMessageSendRender({
           apply(false);
         }, 80);
       }
-    } else if (flow.active && sendTransitionActive) {
-      const geo = SHAPES[shape] || SHAPES.magic;
-      const current = getCurrentMainGeometry() || {};
-      if (
-        shouldMorph
-        || Math.abs(geo.main.w - (current.w || 0)) > 1
-        || Math.abs(geo.main.h - (current.h || 0)) > 1
-        || Math.abs(geo.main.ty - (current.ty || 0)) > 1
-      ) {
-        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
-      }
-      trackIntentHeaderForTransition(CONFIRM_TO_SENDING_MS);
-      syncDropMainOrbClasses(shape);
-      renderControls(screenSpec);
     } else if (flow.active && flow.state === GS.DISAMBIGUATE) {
       if (shouldMorph || enteringDisambiguation) {
-        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, disambiguationGeo());
+        morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" });
       }
       syncDropMainOrbClasses(shape);
     } else if (flow.active) {
@@ -515,7 +464,6 @@ export function createMessageSendRender({
     const glow = document.getElementById("home-glow-layer");
     if (glow) glow.style.opacity = "";
     updateOrbLabel();
-    prevSendTransitionActive = sendTransitionActive;
 
     hideIntentHeader();
 
@@ -543,7 +491,7 @@ export function createMessageSendRender({
     buildContent,
     render,
     setManualComposeEntry(flag) {
-      manualComposeEntry = !!flag;
+      void flag;
     },
     markStateCommitted() {
       prevState = getFlow().state;
@@ -551,8 +499,11 @@ export function createMessageSendRender({
     clearDisambiguationMotion() {
       disambiguationPhase = "settled";
       cancelDisambiguationTimer();
+      cancelOutgoingDisambiguationTimer();
+      outgoingDisambiguationHtml = "";
       syncDisambiguationPhaseUi();
     },
+    primeDisambiguationExitLayer,
     updateSelectionUiOnly() {
       const flow = getFlow();
       if (!flow.active) return false;
@@ -577,7 +528,7 @@ export function createMessageSendRender({
       if (!flow.active || flow.state !== GS.COMPOSE) return false;
       const glassBodies = C.rich.querySelectorAll("[data-glass-body]");
       const hasOutgoingDisambiguationLayer = glassBodies.length > 1 || !!C.rich.querySelector(".g-disambiguation-pills.exiting-to-compose");
-      if (manualComposeEntry || hasOutgoingDisambiguationLayer) return false;
+      if (hasOutgoingDisambiguationLayer) return false;
       const stack = C.rich.querySelector(".g-compose-chip-stack");
       if (!stack) return false;
       const previousStackRect = stack.getBoundingClientRect();
@@ -588,7 +539,7 @@ export function createMessageSendRender({
       stack.classList.toggle("expanded", visibleCount > 3);
       stack.dataset.visibleCount = String(visibleCount);
       const header = C.rich.querySelector(".g-compose-header");
-      if (header) header.classList.toggle("is-hidden", !!flow.composeMenuOpen && !flow.composeMenuClosing);
+      if (header) header.classList.toggle("is-hidden", (!!flow.composeMenuOpen && !flow.composeMenuClosing) || !!flow.composeChipMagicPending);
       chips.forEach((chip, idx) => {
         chip.classList.toggle("is-visible", idx < visibleCount);
         chip.classList.toggle("selected", idx === flow.sel);

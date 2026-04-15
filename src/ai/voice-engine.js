@@ -36,18 +36,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   };
 
   async function initVoiceAnalyser() {
-    if (voiceEngine.analyser) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false });
-      voiceEngine.micStream = stream;
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.88;
-      ctx.createMediaStreamSource(stream).connect(analyser);
-      voiceEngine.audioCtx = ctx;
-      voiceEngine.analyser = analyser;
-    } catch {}
+    return;
   }
 
   function getComposePulseField() {
@@ -55,79 +44,13 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function applyVoiceVisualization(level, actionBtns) {
-    const glassUi = getGlassUi();
-    const GS = getGlassState();
-    const state = glassUi?.state;
-    const glowEl = document.getElementById('home-glow-layer');
-    const dropMain = document.getElementById('drop-main');
-    const siriOrb = document.getElementById('siri-orb');
-    const confirmAwaitOrb = dropMain?.classList.contains('confirm-await-orb') === true;
-    const clearActionBtns = () => actionBtns.forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
-    const clearSiriOrb = () => {
-      if (siriOrb) siriOrb.style.boxShadow = '';
-    };
-    if (voiceEngine.mode === 'command') {
-      const allowCommandViz = shouldShowCommandViz?.() !== false;
-      if (!allowCommandViz) {
-        if (glowEl) glowEl.style.boxShadow = '';
-        if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        clearSiriOrb();
-        clearActionBtns();
-        return;
-      }
-      const flightContainerViz = document.getElementById('stage')?.classList.contains('flight-voice-viz') === true;
-      if (state === GS.DISAMBIGUATE || flightContainerViz) {
-        if (glowEl) glowEl.style.boxShadow = shadow(level);
-        if (dropMain) dropMain.style.setProperty('box-shadow', shadow(level));
-        clearSiriOrb();
-      } else if (state === GS.CONFIRM && confirmAwaitOrb) {
-        if (glowEl) glowEl.style.boxShadow = shadow(level);
-        if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        clearSiriOrb();
-        clearActionBtns();
-      } else {
-        if (glowEl) glowEl.style.boxShadow = shadow(level);
-        if (dropMain) dropMain.style.setProperty('box-shadow', '');
-        clearSiriOrb();
-      }
-      if (state !== GS.CONFIRM || !confirmAwaitOrb) {
-        clearActionBtns();
-      }
-    }
-    if (voiceEngine.mode === 'dictation') {
-      if (glowEl) glowEl.style.boxShadow = '';
-      if (dropMain) dropMain.style.removeProperty('box-shadow');
-      clearSiriOrb();
-      clearActionBtns();
-    }
-    if (voiceEngine.mode === 'dictation' && Date.now() - dictationStart > 600) {
-      const field = getComposePulseField();
-      if (field && field.dataset.pulseLock !== '1') {
-        field.style.transition = 'min-height 400ms var(--motion-ease), background 400ms var(--motion-ease), border-color 400ms var(--motion-ease), box-shadow 180ms var(--motion-ease)';
-        field.style.setProperty('box-shadow', shadow(level), 'important');
-      }
-    }
+    void level;
+    void actionBtns;
+    resetVizStyles({ clearDropMain: true });
   }
 
   function startVoiceViz() {
-    if (!voiceEngine.analyser) return;
-    if (voiceEngine.vizRaf) cancelAnimationFrame(voiceEngine.vizRaf);
-    vizLevel = 0;
-    const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
-    let actionBtns = document.querySelectorAll('.g-action-btn');
-    let lastState = null;
-    const tick = () => {
-      if (!voiceEngine.active || voiceEngine.mode === 'off') { voiceEngine.vizRaf = null; return; }
-      const currentState = getGlassUi()?.state;
-      if (currentState !== lastState) { actionBtns = document.querySelectorAll('.g-action-btn'); lastState = currentState; }
-      voiceEngine.analyser.getByteFrequencyData(data);
-      const avg = data.reduce((s, v) => s + v, 0) / data.length;
-      const raw = Math.pow(Math.min(avg / 32, 1), 0.6);
-      vizLevel += (raw - vizLevel) * 0.18;
-      applyVoiceVisualization(vizLevel, actionBtns);
-      voiceEngine.vizRaf = requestAnimationFrame(tick);
-    };
-    voiceEngine.vizRaf = requestAnimationFrame(tick);
+    applyVoiceVisualization(0, []);
   }
 
   function resetVizStyles({ clearDropMain = true } = {}) {
@@ -144,7 +67,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
 
   function stopVoiceViz() {
     if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
-    resetVizStyles({ clearDropMain: getGlassUi()?.state !== getGlassState().DISAMBIGUATE });
+    resetVizStyles({ clearDropMain: true });
   }
 
   function clearVoiceVizStyles() {

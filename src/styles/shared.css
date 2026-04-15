@@ -59,6 +59,10 @@
   opacity: 1;
 }
 
+body.glass-flow-active #prototype-stage-selection {
+  opacity: 0 !important;
+}
+
 /* Bottom-right white highlight — must NOT be inside a masked ancestor */
 .g-stage-selected-sharp-pass {
   position: absolute;

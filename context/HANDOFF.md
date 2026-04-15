@@ -1,6 +1,436 @@
 # Handoff
 
 ## Task title
+Animate disambiguation chips into compose and remove confirm to send shell fade
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to support an outgoing disambiguation overlay layer that reuses the existing prototype pill transition path:
+  - captures the current disambiguation contacts before entering compose
+  - renders them as `g-disambiguation-pills prototype-disambiguation-pills exiting-to-compose`
+  - keeps that layer mounted for the existing `prototype-disambiguation-pill-out` animation window, then clears it
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so choosing a disambiguation contact primes that outgoing pill layer before the flow switches to compose.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so confirm → send no longer drops the shell styling immediately:
+  - listening-shell suppression is skipped while `sending-orb-fade-in` is active
+  - send-entry orb fade duration is lengthened so the orb takes over after the shell morph, not during a blank fade window
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Live Playwright validation against served `ai.html`:
+  - disambiguation → compose screenshots:
+    - `/tmp/genui-transition-check/compose-exit-40.png`
+    - `/tmp/genui-transition-check/compose-exit-180.png`
+    - `/tmp/genui-transition-check/compose-exit-420.png`
+  - confirm → send opacity samples:
+    - `50ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity=0`
+    - `180ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity=0`
+    - `320ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity≈0.12`
+    - `420ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity≈0.89`
+  - confirm → send screenshots:
+    - `/tmp/genui-transition-check/send-180.png`
+    - `/tmp/genui-transition-check/send-320.png`
+    - `/tmp/genui-transition-check/send-420.png`
+
+## Remaining issues / caveats
+- The outgoing disambiguation layer is intentionally mounted inside `#c-rich` for the 600ms prototype exit window. During that window, compose chip-menu UI-only updates intentionally bail out if they detect the outgoing layer, then resume once it clears.
+- `context/task.md` remains stale and did not drive this pass; the user request was the effective source of truth.
+
+## Recommended next step
+1. Manually verify whether the disambiguation pill drop distance feels correct. If the chips should fall farther or fan outward before collapsing, only the `xStart` / `yStart` values in `primeDisambiguationExitLayer()` need adjustment.
+
+## Task title
+Remove remaining duplicate selected-shell transitions in compose entry and confirm to send
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the compose-entry preserve-shell path from [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so entering compose no longer applies a second transition-only shell class to `#drop-main`.
+- Removed the old compose-entry and send-entry shell-preservation logic from [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js), then restored a send-only timer that is now used only for centered orb fade-in timing.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so:
+  - plain compose surfaces immediately suppress `#siri-orb`, preventing any inner selected-shell carry-over after disambiguation → compose
+  - sending surfaces force the orb to stay centered with no horizontal transform interpolation from the confirm orb position
+  - confirm → send now uses opacity-only fade-in on the orb, with `drop-main` remaining the only container shell
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Live browser validation against served `ai.html` at `http://127.0.0.1:4317/ai.html` using Playwright:
+  - compose entry at `40ms`: `drop-main` classes = `drop compose-surface`; `#siri-orb` opacity = `0`
+  - compose entry at `180ms`: `drop-main` classes = `drop compose-surface`; `#siri-orb` opacity = `0`
+  - compose entry at `520ms`: `drop-main` classes = `drop compose-surface`; `#siri-orb` opacity = `0`
+  - confirm → send at `50ms`: `drop-main` classes = `drop listening-orb sending-surface sending-orb-fade-in`; `#siri-orb` transform = centered `scale(1)` with opacity `0`
+  - confirm → send at `230ms`: `drop-main` classes = `drop listening-orb sending-surface`; `#siri-orb` transform = centered `scale(1)` with no left-translation component
+- Visual screenshots captured during validation:
+  - `/tmp/genui-repro-fixed2/compose-180.png`
+  - `/tmp/genui-repro-fixed2/send-050.png`
+  - `/tmp/genui-repro-fixed2/send-230.png`
+
+## Remaining issues / caveats
+- `context/task.md` is still stale and does not reflect this AI-mode regression pass; the user request remained the effective source of truth for this work.
+- I did not complete a separate long-press screenshot pass in this turn because the visible compose-field locator hits both the real field and the offscreen measurement clone. The reported issues for compose entry and confirm → send are validated live.
+
+## Recommended next step
+1. Reopen AI mode and recheck the same two transitions manually:
+   - disambiguation → compose should not show any inner selected shell after compose starts
+   - confirm → send should fade the orb in at the center without any container translating in from the left
+
+## Task title
+Make AI-mode listening and confirm orbs reuse the bubble-page orb setup and suppress the flow shell flash
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [ai.html](/Users/ariax/Documents/GitHub/GenUI/ai.html) so the `#siri-orb` selection-layer order now matches the bubble page setup:
+  - accent rim
+  - white highlight
+  - sharp pass
+  - highlight mask
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so `#drop-main.listening-orb:not(.compose-surface)` no longer renders the base drop shell background, box-shadow, stroke pseudo-elements, or home-glow layer. This leaves the listening-stage orb visually driven by the orb visual itself, like the bubble page orb.
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to stop applying the AI-flow orb mute class during disambiguation / confirm. The confirm-step orb now keeps the normal bubble-orb chrome instead of switching to the muted flow-specific orb treatment.
+- Updated [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css) so `#prototype-stage-selection` is forced hidden while `glass-flow-active` is set. This removes the large selected-style shell flash from active AI flows, including the compose long-press path.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ai.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed `muteOrbChrome = false` in `message-send-render`
+  - confirmed listening-orb shell suppression is applied to `#drop-main.listening-orb:not(.compose-surface)`
+  - confirmed `body.glass-flow-active #prototype-stage-selection` is hidden
+  - confirmed the AI orb layer order in `ai.html` now matches the bubble page structure
+
+## Remaining issues / caveats
+- I still did not complete a browser visual pass in this environment, so the final confirmation for listening, long-press, and confirm orb appearance is manual in AI mode.
+- The older `flow-orb-muted` CSS remains in the stylesheet but is no longer actively applied by the message-send flow after this pass.
+
+## Recommended next step
+1. Reopen AI mode and verify:
+   - the listening-stage orb now matches the bubble page orb instead of the brighter double-shell version
+   - long-press no longer flashes the large selected-style container before chips open
+   - the confirm-step orb remains visually consistent with the bubble page orb from entry through settle
+
+## Task title
+Stabilize compose long-press chip menu and make message-flow listening orb match the bubble orb
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so the initial compose long-press hold uses `updateComposeMenuUiOnly()` instead of forcing a full compose rerender. This keeps the hold-state update limited to the existing chip stack/header DOM and avoids the extra pre-open flash on the compose surface.
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so message-flow listening / chip-await states no longer enable `home-glow`; only the `magic` state does. That removes the extra blue fill pass that was making the chip-fired orb change appearance mid-entry.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the compose await orb no longer applies its own glow shell, backdrop blur, or extra white `::before` / `::after` strokes. The chip-fired orb now reuses the same base bubble-orb visual stack instead of swapping through multiple styles.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed message-flow `home-glow` is now only enabled for `magic`
+  - confirmed compose-await orb no longer renders custom `#siri-orb::before` / `::after` shell strokes
+  - confirmed long-press hold start/cancel paths now prefer `updateComposeMenuUiOnly()` over a full rerender
+
+## Remaining issues / caveats
+- I did not finish a browser visual pass for the long-press sequence in this environment, so the final check is still manual in AI mode.
+- The repo still has unrelated local modifications in the same AI-mode files; this pass stayed within the compose hold / orb-style paths only.
+
+## Recommended next step
+1. Reopen AI mode and verify:
+   - holding on the compose field no longer flashes a selected-style shrinking container before the chip stack opens
+   - the chip-fired orb below the compose field keeps one consistent bubble-orb style during its full entry
+   - the message-flow listening orb now matches the bubble-page orb styling without the extra AI-only glow layer
+
+## Task title
+Fix AI-mode send-message regressions in disambiguation, compose entry, and confirm-to-sending chrome
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to tag three transition-specific AI-mode states on `#drop-main`:
+  - `flow-orb-muted` for disambiguation and confirm
+  - `compose-entry-preserve-orb` for disambiguation → compose
+  - `sending-orb-selection-enter` for confirm → sending
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so:
+  - disambiguation and confirm suppress the white orb outline/highlight layers and the home-glow / breathing treatment
+  - the outgoing orb stays full-size during disambiguation → compose, expands with the shell, and fades out instead of shrinking
+  - the sending-state orb selection chrome fades in after entry instead of sliding in visually from the left-side highlight assets
+  - the confirm await-orb white shell strokes are disabled while confirm is in the muted state
+- Updated [src/styles/ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so:
+  - disambiguation pills no longer render the white outline stroke
+  - focused confirm/info shells no longer render the explicit white outline ring
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed `message-send-render` now applies `flow-orb-muted`, `compose-entry-preserve-orb`, and `sending-orb-selection-enter`
+  - confirmed muted disambiguation / confirm states suppress white highlight layers and home glow in `ai-decorative.css`
+  - confirmed disambiguation pill outline opacity is `0` and focused info-shell white ring was removed in `ai-glass.css`
+
+## Remaining issues / caveats
+- I did not complete a browser render pass in this environment, so the final confirmation for the three regressions is still visual in AI mode.
+- `src/styles/ai-glass.css` and related AI-mode files already had unrelated local modifications in the worktree; this patch was limited to the specific regression paths above.
+
+## Recommended next step
+1. Reopen AI mode and verify:
+   - disambiguation and confirm no longer show the white orb/container outline or voice-glow treatment
+   - disambiguation → compose keeps the outgoing orb full-size, expands it with the shell, and fades it instead of shrinking
+   - saying `send` on confirm makes the sending-state selection chrome fade in from within the orb rather than appearing to travel in from the left
+
+## Task title
+Restore compose chip-selection orb and hide compose header during hold/select states
+
+## Completion status
+- Completed
+
+## Summary
+- Reintroduced a compose-only chip-selection orb state in [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) and [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+- After selecting a suggestion chip, the listening orb now appears below the compose field again during the chip-fill animation, without reusing the old confirm/send auxiliary orb path.
+- Updated compose layout sizing so the field lifts upward when that compose-only orb is active.
+- Updated the compose header visibility rules so the header hides during:
+  - long-press hold before the chip stack opens
+  - chip stack open state
+  - chip-fill magic pending state
+- Added the compose-only orb positioning CSS back in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css), scoped to `compose-await-orb` only.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed compose-only orb state is driven by `composeChipMagicOrbActive`
+  - confirmed compose-only orb CSS is scoped to `.compose-await-orb`
+  - confirmed header hide logic now includes `composeMenuHolding` and `composeChipMagicPending`
+
+## Remaining issues / caveats
+- I did not complete a browser-render verification in this environment, so the final check is still visual in AI mode.
+
+## Recommended next step
+1. Reopen send-message in AI mode, long-press to open chips, then select a chip and verify:
+   - the header hides during hold/open
+   - the text fills
+   - the listening orb appears below the compose field before confirm
+
+## Task title
+Fix compose long-press suggestion menu regression after transition cleanup
+
+## Completion status
+- Completed
+
+## Summary
+- Removed a stale `manualComposeEntry` reference from [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+- The long-press compose suggestion menu path still called `updateComposeMenuUiOnly()`, and that function was throwing once the removed `manualComposeEntry` variable was touched.
+- With that reference gone, the hold timer can update the compose chip stack normally again.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed there are no remaining `manualComposeEntry` references in message-send render/flow files
+
+## Remaining issues / caveats
+- This was a source-level fix; I did not complete a clean browser automation confirmation in this environment.
+
+## Recommended next step
+1. Reopen the send-message compose step and long-press on the compose surface. The suggestion chip stack should now open instead of silently failing.
+
+## Task title
+Restore compose long-press gesture for suggestion chips
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the compose/recommendation pointer gesture wiring in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js).
+- The long-press handlers now run in the capture phase and explicitly capture the active pointer on the pressed element before the compose flow blurs the simulator input.
+- On pointer release/cancel, the code now releases pointer capture cleanly and clears the tracked target reference.
+- This makes the hold gesture resilient to focus changes and DOM updates during compose, which were preventing the suggestion-chip hold from consistently opening.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Source verification:
+  - confirmed compose hold uses capture-phase `pointerdown` / `pointermove` / `pointerup`
+  - confirmed compose hold now stores the pressed element and calls `setPointerCapture(...)`
+  - confirmed release path clears pointer capture and resets tracked pointer target state
+
+## Remaining issues / caveats
+- I did not get a clean browser automation confirmation in this environment, so the final verification still needs a manual long-press check in AI mode.
+
+## Recommended next step
+1. Reopen the send-message compose step and hold on the compose container; the suggestion chips should open while the pointer is still held, then remain draggable/selectable.
+
+## Task title
+Remove duplicate AI message-flow orb/container transitions and disable voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Simplified the send-message flow render path in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - removed the confirm-to-sending preserved layer path
+  - removed the extra confirm/compose auxiliary orb path
+  - removed the outgoing disambiguation overlay stage
+  - removed the loading dots content inside the magic-stage orb
+- Simplified the state machine in [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - deleted the temporary compose-chip orb activation path
+  - deleted the confirm-to-sent transition preservation state
+  - made confirm → sending → sent use one shell at a time instead of overlapping carry-over layers
+  - made disambiguation → compose morph directly into the compose container
+- Disabled voice-driven visual effects in [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so command/dictation still work, but the extra glow/box-shadow visualization no longer modifies the orb, shell, compose field, or action buttons.
+- Prevented active AI flows from using the home-orb thinking bridge in [src/shared/morph.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js), which removes the old blurred orb flash when transitioning from listening into magic during the message flow.
+- Removed dead transition styling from [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) and [src/styles/ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css), and stopped applying `flight-voice-viz` in [src/flows/flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js).
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check` passed for:
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- Source verification:
+  - confirmed message-flow source no longer contains `composeChipMagicOrbActive`, `sentTransitionActive`, `message-confirm-to-sent`, `g-confirm-to-sent-layer`, or `confirm-exit-to-sent`
+  - confirmed message-flow CSS no longer contains the removed confirm-await / confirm-to-sent transition styling
+  - confirmed flight render no longer enables `flight-voice-viz`
+- Attempted browserless module import, but repo-level module loading still fails in Node because `/Users/ariax/Documents/GitHub/GenUI/src/utils.js` reads `window` at import time
+
+## Remaining issues / caveats
+- I did not capture fresh rendered screenshots from this environment, so the final confirmation for the transition cleanup still needs an in-browser visual pass through the send-message flow.
+- Home-state orb bridging still exists for non-flow home transitions; this pass only disabled that bridge while `glass-flow-active` is set.
+
+## Recommended next step
+1. Reopen AI mode and step through send-message from listening → disambiguation → compose → confirm → sending → sent to verify there is only one orb/container at each transition and no blurred legacy orb flash.
+
+## Task title
+Make disambiguation orb use the normal listening-stage orb
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the disambiguation-only orb shrink path from [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) and [src/flows/flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js).
+- Disambiguation states in both send-message and book-flight flows now morph directly to the standard `listening` stage without a reduced custom geometry override.
+- Removed the disambiguation-only orb dim/scale CSS from [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css), so the orb in that step now uses the same visual treatment as the normal listening stage.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed there are no remaining `DISAMBIGUATION_ORB_SCALE`, `disambiguationGeo`, or `recommendationDisambiguationGeo` helpers
+  - confirmed both flows now call `morphTo("listening", ...)` / `morphTo(shape, ...)` for disambiguation without a custom orb geometry
+  - confirmed there are no remaining `.disambiguation-surface.listening-orb` orb override rules
+
+## Remaining issues / caveats
+- This pass was source-verified only; I did not capture a fresh rendered screenshot of the disambiguation state from this environment.
+
+## Recommended next step
+1. Reopen the disambiguation step in AI mode and verify the orb below the pills now matches the normal listening-stage orb size and styling.
+
+## Task title
+Align AI-mode orb styling with bubble page and unify flow selected states
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the AI-page listening/magic orb markup in [ai.html](/Users/ariax/Documents/GitHub/GenUI/ai.html) so AI mode no longer uses the old `thinking-orb` structure and instead renders the same spherical chrome system used by the bubble page.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so listening, magic, disambiguation, and confirm-await orb states all use that shared bubble-style orb visual instead of the previous metaball/thinking CSS.
+- Fixed the magic-stage orb regression from the follow-up screenshot by:
+  - restoring inherited radius on the new orb visual wrapper
+  - making `magic` geometry match `listening` (`80x80`, `40px` radius) in [src/shapes.js](/Users/ariax/Documents/GitHub/GenUI/src/shapes.js) and [src/shapes.legacy.js](/Users/ariax/Documents/GitHub/GenUI/src/shapes.legacy.js)
+- Reworked AI flow selected-container styling in [src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) and [src/styles/ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css):
+  - send-message and book-flight flow containers now render the same `g-stage-selected-*` chrome used on bubble/index
+  - removed the old AI-only accent-orbit selection DOM/CSS
+  - this covers the selected states for disambiguation pills, compose chips, recommendation chips, selection rows, chip bars, action buttons, and flight recommendation cards generated through the shared flow primitives
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ai.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shapes.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shapes.legacy.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `SHAPES.listening.main` and `SHAPES.magic.main` now match exactly
+  - confirmed `ai.html` mounts `#siri-orb .ai-flow-orb-visual` and no longer mounts `.thinking-orb-visual`
+  - confirmed the AI-page selected containers now render shared `g-stage-selected-*` chrome from the flow primitives
+- Browser verification:
+  - loaded `ai.html` in Playwright
+  - confirmed the AI page boots without page errors
+  - confirmed the new orb markup exists and legacy `thinking-orb` nodes count is `0`
+- Existing repo smoke:
+  - `node test/smoke.mjs` still fails later in the index-page portion because a pre-existing debug sidebar toggle intercepts the timeline click; the failure was not in the AI boot path touched here
+
+## Remaining issues / caveats
+- I did not produce a rendered screenshot from this environment after the magic-stage fix, so the final visual confirmation still depends on opening the AI flow and checking the stage directly.
+- `src/shapes.legacy.js` previously lacked a `magic` shape entry; it now has one to stay aligned with the canonical module.
+
+## Recommended next step
+1. Open AI mode and step through both listening and magic states in send-message and book-flight flows to visually confirm the orb now matches in both states and that the selected-container chrome feels correct against the live motion.
+
+## Task title
 Switch Unity shell container to a sliced sprite using `container.png`
 
 ## Completion status
@@ -9972,6 +10402,103 @@ Remove the original bubble page and keep only bubble2 runtime
 ## Recommended next step
 1. Use `http://localhost:5173/bubble2` as the explicit bubble demo URL going forward.
 2. If you no longer need the legacy alias, the next cleanup step is to remove `/bubble` route compatibility and keep only `/bubble2`.
+
+---
+
+## Task title
+Eliminate duplicate shell during compose long-press and confirm-to-send transition
+
+## Completion status
+- Completed
+
+## Summary
+- Cleared the stale disambiguation-to-compose orb-preservation class after the compose entry animation settles, so long-press no longer inherits that inner shell state.
+- Kept the compose long-press hold window shell-stable by not mounting the chip stack until the menu actually opens.
+- Delayed the send-state inner orb reveal during the first part of confirm-to-send, so the outer `drop-main` morph no longer shows a second nested shell during the transition.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Live Playwright browser run on served `ai.html` in fullscreen stage mode:
+  - compose hold at `150ms`: `#c-rich [data-compose-field]` count = `1`, chip stack absent, no visible inner duplicate shell
+  - compose hold at `370ms`: chip stack present, compose field count still `1`, no second full-size inner shell
+  - confirm → send at `60ms`: `#c-rich [data-glass-body]` count = `0`, no nested inner shell visible
+  - confirm → send at `240ms`: orb visible as the only inner element
+
+## Remaining issues / caveats
+- Browser verification was performed headlessly in Playwright. I did not do an additional manual non-headless visual pass in this turn.
+- `context/task✅.md` remains stale and unrelated to the current AI-mode regression work.
+
+## Recommended next step
+1. Recheck the same two transitions interactively in your local browser:
+   - compose long-press before chips open
+   - confirm → `send` first transition frame
+
+---
+
+## Task title
+Remove duplicate send-transition shell and compose-hold inner shell in AI message flow
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the special confirm-to-sending orb-selection transition from the AI message flow render path so the send step no longer enables its extra one-off shell animation.
+- Changed the message-send `SENDING` state to use the listening-orb shape path instead of the magic shell path, so post-`send` visuals now resolve through the same bubble-orb setup used elsewhere in the flow.
+- Stopped mounting the compose chip stack during the long-press hold window. The stack now appears only once the chip menu actually opens, which removes the hidden inner shell layer that was still flashing inside the compose container.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- This pass only included source-level validation. I did not run a live browser visual check in this turn.
+- `context/task✅.md` remains stale and unrelated to the current AI-mode regression work.
+
+## Recommended next step
+1. In AI mode confirm step, say `send` and verify there is no duplicate card shell entering from the left.
+2. Verify the post-`send` waiting state now uses the same bubble-style orb instead of the magic/thinking shell.
+3. In compose step, long-press before the menu opens and verify no inner duplicate container appears during the hold window.
+
+---
+
+## Task title
+Remove compose long-press inner selected-style flash before chip menu opens
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the compose field in its resting visual state during the long-press hold window.
+- Removed the pre-open selection state by clearing `flow.sel` as soon as compose hold starts, instead of waiting for the chip menu to open.
+- Stopped hiding the compose header during `composeMenuHolding`; the header now stays visible until the chip menu is actually open, which avoids the transient inner selected-style shell the user reported.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- This pass only included source-level validation. I did not run a live browser visual check in this turn.
+- `context/task✅.md` is still stale and unrelated to the current AI-mode regression work.
+
+## Recommended next step
+1. In AI mode compose step, long-press on the compose field and verify the field stays visually unchanged during the hold window, then the chips appear without the shrinking inner selected-style flash.
 
 ---
 
