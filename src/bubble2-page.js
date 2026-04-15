@@ -1,3 +1,5 @@
+// import { initHandTracking } from './hand-tracking.js';
+
 const BUBBLE_BASE_SIZE = 110;
 const BUBBLE_MIN_SIZE = 60;
 const BUBBLE_MAX_SIZE = 110;
@@ -25,15 +27,15 @@ const ORB_IDLE_DURATION_MS = 1000;
 const ORB_PRESSED_DURATION_MS = 450;
 const ORB_CENTER_X = 210;
 const ORB_CENTER_Y = 356;
-const FALLBACK_ICON = 'https://img.icons8.com/color/512/application-window.png';
+const FALLBACK_ICON = 'src/assets/fallback-icon.png';
 const PILL_TEXT_LEFT_PADDING = 16;
 const PILL_TEXT_RIGHT_PADDING = 64;
 const PILL_TRAILING_ICON_SIZE = 40;
 const PILL_TRAILING_ICON_RIGHT = 18;
 const PILL_ACTION_GAP = 16;
 const CHILD_STAGGER_STEP_MS = 60;
-const CHILD_MENU_HOLD_MS = 3000;
-const CHILD_BUBBLE_SIZE = 60;
+const CHILD_MENU_HOLD_MS = 1500;
+const CHILD_BUBBLE_SIZE = 80;
 const CHILD_CHIP_FONT_SIZE = 20;
 const CHILD_CHIP_HEIGHT = 48;
 const CHILD_CHIP_PADDING_X = 16;
@@ -47,14 +49,14 @@ const CHILD_SIBLING_GAP = 14;
 const HOVER_LEASH_PX = 15;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
-  chatgpt: 'https://www.figma.com/api/mcp/asset/6226094c-fe66-40cc-bfeb-a23992ea5c25',
-  gemini: 'https://www.figma.com/api/mcp/asset/9d1608d4-5006-4ce7-9784-7dc5b7eb62c5',
-  health: 'https://www.figma.com/api/mcp/asset/87b4cdef-3bb5-416a-bb0f-211d77a0d40b',
-  map: 'https://www.figma.com/api/mcp/asset/f40a0071-c992-4dbf-9256-c3736addfb85',
-  weather: 'https://www.figma.com/api/mcp/asset/896a1ccd-1004-44f8-8049-ca37fea131a9',
-  note: 'https://www.figma.com/api/mcp/asset/cdea9f5f-3322-4b7d-a23d-bde7e27887c7',
+  chatgpt: 'src/assets/figma-chatgpt.png',
+  gemini:  'src/assets/figma-gemini.png',
+  health:  'src/assets/figma-health.png',
+  map:     'src/assets/figma-map.png',
+  weather: 'src/assets/figma-weather.png',
+  note:    'src/assets/figma-note.png',
 };
-const PROFILE_CALL_BADGE_ASSET = 'https://store-images.s-microsoft.com/image/apps.36692.13838317266281778.c2d285ff-9d71-4e2b-9a04-aa9832c1b3c2.506b3747-5c34-4ea3-a97c-53b41cdf491e';
+const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 
 const BUBBLES_CONFIG = [
   {
@@ -62,7 +64,7 @@ const BUBBLES_CONFIG = [
     x: 9,
     y: -102,
     zIndex: 20,
-    img: 'https://i.scdn.co/image/ab67616d00001e0200702474f8e0e2b6155d48e3',
+    img: 'src/assets/spotify-album-happiness.jpg',
     fill: true,
     isPill: true,
     pillTitle: 'Happiness',
@@ -77,9 +79,9 @@ const BUBBLES_CONFIG = [
     subIconOffsetY: 67.83,
     disableHoverScale: true,
     childActions: [
-      { id: 'playlist-1', img: 'https://misc.scdn.co/liked-songs/liked-songs-300.jpg', fill: true },
-      { id: 'playlist-2', img: 'https://www.indieground.net/images/blog/2024/indieblog-best-album-covers-2010s-07.jpg', fill: true },
-      { id: 'playlist-3', img: 'https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg', fill: true },
+      { id: 'playlist-1', img: 'src/assets/spotify-liked-songs.jpg', fill: true },
+      { id: 'playlist-2', img: 'src/assets/spotify-album-2.jpg', fill: true },
+      { id: 'playlist-3', img: 'src/assets/spotify-album-blonde.jpg', fill: true },
     ],
   },
   {
@@ -109,6 +111,7 @@ const BUBBLES_CONFIG = [
     zIndex: 14,
     img: FIGMA_ASSETS.note,
     fill: true,
+    haloColor: 'rgb(253, 64, 64)',
     childActions: [
       { id: 'checklist', kind: 'check', bg: '#ffffff', fg: '#111827' },
       { id: 'voice', kind: 'mic', bg: '#fff5f5', fg: '#ff5252' },
@@ -138,6 +141,7 @@ const BUBBLES_CONFIG = [
     zIndex: 13,
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
+    haloColor: '#ffffff',
     pillTitle: 'Continue',
     pillSubtitle: 'Book flight to Coachella',
     childLayout: 'chatgpt-chips',
@@ -154,6 +158,7 @@ const BUBBLES_CONFIG = [
     zIndex: 14,
     img: FIGMA_ASSETS.gemini,
     fill: true,
+    haloColor: '#A391FB',
     childLayout: 'gemini-chips',
     childActions: [
       { id: 'plan', kind: 'chip', label: '🧩 Plan my day', fontWeight: 500, layoutLeft: -3, layoutTop: -81, accent: '#8ce56f' },
@@ -188,6 +193,7 @@ const BUBBLES_CONFIG = [
     zIndex: 10,
     img: FIGMA_ASSETS.map,
     fill: true,
+    haloColor: '#ffffff',
     childActions: [
       { id: 'home', kind: 'home', bg: '#ffffff', fg: '#ffffff' },
       { id: 'work', kind: 'briefcase', bg: '#ffffff', fg: '#ffffff' },
@@ -200,6 +206,7 @@ const BUBBLES_CONFIG = [
     zIndex: 12,
     img: FIGMA_ASSETS.weather,
     fill: true,
+    haloColor: '#3483FF',
     childActions: [
       { id: 'forecast', kind: 'sun', bg: '#ffffff', fg: '#f5b400' },
       { id: 'rain', kind: 'umbrella', bg: '#ffffff', fg: '#149cf1' },
@@ -269,6 +276,7 @@ function init() {
   }
   bindEvents();
   render();
+  // initHandTracking();
 }
 
 function buildScene() {
@@ -369,6 +377,10 @@ function createBubbleNode(bubble, index) {
   }
 
   inner.appendChild(surface);
+
+  const shadowEl = document.createElement('div');
+  shadowEl.className = 'bubble2-item-shadow';
+  root.appendChild(shadowEl);
   root.appendChild(inner);
 
   return {
@@ -379,6 +391,7 @@ function createBubbleNode(bubble, index) {
     iconWrap,
     pillCopy,
     subIcon,
+    shadowEl,
   };
 }
 
@@ -455,11 +468,11 @@ function createOrbNode() {
   `;
   button.appendChild(visual);
 
-  button.addEventListener('pointerdown', handlePointerDown);
   return button;
 }
 
 function bindEvents() {
+  window.addEventListener('pointerdown', handlePointerDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
@@ -499,7 +512,7 @@ function handlePointerDown(event) {
     active: true,
   };
   if (refs.orb?.setPointerCapture && event.pointerId != null) {
-    refs.orb.setPointerCapture(event.pointerId);
+    try { refs.orb.setPointerCapture(event.pointerId); } catch (_) {}
   }
   scheduleMotionPhaseRender(state.openMotionUntil);
   scheduleRender();
@@ -634,13 +647,24 @@ function render() {
     node.root.style.height = `${format(bubble.baseSize)}px`;
     const isContextParent = state.childMenuParentId === bubble.id;
     const isDimmed = state.childMenuParentId != null && !isContextParent;
-    node.root.style.opacity = state.isPressed ? String(isDimmed ? CHILD_DIMMED_OPACITY : 1) : '0';
-    node.root.style.boxShadow = isHovered
-      ? '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
-      : '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
+    const anyHovered = scene.hoveredId != null;
+    const isHoverDimmed = anyHovered && !isHovered;
+    const bubbleOpacity = isDimmed ? CHILD_DIMMED_OPACITY : isHoverDimmed ? 0.6 : 1;
+    node.root.style.opacity = state.isPressed ? String(bubbleOpacity) : '0';
+    if (node.shadowEl) {
+      const accentShadow = (!bubble.isPill && isHovered && bubble.haloColor)
+        ? `0 0 20px 8px ${bubble.haloColor}`
+        : '';
+      node.shadowEl.style.boxShadow = [
+        accentShadow,
+        isHovered ? '0 0 50px 40px rgba(0, 0, 0, 1)' : '0 15px 35px -5px rgba(0, 0, 0, 0.3)'
+      ].filter(Boolean).join(', ');
+    }
     node.root.style.transform =
       `translate3d(${format(translateX)}px, ${format(translateY)}px, 0) scale(${bubble.targetScale.toFixed(4)})`;
-    node.root.style.filter = isDimmed ? 'brightness(0.42) saturate(0.68)' : 'none';
+    node.root.style.filter = isDimmed
+      ? 'brightness(0.42) saturate(0.68)'
+      : 'none';
     node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
     node.root.style.transitionDelay = `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
     node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
@@ -648,6 +672,9 @@ function render() {
 
     node.iconWrap.style.width = `${bubble.baseSize}px`;
     node.iconWrap.style.height = `${bubble.baseSize}px`;
+    if (!bubble.isPill) {
+      node.surface.classList.toggle('is-hovered', isHovered);
+    }
 
     if (node.pillCopy) {
       const pillContentScale = Math.max((bubble.targetScale ?? 1), 0.0001);
@@ -1142,7 +1169,7 @@ function createSubIconGraphic(kind) {
   if (kind === 'spotify-badge') {
     const image = document.createElement('img');
     image.className = 'bubble2-icon is-fill';
-    image.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Spotify_icon.svg/960px-Spotify_icon.svg.png?_=20220821125323';
+    image.src = 'src/assets/spotify-icon.png';
     image.alt = '';
     image.draggable = false;
     image.style.setProperty('--bubble-image-scale', '1');
