@@ -50,6 +50,7 @@
   z-index: 8;
   border-radius: inherit;
   --g-stage-h: 80px;
+  --ai-listening-rim-level: 0;
   --g-stage-selected-rgb: rgb(114 154 241);
   --g-stage-selected-secondary-rgb: rgb(197 160 240);
   opacity: 0;
@@ -126,6 +127,69 @@
 }
 .ai-flow-orb-selection .g-stage-selected-highlight {
   animation: ai-flow-orb-breathe-highlight 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+#drop-main.listening-orb #siri-orb .ai-flow-orb-sphere {
+  animation: none;
+}
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+  animation: none;
+}
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+  box-shadow:
+    inset calc(5px + var(--ai-listening-rim-level) * 14px) 0 calc(4px + var(--ai-listening-rim-level) * 26px) calc(-9px + var(--ai-listening-rim-level) * 4px)
+      color-mix(in srgb, var(--g-stage-selected-rgb) calc(18% + var(--ai-listening-rim-level) * 60%), white calc(4% + var(--ai-listening-rim-level) * 18%)),
+    inset calc(-5px - var(--ai-listening-rim-level) * 14px) 0 calc(4px + var(--ai-listening-rim-level) * 26px) calc(-9px + var(--ai-listening-rim-level) * 4px)
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(20% + var(--ai-listening-rim-level) * 60%), white calc(4% + var(--ai-listening-rim-level) * 16%)),
+    inset 0 calc(3px + var(--ai-listening-rim-level) * 9px) calc(3px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
+      color-mix(in srgb, var(--g-stage-selected-rgb) calc(10% + var(--ai-listening-rim-level) * 42%), var(--g-stage-selected-secondary-rgb)),
+    inset 0 calc(-3px - var(--ai-listening-rim-level) * 9px) calc(3px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(12% + var(--ai-listening-rim-level) * 44%), var(--g-stage-selected-rgb)),
+    inset 0 0 calc(4px + var(--ai-listening-rim-level) * 28px) calc(-7px + var(--ai-listening-rim-level) * 3px)
+      rgba(255, 255, 255, calc(0.008 + var(--ai-listening-rim-level) * 0.102));
+  transition: box-shadow 48ms linear;
+}
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+  box-shadow:
+    inset 0 0 calc(1px + var(--ai-listening-rim-level) * 9px) calc(-1px + var(--ai-listening-rim-level) * 2px) rgba(255, 255, 255, calc(0.14 + var(--ai-listening-rim-level) * 0.66)),
+    inset 0 1px 0 rgba(255, 255, 255, calc(0.03 + var(--ai-listening-rim-level) * 0.21));
+  transition: box-shadow 48ms linear;
+}
+#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
+#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+  animation: none;
+}
+#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection,
+#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-accent-rim,
+#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-highlight,
+#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-sharp-pass,
+#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-highlight-mask,
+#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-sphere::before,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection,
+#drop-main.confirm-surface #siri-orb .g-stage-selected-accent-rim,
+#drop-main.confirm-surface #siri-orb .g-stage-selected-highlight,
+#drop-main.confirm-surface #siri-orb .g-stage-selected-sharp-pass,
+#drop-main.confirm-surface #siri-orb .g-stage-selected-highlight-mask,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere::before {
+  opacity: 1;
+  transition: none !important;
+}
+#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+  box-shadow:
+    inset 13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
+    inset -13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
+    inset 0 9px 11px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
+    inset 0 -9px 11px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
+    inset 0 0 14px -5px rgba(255, 255, 255, 0.03);
+}
+#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+  box-shadow:
+    inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 @keyframes sleep-listening-orb-in {
   0% {

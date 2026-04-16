@@ -45,7 +45,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.88;
+      analyser.smoothingTimeConstant = 0.72;
       ctx.createMediaStreamSource(stream).connect(analyser);
       voiceEngine.audioCtx = ctx;
       voiceEngine.analyser = analyser;
@@ -56,6 +56,43 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     return document.querySelector('[data-compose-field]');
   }
 
+  function getListeningOrb() {
+    return document.getElementById('siri-orb');
+  }
+
+  function getOrbVizState() {
+    const orb = getListeningOrb();
+    const dropMain = document.getElementById('drop-main');
+    const listeningShape = document.body?.dataset?.currentShape === 'listening';
+    const orbVisible = !!(orb && dropMain && listeningShape && dropMain.classList.contains('listening-orb'));
+    const orbSuppressed = !!(dropMain && (
+      dropMain.classList.contains('disambiguation-surface') ||
+      dropMain.classList.contains('confirm-surface') ||
+      dropMain.classList.contains('flow-orb-muted')
+    ));
+    return { orb, dropMain, orbVisible, orbSuppressed };
+  }
+
+  function shouldDriveOrbVisualization() {
+    const { orbVisible, orbSuppressed } = getOrbVizState();
+    return orbVisible && !orbSuppressed;
+  }
+
+  function applyOrbVisualization(level) {
+    const { orb, orbVisible, orbSuppressed } = getOrbVizState();
+    if (!orbVisible || orbSuppressed) {
+      if (orb) {
+        orb.style.removeProperty('--ai-listening-rim-level');
+        orb.removeAttribute('data-listening-rim-reactive');
+      }
+      return false;
+    }
+    const rimLevel = Math.max(0, Math.min(1, Math.pow(level, 0.86) * 1.18));
+    orb.style.setProperty('--ai-listening-rim-level', rimLevel.toFixed(4));
+    orb.setAttribute('data-listening-rim-reactive', '1');
+    return true;
+  }
+
   function composeFieldAccent(level) {
     const mix = (from, to) => Math.round(from + ((to - from) * level));
     const primary = `rgb(${mix(144, 102)} ${mix(172, 208)} ${mix(255, 255)})`;
@@ -63,7 +100,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     return { primary, secondary };
   }
 
-  function dictationVizFade() {
+  function voiceVizFade() {
     if (!vizVisibleSince) return 0;
     const progress = Math.max(0, Math.min((Date.now() - vizVisibleSince) / VIZ_FADE_IN_MS, 1));
     return 1 - Math.pow(1 - progress, 2);
@@ -73,11 +110,12 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const field = getComposePulseField();
     const state = getGlassUi?.()?.state;
     const composeState = getGlassState?.()?.COMPOSE;
+    const orbApplied = applyOrbVisualization(level);
 
     if (voiceEngine.mode !== 'dictation' || !field || (composeState != null && state !== composeState)) {
-      vizVisibleSince = 0;
+      if (!orbApplied) vizVisibleSince = 0;
       void actionBtns;
-      resetVizStyles({ clearDropMain: true });
+      resetVizStyles({ clearDropMain: true, clearOrb: !orbApplied });
       return;
     }
     if (!vizVisibleSince) vizVisibleSince = Date.now();
@@ -96,20 +134,31 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
     const tick = () => {
       if (voiceEngine.mode === 'off') { voiceEngine.vizRaf = null; return; }
+      if (!vizVisibleSince && (voiceEngine.mode === 'dictation' || shouldDriveOrbVisualization())) {
+        vizVisibleSince = Date.now();
+      }
       voiceEngine.analyser.getByteFrequencyData(data);
-      const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
-      const raw = Math.pow(Math.min(avg / 32, 1), 0.6);
-      const target = raw * dictationVizFade();
-      vizLevel += (target - vizLevel) * 0.18;
+      const bins = Array.from(data.slice(4, 64));
+      const avg = bins.reduce((sum, value) => sum + value, 0) / Math.max(bins.length, 1);
+      const peak = bins.reduce((max, value) => Math.max(max, value), 0);
+      const weighted = (avg * 0.62) + (peak * 0.38);
+      const raw = Math.pow(Math.min(weighted / 52, 1), 0.82);
+      const target = raw * voiceVizFade();
+      const response = target > vizLevel ? 0.44 : 0.32;
+      vizLevel += (target - vizLevel) * response;
       applyVoiceVisualization(vizLevel, []);
       voiceEngine.vizRaf = requestAnimationFrame(tick);
     };
     voiceEngine.vizRaf = requestAnimationFrame(tick);
   }
 
-  function resetVizStyles({ clearDropMain = true } = {}) {
+  function resetVizStyles({ clearDropMain = true, clearOrb = true } = {}) {
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
-    document.getElementById('siri-orb')?.style.setProperty('box-shadow', '');
+    const orb = getListeningOrb();
+    if (orb && clearOrb) {
+      orb.style.removeProperty('--ai-listening-rim-level');
+      orb.removeAttribute('data-listening-rim-reactive');
+    }
     const field = getComposePulseField();
     if (field) {
       field.style.transition = '';

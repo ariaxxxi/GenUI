@@ -10581,3 +10581,405 @@ Build standalone Unity prototype project for the GenUI morphing stage system
 1. Open `/Users/ariax/Documents/Github/GenUI-Unity` in the desktop Unity editor.
 2. Let Unity import scripts and assets, then open or let it auto-create `Assets/GenUIPrototype/Scenes/PrototypeStageSystem.unity`.
 3. Select `GenUIStageSystem`, author stages in the inspector, press Play, and verify transitions with `1..9`, arrows, `Enter`/`Space`, and `Esc`.
+
+## Task title
+Implement reactive listening-stage orb voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Used the `frontend-design` skill direction to keep the listening orb on the existing bubble-page chrome stack, then made the inner rim react more aggressively to live voice energy instead of adding a separate waveform UI.
+- Updated [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so the voice analyser now:
+  - computes a stronger weighted level from the mic spectrum
+  - drives orb-specific CSS variables (`--ai-voice-level`, `--ai-voice-presence`) on `#siri-orb`
+  - boosts the orb response curve so low-to-mid speech reads more clearly
+  - suppresses orb voice-reactivity on muted message-flow states (`disambiguation-surface`, `confirm-surface`, `flow-orb-muted`) so earlier fixes are preserved
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so active listening orb states now get:
+  - stronger cyan/lilac rim bloom on the existing selected-edge layers
+  - a brighter white inner-edge surge
+  - a rotating spectral edge band inside the orb rim
+  - larger scale / glow response under higher voice levels
+  - fast linear transitions so the rim reads as voice-reactive instead of slow ambient breathing
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- Live browser validation via real Google Chrome launched with remote debugging, then controlled through Playwright over CDP against served `ai.html`
+- Forced the listening orb into isolated render mode and compared calm vs high-energy states
+- Captured live screenshots:
+  - calm state: `/tmp/orb-voice-compare-0-v2.png`
+  - high-energy state: `/tmp/orb-voice-compare-0-9-v2.png`
+- Observed in the live render:
+  - high-energy state grows beyond the calm orb size
+  - the inner edge brightens and blooms more strongly at high voice levels
+  - the effect stays on the orb chrome itself rather than introducing a second container or separate waveform element
+
+## Remaining issues / caveats
+- The static screenshots show the voice-reactive state clearly brighter and larger than the calm orb, but the rotating edge-band component is easier to judge in motion than in a still frame.
+- `context/task.md` is still stale and did not drive this pass; the current user request was the effective source of truth.
+
+## Recommended next step
+1. Reopen AI mode and speak at low and high volume in the listening stage. The rim should now read as a deliberate cyan/lilac surge on the orb edge, with a noticeably stronger response on louder speech.
+
+## Task title
+Fix listening-stage orb voice visualization not reacting in command mode
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the actual command-listening logic bug in [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js):
+  - added a shared orb-eligibility helper so command-mode orb listening and muted flow states use the same gate
+  - armed `vizVisibleSince` for command-mode orb listening before the analyser output is fade-gated
+  - this prevents the command-listening analyser target from being multiplied by a permanent `0` fade value
+- Updated [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) so command visualization is allowed whenever the real listening stage is onscreen, not only when `aiAwake` or a flow is active
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome using a fake microphone/analyser harness:
+  - entered the actual listening stage via keyboard `L`
+  - confirmed `#drop-main` had `listening-orb`
+  - confirmed `#siri-orb` had `data-voice-reactive="1"`
+  - measured live CSS variable response:
+    - high injected mic energy: `--ai-voice-level = 1`
+    - reduced injected mic energy after settle: `--ai-voice-level = 0.4464`
+
+## Remaining issues / caveats
+- This validation used a fake analyser in the browser harness to drive stable synthetic mic energy. It verifies the real page wiring and state transitions, but not actual OS microphone permission behavior.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Reopen AI mode and test with your real microphone in the listening stage. The orb should now react immediately instead of staying visually static.
+
+## Task title
+Remove listening-stage orb voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the orb-specific voice-visualization path from [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js):
+  - deleted orb-reactive helpers and the orb variable-writing path
+  - restored `startVoiceViz()` / `applyVoiceVisualization()` to affect only the compose dictation field
+  - stopped setting `data-voice-reactive`, `--ai-voice-level`, and `--ai-voice-presence` on `#siri-orb`
+- Removed the orb voice-reactive CSS treatment from [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css):
+  - deleted the extra rotating rim band
+  - deleted the cyan/lilac reactive glow path
+  - deleted the scale / edge-intensity overrides tied to `#siri-orb[data-voice-reactive="1"]`
+- Result: the listening stage now falls back to the normal bubble orb with no voice-reactive rim effect
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome using a fake loud analyser:
+  - entered the actual listening stage via keyboard `L`
+  - confirmed `document.body.dataset.currentShape === "listening"`
+  - confirmed `#siri-orb` had no `data-voice-reactive`
+  - confirmed computed CSS values for `--ai-voice-level` and `--ai-voice-presence` were empty
+
+## Remaining issues / caveats
+- This only removes the orb listening-stage voice visualization. The compose dictation field visualization remains intact.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Hard refresh the AI page if you still have the old orb effect cached in an open tab.
+
+## Task title
+Make listening-stage orb rim width react to voice without idle breathing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so the listening orb writes a dedicated `--ai-listening-rim-level` CSS variable during the real listening stage instead of relying on the old idle animation path.
+- Kept the listening-stage visualization scoped to the orb rim only:
+  - `applyOrbVisualization()` now drives the rim level from analyser energy
+  - command/listening mode no longer clears the orb state immediately after applying it
+  - compose dictation field visualization remains separate
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css):
+  - disabled the listening orb’s idle sphere / rim breathing animations
+  - made the inner rim thickness and highlight intensity respond to `--ai-listening-rim-level`
+  - preserved the existing bubble-page orb look while changing only rim width under voice input
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome using a fake microphone / analyser harness:
+  - entered the actual listening stage via keyboard `L`
+  - confirmed `#drop-main` had `listening-orb`
+  - confirmed `#siri-orb` had `data-listening-rim-reactive="1"`
+  - confirmed the listening rim variable moved with input:
+    - high injected mic energy: `--ai-listening-rim-level = 1.0000`
+    - low injected mic energy after settle: `--ai-listening-rim-level = 0.1971`
+
+## Remaining issues / caveats
+- This validation used a synthetic analyser feed, so it verifies the real listening-stage wiring and CSS behavior but not OS-level microphone permission handling.
+- `context/task.md` remains stale and did not drive this pass; the direct user request was treated as the active source of truth.
+
+## Recommended next step
+1. Reopen AI mode listening and test with your real microphone. The orb should stay visually still at idle and only thicken the inner rim when voice energy comes in.
+
+## Task title
+Reduce listening-stage rim visibility at zero volume
+
+## Completion status
+- Completed
+
+## Summary
+- Tuned the listening-stage rim baseline in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so silence collapses to a near-hairline instead of leaving a clearly visible idle rim.
+- Reduced the zero-level inset spread, blur, and white highlight values for:
+  - `.g-stage-selected-accent-rim`
+  - `.g-stage-selected-highlight`
+- Kept the same voice-driven widening path, so louder input still expands to the full thicker rim.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome using the same fake listening analyser harness:
+  - entered the actual listening stage via keyboard `L`
+  - sampled silence and loud input on the real page
+  - confirmed `--ai-listening-rim-level = 0.0000` at silence
+  - confirmed the silent shadow stack dropped to a minimal hairline:
+    - rim highlight: `rgba(255, 255, 255, 0.14) 0px 0px 1px -1px inset`
+  - confirmed loud input still reaches the full widened state:
+    - `--ai-listening-rim-level = 1.0000`
+
+## Remaining issues / caveats
+- This pass validated the live page with synthetic analyser input, not a real microphone capture.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Check the listening orb at real silence in AI mode. If you want it even more minimal, the remaining tuning is isolated to the listening-rim shadow values in `ai-decorative.css`.
+
+## Task title
+Restore colored orb rim in confirm step
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm-step orb in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css).
+- Root cause: confirm still carries the `listening-orb` class, so after the listening-rim tuning it was inheriting the zero-volume listening baseline, which made the rim read almost black.
+- Added a confirm-specific override so `#drop-main.confirm-surface #siri-orb` uses a static colored blue/lilac accent rim and normal highlight instead of the ultra-thin listening-at-zero treatment.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - forced the confirm-state class stack on the real page: `confirm-surface compose-surface compose-await-orb listening-orb`
+  - forced `--ai-listening-rim-level: 0`
+  - confirmed computed confirm rim shadow resolved to the colored accent rim instead of the thin listening baseline:
+    - blue/lilac rim shadows at `13px / 14px / -7px`
+    - highlight restored to `rgba(255, 255, 255, 0.8) 0px 0px 6px 1px inset`
+
+## Remaining issues / caveats
+- This validation targeted the real CSS state directly rather than stepping through the full confirm interaction flow.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Reopen the confirm step in AI mode and verify the orb reads like the bubble-page orb again, with a visible colored rim instead of a black edge.
+
+## Task title
+Remove black first-frame orb flash when entering confirm from a fired chip
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm-entry orb handoff in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css).
+- Root cause: the disambiguation state explicitly drove the orb selection layers to `opacity: 0`, and the listening rim path still had a short `box-shadow` transition. On the first confirm frame, the orb could briefly render with the dark sphere before the colored confirm rim fully came back.
+- Added a confirm-specific first-frame override so the orb selection stack is immediately visible in confirm:
+  - forced `opacity: 1` for the selection, rim, highlight, sharp pass, highlight mask, and sphere edge layer
+  - forced `transition: none !important` on those layers so the confirm rim does not interpolate from the listening baseline
+- Result: after firing a chip into confirm, the orb shows the colored blue/lilac rim immediately instead of flashing black for the first few milliseconds.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - forced the live orb through a disambiguation → confirm class handoff on the real page
+  - sampled the first frame after switching to `confirm-surface`
+  - confirmed immediate first-frame values:
+    - `selectionOpacity = 1`
+    - `rimOpacity = 1`
+    - `hiOpacity = 1`
+    - full confirm rim shadow already present on that first frame
+  - confirmed the immediate rim shadow matched the final blue/lilac confirm rim, not an intermediate dark / thin state
+
+## Remaining issues / caveats
+- This validation targeted the exact CSS handoff path directly rather than replaying the full message-send interaction sequence.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Reopen the chip-fire → confirm path in AI mode and verify the orb starts with the colored rim immediately, with no black flash on entry.
+
+## Task title
+Restore colored rim on first await-orb frame before confirm
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the pre-confirm await-orb styling in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css).
+- Root cause: the earlier confirm-only override still left the shared `compose-await-orb.listening-orb` state on the listening-at-zero rim path. That meant the orb could appear dark before the confirm-specific styling took over.
+- Moved the static colored rim treatment up to the entire `compose-await-orb.listening-orb` path:
+  - forced the selection / rim / highlight stack visible immediately
+  - disabled transitions on those layers
+  - applied the same static blue/lilac rim and highlight shadows used by confirm
+- Result: the orb now has the colored rim from the moment it appears in the await-orb phase, so there is no black first frame before confirm.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - forced the real page into `compose-surface compose-await-orb listening-orb`
+  - sampled the first await-orb frame
+  - forced the next frame into `confirm-surface compose-surface compose-await-orb listening-orb`
+  - confirmed both frames already had:
+    - `rimOpacity = 1`
+    - `hiOpacity = 1`
+    - full blue/lilac rim shadow
+    - restored white highlight shadow
+
+## Remaining issues / caveats
+- This validation still targets the exact live CSS states directly rather than replaying the full user interaction sequence through the UI.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Reopen the chip-fire → confirm path and verify the orb has the colored rim immediately on first appearance, before any later confirm settling.
+
+## Task title
+Add wake audio for idle/home to listening transition
+
+## Completion status
+- Completed
+
+## Summary
+- Added a dedicated wake/listening earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+- The new `wake-listening` cue is a short upward glassy bloom designed for the agent-awakening transition, distinct from the existing `hover`, `chip`, `button`, and `sent` earcons.
+- Wired it into [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) inside `armAiWakeListening()` so it only plays when AI mode actually transitions from idle/home into the listening orb:
+  - home context circle → listening
+  - sleep → listening
+- It does not run for unrelated internal listening reuse inside active flows.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered `armAiWakeListening({ source: 'keyboard-l' })` from home
+  - confirmed resulting stage state was listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+  - instrumented `AudioContext.prototype` and confirmed the wake transition created audio nodes:
+    - `oscCount = 2`
+    - `gainCount = 3`
+
+## Remaining issues / caveats
+- This validates the wake path and generated audio graph, but not subjective loudness / taste on real speakers.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the idle/home → listening wake in the browser and tune the wake earcon envelope if you want it softer, brighter, or more Apple-like.
+
+## Task title
+Retune wake earcon to be brighter and more magical
+
+## Completion status
+- Completed
+
+## Summary
+- Retuned the `wake-listening` earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+- Shifted the cue away from a grounded warm bloom and toward a lighter, more magical character:
+  - reduced the low-body feel
+  - raised the lead pitch contour
+  - added a brighter shimmer layer
+  - added a small high sparkle accent
+  - tightened the airy transient so it feels lighter and less heavy
+- The wake logic in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) was left unchanged.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered `armAiWakeListening({ source: 'keyboard-l' })` from home
+  - confirmed the wake path still transitions to listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+  - instrumented `AudioContext.prototype` and confirmed the retuned earcon still builds an audio graph on wake:
+    - `oscCount = 3`
+    - `gainCount = 4`
+
+## Remaining issues / caveats
+- This confirms the wake earcon fires and uses the new brighter synth graph, but subjective tone still needs real-speaker evaluation.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition on speakers/headphones and decide whether the new cue should go even further toward sparkle or stay closer to the current lighter magic tone.
+
+## Task title
+Use awake.mp3 for the wake listening cue
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the synthesized `wake-listening` earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js) with buffered playback of [src/assets/awake.mp3](/Users/ariax/Documents/GitHub/GenUI/src/assets/awake.mp3).
+- Added a dedicated decoded buffer cache for `awake.mp3`, parallel to the existing click asset-loading pattern.
+- The wake trigger logic in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) was left unchanged; it still calls `playSimEarcon("wake-listening")` on idle/home → listening.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered the idle/home → listening wake twice
+  - instrumented `AudioContext.prototype.createBufferSource`
+  - confirmed buffered audio playback occurred on wake:
+    - `bufferSourceCount = 2`
+  - confirmed the UI still landed in listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+
+## Remaining issues / caveats
+- The first wake call depends on async asset fetch/decode timing; after the asset is cached in memory, subsequent wakes play immediately.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition in the browser and judge the timing/volume of `awake.mp3`; if needed, the next tuning step is gain or preloading rather than synth design.

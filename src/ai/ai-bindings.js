@@ -291,6 +291,7 @@ function armAiWakeListening(options = {}) {
   if (!messageFlow?.isActive() && !flightFlow?.isActive() && !coffeeFlow?.isActive?.()) {
     voice?.voiceEngine?.start?.("command");
     if (fromSleep || fromHome) {
+      playSimEarcon("wake-listening");
       document.body.classList.remove("sleep-to-listening");
       document.body.classList.remove("home-to-listening");
       void document.body.offsetWidth;
@@ -387,7 +388,13 @@ const voice = initVoiceEngine({
   getGlassUi: () => messageFlow?.flow,
   getGlassState: () => messageFlow?.GS,
   shouldKeepCommandListening: () => true,
-  shouldShowCommandViz: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.(),
+  shouldShowCommandViz: () => (
+    aiAwake ||
+    morph.getCurrentShape() === "listening" ||
+    document.getElementById("drop-main")?.classList.contains("listening-orb") ||
+    messageFlow?.isActive?.() ||
+    flightFlow?.isActive?.()
+  ),
   onTranscriptUpdate: (text, isFinal) => {
     if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
     const transcript = String(text || "");
