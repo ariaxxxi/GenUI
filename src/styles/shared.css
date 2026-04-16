@@ -308,6 +308,7 @@ body.glass-flow-active #prototype-stage-selection {
   opacity: calc(0.8 * var(--thinking-entry-progress));
 }
 
+
 #siri-orb .thinking-orb-layer-grain {
   background-image:
     radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.2) 0 0.7px, transparent 1px),

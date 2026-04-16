@@ -544,6 +544,10 @@
   justify-content: center;
   /* transform: translateY(0); */
 }
+.g-sent-toast > svg {
+  display: block;
+  flex-shrink: 0;
+}
 .g-compose-card {
   width: 100%;
   padding: 0;

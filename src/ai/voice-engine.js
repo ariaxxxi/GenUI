@@ -73,6 +73,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const field = getComposePulseField();
     const state = getGlassUi?.()?.state;
     const composeState = getGlassState?.()?.COMPOSE;
+
     if (voiceEngine.mode !== 'dictation' || !field || (composeState != null && state !== composeState)) {
       vizVisibleSince = 0;
       void actionBtns;
@@ -94,7 +95,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     vizVisibleSince = 0;
     const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
     const tick = () => {
-      if (!voiceEngine.active || voiceEngine.mode === 'off') { voiceEngine.vizRaf = null; return; }
+      if (voiceEngine.mode === 'off') { voiceEngine.vizRaf = null; return; }
       voiceEngine.analyser.getByteFrequencyData(data);
       const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
       const raw = Math.pow(Math.min(avg / 32, 1), 0.6);

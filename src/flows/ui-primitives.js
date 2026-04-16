@@ -340,8 +340,10 @@ export function renderCompactStatus({ type = "loading", label = "", icon = "", d
   if (type === "loading") {
     return `<div class="g-center-row"><span id="${esc(dotsId)}">${esc(label || "·")}</span></div>`;
   }
-  const finalIcon = icon || (type === "error" ? "⚠️" : "✅");
-  return `<div data-glass-sent class="g-sent-toast${enter ? " sent-toast-enter" : ""}"><span class="g-sent-emoji">${esc(finalIcon)}</span><span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;
+  const successIcon = `<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="28" rx="14" fill="#34C759"/><path d="M8 14.5L12 18.5L20 10" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const finalIcon = icon || (type === "error" ? "⚠️" : successIcon);
+  const iconHtml = (type === "success" && !icon) ? finalIcon : `<span class="g-sent-emoji">${esc(finalIcon)}</span>`;
+  return `<div data-glass-sent class="g-sent-toast${enter ? " sent-toast-enter" : ""}">${iconHtml}<span>${esc(label || (type === "error" ? "Failed" : "Success"))}</span></div>`;
 }
 
 export function renderSendingStatus({ label = "sending..." } = {}) {

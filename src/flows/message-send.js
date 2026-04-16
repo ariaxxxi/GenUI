@@ -398,6 +398,7 @@ export function createMessageSendFlow(ctx) {
           if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
           flow.state = state;
           flow.sel = 0;
+          if (state === GS.DISAMBIGUATE && typeof ctx.playEarcon === "function") ctx.playEarcon("disambiguate-reveal");
           speakOutput(voiceText, { announce: state !== GS.THINKING && state !== GS.SENDING });
           render.render(true);
           applyVoiceMode();
@@ -417,6 +418,7 @@ export function createMessageSendFlow(ctx) {
     }
     flow.state = state;
     flow.sel = 0;
+    if (state === GS.DISAMBIGUATE && typeof ctx.playEarcon === "function") ctx.playEarcon("disambiguate-reveal");
     speakOutput(voiceText, { announce: state !== GS.THINKING && state !== GS.SENDING });
     render.render(true);
     applyVoiceMode();
@@ -585,6 +587,7 @@ export function createMessageSendFlow(ctx) {
         dropMain.classList.remove("compose-chip-magic");
         void dropMain.offsetHeight;
         dropMain.classList.add("compose-chip-magic");
+        if (typeof ctx.playEarcon === "function") ctx.playEarcon("magic-pulse");
       }
       if (text) {
         text.classList.remove("g-text-magic");
@@ -618,7 +621,7 @@ export function createMessageSendFlow(ctx) {
   function doAction(index) {
     const epoch = flowEpoch;
     if (index === 0) {
-      if (typeof ctx.playEarcon === "function") ctx.playEarcon("button");
+      if (typeof ctx.playEarcon === "function") ctx.playEarcon("chip");
       transitionTo(GS.SENDING, "Sending…");
       timers.send = setTimeout(() => {
         if (!isEpochAlive(epoch)) return;

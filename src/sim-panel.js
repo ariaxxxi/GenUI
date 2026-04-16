@@ -150,6 +150,54 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
+  if (type === 'disambiguate-reveal') {
+    // Magical scatter whoosh — pills flying out from center
+    const t = ctx.currentTime;
+
+    // Upward tonal sweep — feels like things expanding outward
+    const notes = [
+      { freq: 330, targetFreq: 494, delay: 0.00 },   // E4 → B4
+      { freq: 415, targetFreq: 622, delay: 0.05 },   // Ab4 → Eb5
+      { freq: 523, targetFreq: 784, delay: 0.10 },   // C5 → G5
+    ];
+    notes.forEach(({ freq, targetFreq, delay }) => {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + delay);
+      g.gain.exponentialRampToValueAtTime(0.07, t + delay + 0.07);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + delay + 0.50);
+      g.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + delay);
+      osc.frequency.exponentialRampToValueAtTime(targetFreq, t + delay + 0.40);
+      osc.connect(g);
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.55);
+    });
+
+    // Airy breath — narrow bandpass, very subtle
+    const noiseLen = Math.floor(ctx.sampleRate * 0.55);
+    const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < noiseLen; i++) nd[i] = Math.random() * 2 - 1;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(500, t);
+    bp.frequency.exponentialRampToValueAtTime(1400, t + 0.45);
+    bp.Q.value = 4.0;
+    const breathGain = ctx.createGain();
+    breathGain.gain.setValueAtTime(0.0001, t);
+    breathGain.gain.exponentialRampToValueAtTime(0.035, t + 0.08);
+    breathGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    const breathSrc = ctx.createBufferSource();
+    breathSrc.buffer = noiseBuf;
+    breathSrc.connect(bp);
+    bp.connect(breathGain);
+    breathGain.connect(ctx.destination);
+    breathSrc.start(t);
+    return;
+  }
+
   if (type === 'chip-reveal') {
     // Magical reveal — pure tonal chord bloom, no noise
     const t = ctx.currentTime;
@@ -197,6 +245,57 @@ export function playSimEarcon(type = 'sent') {
     bp.connect(breathGain);
     breathGain.connect(ctx.destination);
     breathSrc.start(t);
+    return;
+  }
+
+  if (type === 'magic-pulse') {
+    // Deep resonant bloom — like a spell being cast, soft and weighty
+    const t = ctx.currentTime;
+
+    // Low warm fundamental swell
+    const baseGain = ctx.createGain();
+    baseGain.gain.setValueAtTime(0.0001, t);
+    baseGain.gain.exponentialRampToValueAtTime(0.18, t + 0.05);
+    baseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+    baseGain.connect(ctx.destination);
+
+    const base = ctx.createOscillator();
+    base.type = 'sine';
+    base.frequency.setValueAtTime(130, t);
+    base.frequency.exponentialRampToValueAtTime(196, t + 0.5);
+    base.connect(baseGain);
+    base.start(t);
+    base.stop(t + 0.7);
+
+    // Mid warmth — a fifth above
+    const midGain = ctx.createGain();
+    midGain.gain.setValueAtTime(0.0001, t + 0.02);
+    midGain.gain.exponentialRampToValueAtTime(0.10, t + 0.08);
+    midGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.60);
+    midGain.connect(ctx.destination);
+
+    const mid = ctx.createOscillator();
+    mid.type = 'sine';
+    mid.frequency.setValueAtTime(196, t + 0.02);
+    mid.frequency.exponentialRampToValueAtTime(294, t + 0.5);
+    mid.connect(midGain);
+    mid.start(t + 0.02);
+    mid.stop(t + 0.65);
+
+    // Soft high shimmer — octave bloom
+    const shimmerGain = ctx.createGain();
+    shimmerGain.gain.setValueAtTime(0.0001, t + 0.06);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.05, t + 0.14);
+    shimmerGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    shimmerGain.connect(ctx.destination);
+
+    const shimmer = ctx.createOscillator();
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(523, t + 0.06);
+    shimmer.frequency.exponentialRampToValueAtTime(659, t + 0.45);
+    shimmer.connect(shimmerGain);
+    shimmer.start(t + 0.06);
+    shimmer.stop(t + 0.6);
     return;
   }
 
