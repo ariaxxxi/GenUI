@@ -31,9 +31,9 @@ export function createMessageSendFlow(ctx) {
   const COMPOSE_MENU_CLOSE_MS = 260;
   const COMPOSE_MENU_BASE_COUNT = 3;
   const COMPOSE_MENU_POINTER_STEP_PX = 48;
-  const COMPOSE_CHIP_MAGIC_MS = 800;
-  const COMPOSE_CHIP_MAGIC_REVEAL_MS = 260;
-  const COMPOSE_CHIP_ORB_DELAY_MS = 300;
+  const COMPOSE_CHIP_MAGIC_MS = 1000;
+  const COMPOSE_CHIP_MAGIC_REVEAL_MS = 460;
+  const COMPOSE_CHIP_ORB_DELAY_MS = 400;
   const COMPOSE_AUTO_CONFIRM_MS = 2000;
   const GS = { IDLE: 0, THINKING: 1, DISAMBIGUATE: 2, COMPOSE: 3, CONFIRM: 4, SENDING: 5, SENT: 6 };
   const flow = { active: false, state: GS.IDLE, sel: 0, contact: null, msg: "", composeText: "", composeChipMagicPending: false, composeChipMagicOrbActive: false, composeMenuOpen: false, composeMenuClosing: false, composeMenuHolding: false, composeMenuVisibleCount: 0, composeVisualChips: [], showCheck: false, aiVoice: "", disambiguateContacts: [], interimText: "", _pendingMsg: "", replaceComposeOnNextDictation: false, dictationInterimActive: false, dictationBaseText: "", sentToastEnterPending: false };
@@ -217,6 +217,7 @@ export function createMessageSendFlow(ctx) {
       : Math.max(0, Math.min(index, visibleCount - 1));
     if (flow.sel === nextIndex) return false;
     flow.sel = nextIndex;
+    if (typeof ctx.playEarcon === "function") ctx.playEarcon("hover");
     return !!(render.updateComposeMenuUiOnly?.() || render.render(false));
   }
 
@@ -523,6 +524,8 @@ export function createMessageSendFlow(ctx) {
     animateToCompose(contact, voiceText);
   }
 
+  const CHIP_DISMISS_MS = 800;
+
   function selectChipWithAnimation(idx) {
     const epoch = flowEpoch;
     const chip = flow.contact?.chips?.[idx];
@@ -535,11 +538,35 @@ export function createMessageSendFlow(ctx) {
     flow.composeChipMagicPending = true;
     flow.composeChipMagicOrbActive = false;
     flow.showCheck = false;
-    cancelComposeMenu({ immediate: true });
+
+    // Kill any lingering disambiguation exit layer immediately to prevent double container
+    render.clearDisambiguationMotion?.();
+
     ctx.voice.clearVoiceVizStyles?.();
     ctx.voice.voiceEngine.stop();
     ctx.input.blur();
+
+    // Trigger dismiss animation on all chips, capture HTML to re-inject after re-render
+    const stack = ctx.C.rich?.querySelector(".g-compose-chip-stack");
+    let dismissingStackHtml = null;
+    if (stack && stack.classList.contains("open")) {
+      stack.classList.add("dismissing");
+      dismissingStackHtml = stack.outerHTML;
+    }
+
+    cancelComposeMenu({ immediate: true });
     render.render(true);
+
+    // Re-inject dismissing chip stack so it plays its animation over the re-rendered content
+    if (dismissingStackHtml) {
+      const fieldWrap = ctx.C.rich?.querySelector(".g-compose-field-wrap");
+      if (fieldWrap) {
+        fieldWrap.insertAdjacentHTML("afterbegin", dismissingStackHtml);
+      }
+      setTimeout(() => {
+        ctx.C.rich?.querySelector(".g-compose-chip-stack.dismissing")?.remove();
+      }, CHIP_DISMISS_MS + 50);
+    }
 
     timers.composeChipOrbDelay = setTimeout(() => {
       timers.composeChipOrbDelay = null;
@@ -548,17 +575,19 @@ export function createMessageSendFlow(ctx) {
       render.render(true);
     }, COMPOSE_CHIP_ORB_DELAY_MS);
 
-    if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
-    const dropMain = document.getElementById("drop-main");
-    const text = ctx.C.rich?.querySelector("[data-compose-field-text]");
-    if (dropMain) {
-      dropMain.classList.remove("compose-chip-magic");
-      void dropMain.offsetHeight;
-      dropMain.classList.add("compose-chip-magic");
-    }
-    if (text) {
-      text.classList.remove("g-text-magic");
-    }
+    setTimeout(() => {
+      if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;
+      const dropMain = document.getElementById("drop-main");
+      const text = ctx.C.rich?.querySelector("[data-compose-field-text]");
+      if (dropMain) {
+        dropMain.classList.remove("compose-chip-magic");
+        void dropMain.offsetHeight;
+        dropMain.classList.add("compose-chip-magic");
+      }
+      if (text) {
+        text.classList.remove("g-text-magic");
+      }
+    }, 200);
 
     setTimeout(() => {
       if (!isEpochAlive(epoch) || flow.state !== GS.COMPOSE) return;

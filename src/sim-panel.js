@@ -57,6 +57,8 @@ export function showTypingBubble() {
 export function hideTypingBubble() {}
 
 let earconCtx = null;
+let _hoverClickBuffer = null;
+let _hoverClickLoading = false;
 
 function getEarconCtx() {
   if (!earconCtx) {
@@ -67,9 +69,35 @@ function getEarconCtx() {
   return earconCtx;
 }
 
+async function loadHoverClickBuffer() {
+  if (_hoverClickBuffer || _hoverClickLoading) return;
+  _hoverClickLoading = true;
+  const ctx = getEarconCtx();
+  if (!ctx) return;
+  try {
+    const res = await fetch('src/assets/click.mp3');
+    const arrayBuffer = await res.arrayBuffer();
+    _hoverClickBuffer = await ctx.decodeAudioData(arrayBuffer);
+  } catch (e) {}
+}
+
 export function playSimEarcon(type = 'sent') {
   const ctx = getEarconCtx();
   if (!ctx) return;
+
+  if (type === 'hover') {
+    loadHoverClickBuffer();
+    if (!_hoverClickBuffer) return;
+    const src = ctx.createBufferSource();
+    src.buffer = _hoverClickBuffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+    return;
+  }
+
   const now = ctx.currentTime + 0.01;
 
   if (type === 'sent') {

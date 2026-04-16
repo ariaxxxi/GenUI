@@ -701,6 +701,11 @@
   animation: compose-chip-out 1000ms var(--motion-ease) both;
   animation-delay: calc(var(--chip-order, 0) * 14ms);
 }
+.g-compose-chip-stack.dismissing .g-compose-chip.is-visible {
+  animation: compose-chip-dismiss 1000ms var(--motion-ease) both;
+  animation-delay: calc(var(--chip-order, 0) * 42ms);
+  pointer-events: none;
+}
 @keyframes compose-chip-in {
   from {
     opacity: 0;
@@ -722,6 +727,16 @@
   to {
     opacity: 0;
     transform: translateY(var(--chip-travel-end, 92px)) scale(0.86) rotate(var(--chip-rot-end, 0deg));
+  }
+}
+@keyframes compose-chip-dismiss {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--chip-travel-start, 80px)) scale(0.28) rotate(var(--chip-rot-start, 0deg));
   }
 }
 .g-compose-field-wrap {

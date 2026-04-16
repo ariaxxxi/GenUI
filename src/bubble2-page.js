@@ -19,22 +19,10 @@ async function loadClickBuffer() {
   const ctx = getAudioCtx();
   if (!ctx) return;
   try {
-    const res = await fetch('src/assets/mouse.mp3');
+    const res = await fetch('src/assets/click.mp3');
     const arrayBuffer = await res.arrayBuffer();
-    const fullBuffer = await ctx.decodeAudioData(arrayBuffer);
-    // Extract the second click — starts around half the file duration
-    const sampleRate = fullBuffer.sampleRate;
-    const midSample = Math.floor(fullBuffer.length / 2);
-    const clickLen = Math.min(Math.floor(sampleRate * 0.25), fullBuffer.length - midSample);
-    const slice = ctx.createBuffer(fullBuffer.numberOfChannels, clickLen, sampleRate);
-    for (let ch = 0; ch < fullBuffer.numberOfChannels; ch++) {
-      const src = fullBuffer.getChannelData(ch);
-      slice.copyToChannel(src.slice(midSample, midSample + clickLen), ch);
-    }
-    _clickBuffer = slice;
-  } catch (e) {
-    // Ignore load errors
-  }
+    _clickBuffer = await ctx.decodeAudioData(arrayBuffer);
+  } catch (e) {}
 }
 
 function playBubbleHoverSound() {
@@ -45,7 +33,7 @@ function playBubbleHoverSound() {
   const src = ctx.createBufferSource();
   src.buffer = _clickBuffer;
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.7, ctx.currentTime);
+  gain.gain.setValueAtTime(0.8, ctx.currentTime);
   src.connect(gain);
   gain.connect(ctx.destination);
   src.start();
