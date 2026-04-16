@@ -279,12 +279,14 @@ export function createMessageSendFlow(ctx) {
       flow.composeMenuOpen = true;
       flow.composeMenuVisibleCount = Math.min(COMPOSE_MENU_BASE_COUNT, ensureComposeVisualChips().length);
       flow.sel = -1;
+      if (typeof ctx.playEarcon === "function") ctx.playEarcon("chip-reveal");
       render.render(false);
       updateComposeMenuSelectionFromPointer();
       timers.composeMenuExpand = setTimeout(() => {
         timers.composeMenuExpand = null;
         if (!flow.active || flow.state !== GS.COMPOSE || !flow.composeMenuHolding || !flow.composeMenuOpen) return;
         flow.composeMenuVisibleCount = ensureComposeVisualChips().length;
+        if (typeof ctx.playEarcon === "function") ctx.playEarcon("chip-reveal-2");
         if (!render.updateComposeMenuUiOnly?.()) render.render(false);
         updateComposeMenuSelectionFromPointer();
       }, COMPOSE_MENU_EXPAND_MS);

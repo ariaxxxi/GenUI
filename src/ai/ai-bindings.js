@@ -559,13 +559,17 @@ document.addEventListener("keydown", (e) => {
     }
     if ((!focusedInMainInput || composeMenuActive) && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) {
       e.preventDefault();
+      const prevSel = messageFlow.flow.sel;
       messageFlow.flow.sel = composeMenuActive ? Math.max(-1, messageFlow.flow.sel - 1) : Math.max(0, messageFlow.flow.sel - 1);
+      if (messageFlow.flow.sel !== prevSel) playSimEarcon("hover");
       if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false);
       return;
     }
     if ((!focusedInMainInput || composeMenuActive) && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) {
       e.preventDefault();
+      const prevSel = messageFlow.flow.sel;
       messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1);
+      if (messageFlow.flow.sel !== prevSel) playSimEarcon("hover");
       if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false);
       return;
     }
@@ -625,6 +629,16 @@ document.addEventListener("pointerdown", (e) => {
 document.addEventListener("pointermove", (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
   if (messageFlow.updateComposeMenuPointerGesture(e.clientY)) e.preventDefault();
+}, true);
+document.addEventListener("pointermove", (e) => {
+  if (!messageFlow.isActive() || messageFlow.flow.state !== messageFlow.GS.DISAMBIGUATE) return;
+  const pill = e.target?.closest?.("[data-g-contact]");
+  if (!pill) return;
+  const idx = parseInt(pill.getAttribute("data-g-contact"), 10);
+  if (!Number.isFinite(idx) || idx === messageFlow.flow.sel) return;
+  messageFlow.flow.sel = idx;
+  messageFlow.updateSelectionUiOnly();
+  playSimEarcon("hover");
 }, true);
 document.addEventListener("pointermove", (e) => {
   if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
