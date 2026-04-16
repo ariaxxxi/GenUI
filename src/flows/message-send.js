@@ -528,6 +528,7 @@ export function createMessageSendFlow(ctx) {
     const chip = flow.contact?.chips?.[idx];
     if (!chip) return;
 
+    if (typeof ctx.playEarcon === "function") ctx.playEarcon("chip");
     ctx.addSimLog(`Chip: "${chip.label}"`, "action");
     flow.composeText = chip.message;
     flow.msg = chip.message;
@@ -586,6 +587,7 @@ export function createMessageSendFlow(ctx) {
   function doAction(index) {
     const epoch = flowEpoch;
     if (index === 0) {
+      if (typeof ctx.playEarcon === "function") ctx.playEarcon("button");
       transitionTo(GS.SENDING, "Sending…");
       timers.send = setTimeout(() => {
         if (!isEpochAlive(epoch)) return;

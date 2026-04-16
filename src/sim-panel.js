@@ -68,29 +68,76 @@ function getEarconCtx() {
 }
 
 export function playSimEarcon(type = 'sent') {
-  if (type !== 'sent') return;
   const ctx = getEarconCtx();
   if (!ctx) return;
   const now = ctx.currentTime + 0.01;
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
-  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
-  master.connect(ctx.destination);
 
-  const osc1 = ctx.createOscillator();
-  osc1.type = 'sine';
-  osc1.frequency.setValueAtTime(784, now);
-  osc1.frequency.exponentialRampToValueAtTime(1174.66, now + 0.12);
-  osc1.connect(master);
-  osc1.start(now);
-  osc1.stop(now + 0.14);
+  if (type === 'sent') {
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+    master.connect(ctx.destination);
 
-  const osc2 = ctx.createOscillator();
-  osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(1174.66, now + 0.12);
-  osc2.frequency.exponentialRampToValueAtTime(1567.98, now + 0.26);
-  osc2.connect(master);
-  osc2.start(now + 0.12);
-  osc2.stop(now + 0.3);
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(784, now);
+    osc1.frequency.exponentialRampToValueAtTime(1174.66, now + 0.12);
+    osc1.connect(master);
+    osc1.start(now);
+    osc1.stop(now + 0.14);
+
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(1174.66, now + 0.12);
+    osc2.frequency.exponentialRampToValueAtTime(1567.98, now + 0.26);
+    osc2.connect(master);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.3);
+    return;
+  }
+
+  if (type === 'chip') {
+    // Soft airy tap — high sine ping with gentle tail
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.14, now + 0.008);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    master.connect(ctx.destination);
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1320, now);
+    osc.frequency.exponentialRampToValueAtTime(1046, now + 0.14);
+    osc.connect(master);
+    osc.start(now);
+    osc.stop(now + 0.2);
+    return;
+  }
+
+  if (type === 'button') {
+    // Confident two-tone confirm click
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.16, now + 0.006);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    master.connect(ctx.destination);
+
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    osc1.frequency.exponentialRampToValueAtTime(1108, now + 0.09);
+    osc1.connect(master);
+    osc1.start(now);
+    osc1.stop(now + 0.1);
+
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1108, now + 0.08);
+    osc2.frequency.exponentialRampToValueAtTime(1320, now + 0.2);
+    osc2.connect(master);
+    osc2.start(now + 0.08);
+    osc2.stop(now + 0.22);
+    return;
+  }
 }

@@ -1,5 +1,34 @@
 // import { initHandTracking } from './hand-tracking.js';
 
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) _audioCtx = new AC();
+  }
+  return _audioCtx;
+}
+
+function playBubbleHoverSound() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime + 0.005;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.07, now + 0.006);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+  gain.connect(ctx.destination);
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1800, now);
+  osc.frequency.exponentialRampToValueAtTime(1200, now + 0.07);
+  osc.connect(gain);
+  osc.start(now);
+  osc.stop(now + 0.09);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const BUBBLE_BASE_SIZE = 110;
 const BUBBLE_MIN_SIZE = 60;
 const BUBBLE_MAX_SIZE = 110;
@@ -602,6 +631,7 @@ function render() {
   let scene = computeScene();
   const hoverChanged = state.hoveredBubble !== scene.hoveredId || state.hoveredChildBubble !== scene.hoveredChildId;
   if (hoverChanged) {
+    if (scene.hoveredId != null && scene.hoveredId !== state.hoveredBubble) playBubbleHoverSound();
     state.hoveredBubble = scene.hoveredId;
     state.hoveredChildBubble = scene.hoveredChildId;
     scene = computeScene();
