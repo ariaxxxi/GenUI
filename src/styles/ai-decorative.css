@@ -128,6 +128,18 @@
 .ai-flow-orb-selection .g-stage-selected-highlight {
   animation: ai-flow-orb-breathe-highlight 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
+#drop-main.magic-glow #siri-orb .ai-flow-orb-sphere,
+#drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-sphere {
+  animation-duration: 1.5s;
+}
+#drop-main.magic-glow #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
+#drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+  animation-duration: 1.5s;
+}
+#drop-main.magic-glow #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight,
+#drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+  animation-duration: 1.5s;
+}
 #drop-main.listening-orb #siri-orb .ai-flow-orb-sphere {
   animation: none;
 }

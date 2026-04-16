@@ -59,8 +59,6 @@ export function hideTypingBubble() {}
 let earconCtx = null;
 let _hoverClickBuffer = null;
 let _hoverClickLoading = false;
-let _awakeBuffer = null;
-let _awakeLoading = false;
 
 function getEarconCtx() {
   if (!earconCtx) {
@@ -80,18 +78,6 @@ async function loadHoverClickBuffer() {
     const res = await fetch('src/assets/click.mp3');
     const arrayBuffer = await res.arrayBuffer();
     _hoverClickBuffer = await ctx.decodeAudioData(arrayBuffer);
-  } catch (e) {}
-}
-
-async function loadAwakeBuffer() {
-  if (_awakeBuffer || _awakeLoading) return;
-  _awakeLoading = true;
-  const ctx = getEarconCtx();
-  if (!ctx) return;
-  try {
-    const res = await fetch('src/assets/awake.mp3');
-    const arrayBuffer = await res.arrayBuffer();
-    _awakeBuffer = await ctx.decodeAudioData(arrayBuffer);
   } catch (e) {}
 }
 
@@ -134,28 +120,6 @@ export function playSimEarcon(type = 'sent') {
     hp.connect(noiseGain);
     noiseGain.connect(ctx.destination);
     noiseSrc.start(t);
-    return;
-  }
-
-  if (type === 'wake-listening') {
-    const playBuffer = () => {
-      if (!_awakeBuffer) return;
-      const source = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.9, ctx.currentTime + 0.01);
-      source.buffer = _awakeBuffer;
-      source.connect(gain);
-      gain.connect(ctx.destination);
-      source.start(ctx.currentTime + 0.01);
-    };
-    if (_awakeBuffer) {
-      playBuffer();
-    } else {
-      void (async () => {
-        await loadAwakeBuffer();
-        playBuffer();
-      })();
-    }
     return;
   }
 

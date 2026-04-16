@@ -291,7 +291,6 @@ function armAiWakeListening(options = {}) {
   if (!messageFlow?.isActive() && !flightFlow?.isActive() && !coffeeFlow?.isActive?.()) {
     voice?.voiceEngine?.start?.("command");
     if (fromSleep || fromHome) {
-      playSimEarcon("wake-listening");
       document.body.classList.remove("sleep-to-listening");
       document.body.classList.remove("home-to-listening");
       void document.body.offsetWidth;

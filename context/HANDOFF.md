@@ -10983,3 +10983,140 @@ Use awake.mp3 for the wake listening cue
 
 ## Recommended next step
 1. Trigger the wake transition in the browser and judge the timing/volume of `awake.mp3`; if needed, the next tuning step is gain or preloading rather than synth design.
+
+## Task title
+Remove idle/home to listening wake audio
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the wake audio from the idle/home → listening transition.
+- Deleted the `playSimEarcon("wake-listening")` call from [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js), so `armAiWakeListening()` no longer plays any sound when waking into the listening orb.
+- Removed the now-unused `awake.mp3` loading/playback path from [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- The `src/assets/awake.mp3` file still exists in the repo, but it is no longer referenced by the app.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition and confirm it is now silent. If needed later, a new wake cue can be reintroduced without the old asset path.
+
+## Task title
+Add a bubbly airy wake sound for idle/home to listening
+
+## Completion status
+- Completed
+
+## Summary
+- Restored wake audio on the idle/home → listening transition in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) by re-adding `playSimEarcon("wake-listening")` inside `armAiWakeListening()`.
+- Replaced the removed asset-based wake sound with a new synthesized `wake-listening` earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+- The new cue is designed as:
+  - a rounded rising bubble tone
+  - a brighter second pop note
+  - a soft airy whoosh tail built from filtered noise
+- Result: the wake feels more bubble-rise / woosh / air rather than a hard click or flat chime.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered `armAiWakeListening({ source: 'keyboard-l' })` from home
+  - confirmed the UI still lands in listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+  - instrumented `AudioContext.prototype` and confirmed the new synth graph fired:
+    - `oscCount = 2`
+    - `gainCount = 3`
+    - `bufferSourceCount = 1` for the airy noise tail
+
+## Remaining issues / caveats
+- This verifies the wake path and audio graph, but the exact feel still needs real-speaker judgement.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition on speakers/headphones and decide whether the bubbly rise should be softer, shorter, or more exaggerated.
+
+## Task title
+Remove the bubbly wake sound from idle/home to listening
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the current bubbly wake sound from the idle/home → listening transition.
+- Deleted the `playSimEarcon("wake-listening")` trigger from [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js), so waking into listening is silent again.
+- Removed the now-unused synthetic `wake-listening` earcon branch from [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- Other earcons such as `hover`, `chip`, `button`, `sent`, and the flow-specific reveal sounds remain unchanged.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition and confirm it is silent again. If you want a different wake cue later, it can be reintroduced independently of the removed bubbly version.
+
+## Task title
+Increase thinking-stage breathing frequency
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the thinking-stage orb breathing frequency in [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css).
+- Changed `#siri-orb .thinking-orb-sphere` from `thinking-orb-breathe 3.9s` to `thinking-orb-breathe 1.5s`, so the magic/thinking orb now pulses faster without changing the orbit layers or the stage transition timing.
+- Follow-up correction: the visible AI thinking stage was not actually using the `thinking-orb` stack. The live page uses the `ai-flow-orb` stack under `magic-glow` and the temporary `orb-thinking-bridge` class.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the active thinking-path animations now also run at `1.5s`:
+  - `#drop-main.magic-glow #siri-orb .ai-flow-orb-sphere`
+  - `#drop-main.magic-glow #siri-orb .g-stage-selected-accent-rim`
+  - `#drop-main.magic-glow #siri-orb .g-stage-selected-highlight`
+  - the same three selectors for `#drop-main.orb-thinking-bridge`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - manual magic button path:
+    - `currentShape = "magic"`
+    - `classes = "drop orb-thinking-bridge"`
+    - `aiFlowSphereAnimation = 1.5s ... ai-flow-orb-breathe-scale`
+    - `rimAnimation = 1.5s ... ai-flow-orb-breathe-rim`
+    - `hiAnimation = 1.5s ... ai-flow-orb-breathe-highlight`
+  - AI send-message flow thinking state:
+    - `shape = "magic"`
+    - `classes = "drop home-glow home-blur magic-glow"`
+    - `richState = "1"` during the active flow
+    - `aiFlowSphereAnimation = 1.5s ... ai-flow-orb-breathe-scale`
+    - `rimAnimation = 1.5s ... ai-flow-orb-breathe-rim`
+
+## Remaining issues / caveats
+- The earlier `shared.css` change alone did not affect the visible AI thinking stage because that stage was using the `ai-flow-orb` stack instead of the `thinking-orb` stack.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Open the thinking stage and confirm the faster pulse feels right. If needed, the next tuning step is the `1.5s` duration in `ai-decorative.css` for the active thinking path.
