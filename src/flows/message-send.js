@@ -631,6 +631,7 @@ export function createMessageSendFlow(ctx) {
     if (flow.state === GS.DISAMBIGUATE) {
       const contact = flow.disambiguateContacts[flow.sel];
       if (!contact) return;
+      if (typeof ctx.playEarcon === "function") ctx.playEarcon("chip");
       const pending = flow._pendingMsg || "";
       flow._pendingMsg = "";
       if (pending) {

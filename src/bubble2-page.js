@@ -2,6 +2,9 @@
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
 let _audioCtx = null;
+let _clickBuffer = null;
+let _clickBufferLoading = false;
+
 function getAudioCtx() {
   if (!_audioCtx) {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -10,22 +13,42 @@ function getAudioCtx() {
   return _audioCtx;
 }
 
+async function loadClickBuffer() {
+  if (_clickBuffer || _clickBufferLoading) return;
+  _clickBufferLoading = true;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const res = await fetch('src/assets/mouse.mp3');
+    const arrayBuffer = await res.arrayBuffer();
+    const fullBuffer = await ctx.decodeAudioData(arrayBuffer);
+    // Extract the second click — starts around half the file duration
+    const sampleRate = fullBuffer.sampleRate;
+    const midSample = Math.floor(fullBuffer.length / 2);
+    const clickLen = Math.min(Math.floor(sampleRate * 0.25), fullBuffer.length - midSample);
+    const slice = ctx.createBuffer(fullBuffer.numberOfChannels, clickLen, sampleRate);
+    for (let ch = 0; ch < fullBuffer.numberOfChannels; ch++) {
+      const src = fullBuffer.getChannelData(ch);
+      slice.copyToChannel(src.slice(midSample, midSample + clickLen), ch);
+    }
+    _clickBuffer = slice;
+  } catch (e) {
+    // Ignore load errors
+  }
+}
+
 function playBubbleHoverSound() {
   const ctx = getAudioCtx();
   if (!ctx) return;
-  const now = ctx.currentTime + 0.005;
+  loadClickBuffer();
+  if (!_clickBuffer) return;
+  const src = ctx.createBufferSource();
+  src.buffer = _clickBuffer;
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.07, now + 0.006);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+  gain.gain.setValueAtTime(0.7, ctx.currentTime);
+  src.connect(gain);
   gain.connect(ctx.destination);
-  const osc = ctx.createOscillator();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(1800, now);
-  osc.frequency.exponentialRampToValueAtTime(1200, now + 0.07);
-  osc.connect(gain);
-  osc.start(now);
-  osc.stop(now + 0.09);
+  src.start();
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
