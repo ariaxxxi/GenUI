@@ -586,7 +586,7 @@ export function createMessageSendFlow(ctx) {
   function doAction(index) {
     const epoch = flowEpoch;
     if (index === 0) {
-      transitionTo(GS.SENDING, "");
+      transitionTo(GS.SENDING, "Sending…");
       timers.send = setTimeout(() => {
         if (!isEpochAlive(epoch)) return;
         flow.sentToastEnterPending = true;

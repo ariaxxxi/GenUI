@@ -193,6 +193,9 @@ body[data-ai-home-state="context"] #home-state-dot {
   transition: opacity 200ms var(--motion-ease);
 }
 #glass-orb-label.visible { opacity: 1; }
+#glass-orb-label.orb-entry-delay {
+  transition: opacity 200ms var(--motion-ease) 480ms;
+}
 #stage-wrap.flow-active #intent-header {
   margin-bottom: 16px;
 }

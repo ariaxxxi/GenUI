@@ -137,14 +137,19 @@ export function initAiShell({ document, C, input, clearListPills, morphTo, getAn
     } else if (glassUi && GS) {
       const isIdle = glassUi.active && glassUi.state === GS.IDLE;
       const isThinking = glassUi.active && glassUi.state === GS.THINKING;
-      text = isIdle ? (glassUi.interimText || input?.value || '') : (isThinking ? (glassUi.aiVoice || '') : '');
-      if (!text || (!isIdle && !isThinking)) text = '';
+      const isSending = glassUi.active && glassUi.state === GS.SENDING;
+      text = isIdle ? (glassUi.interimText || input?.value || '') : ((isThinking || isSending) ? (glassUi.aiVoice || '') : '');
+      if (!text || (!isIdle && !isThinking && !isSending)) text = '';
     }
+    const needsEntryDelay = glassUi && GS && glassUi.active &&
+      (glassUi.state === GS.THINKING || glassUi.state === GS.SENDING) &&
+      !lbl.classList.contains('visible');
     if (!text) {
-      lbl.classList.remove('visible');
+      lbl.classList.remove('visible', 'orb-entry-delay');
       lbl.textContent = '';
       return;
     }
+    lbl.classList.toggle('orb-entry-delay', !!needsEntryDelay);
     lbl.textContent = text;
     lbl.classList.add('visible');
     if (stage && main) {
