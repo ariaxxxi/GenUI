@@ -19,6 +19,7 @@ export function initManualBindings({
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageSelectedMaskBlurForShape,
   stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
@@ -42,7 +43,6 @@ export function initManualBindings({
   addStage,
   duplicateCurrentStage,
   deleteCurrentStage,
-  resetCurrentStageToDefault,
   commitStageChange,
   getScenarioImagesForStage,
   isSupportedAssetFile,
@@ -139,6 +139,26 @@ export function initManualBindings({
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
     commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = clamp(parsed, 0, 120); });
+  };
+
+  const commitStageSelectedMaskBlur = (rawValue) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    const value = String(rawValue || '').trim();
+    if (!value) {
+      commitScenarioChange((draft) => {
+        draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
+        delete draft.content.selectedMaskBlurByShape[draft.shape];
+      });
+      return;
+    }
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return;
+    const bounded = clamp(parsed, 0, 120);
+    commitScenarioChange((draft) => {
+      draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
+      draft.content.selectedMaskBlurByShape[draft.shape] = bounded;
+    });
   };
 
   input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
@@ -301,13 +321,7 @@ export function initManualBindings({
   UI.scenarioAdd.addEventListener('click', () => addScenario('pill'));
   UI.scenarioDuplicate.addEventListener('click', duplicateScenario);
   UI.scenarioDelete.addEventListener('click', deleteScenario);
-  UI.scenarioName.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.name = String(e.target.value || ''); }));
-  UI.scenarioName.addEventListener('blur', (e) => {
-    const value = String(e.target.value || '');
-    if (value.trim()) return;
-    commitScenarioChange((scenario) => { scenario.name = 'Untitled Scenario'; });
-  });
-  UI.scenarioTriggers.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.triggers = normalizeTriggers(e.target.value); }));
+  UI.scenarioTriggers?.addEventListener('input', (e) => commitScenarioChange((scenario) => { scenario.triggers = normalizeTriggers(e.target.value); }));
   UI.scenarioIconInput.addEventListener('input', (e) => commitScenarioChange((scenario) => {
     const value = String(e.target.value || '').trim();
     scenario.content.iconByShape = normalizeIconByShape(scenario.content.iconByShape, scenario.shape, scenario.content.icon);
@@ -343,6 +357,7 @@ export function initManualBindings({
   commitTextField('detail', UI.scenarioDetail);
   if (UI.scenarioIntentHeader) commitTextField('intentHeader', UI.scenarioIntentHeader);
   UI.scenarioShapeRow.addEventListener('click', (e) => {
+    if (e.target.closest('.sb-inline-rename-input')) return;
     const button = e.target.closest('[data-scenario-shape]');
     if (!button) return;
     const shape = String(button.dataset.scenarioShape || '');
@@ -355,24 +370,100 @@ export function initManualBindings({
     });
   });
 
+  function beginInlineRename(button, {
+    initialValue = '',
+    fallbackValue = 'Untitled',
+    onCommit,
+  } = {}) {
+    if (!button || button.dataset.renaming === '1') return;
+    button.dataset.renaming = '1';
+    button.classList.add('is-renaming');
+    const previousHtml = button.innerHTML;
+    button.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'sb-inline-rename-input';
+    input.value = String(initialValue || '');
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    button.appendChild(input);
+    let finished = false;
+
+    const restore = () => {
+      button.dataset.renaming = '';
+      button.classList.remove('is-renaming');
+      if (button.contains(input)) button.removeChild(input);
+      if (!finished) button.innerHTML = previousHtml;
+    };
+
+    const complete = (commit = true) => {
+      if (finished) return;
+      finished = true;
+      if (commit && typeof onCommit === 'function') {
+        const nextValue = String(input.value || '').trim() || fallbackValue;
+        onCommit(nextValue);
+        return;
+      }
+      restore();
+    };
+
+    input.addEventListener('click', (event) => event.stopPropagation());
+    input.addEventListener('dblclick', (event) => event.stopPropagation());
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        complete(true);
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        complete(false);
+      }
+    });
+    input.addEventListener('blur', () => complete(true));
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  UI.scenarioList?.addEventListener('dblclick', (e) => {
+    const button = e.target.closest('.scenario-item');
+    if (!button) return;
+    const scenarioId = String(button.dataset.scenarioId || '');
+    if (!scenarioId) return;
+    const scenario = getScenarioLibrary().find((item) => item.id === scenarioId);
+    if (!scenario) return;
+    beginInlineRename(button, {
+      initialValue: scenario.name,
+      fallbackValue: 'Untitled Scenario',
+      onCommit: (nextValue) => {
+        setScenarioLibrary(getScenarioLibrary().map((item) => (
+          item.id === scenarioId ? { ...item, name: nextValue } : item
+        )));
+        renderScenarioUi();
+      },
+    });
+  });
+
+  UI.scenarioShapeRow?.addEventListener('dblclick', (e) => {
+    const button = e.target.closest('[data-scenario-shape]');
+    if (!button) return;
+    const stageId = String(button.dataset.scenarioShape || '');
+    const stage = stageById(stageId);
+    if (!stage) return;
+    beginInlineRename(button, {
+      initialValue: stage.name,
+      fallbackValue: 'Untitled Stage',
+      onCommit: (nextValue) => {
+        commitStageChange(stage.id, (draft) => { draft.name = nextValue; });
+      },
+    });
+  });
+
   UI.stageAdd.addEventListener('click', () => {
     const kind = String(UI.stageAddKind?.value || 'card');
     addStage(kind);
   });
   UI.stageDuplicate?.addEventListener('click', () => duplicateCurrentStage());
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());
-  UI.stageReset.addEventListener('click', () => resetCurrentStageToDefault());
-  UI.stageNameInput.addEventListener('input', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    if (!stage) return;
-    commitStageChange(stage.id, (draft) => { draft.name = String(e.target.value || ''); });
-  });
-  UI.stageNameInput.addEventListener('blur', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    if (!stage) return;
-    if (String(e.target.value || '').trim()) return;
-    commitStageChange(stage.id, (draft) => { draft.name = 'Untitled Stage'; });
-  });
   UI.stageRadiusInput.addEventListener('change', (e) => commitStageRadius(e.target.value));
   UI.stageRadiusInput.addEventListener('blur', (e) => {
     const value = String(e.target.value || '').trim();
@@ -422,11 +513,6 @@ export function initManualBindings({
       draft.content.stageRenderShapeById[stage.id] = e.target.checked ? 'card-s' : 'card';
     });
   });
-  UI.stagePhoneBlurToggle.addEventListener('change', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    if (!stage) return;
-    commitStageChange(stage.id, (draft) => { draft.phoneBgBlur = e.target.checked; });
-  });
   UI.stageListListeningOrbToggle?.addEventListener('change', (e) => {
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
@@ -440,21 +526,47 @@ export function initManualBindings({
       draft.content.selectedByShape[draft.shape] = e.target.checked;
     });
   });
-  UI.stageAccentColor?.addEventListener('input', (e) => {
+  UI.stageBlobTopCoreColor?.addEventListener('input', (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;
     commitScenarioChange((draft) => {
-      draft.content.accentColorByShape = { ...(draft.content.accentColorByShape || {}) };
-      draft.content.accentColorByShape[draft.shape] = String(e.target.value || '#90acff');
+      draft.content.selectedBlobTopCoreColorByShape = { ...(draft.content.selectedBlobTopCoreColorByShape || {}) };
+      draft.content.selectedBlobTopCoreColorByShape[draft.shape] = String(e.target.value || '#90acff');
     });
   });
-  UI.stageAccentSecondaryColor?.addEventListener('input', (e) => {
+  UI.stageBlobTopEdgeColor?.addEventListener('input', (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;
     commitScenarioChange((draft) => {
-      draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
-      draft.content.secondaryAccentColorByShape[draft.shape] = String(e.target.value || '#9761ff');
+      draft.content.selectedBlobTopEdgeColorByShape = { ...(draft.content.selectedBlobTopEdgeColorByShape || {}) };
+      draft.content.selectedBlobTopEdgeColorByShape[draft.shape] = String(e.target.value || '#9761ff');
     });
+  });
+  UI.stageBlobBottomCoreColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.selectedBlobBottomCoreColorByShape = { ...(draft.content.selectedBlobBottomCoreColorByShape || {}) };
+      draft.content.selectedBlobBottomCoreColorByShape[draft.shape] = String(e.target.value || '#90acff');
+    });
+  });
+  UI.stageBlobBottomEdgeColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.selectedBlobBottomEdgeColorByShape = { ...(draft.content.selectedBlobBottomEdgeColorByShape || {}) };
+      draft.content.selectedBlobBottomEdgeColorByShape[draft.shape] = String(e.target.value || '#9761ff');
+    });
+  });
+  UI.stageMaskBlurInput?.addEventListener('change', (e) => commitStageSelectedMaskBlur(e.target.value));
+  UI.stageMaskBlurInput?.addEventListener('blur', (e) => {
+    const scenario = selectedScenario();
+    const value = String(e.target.value || '').trim();
+    if (!value) {
+      e.target.value = scenario ? String(stageSelectedMaskBlurForShape(scenario, scenario.shape)) : '';
+      return;
+    }
+    commitStageSelectedMaskBlur(value);
   });
   UI.stageListCountDec?.addEventListener('click', () => {
     const scenario = selectedScenario();

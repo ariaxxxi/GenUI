@@ -17,7 +17,17 @@ export function createMorphLayout(ctx) {
 
   function contentPos(shape, w, h) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
-    if (shape === 'list') return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'list') {
+      const scenario = callbacks.selectedScenario?.();
+      const showListOrb = !!callbacks.stageListListeningOrbForShape?.(scenario, scenario?.shape || 'list');
+      return {
+        thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:showListOrb ? 1 : 0 },
+        prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true },
+        sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+        div:{ x:P, y:h/2, dw:0, op:0 },
+        det:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+      };
+    }
     if (['circle', 'magic', 'listening', 'dot'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (shape === 'pill') {
       const isAiHomeContext = document.body?.dataset?.pageMode === 'ai' && document.body?.dataset?.aiHomeState === 'context';
@@ -250,8 +260,9 @@ export function createMorphLayout(ctx) {
   }
 
   function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
-    const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
     const scenario = callbacks.selectedScenario();
+    const showListOrb = !customGeo && shape === 'list' && !!callbacks.stageListListeningOrbForShape?.(scenario, stageId || shape);
+    const rawGeo = customGeo || (showListOrb ? SHAPES.circle : (SHAPES[shape] || SHAPES.card));
     const stageSizeOverride = callbacks.normalizeStageSizeEntry(contentData?.sizeOverride, callbacks.scenarioStageSizeOverride(scenario, stageId));
     const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
     const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
@@ -260,6 +271,9 @@ export function createMorphLayout(ctx) {
       const nextRadius = stageCornerRadiusPx(stageId, geo.main.br);
       return nextRadius === geo.main.br ? geo : { ...geo, main:{ ...geo.main, br: nextRadius } };
     };
+    if (showListOrb) {
+      return rawGeo;
+    }
     if ((shape !== 'card' && shape !== 'card-s' && shape !== 'image') || customGeo) {
       return withStageRadius(baseGeo);
     }

@@ -1,6 +1,971 @@
 # Handoff
 
 ## Task title
+Use smaller shared highlight preset for AI listening orb
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared Celestial chrome helper so the AI orb no longer uses the large `pill` preset for its highlight geometry.
+- `#siri-orb` and `.ai-flow-orb-sphere` now resolve to the smaller `list` preset instead of `pill`.
+- This reduces the shared highlight-image geometry used by the AI listening orb while keeping the existing AI/prototype surface presets unchanged.
+- Kept prototype-stage selection, compose fields, contact rows, and flight recommendation surfaces on the `pill` preset.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax check:
+  - `node --check src/shared/celestial-selection-chrome.js`
+- Reviewed the orb preset routing logic in `src/shared/celestial-selection-chrome.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open `ai.html` and verify the listening orb now uses the smaller orb highlight geometry instead of the oversized pill highlight setup.
+
+## Task title
+Reduce AI listening orb to volume-reactive glow plus two highlight images
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the AI listening-orb stack so the listening state no longer shows the static orb shell or static Celestial refraction/blob layers.
+- In listening mode, the orb now keeps only:
+  - the volume-reactive accent rim
+  - the volume-reactive inner highlight
+  - the top-left highlight image
+  - the bottom-right highlight image
+- Hid these non-reactive layers during listening:
+  - `.ai-flow-orb-sphere` shell glow
+  - `.ai-flow-orb-sphere::before`
+  - `.ai-flow-orb-sphere::after`
+  - `.g-stage-selected-refraction`
+  - `.g-stage-selected-blob--top-left`
+  - `.g-stage-selected-blob--bottom-right`
+- Applied the same reduction to the `compose-await-orb.listening-orb` variant so it does not reintroduce the static shell/refraction while still in the listening-orb path.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed the targeted listening-orb selectors in `src/styles/ai-decorative.css`
+- Confirmed the listening-mode rules still leave the two image highlights and the reactive rim/highlight selectors in place
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+- `src/styles/ai-decorative.css` already had unrelated local modifications in the worktree; I kept this task scoped to listening-orb layer visibility.
+
+## Recommended next step
+1. Open `ai.html` and verify the listening orb:
+   - no longer shows the static white shell fill
+   - still responds to live volume through rim/highlight intensity
+   - still keeps the two highlight images visible
+   - still looks acceptable in `compose-await-orb.listening-orb`
+
+## Task title
+Apply current Celestial highlight setup to AI and prototype selected chrome
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared Celestial selected-state highlight setup used by both `ai.html` and `index.html` so it matches the current `celestial-tool.html` behavior.
+- Replaced the old shell-height-derived stretched highlight sizing with intrinsic-size highlight sizing in the shared selected chrome path.
+- Set the shared highlight bases to:
+  - top-left highlight: `84x84`
+  - bottom-right highlight: `96x96`
+- Updated the shared anchor math so:
+  - the top-left highlight center sits `10px` right/down from the host's top-left corner
+  - the bottom-right highlight center sits on the host's bottom-right corner
+- Updated directional start transforms so highlight enter/exit motion now offsets from the computed anchored end position instead of assuming `0,0`.
+- Reset the shared card preset highlight offsets to `0` so the new anchor math is the source of truth instead of the older manual card offsets.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selected-presets.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/celestial-selection-chrome.js`
+  - `node --check src/shared/morph-render.js`
+- Verified old shared highlight width vars and legacy card offsets are gone:
+  - `rg -n "g-stage-selected-highlight-width|g-stage-selected-highlight-height|highlightTopX: -20|highlightBottomX: 8" src/shared src/styles/shared.css`
+- Reviewed the targeted shared preset / CSS / JS snippets after patching
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+- `src/shared/morph-render.js` already had unrelated local changes in the worktree; I kept this task scoped to the shared highlight math inside that file.
+
+## Recommended next step
+1. Open both `index.html` and `ai.html` and verify:
+   - prototype selected surfaces now use the smaller top-left and larger bottom-right highlight geometry
+   - AI selected rows / chips / orb chrome use the same updated highlight placement
+   - highlight motion still enters and exits from the correct direction after the anchor shift
+
+## Task title
+Scale Celestial top-left highlight down to 0.9x
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the Celestial top-left highlight base size to `0.9x` of its prior size.
+- Updated the top-left highlight base from `93x93` to `84x84`.
+- Left the bottom-right highlight unchanged at `96x96`.
+- Left both corner-anchor rules unchanged:
+  - top-left center remains `10px` right/down from the shell's top-left corner
+  - bottom-right center remains anchored to the shell's bottom-right corner
+- Kept the shared highlight scale slider behavior, so the top-left highlight now scales from the smaller `84x84` base.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed the targeted top-left highlight size diff in `celestial-tool.html`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html) and verify the card preset:
+   - top-left highlight reads slightly smaller than before
+   - top-left anchoring still lands correctly near the shell corner
+   - bottom-right highlight remains unchanged
+   - the scale slider still adjusts both highlights as expected
+
+## Task title
+Scale Celestial bottom-right highlight up by 1.5x
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the Celestial bottom-right highlight base size by `1.5x`.
+- Updated the bottom-right highlight base from `64x64` to `96x96`.
+- Left the top-left highlight unchanged at `93x93`.
+- Left both corner-anchor rules unchanged:
+  - top-left center remains `10px` right/down from the shell's top-left corner
+  - bottom-right center remains anchored to the shell's bottom-right corner
+- Kept the shared highlight scale slider behavior, so the bottom-right highlight now scales from the larger `96x96` base.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed the targeted bottom-right highlight size diff in `celestial-tool.html`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html) and verify the card preset:
+   - bottom-right highlight reads larger than before
+   - bottom-right anchoring still lands on the shell corner
+   - top-left highlight remains unchanged
+   - the scale slider still adjusts both highlights as expected
+
+## Task title
+Reduce Celestial top-left highlight anchor offset to 10px
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the Celestial top-left highlight anchor math so its center now sits `10px` right/down from the shell's top-left corner instead of `20px`.
+- Left the bottom-right highlight anchor unchanged.
+- Left the one-third highlight base sizing unchanged:
+  - top-left `93x93`
+  - bottom-right `64x64`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed the targeted anchor-math change in `celestial-tool.html`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html) and verify the card preset:
+   - top-left highlight center now sits `10px` right/down from the shell's top-left corner
+   - bottom-right highlight still anchors correctly
+   - the smaller one-third highlight sizes still read correctly
+
+## Task title
+Scale Celestial highlight images down to one-third
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the Celestial highlight base render size to one-third of the prior intrinsic-size mapping.
+- Updated the top-left highlight base from `279x279` to `93x93`.
+- Updated the bottom-right highlight base from `192x192` to `64x64`.
+- Kept the existing corner-anchor logic unchanged:
+  - top-left highlight center remains anchored `20px` right/down from the shell's top-left corner
+  - bottom-right highlight center remains anchored to the shell's bottom-right corner
+- Kept the highlight scale slider behavior, but it now scales from the smaller one-third base size.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed the targeted highlight-size diff in `celestial-tool.html`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html) and verify the card preset:
+   - highlights render at the smaller one-third base size
+   - corner anchoring still matches the previous placement
+   - the scale slider still grows and shrinks both highlights as expected
+
+## Task title
+Adjust Celestial highlight image sizing and corner anchoring
+
+## Completion status
+- Completed
+
+## Summary
+- Changed the Celestial tool highlight sizing logic so the two highlight PNGs no longer derive their size from shell height.
+- Wired the top-left highlight to use the source image dimensions (`279x279`) and the bottom-right highlight to use its source image dimensions (`192x192`) at `100%` scale.
+- Updated highlight placement math so:
+  - the top-left highlight center anchors to the container's top-left corner with a `20px` right/down center offset
+  - the bottom-right highlight center anchors to the container's bottom-right corner
+- Reset the default card highlight offsets to `0` so the new anchor logic is the source of truth instead of the legacy manual offsets.
+- Kept the existing highlight scale control, but it now scales from intrinsic image size instead of from shell-derived stretched dimensions.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed the targeted diff in `celestial-tool.html`
+- Confirmed source PNG dimensions:
+  - `src/assets/button-highlight-top-left.png` → `279x279`
+  - `src/assets/figma-proto-button-highlight-bottom-mask.png` → `192x192`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/celestial-tool.html) and verify the card preset:
+   - top-left highlight center sits `20px` right/down from the shell's top-left corner
+   - bottom-right highlight center sits on the shell's bottom-right corner
+   - highlights no longer look vertically stretched when changing shell height
+   - the scale slider still enlarges/reduces both highlights from their native base size
+
+## Task title
+Use Celestial selected-state chrome and directional list motion in AI mode
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the AI-mode selected chrome setup with the Celestial layer model instead of the old partial rim/highlight-only setup.
+- Added a shared AI-side helper that applies the same Celestial preset math used by the Celestial tool:
+  - mask blur
+  - blob blur
+  - blob positions
+  - highlight offsets
+  - highlight scale
+  - inner glow blur
+  - all four blob colors
+  - rim accent mapping
+- Updated AI-mode static chrome markup so both `#prototype-stage-selection` and the orb selection shell include the full Celestial layer stack:
+  - refraction mask
+  - top-left blob
+  - bottom-right blob
+  - accent rim
+  - inner glow
+  - top-left highlight
+  - bottom-right highlight
+- Rebuilt directional selection motion for AI list-stage surfaces using top/bottom enter-exit direction mapping:
+  - message disambiguation pills
+  - compose suggestion chips
+  - flight/payment selection lists
+  - flight recommendation chip stack
+- Added deselection exit animations so the outgoing item now animates its Celestial chrome out instead of snapping off.
+- Removed the old AI-only per-surface selected-style variable blocks that hardcoded the previous setup in CSS.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ai.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-booking.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/celestial-selection-chrome.js`
+  - `node --check src/flows/message-send-render.js`
+  - `node --check src/flows/flight-render.js`
+  - `node --check src/flows/flight-booking.js`
+  - `node --check src/flows/ui-primitives.js`
+- Diff review of the AI chrome, motion, and markup changes
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- The orb still keeps its AI-mode breathing behavior; the shell layers are now Celestial-based, but I did not redesign the orb timing model beyond wiring in the new chrome stack.
+
+## Recommended next step
+1. Open `ai.html` and verify:
+   - disambiguation selection moves with opposite-direction outgoing/incoming Celestial motion
+   - compose suggestion chips use the same motion model
+   - flight/payment list rows use the same motion model
+   - flight recommendation chips keep the new Celestial shell while opening/closing
+   - the listening orb still looks correct in `listening`, `compose-await-orb`, and `confirm` states
+
+## Task title
+Move prototype Geometry section to Style tab and collapse it by default
+
+## Completion status
+- Completed
+
+## Summary
+- Moved the prototype `Geometry` section from the `Stage` tab into the `Style` tab.
+- Set the moved `Geometry` section to be collapsed by default by removing the `expanded` class from its `layer-row`.
+- Kept all existing geometry/list-control IDs unchanged so the current prototype sidebar bindings continue to work without JavaScript changes.
+- The moved section still contains:
+  - geometry fields
+  - `Card-S layout`
+  - `List chips`
+  - `Bottom circle`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Structural review of moved markup and preserved IDs
+
+## Remaining issues / caveats
+- I did not run a browser-side pass in this turn.
+
+## Recommended next step
+1. Open prototype mode and verify:
+   - `Geometry` appears in the `Style` tab
+   - it is collapsed on first load
+   - list-only controls still appear there for list stages
+
+## Task title
+Increase visual hierarchy in prototype Style tab
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the prototype `Style` tab hierarchy so section titles and parameter labels are more visually distinct.
+- Strengthened the Style-tab section headers:
+  - `Accent blobs`
+  - `Refraction mask`
+  - `Animation`
+- Dimmed and slightly reduced the parameter labels and value text within the Style tab so the panel scans with clearer section-level grouping.
+- Scoped the change to the `Style` tab only, leaving the rest of the sidebar label system unchanged.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-sidebar.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change reviewed in diff
+
+## Remaining issues / caveats
+- I did not run a browser-side pass in this turn.
+
+## Recommended next step
+1. Open prototype mode and confirm the `Style` tab now has a clearer hierarchy between section titles and parameter labels.
+
+## Task title
+Restore blue accent styling for prototype Stage-tab stage buttons
+
+## Completion status
+- Completed
+
+## Summary
+- Restored the blue-accent visual treatment for the prototype Stage-tab stage buttons in the stage timeline.
+- Updated the stage-chip base, hover, and active styles so the stage buttons no longer use the fully neutral gray treatment.
+- Kept the rest of the panel styling unchanged; this only affects the stage buttons in the prototype stage timeline.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- CSS-only change reviewed in diff
+
+## Remaining issues / caveats
+- I did not run a browser-side pass in this turn.
+
+## Recommended next step
+1. Open prototype mode and confirm the stage timeline chips now read with the intended blue accent in default, hover, and active states.
+
+## Task title
+Make prototype Stage-tab Geometry a collapsible row and group list-only controls inside it
+
+## Completion status
+- Completed
+
+## Summary
+- Converted the prototype `Stage` tab `Geometry` block into a collapsible `layer-row` so it matches the visual and interaction pattern used by the `Content` tab rows.
+- Kept the section expanded by default.
+- Moved the list-stage-specific controls into the `Geometry` body:
+  - `List chips`
+  - `Bottom circle`
+- Also kept `Card-S layout` inside the same geometry section so shape-specific layout controls stay grouped together.
+- Preserved all existing control IDs so the current sidebar bindings and render logic continue to work without additional JS changes.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Structural check:
+  - verified geometry/list control IDs remain unique in `index.html`
+
+## Remaining issues / caveats
+- I did not run a browser-side pass in this turn.
+
+## Recommended next step
+1. Open prototype mode and confirm:
+   - `Geometry` collapses/expands like Content-tab rows
+   - `List chips` and `Bottom circle` appear only on list stages
+   - existing Stage-tab controls still update preview correctly
+
+## Task title
+Expose Celestial mask blur in prototype Style tab and compact selected-color rows
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the prototype `Style` tab so the selected-state blob color controls are grouped in two compact rows:
+  - `Top-left core` and `Top-left edge` on the same row
+  - `Bottom-right core` and `Bottom-right edge` on the same row
+- Added `Celestial mask blur` to the prototype `Style` tab under `Refraction mask`.
+- Wired the new control through prototype scenario state so it persists per shape in `selectedMaskBlurByShape`.
+- Updated prototype selected-shell rendering so the main stage and prototype list pills both use the per-shape Celestial mask blur value instead of only the preset default.
+- Updated stage duplication so custom Celestial mask blur values copy forward with the duplicated stage.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selected-presets.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/scenario-data.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-actions.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-sidebar.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/sidebar-render.js`
+  - `node --check src/tool/modules/manual-bindings.js`
+  - `node --check src/shared/morph-render.js`
+  - `node --check src/shared/sidebar-actions.js`
+  - `node --check src/shared/scenario-data.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open prototype mode and verify the `Style` tab layout plus `Celestial mask blur` behavior on:
+   - pill
+   - card
+   - list
+   to confirm the mask softness now matches the panel value in both the main stage and multi-select list pills.
+
+## Task title
+Fix prototype selected-shell artifacts when transitioning between shapes of different sizes
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the prototype selected-state artifact where moving from smaller shapes to larger shapes could show an extra inner shell, and moving from larger shapes to smaller shapes could show the inverse mismatch until `selected` was toggled off and on again.
+- Root cause:
+  - the Celestial refraction mask was being regenerated from the host’s current measured box during a live geometry transition
+  - during size transitions, that could capture the previous rendered size instead of the target size
+  - this caused the mask and selected shell layers to use stale geometry for part of the transition
+- Updated `src/shared/morph-render.js` so the prototype main-stage selected shell now applies the Celestial mask and layer preset using the target geometry directly:
+  - target width
+  - target height
+  - target border radius
+- This keeps the selected shell consistent whether the transition is:
+  - list/dot → pill
+  - card → pill
+  - small → large
+  - large → small
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax check:
+  - `node --check src/shared/morph-render.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- The fix is targeted at the prototype main-stage selected shell transition path.
+
+## Recommended next step
+1. Open `index.html` and verify transitions between:
+   - list → pill
+   - dot → pill
+   - card → pill
+   - pill → card
+   while selected is on, to confirm the shell no longer shows the stale inner mask during geometry changes.
+
+## Task title
+Compact the prototype Stage tab and switch scenario / stage renaming to inline double-click editing
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the standalone prototype scenario-name input from the right sidebar.
+- Removed the standalone prototype stage-name input from the Stage tab.
+- Removed the Stage-tab refresh/reset button.
+- Added inline double-click rename behavior:
+  - double-click a scenario in the left scenario list to rename it inline
+  - double-click a stage chip in the Stage tab to rename it inline
+  - Enter commits, Escape cancels, blur commits, and empty names fall back to untitled defaults
+- Reworked the Stage tab to be denser and more compact:
+  - added a tighter stage rail header
+  - tightened stage actions
+  - grouped geometry controls into a compact two-column grid
+  - moved `Components` ahead of `Corner radius` / geometry controls
+- Removed the `DM Mono` font import from `index.html` so prototype mode now relies on `DM Sans` only for the editor UI.
+- Tightened the prototype sidebar styling to reduce vertical space and make the Stage tab read as a compact neutral utility panel.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-sidebar.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/tool/modules/manual-bindings.js`
+  - `node --check src/shared/sidebar-render.js`
+  - `node --check src/shared/sidebar.js`
+- Reference checks:
+  - `rg -n "scenario-name|stage-name-input|stage-reset|DM Mono" index.html src/shared src/tool/modules src/styles/editor-sidebar.css src/styles/editor-decorative.css -S`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- Scenario rename is now available by double-clicking the scenario list entries in the left sidebar.
+- Stage rename is now available by double-clicking the stage chips in the Stage tab.
+
+## Recommended next step
+1. Open `index.html` and verify the inline rename flow and the denser Stage-tab layout feel right at normal editor width. If needed, the next pass should tune chip widths, button heights, and spacing further instead of reintroducing standalone inputs.
+
+## Task title
+Use the exact Celestial selected-state setup in prototype mode and remove the legacy selected-layer mapping
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the remaining legacy prototype selected-state mapping with the exact Celestial preset source.
+- Added `src/shared/celestial-selected-presets.js` as the single shared preset definition for:
+  - chip / list
+  - pill
+  - card-like shapes
+- Updated `src/shared/scenario-data.js` so selected-state default colors now come from the shared Celestial preset source instead of the old generic accent pair.
+- Updated prototype runtime in `src/shared/morph-render.js` so the main stage selected shell now uses the exact Celestial setup for:
+  - mask blur
+  - blob blur
+  - blob positions
+  - highlight offsets
+  - highlight scale
+  - inner glow blur
+  - the four blob colors
+  - rim accent mapping
+- Removed the old prototype main-stage selected-state runtime dependency on:
+  - `stageAccentColorForShape`
+  - `stageSecondaryAccentColorForShape`
+  for the selected shell itself.
+- Rim mapping now matches the Celestial tool:
+  - `--g-stage-selected-rgb` comes from top-left core
+  - `--g-stage-selected-secondary-rgb` comes from bottom-right core
+- Prototype list pills now also get the exact Celestial list preset applied after render, including a generated zero-spread mask sized to the real pill geometry, so list-stage selected motion and visuals use the same setup instead of the old shared defaults.
+- Updated the prototype decorative figma-button preview accent mapping so it also follows the Celestial top-left-core / bottom-right-core mapping.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selected-presets.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/scenario-data.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/celestial-selected-presets.js`
+  - `node --check src/shared/scenario-data.js`
+  - `node --check src/shared/morph-render.js`
+- Hook verification:
+  - `rg -n "applySelectedChromePreset|applyPrototypeListSelectedChromePresets|celestialSelectedPresetForRenderShape|buildZeroSpreadMaskUrl\\(width, height, radius, preset.maskBlur\\)" src/shared/morph-render.js src/shared/scenario-data.js src/shared/celestial-selected-presets.js`
+  - `rg -n "stageAccentColorForShape|stageSecondaryAccentColorForShape" src/shared/morph-render.js`
+
+## Remaining issues / caveats
+- Prototype main stage and prototype list stage now use the exact Celestial preset source and runtime mapping.
+- I did not run a browser-side visual pass in this turn, so the final confirmation still needs an in-browser comparison of `index.html` against `celestial-tool.html`.
+- Other selected hosts outside the main prototype stage and prototype list pills still inherit shared selected-chrome CSS defaults unless they are explicitly overridden at render time.
+
+## Recommended next step
+1. Open `index.html` and compare:
+   - card selected state
+   - pill selected state
+   - list-pill selected state
+   against `celestial-tool.html`, then decide whether to extend the same exact runtime preset application to every other selected host in prototype mode.
+
+## Task title
+Align prototype card selected-state defaults with the Celestial card preset
+
+## Completion status
+- Completed
+
+## Summary
+- Updated prototype mode so card-like selected shells use the same Celestial card default recipe, not just card-like geometry.
+- Added a shape-aware selected-state default helper in `src/shared/scenario-data.js` so card-like stages now default to the Celestial card accent and blob colors:
+  - accent / rim primary: `#6386ef`
+  - accent / rim secondary: `#5973ef`
+  - top-left edge: `#a086ef`
+  - bottom-right edge: `#43367a`
+- Added migration-friendly fallback logic so older prototype scenarios that were still using the legacy generic accent defaults for card-like stages resolve to the Celestial card defaults instead.
+- Updated `src/shared/morph-render.js` so the main prototype selected overlay also matches the Celestial card preset in the non-color tuning:
+  - fixed card highlight offsets:
+    - top-left: `-20px, -15px`
+    - bottom-right: `8px, 0px`
+  - blob blur now uses the fixed Celestial card preset value `80px` instead of being scaled down by stage size
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/scenario-data.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/scenario-data.js`
+  - `node --check src/shared/morph-render.js`
+- Hook verification:
+  - `rg -n "selectedBlobDefaultsForRenderShape|#6386ef|#a086ef|#5973ef|#43367a" src/shared/scenario-data.js`
+  - `rg -n "highlightTopX|highlightBottomX|g-stage-selected-blob-blur|g-stage-selected-highlight-top-end-x|g-stage-selected-highlight-bottom-end-x" src/shared/morph-render.js`
+
+## Remaining issues / caveats
+- This aligns the prototype runtime and default fallback behavior for card-like selected shells.
+- I did not run a browser-side visual pass, so the final confirmation still needs an in-browser comparison of prototype card against `celestial-tool.html`.
+
+## Recommended next step
+1. Open `index.html`, switch to a card stage, and compare it against the Celestial card preset visually. If there is still drift, the next likely adjustment point is the main stage card geometry itself rather than the selected-state preset.
+
+## Task title
+Replace prototype-mode DM Mono typography with DM Sans
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the remaining `DM Mono` typography in the prototype editor UI with `DM Sans`.
+- Updated the main prototype layout font, entry-point button, editor sidebar controls, and editor decorative panel labels so prototype mode now uses a consistent sans-serif type treatment.
+- Kept the change scoped to prototype editor files only; AI-mode typography was not touched.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-layout.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-sidebar.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Verified there are no remaining `DM Mono` references in the prototype editor files:
+  - `rg -n "DM Mono" src/styles/editor-layout.css src/styles/editor-sidebar.css src/styles/editor-decorative.css index.html -S`
+
+## Remaining issues / caveats
+- This does not change AI page typography; AI styles still keep their own font choices.
+
+## Recommended next step
+1. Open `index.html` and do a quick visual pass on the prototype side panels to confirm the lighter DM Sans labels still feel readable at the current small sizes.
+
+## Task title
+Preserve prototype list-stage deactivation motion during hover switches
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the missing outgoing motion in the prototype list stage when switching hover with ArrowUp / ArrowDown.
+- Added an explicit `deselecting` phase for outgoing prototype list pills so the selected shell stays visible during the reverse Celestial motion instead of fading away immediately.
+- Added timer cleanup in `src/shared/morph-render.js` so repeated quick list navigation does not leave stale deselection classes behind.
+- Updated pill styling in `src/styles/ai-glass.css` so a `deselecting` pill keeps:
+  - black selected shell
+  - neutral selected outline
+  - selected text / avatar emphasis
+  - selected chrome wrapper visibility
+  while the reverse motion completes.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax check:
+  - `node --check src/shared/morph-render.js`
+- Hook verification:
+  - `rg -n "prototypeListDeselectTimers|deselecting > \\.g-selection-chrome|g-disambiguation-pill:is\\(\\.selected, \\.deselecting\\)" src/shared/morph-render.js src/styles/ai-glass.css`
+
+## Remaining issues / caveats
+- This patch specifically fixes outgoing motion for the prototype list stage path.
+- Other multi-select surfaces that fully replace DOM on selection change may still need the same `deselecting` pattern if you want reverse motion there too.
+
+## Recommended next step
+1. Do a browser check on prototype list stage and then extend the same deselection-phase pattern to any other multi-select surface where outgoing reverse motion still feels too abrupt.
+
+## Task title
+Add Celestial directional hover-switch motion to prototype list stage and set the shared multi-select rule
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed prototype list-stage hover changes so they no longer re-render away the previously selected pill on ArrowUp / ArrowDown changes.
+- Added an in-place list selection update path in `src/shared/morph-render.js` so:
+  - the outgoing selected pill reverses toward `bottom` when moving down
+  - the outgoing selected pill reverses toward `top` when moving up
+  - the incoming selected pill activates from the opposite direction, matching the Celestial list behavior
+- Added shared selected-host entry animations in `src/styles/shared.css` for:
+  - refraction blobs
+  - top-left highlight
+  - bottom-right highlight
+  - accent rim
+  - inner glow
+- Documented the project-wide rule in `design.md`:
+  - whenever a view has more than one selectable container, switching hover / selection should trigger directional Celestial motion instead of a static selected-state swap
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/design.md`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/morph-render.js`
+- Selector / hook verification:
+  - `rg -n "updatePrototypeListSelectionInPlace|g-selected-blob-top-enter|g-selected-rim-enter|g-selected-inner-glow-enter|Project rule for multi-select surfaces" src/shared/morph-render.js src/styles/shared.css design.md`
+
+## Remaining issues / caveats
+- The project-wide rule is now implemented at the shared selected-host chrome layer for entry motion, but outgoing reverse motion still depends on the DOM persisting during selection changes.
+- Prototype list stage now preserves DOM during hover switches, but other multi-select surfaces that fully replace their selected nodes on render may still only show the incoming directional motion.
+
+## Recommended next step
+1. Run a visual browser pass on `index.html` list stage, then audit other multi-select surfaces that fully re-render on selection change and convert them to class toggles if you want outgoing reverse motion everywhere.
+
+## Task title
+Expose four Celestial blob colors in prototype mode and simplify the right sidebar
+
+## Completion status
+- Completed
+
+## Summary
+- Reduced the prototype right sidebar to three tabs only:
+  - `Stage`
+  - `Content`
+  - `Style`
+- Removed the old `Config` tab and its contents from the prototype page.
+- Replaced the old two-accent selected-style controls in prototype mode with four explicit Celestial blob color controls:
+  - `Top-left core`
+  - `Top-left edge`
+  - `Bottom-right core`
+  - `Bottom-right edge`
+- Extended the prototype scenario data model so those four selected-state colors persist per stage shape.
+- Wired the prototype selected shell to use those four color values directly in the blob gradients, while still deriving the rim’s primary/secondary accents from the core colors.
+- Removed the prototype phone background blur effect:
+  - removed the prototype style control
+  - removed the prototype CSS blur application
+  - changed the prototype `applyStagePhoneBlur()` path to clear `stage-blur` instead of toggling it on
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/scenario-data.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-actions.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/index-app.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-layout.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/scenario-data.js`
+  - `node --check src/shared/sidebar-render.js`
+  - `node --check src/tool/modules/manual-bindings.js`
+  - `node --check src/tool/index-app.js`
+  - `node --check src/shared/morph-render.js`
+
+## Remaining issues / caveats
+- Existing stored scenarios fall back cleanly to the previous two-accent defaults unless the new four-color fields are explicitly set.
+- This removes phone-frame blur from the prototype path only; the AI page still has its own separate blur path.
+
+## Recommended next step
+1. Open `index.html` and tune the four prototype default blob colors if you want them to match the current `celestial-tool.html` presets more closely.
+
+## Task title
+Replace prototype list-stage listening orb with a normal icon circle
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the list-stage bottom anchor behavior in prototype mode, but changed the visual treatment from the listening orb path to the normal circular shell path.
+- Preserved the existing list-stage icon editing flow instead of adding a new control:
+  - the list-stage bottom circle now uses the same stage icon data already editable in the sidebar icon field
+  - the list-stage shell geometry stays circular when the bottom anchor toggle is enabled
+- Removed the old listening-orb visual class usage for list stage from both the instant-preview path and animated morph path, so the bottom anchor no longer inherits Siri/listening glow behavior.
+- Renamed the stage toggle label from `Listening orb` to `Bottom circle` so the sidebar matches the new behavior.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-layout.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/index-app.js`
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax checks:
+  - `node --check src/shared/morph-layout.js`
+  - `node --check src/shared/morph-render.js`
+  - `node --check src/tool/index-app.js`
+
+## Remaining issues / caveats
+- The underlying stage field name is still `listListeningOrb` for compatibility, even though the visual treatment is now a normal icon circle.
+- I did not run an in-browser pass in this turn, so the next check should be a quick visual verification of the prototype list stage and sidebar wording.
+
+## Recommended next step
+1. Verify the prototype list stage in-browser and, if desired, rename the stored `listListeningOrb` field and related UI ids to `listBottomCircle` in a cleanup pass.
+
+## Task title
+Add Celestial-style directional motion to prototype-mode selected state
+
+## Completion status
+- Completed
+
+## Summary
+- Added inferred directional motion to the prototype main-stage selected shell by deriving `top / right / bottom / left` from the previous and next main-stage geometry in `src/shared/morph-render.js`.
+- Added a motion-phase retrigger for `#prototype-stage-selection` so the main selected shell now plays:
+  - directional blob travel
+  - directional highlight travel
+  - directional rim bias settling
+  - directional inner-glow bias settling
+  whenever the selected prototype stage changes geometry.
+- Updated shared selected chrome markup in `src/flows/ui-primitives.js` so the selected host chrome now carries a `data-stage-direction` hook.
+- Updated shared selected-chrome CSS in `src/styles/shared.css` so the Celestial layers use directional start/end transforms and inactive/active shadow stacks.
+- Added top/bottom direction tagging for prototype list pills on selection changes so the selected chrome path can distinguish the incoming and outgoing direction during list navigation.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Verified direction and motion hooks exist:
+  - `rg -n "data-stage-direction|motionPhase|prototypeSelectionDirection|inferPrototypeSelectionDirection|playPrototypeSelectionMotion|g-stage-selected-blob-top-start-x|g-stage-selected-accent-rim-shadow-inactive" src/shared/morph-render.js src/flows/ui-primitives.js src/styles/shared.css src/shared/morph.js`
+- Syntax check:
+  - `node --check src/shared/morph-render.js`
+  - `node --check src/flows/ui-primitives.js`
+- Existing module parse still passes:
+  - `node -e "import('./src/flows/ui-primitives.js').then(()=>console.log('ui-primitives ok'))"`
+
+## Remaining issues / caveats
+- Prototype list pills are still re-rendered as HTML on selection changes, so the new per-pill direction tags are in place but still need a live browser check to confirm the directional read is as strong as intended.
+- I did not run a browser-side visual pass in this turn, so the exact motion feel versus `celestial-tool.html` is not yet visually verified.
+
+## Recommended next step
+1. Compare `index.html` against `celestial-tool.html` in-browser and tune the directional start offsets or inactive shadow bias if the prototype selected shell still feels weaker or stronger than the Celestial reference.
+
+## Task title
+Port prototype-mode selected state to the Celestial method
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the old prototype-stage overlay shell setup with the Celestial layer stack on the main prototype stage:
+  - black shell with neutral gray outline
+  - luminance-masked refraction layer
+  - top-left and bottom-right refraction blobs
+  - shared rim / inner glow / highlight layers driven by Celestial defaults
+- Added Celestial per-shape preset mapping in `src/shared/morph-render.js` so prototype stage geometry now picks the same default tuning model as the Celestial page:
+  - `pill`
+  - `card` / `card-s` / `image` / `card-form` / `card-list`
+  - chip-like fallback for list / dot / circle-like shapes
+- Updated `renderSelectedChrome()` so shared selected hosts now mount the same Celestial refraction layer instead of only the older rim/highlight stack.
+- Added shared host defaults in `src/styles/ai-glass.css` so prototype-mode pills and other selected hosts get Celestial-style mask / blob / inner-glow defaults without needing stage-specific JS.
+- Added the zero-spread refraction mask asset as the shared fallback in `src/styles/shared.css`, while keeping the main prototype stage on the generated geometry-aware mask URL.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Verified the new Celestial selectors / helpers are present in the prototype overlay and shared selected chrome:
+  - `rg -n "g-stage-selected-refraction|g-stage-selected-blob|figma-proto-button-refraction-mask-zero-spread|renderSelectedChrome\\(" src/flows/ui-primitives.js src/styles/shared.css src/styles/ai-glass.css index.html src/shared/morph-render.js`
+- Parsed the updated selected-chrome markup module:
+  - `node -e "import('./src/flows/ui-primitives.js').then(()=>console.log('ui-primitives ok'))"`
+- Reviewed the scoped diff:
+  - `git diff -- src/flows/ui-primitives.js src/styles/shared.css src/styles/ai-glass.css index.html src/shared/morph-render.js`
+
+## Remaining issues / caveats
+- The main prototype stage uses the full generated Celestial mask setup, but shared selected hosts still use the zero-spread SVG mask as a scalable fallback rather than a per-host generated mask URL.
+- I did not run a live browser comparison in this turn, so visual parity for prototype list pills and compose / recommendation selected hosts still needs eyeballing against `celestial-tool.html`.
+
+## Recommended next step
+1. Run `index.html` side by side with `celestial-tool.html` and tune any shared-host residuals, especially prototype list pills and any selected rich-content rows that still read stronger or weaker than the Celestial reference.
+
+## Task title
 Enable ArrowUp and ArrowDown for prototype list-stage hover selection
 
 ## Completion status

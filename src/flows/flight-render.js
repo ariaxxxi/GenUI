@@ -1,5 +1,6 @@
 import { composeScreen, renderScreenMarkup } from "../shared/screen-composer.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
+import { applyAiCelestialChrome, clearDirectionalSelectionTimers, syncDirectionalSelection } from "../shared/celestial-selection-chrome.js";
 import { normalizeFlightDateValue } from "./flight-ai.js";
 import { renderFlightRecommendationChipStack } from "./ui-primitives.js";
 import { clamp } from "../utils.js";
@@ -40,6 +41,7 @@ export function createFlightRender({
     depart: "",
     ret: "",
   };
+  const selectionMotionTimers = new Map();
 
   function contentHeightPx(html) {
     const layer = ensureMeasureLayer("flight-measure-layer");
@@ -203,8 +205,6 @@ export function createFlightRender({
       price: String(option?.price || "").trim(),
       priceColor: index === 0 ? "green" : (index === 1 ? "white" : "orange"),
       mediaClass: "g-disambiguation-pill-media g-disambiguation-pill-media--large",
-      accentRgb: "244 247 255",
-      accentSecondaryRgb: "255 255 255",
     }));
   }
 
@@ -424,6 +424,9 @@ export function createFlightRender({
       })
       : "";
     const html = customRecommendationHtml || (shouldRenderInsideShell ? renderScreenMarkup(screenSpec) : "");
+    if (step.type !== "payment" && step.type !== "recommendation") {
+      clearDirectionalSelectionTimers(selectionMotionTimers);
+    }
     if (step.type === "thinking") {
       clearFlightRichStage(false);
       setTimeout(() => {
@@ -506,6 +509,7 @@ export function createFlightRender({
           trackConfirmIntentHeader();
           syncConfirmFocusUi(flow.focused);
         }
+        applyAiCelestialChrome(document);
         applyFlowChromeVisibility({
           C: getFlow()?.C,
           active: true,
@@ -581,8 +585,16 @@ export function createFlightRender({
     document.querySelectorAll("#glass-controls-layer .g-action-btn").forEach((btn, idx) => btn.classList.toggle("selected", idx === focused));
   }
 
+  function updateSelectionListUi(focused) {
+    const rows = Array.from(document.querySelectorAll("#c-rich [data-flight-opt]"));
+    if (!rows.length) return false;
+    return syncDirectionalSelection(rows, focused, selectionMotionTimers, { durationMs: 700 });
+  }
+
   function updateRecommendationSelectionUi(focused) {
-    document.querySelectorAll("#c-rich [data-flight-rec-opt]").forEach((row, idx) => row.classList.toggle("selected", idx === focused));
+    const rows = Array.from(document.querySelectorAll("#c-rich [data-flight-rec-opt]"));
+    if (!rows.length) return false;
+    return syncDirectionalSelection(rows, focused, selectionMotionTimers, { durationMs: 700 });
   }
 
   function updateRecommendationMenuUi(open = false, focused = getFlow().focused) {
@@ -597,8 +609,9 @@ export function createFlightRender({
     stack.dataset.visibleCount = String(open ? chips.length : 1);
     chips.forEach((chip, idx) => {
       chip.classList.toggle("is-visible", idx < (open ? chips.length : 1));
-      chip.classList.toggle("selected", idx === focused);
     });
+    syncDirectionalSelection(chips, focused, selectionMotionTimers, { durationMs: 700 });
+    applyAiCelestialChrome(document);
     const nextStackRect = stack.getBoundingClientRect();
     const deltaY = previousStackRect.top - nextStackRect.top;
     if (Math.abs(deltaY) >= 1) {
@@ -629,11 +642,16 @@ export function createFlightRender({
     if (!stack) return false;
     const chips = Array.from(stack.querySelectorAll(".g-flight-recommendation-chip"));
     if (!chips.length) return false;
-    chips.forEach((chip, idx) => chip.classList.toggle("selected", idx === selectedIndex));
+    clearDirectionalSelectionTimers(selectionMotionTimers);
+    chips.forEach((chip, idx) => {
+      chip.classList.remove("deselecting");
+      chip.classList.toggle("selected", idx === selectedIndex);
+    });
     stack.classList.remove("open");
     stack.classList.add("closing");
     richRoot.classList.add("visible");
     richRoot.classList.add("glass-recommendation-open");
+    applyAiCelestialChrome(document);
     return true;
   }
 
@@ -652,5 +670,5 @@ export function createFlightRender({
     if (node) node.scrollTop = 0;
   }
 
-  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, DISAMBIGUATION_EXIT_MS, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildRecommendationVisualOptions, buildScreenSpec, renderStep, syncConfirmFocusUi, updateRecommendationSelectionUi, updateRecommendationMenuUi, animateRecommendationExit, getConfirmScrollContainer, scrollConfirmDetails, resetConfirmScroll };
+  return { THINKING_HOLD_MS, DATE_SELECTION_STEP_GEO, DISAMBIGUATION_EXIT_MS, optionRows, buildConfirmRows, buildRecommendationAlternatives, buildRecommendationVisualOptions, buildScreenSpec, renderStep, syncConfirmFocusUi, updateSelectionListUi, updateRecommendationSelectionUi, updateRecommendationMenuUi, animateRecommendationExit, getConfirmScrollContainer, scrollConfirmDetails, resetConfirmScroll };
 }

@@ -1,5 +1,6 @@
 import { layoutDisambiguationPillItems, renderDisambiguationPills } from '../flows/ui-primitives.js';
 import { SHAPES, normalizeTypography, normalizeStageImages } from '../shapes.js';
+import { celestialSelectedPresetForRenderShape } from './celestial-selected-presets.js';
 import { clamp } from '../utils.js';
 
 export function createMorphRender(ctx) {
@@ -13,6 +14,7 @@ export function createMorphRender(ctx) {
   const prototypeListRoot = document.getElementById('list-pills');
   state.prototypeListContent = state.prototypeListContent || null;
   state.prototypeListSelectedIndex = Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0;
+  state.prototypeListDeselectTimers = state.prototypeListDeselectTimers || new Map();
 
   function clearThinkingVisualEnterTimer() {
     if (!thinkingVisualEnterTimer) return;
@@ -30,6 +32,18 @@ export function createMorphRender(ctx) {
     if (!prototypeListCollapseTimer) return;
     clearTimeout(prototypeListCollapseTimer);
     prototypeListCollapseTimer = null;
+  }
+
+  function clearPrototypeListDeselectTimers() {
+    if (!(state.prototypeListDeselectTimers instanceof Map)) return;
+    state.prototypeListDeselectTimers.forEach((timerId) => clearTimeout(timerId));
+    state.prototypeListDeselectTimers.clear();
+  }
+
+  function clearPrototypeSelectionMotionFrame() {
+    if (!state.prototypeSelectionMotionFrame) return;
+    cancelAnimationFrame(state.prototypeSelectionMotionFrame);
+    state.prototypeSelectionMotionFrame = null;
   }
 
   function derivePrototypeListInitials(label = '') {
@@ -58,8 +72,10 @@ export function createMorphRender(ctx) {
     const icon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
     const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
     const shape = String(scenario?.shape || 'list');
-    const accentRgb = hexToRgbTriplet(callbacks.stageAccentColorForShape?.(scenario, shape), '144 172 255');
-    const accentSecondaryRgb = hexToRgbTriplet(callbacks.stageSecondaryAccentColorForShape?.(scenario, shape), '151 97 255');
+    const blobTopCore = callbacks.stageSelectedBlobTopCoreColorForShape?.(scenario, shape) || '#8fb2ef';
+    const blobTopEdge = callbacks.stageSelectedBlobTopEdgeColorForShape?.(scenario, shape) || '#8a72eb';
+    const blobBottomCore = callbacks.stageSelectedBlobBottomCoreColorForShape?.(scenario, shape) || '#a8bbf0';
+    const blobBottomEdge = callbacks.stageSelectedBlobBottomEdgeColorForShape?.(scenario, shape) || '#572fff';
     const sourceItems = Array.isArray(contentData?.listItems) && contentData.listItems.length
       ? contentData.listItems
       : [
@@ -78,11 +94,13 @@ export function createMorphRender(ctx) {
         ? { avatar: '', initials: String(resolvedIcon.value).trim() }
         : null;
       return ({
-      name: label,
-      avatar: baseEntry?.avatar || '',
-      initials: baseEntry?.initials || derivePrototypeListInitials(label),
-      accentRgb,
-      accentSecondaryRgb,
+        name: label,
+        avatar: baseEntry?.avatar || '',
+        initials: baseEntry?.initials || derivePrototypeListInitials(label),
+        blobTopCore,
+        blobTopEdge,
+        blobBottomCore,
+        blobBottomEdge,
       });
     });
   }
@@ -126,17 +144,36 @@ export function createMorphRender(ctx) {
     }
     const orbAnchor = getPrototypeThinkingOrbAnchor();
     const entries = prototypeListEntriesFromContent(contentData);
+    const previousSelectedIndex = clamp(
+      Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
+      0,
+      Math.max(0, entries.length - 1),
+    );
     const resolvedSelectedIndex = clamp(
       Number.isFinite(selectedIndex) ? selectedIndex : state.prototypeListSelectedIndex,
       0,
       Math.max(0, entries.length - 1),
     );
+    const movingDown = resolvedSelectedIndex > previousSelectedIndex;
+    const movingUp = resolvedSelectedIndex < previousSelectedIndex;
     const items = layoutDisambiguationPillItems(
       entries,
       resolvedSelectedIndex,
       'stack',
       { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y }
-    );
+    ).map((item, index) => {
+      let direction = 'bottom';
+      if (movingDown) {
+        if (index === previousSelectedIndex) direction = 'bottom';
+        if (index === resolvedSelectedIndex) direction = 'top';
+      } else if (movingUp) {
+        if (index === previousSelectedIndex) direction = 'top';
+        if (index === resolvedSelectedIndex) direction = 'bottom';
+      } else if (index === resolvedSelectedIndex) {
+        direction = entering ? 'bottom' : 'bottom';
+      }
+      return { ...item, direction };
+    });
     state.prototypeListContent = contentData;
     state.prototypeListSelectedIndex = resolvedSelectedIndex;
     prototypeListRoot.dataset.collapsing = '';
@@ -148,6 +185,7 @@ export function createMorphRender(ctx) {
       rowDataAttr: 'data-prototype-list-pill',
       clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
     });
+    applyPrototypeListSelectedChromePresets(items);
     syncPrototypeListPhase(entering ? 'entering' : 'settled');
     if (!entering) return;
     prototypeListSettleTimer = setTimeout(() => {
@@ -157,9 +195,71 @@ export function createMorphRender(ctx) {
     }, 800);
   }
 
+  function updatePrototypeListSelectionInPlace(nextIndex) {
+    if (!prototypeListRoot || prototypeListRoot.dataset.active !== '1') return false;
+    const cluster = prototypeListRoot.querySelector('.prototype-disambiguation-pills');
+    if (!cluster) return false;
+    const pills = Array.from(cluster.querySelectorAll('[data-prototype-list-pill]'));
+    if (!pills.length) return false;
+    const previousSelectedIndex = clamp(
+      Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
+      0,
+      pills.length - 1,
+    );
+    const resolvedSelectedIndex = clamp(
+      Number.isFinite(nextIndex) ? nextIndex : previousSelectedIndex,
+      0,
+      pills.length - 1,
+    );
+    if (resolvedSelectedIndex === previousSelectedIndex) return false;
+    const movingDown = resolvedSelectedIndex > previousSelectedIndex;
+    const outgoingDirection = movingDown ? 'bottom' : 'top';
+    const incomingDirection = movingDown ? 'top' : 'bottom';
+    pills.forEach((pill, index) => {
+      const chrome = pill.querySelector('.g-selection-chrome');
+      if (!chrome) return;
+      if (index === previousSelectedIndex) {
+        const existingTimer = state.prototypeListDeselectTimers.get(pill);
+        if (existingTimer) clearTimeout(existingTimer);
+        chrome.dataset.stageDirection = outgoingDirection;
+        pill.classList.add('deselecting');
+        pill.classList.remove('selected');
+        const timerId = setTimeout(() => {
+          pill.classList.remove('deselecting');
+          state.prototypeListDeselectTimers.delete(pill);
+        }, 700);
+        state.prototypeListDeselectTimers.set(pill, timerId);
+        return;
+      }
+      if (index === resolvedSelectedIndex) {
+        const existingTimer = state.prototypeListDeselectTimers.get(pill);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          state.prototypeListDeselectTimers.delete(pill);
+        }
+        chrome.dataset.stageDirection = incomingDirection;
+        pill.classList.remove('deselecting');
+        pill.classList.add('selected');
+        return;
+      }
+      const existingTimer = state.prototypeListDeselectTimers.get(pill);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        state.prototypeListDeselectTimers.delete(pill);
+      }
+      pill.classList.remove('deselecting');
+      if (!pill.classList.contains('selected')) {
+        chrome.dataset.stageDirection = 'bottom';
+      }
+    });
+    state.prototypeListSelectedIndex = resolvedSelectedIndex;
+    return true;
+  }
+
   function clearPrototypeListStage(immediate = false) {
     if (!prototypeListRoot) return;
     clearPrototypeListSettleTimer();
+    clearPrototypeListDeselectTimers();
     if (immediate) clearPrototypeListCollapseTimer();
     if (!immediate && prototypeListRoot.dataset.collapsing === '1') return;
     state.prototypeListContent = null;
@@ -182,8 +282,7 @@ export function createMorphRender(ctx) {
       entries.length - 1,
     );
     if (nextIndex === state.prototypeListSelectedIndex) return false;
-    showPrototypeListStage(contentData, { entering: false, selectedIndex: nextIndex });
-    return true;
+    return updatePrototypeListSelectionInPlace(nextIndex) || (showPrototypeListStage(contentData, { entering: false, selectedIndex: nextIndex }), true);
   }
 
   function collapsePrototypeListStack(ms = 600) {
@@ -241,19 +340,193 @@ export function createMorphRender(ctx) {
     return fallback;
   }
 
+  function inferPrototypeSelectionDirection(fromGeo, toGeo) {
+    if (!fromGeo || !toGeo) return 'bottom';
+    const fromX = Number(fromGeo.tx) || 0;
+    const fromY = Number(fromGeo.ty) || 0;
+    const toX = Number(toGeo.tx) || 0;
+    const toY = Number(toGeo.ty) || 0;
+    const fromW = Number(fromGeo.w) || 0;
+    const fromH = Number(fromGeo.h) || 0;
+    const toW = Number(toGeo.w) || 0;
+    const toH = Number(toGeo.h) || 0;
+    const dx = (toX + (toW / 2)) - (fromX + (fromW / 2));
+    const dy = (toY + (toH / 2)) - (fromY + (fromH / 2));
+    const dw = toW - fromW;
+    const dh = toH - fromH;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      return Math.abs(dx) >= Math.abs(dy)
+        ? (dx >= 0 ? 'right' : 'left')
+        : (dy >= 0 ? 'bottom' : 'top');
+    }
+    if (Math.abs(dh) >= Math.abs(dw) && Math.abs(dh) > 4) return dh >= 0 ? 'bottom' : 'top';
+    if (Math.abs(dw) > 4) return dw >= 0 ? 'right' : 'left';
+    return 'bottom';
+  }
+
+  function playPrototypeSelectionMotion(selectionOverlay, selected) {
+    if (!selectionOverlay) return;
+    clearPrototypeSelectionMotionFrame();
+    if (!selected) {
+      selectionOverlay.dataset.motionPhase = 'pre';
+      return;
+    }
+    selectionOverlay.dataset.motionPhase = 'pre';
+    selectionOverlay.getBoundingClientRect();
+    state.prototypeSelectionMotionFrame = requestAnimationFrame(() => {
+      state.prototypeSelectionMotionFrame = null;
+      selectionOverlay.dataset.motionPhase = 'active';
+    });
+  }
+
+  function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
+    const blur = Math.max(0, (height * blurBase) / 56);
+    const stdDeviation = blur / 2;
+    const spread = Math.max(0, (height * 3) / 56);
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" fill="none">
+        <g filter="url(#f)">
+          <rect width="${width}" height="${height}" rx="${radius}" fill="black"/>
+        </g>
+        <defs>
+          <filter id="f" x="0" y="0" width="${width}" height="${height}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+            <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+            <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+            <feOffset/>
+            <feMorphology in="hardAlpha" operator="dilate" radius="${spread}" result="spreadAlpha"/>
+            <feGaussianBlur in="spreadAlpha" stdDeviation="${stdDeviation}" result="blurredSpread"/>
+            <feComposite in="blurredSpread" in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadowAlpha"/>
+            <feColorMatrix in="innerShadowAlpha" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" result="innerShadowColor"/>
+            <feBlend mode="normal" in="innerShadowColor" in2="shape" result="effect1_innerShadow"/>
+          </filter>
+        </defs>
+      </svg>
+    `.replace(/\s+/g, ' ').trim();
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+
+  function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null, runtimeOverrides = {}) {
+    if (!chromeEl || !hostEl || !preset) return;
+    const rect = geometryOverride ? null : hostEl.getBoundingClientRect();
+    const width = Math.max(
+      1,
+      Math.round(
+        Number(geometryOverride?.width)
+        || Number.parseFloat(hostEl.style.width)
+        || rect?.width
+        || hostEl.offsetWidth
+        || 1,
+      ),
+    );
+    const height = Math.max(
+      1,
+      Math.round(
+        Number(geometryOverride?.height)
+        || Number.parseFloat(hostEl.style.height)
+        || rect?.height
+        || hostEl.offsetHeight
+        || 1,
+      ),
+    );
+    const computed = getComputedStyle(hostEl);
+    const radius = Math.max(
+      0,
+      Number(geometryOverride?.radius)
+      || Number.parseFloat(hostEl.style.borderRadius)
+      || Number.parseFloat(computed.borderRadius)
+      || Math.min(width, height) / 2,
+    );
+    const blobTopCore = hexToCssColor(colorOverrides.blobTopCore, hexToCssColor(preset.blobTopCore, 'rgb(144 172 255)'));
+    const blobTopEdge = hexToCssColor(colorOverrides.blobTopEdge, hexToCssColor(preset.blobTopEdge, blobTopCore));
+    const blobBottomCore = hexToCssColor(colorOverrides.blobBottomCore, hexToCssColor(preset.blobBottomCore, blobTopCore));
+    const blobBottomEdge = hexToCssColor(colorOverrides.blobBottomEdge, hexToCssColor(preset.blobBottomEdge, blobBottomCore));
+    const maskBlur = Number.isFinite(Number(runtimeOverrides.maskBlur))
+      ? Number(runtimeOverrides.maskBlur)
+      : preset.maskBlur;
+    const rimPrimary = blobTopCore;
+    const rimSecondary = blobBottomCore;
+    const unit = Math.max(0.65, Math.min(width, height) / 320);
+    const highlightScale = preset.highlightScale / 100;
+    const topHighlightWidth = Math.round(84 * highlightScale);
+    const topHighlightHeight = Math.round(84 * highlightScale);
+    const bottomHighlightWidth = Math.round(96 * highlightScale);
+    const bottomHighlightHeight = Math.round(96 * highlightScale);
+    const topHighlightAnchorX = 10 - (topHighlightWidth / 2) + preset.highlightTopX;
+    const topHighlightAnchorY = 10 - (topHighlightHeight / 2) + preset.highlightTopY;
+    const bottomHighlightAnchorX = (bottomHighlightWidth / 2) + preset.highlightBottomX;
+    const bottomHighlightAnchorY = (bottomHighlightHeight / 2) + preset.highlightBottomY;
+    const blobSize = Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)));
+    const blobBlurPx = unit * preset.blobBlur;
+    const innerGlowBlurPx = (height * preset.innerGlowBlur) / 56;
+
+    hostEl.style.setProperty('--g-stage-selected-rgb', rimPrimary);
+    hostEl.style.setProperty('--g-stage-selected-secondary-rgb', rimSecondary);
+    hostEl.style.setProperty('--g-stage-selected-blob-top-core', blobTopCore);
+    hostEl.style.setProperty('--g-stage-selected-blob-top-edge', blobTopEdge);
+    hostEl.style.setProperty('--g-stage-selected-blob-bottom-core', blobBottomCore);
+    hostEl.style.setProperty('--g-stage-selected-blob-bottom-edge', blobBottomEdge);
+
+    chromeEl.style.setProperty('--g-stage-h', `${height}px`);
+    chromeEl.style.setProperty('--g-stage-selected-unit', `${unit}px`);
+    chromeEl.style.setProperty('--g-stage-selected-mask-url', buildZeroSpreadMaskUrl(width, height, radius, maskBlur));
+    chromeEl.style.setProperty('--g-stage-selected-rgb', rimPrimary);
+    chromeEl.style.setProperty('--g-stage-selected-secondary-rgb', rimSecondary);
+    chromeEl.style.setProperty('--g-stage-selected-blob-top-core', blobTopCore);
+    chromeEl.style.setProperty('--g-stage-selected-blob-top-edge', blobTopEdge);
+    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-core', blobBottomCore);
+    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-edge', blobBottomEdge);
+    chromeEl.style.setProperty('--g-stage-selected-blob-size', `${blobSize}px`);
+    chromeEl.style.setProperty('--g-stage-selected-blob-blur', `${blobBlurPx.toFixed(2)}px`);
+    chromeEl.style.setProperty('--g-stage-selected-blob-top-x', `${preset.blobTopX}%`);
+    chromeEl.style.setProperty('--g-stage-selected-blob-top-y', `${preset.blobTopY}%`);
+    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-x', `${preset.blobBottomX}%`);
+    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-y', `${preset.blobBottomY}%`);
+    chromeEl.style.setProperty('--g-stage-selected-inner-glow-blur', `${innerGlowBlurPx.toFixed(2)}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-top-end-x', `${topHighlightAnchorX}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-top-end-y', `${topHighlightAnchorY}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-end-x', `${bottomHighlightAnchorX}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-end-y', `${bottomHighlightAnchorY}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-top-width', `${topHighlightWidth}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-top-height', `${topHighlightHeight}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-width', `${bottomHighlightWidth}px`);
+    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-height', `${bottomHighlightHeight}px`);
+  }
+
+  function applyPrototypeListSelectedChromePresets(entries = []) {
+    if (!prototypeListRoot) return;
+    const activeScenario = state.prototypeListContent?.scenario || callbacks.selectedScenario?.() || null;
+    const shape = String(activeScenario?.shape || 'list');
+    const preset = celestialSelectedPresetForRenderShape('list');
+    const maskBlur = callbacks.stageSelectedMaskBlurForShape?.(activeScenario, shape) ?? preset.maskBlur;
+    const pills = Array.from(prototypeListRoot.querySelectorAll('[data-prototype-list-pill]'));
+    pills.forEach((pill, index) => {
+      const chrome = pill.querySelector('.g-selection-chrome');
+      if (!chrome) return;
+      const entry = entries[index] || {};
+      applySelectedChromePreset(chrome, pill, preset, {
+        blobTopCore: entry.blobTopCore,
+        blobTopEdge: entry.blobTopEdge,
+        blobBottomCore: entry.blobBottomCore,
+        blobBottomEdge: entry.blobBottomEdge,
+      }, null, { maskBlur });
+    });
+  }
+
   function syncPrototypeFigmaButtonDemo(stageId = null, scenario = null) {
     const previews = document.querySelectorAll('.prototype-figma-button-demo');
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
-    const stage = stageId ? callbacks.stageById?.(stageId) : null;
-    const accentColor = stageId
-      ? (callbacks.stageAccentColorForShape?.(activeScenario, stageId) || stage?.accentColor)
-      : null;
-    const accentSecondaryColor = stageId
-      ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
-      : null;
     if (!previews.length) return;
-    const accentA = hexToCssColor(accentColor, 'rgb(144 172 255)');
-    const accentB = hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)');
+    const renderShape = String(callbacks.renderShapeForStageId?.(stageId, activeScenario) || stageId || 'pill');
+    const preset = celestialSelectedPresetForRenderShape(renderShape);
+    const accentA = hexToCssColor(
+      callbacks.stageSelectedBlobTopCoreColorForShape?.(activeScenario, stageId),
+      hexToCssColor(preset.blobTopCore, 'rgb(144 172 255)'),
+    );
+    const accentB = hexToCssColor(
+      callbacks.stageSelectedBlobBottomCoreColorForShape?.(activeScenario, stageId),
+      hexToCssColor(preset.blobBottomCore, 'rgb(151 97 255)'),
+    );
     previews.forEach((preview) => {
       if (preview.dataset.staticAccents === 'true') return;
       preview.style.setProperty('--prototype-figma-button-accent-a', accentA);
@@ -270,26 +543,47 @@ export function createMorphRender(ctx) {
     const selected = stageId
       ? (callbacks.stageSelectedForShape?.(activeScenario, stageId) ?? !!stage?.selected)
       : false;
+    const renderShape = String(stage?.renderShape || callbacks.renderShapeForStageId?.(stageId) || stageId || 'pill');
+    const preset = celestialSelectedPresetForRenderShape(renderShape);
     main.classList.toggle('prototype-stage-selected', selected);
+    if (selectionOverlay) {
+      selectionOverlay.dataset.stageDirection = state.prototypeSelectionDirection || 'bottom';
+    }
     if (!selected) {
       main.style.removeProperty('--g-stage-selected-rgb');
       main.style.removeProperty('--g-stage-selected-secondary-rgb');
+      main.style.removeProperty('--g-stage-selected-blob-top-core');
+      main.style.removeProperty('--g-stage-selected-blob-top-edge');
+      main.style.removeProperty('--g-stage-selected-blob-bottom-core');
+      main.style.removeProperty('--g-stage-selected-blob-bottom-edge');
       selectionOverlay?.style.removeProperty('--g-stage-selected-rgb');
       selectionOverlay?.style.removeProperty('--g-stage-selected-secondary-rgb');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-blob-top-core');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-blob-top-edge');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-blob-bottom-core');
+      selectionOverlay?.style.removeProperty('--g-stage-selected-blob-bottom-edge');
+      playPrototypeSelectionMotion(selectionOverlay, false);
       return;
     }
-    const accentColor = stageId
-      ? (callbacks.stageAccentColorForShape?.(activeScenario, stageId) || stage?.accentColor)
-      : null;
-    const accentSecondaryColor = stageId
-      ? (callbacks.stageSecondaryAccentColorForShape?.(activeScenario, stageId) || stage?.secondaryAccentColor)
-      : null;
-    const primary = hexToCssColor(accentColor, 'rgb(144 172 255)');
-    const secondary = hexToCssColor(accentSecondaryColor, 'rgb(151 97 255)');
-    main.style.setProperty('--g-stage-selected-rgb', primary);
-    main.style.setProperty('--g-stage-selected-secondary-rgb', secondary);
-    selectionOverlay?.style.setProperty('--g-stage-selected-rgb', primary);
-    selectionOverlay?.style.setProperty('--g-stage-selected-secondary-rgb', secondary);
+    const blobTopCore = callbacks.stageSelectedBlobTopCoreColorForShape?.(activeScenario, stageId) || preset.blobTopCore;
+    const blobTopEdge = callbacks.stageSelectedBlobTopEdgeColorForShape?.(activeScenario, stageId) || preset.blobTopEdge;
+    const blobBottomCore = callbacks.stageSelectedBlobBottomCoreColorForShape?.(activeScenario, stageId) || preset.blobBottomCore;
+    const blobBottomEdge = callbacks.stageSelectedBlobBottomEdgeColorForShape?.(activeScenario, stageId) || preset.blobBottomEdge;
+    const maskBlur = callbacks.stageSelectedMaskBlurForShape?.(activeScenario, stageId) ?? preset.maskBlur;
+    if (!selectionOverlay) return;
+    applySelectedChromePreset(selectionOverlay, main, preset, {
+      blobTopCore,
+      blobTopEdge,
+      blobBottomCore,
+      blobBottomEdge,
+    }, {
+      width: Number.parseFloat(main.style.width) || state.lastMainGeo?.w || stage?.widthOverride || null,
+      height: Number.parseFloat(main.style.height) || state.lastMainGeo?.h || stage?.heightOverride || null,
+      radius: Number.parseFloat(main.style.borderRadius) || state.lastMainGeo?.br || null,
+    }, {
+      maskBlur,
+    });
+    playPrototypeSelectionMotion(selectionOverlay, true);
   }
 
   function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {
@@ -599,6 +893,7 @@ export function createMorphRender(ctx) {
     const prevCardTypography = fromShape === 'card' ? normalizeTypography(state.contentTypographyState, 'card') : null;
     const prevGeo = bridges.getCurrentMainGeometry();
     const nextGeo = layout.resolveGeometryForContent(shape, contentData, customGeo, stageId);
+    state.prototypeSelectionDirection = inferPrototypeSelectionDirection(prevGeo, nextGeo.main);
     setUiMotionProfile(fromShape, shape, prevGeo, nextGeo);
     const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
     const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
@@ -619,7 +914,7 @@ export function createMorphRender(ctx) {
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     const thinkingVisualShape = shape === 'magic' || shape === 'ai';
     const enteringThinking = thinkingVisualShape && fromShape !== 'magic' && fromShape !== 'ai';
-    const listeningToThinking = enteringThinking && (fromShape === 'listening' || (fromShape === 'list' && listStageShowsOrb(contentData)));
+    const listeningToThinking = enteringThinking && fromShape === 'listening';
     DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
     DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
@@ -629,13 +924,13 @@ export function createMorphRender(ctx) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
       DROPS.main.classList.remove('home-glow');
       void DROPS.main.offsetWidth;
-      if (shape === 'listening' || thinkingVisualShape || (shape === 'list' && listStageShowsOrb(contentData))) DROPS.main.classList.add('home-glow');
+      if (shape === 'listening' || thinkingVisualShape) DROPS.main.classList.add('home-glow');
     } else {
       DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape || (shape === 'list' && listStageShowsOrb(contentData)));
+      DROPS.main.classList.toggle('home-glow', shape === 'listening' || thinkingVisualShape);
     }
     DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
-    DROPS.main.classList.toggle('listening-orb', shape === 'listening' || (shape === 'list' && listStageShowsOrb(contentData)));
+    DROPS.main.classList.toggle('listening-orb', shape === 'listening');
     if (contentData) applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
     if (shape === 'list') {

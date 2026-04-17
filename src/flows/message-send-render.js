@@ -13,6 +13,7 @@ import {
   renderTextBubble,
 } from "./ui-primitives.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
+import { applyAiCelestialChrome, clearDirectionalSelectionTimers, syncDirectionalSelection } from "../shared/celestial-selection-chrome.js";
 import { clamp } from "../utils.js";
 
 export function createMessageSendRender({
@@ -65,6 +66,7 @@ export function createMessageSendRender({
   let outgoingDisambiguationTimer = null;
   let composeEntryLockRaf = null;
   let composeEntryLockUntil = 0;
+  const selectionMotionTimers = new Map();
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
@@ -287,6 +289,7 @@ export function createMessageSendRender({
         return;
       }
       releaseComposeEntryLock();
+      C.rich.classList.remove("compose-entering");
       syncComposeFieldSelectionMetrics();
     };
     tick();
@@ -302,6 +305,12 @@ export function createMessageSendRender({
     ));
     if (height > 0) field.style.setProperty("--g-stage-h", `${height}px`);
     return true;
+  }
+
+  function syncDirectionalSelectionUi(selector, nextIndex) {
+    const nodes = Array.from(C.rich.querySelectorAll(selector));
+    if (!nodes.length) return false;
+    return syncDirectionalSelection(nodes, nextIndex, selectionMotionTimers, { durationMs: 700 });
   }
 
   function layoutDisambiguationContacts(contacts) {
@@ -474,6 +483,9 @@ export function createMessageSendRender({
     const enteringComposeText = flow.state === GS.COMPOSE && composeHasText && !prevComposeHasText;
     const muteOrbChrome = false;
     composePlaceholderDelayActive = enteringComposeFromDisambiguation && !composeHasText;
+    if (flow.state !== GS.DISAMBIGUATE && flow.state !== GS.COMPOSE) {
+      clearDirectionalSelectionTimers(selectionMotionTimers);
+    }
     document.body.classList.toggle("glass-flow-active", flow.active);
     if (enteringDisambiguation) {
       disambiguationPhase = "entering";
@@ -491,6 +503,7 @@ export function createMessageSendRender({
     const nextContent = buildContent();
     syncRichMarkup(nextContent);
     syncComposeFieldSelectionMetrics();
+    applyAiCelestialChrome(document);
     if (flow.state === GS.DISAMBIGUATE) syncDisambiguationPhaseUi();
     if (flow.sentToastEnterPending && flow.state === GS.SENT) flow.sentToastEnterPending = false;
     prevState = flow.state;
@@ -641,14 +654,10 @@ export function createMessageSendRender({
       const flow = getFlow();
       if (!flow.active) return false;
       if (flow.state === GS.DISAMBIGUATE) {
-        const pills = C.rich.querySelectorAll(".g-disambiguation-pill");
-        pills.forEach((pill, idx) => pill.classList.toggle("selected", idx === flow.sel));
-        return pills.length > 0;
+        return syncDirectionalSelectionUi(".g-disambiguation-pill", flow.sel);
       }
       if (flow.state === GS.COMPOSE && flow.composeMenuOpen) {
-        const chips = C.rich.querySelectorAll(".g-compose-chip");
-        chips.forEach((chip, idx) => chip.classList.toggle("selected", idx === flow.sel));
-        return chips.length > 0;
+        return syncDirectionalSelectionUi(".g-compose-chip", flow.sel);
       }
       if (flow.state === GS.CONFIRM) {
         renderControls(buildScreenSpec());
@@ -676,8 +685,9 @@ export function createMessageSendRender({
       syncComposeFieldSelectionMetrics();
       chips.forEach((chip, idx) => {
         chip.classList.toggle("is-visible", idx < visibleCount);
-        chip.classList.toggle("selected", idx === flow.sel);
       });
+      syncDirectionalSelection(chips, flow.sel, selectionMotionTimers, { durationMs: 700 });
+      applyAiCelestialChrome(document);
       const nextStackRect = stack.getBoundingClientRect();
       const deltaY = previousStackRect.top - nextStackRect.top;
       if (Math.abs(deltaY) >= 1) {

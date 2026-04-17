@@ -208,7 +208,11 @@
         <div id="glass-orb-label"></div>
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
-          <div id="prototype-stage-selection" aria-hidden="true">
+          <div id="prototype-stage-selection" data-stage-direction="bottom" aria-hidden="true">
+            <div class="g-stage-selected-refraction">
+              <div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div>
+              <div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div>
+            </div>
             <div class="g-stage-selected-sharp-pass">
               <div class="g-stage-selected-sharp-highlight"></div>
             </div>
@@ -228,12 +232,16 @@
           <div id="siri-orb">
             <div class="ai-flow-orb-visual" aria-hidden="true">
               <div class="ai-flow-orb-sphere">
-                <div class="ai-flow-orb-selection">
-                  <div class="g-stage-selected-accent-rim"></div>
-                  <div class="g-stage-selected-highlight"></div>
+                <div class="ai-flow-orb-selection g-selection-chrome" data-stage-direction="bottom">
+                  <div class="g-stage-selected-refraction">
+                    <div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div>
+                    <div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div>
+                  </div>
                   <div class="g-stage-selected-sharp-pass">
                     <div class="g-stage-selected-sharp-highlight"></div>
                   </div>
+                  <div class="g-stage-selected-accent-rim"></div>
+                  <div class="g-stage-selected-highlight"></div>
                   <div class="g-stage-selected-highlight-mask">
                     <div class="g-stage-selected-highlight-mask-image"></div>
                   </div>
