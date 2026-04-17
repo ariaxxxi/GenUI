@@ -1,6 +1,119 @@
 # Handoff
 
 ## Task title
+Remove full-surface selected highlight layer
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the `.g-stage-selected-highlight` node from the shared selected-chrome markup so the full-surface inner highlight layer no longer renders.
+- Updated the hand-authored selected-chrome markup in `ai.html` and `index.html` to match the shared generator change.
+- Left the two image-highlight layers, accent rim, and refraction/blob layers intact.
+- While verifying the orb afterward, found that `src/shared/morph-render.js` still had a duplicate selected-chrome geometry path using the old fixed `84x84` / `96x96` highlight dimensions and unscaled anchor math for the AI orb.
+- Aligned that duplicate path with the orb-specific scaling and corner-anchor logic already added to `src/shared/celestial-selection-chrome.js`, so both code paths now compute the same AI orb highlight image size and placement.
+- After tracing the remaining mismatch, found the normal AI listening orb host was still `inset: 0`, so the selected-chrome math could still be applied against the full stage box instead of an orb-sized box.
+- Constrained the normal listening-orb `#siri-orb` host to a centered `80x80` box in `src/styles/ai-decorative.css` so the highlight image corner-anchor math runs against the actual orb bounds.
+- Browser-side check completed against a live local `ai.html` render before closing this out.
+- The browser check showed the key remaining issue was not the CSS fallback itself, but that the plain AI home/listening path was not applying shared Celestial chrome vars to the orb at all. The orb stayed on fallback highlight sizes until that path was wired up.
+- Fixed that by syncing `applyAiCelestialChrome(document)` after the AI page morphs into `listening`, including the text-input-driven `circle -> listening` transition.
+- Reverted the orb-only highlight downscaling so the AI listening orb now uses the same `84x84` / `96x96` highlight image sizing and anchor math as the Celestial circle setup.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`
+- `/Users/ariax/Documents/GitHub/GenUI/ai.html`
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax check:
+  - `node --check src/flows/ui-primitives.js`
+  - `node --check src/shared/morph-render.js`
+  - `node --check src/shared/celestial-selection-chrome.js`
+  - `node --check src/ai/ai-bindings.js`
+- Confirmed there are no remaining `.g-stage-selected-highlight` markup nodes in:
+  - `ai.html`
+  - `index.html`
+  - `src/flows/ui-primitives.js`
+- Reviewed the shared selected-chrome geometry diff in:
+  - `src/shared/celestial-selection-chrome.js`
+  - `src/shared/morph-render.js`
+- Reviewed the normal listening-orb host sizing override in `src/styles/ai-decorative.css`
+- Browser visual verification:
+  - started local server on `http://localhost:5180`
+  - opened `ai.html` in Safari
+  - forced the AI page into `listening` for verification via temporary local diagnostics, then removed those diagnostics before finishing
+  - verified the live listening orb was receiving the shared highlight vars instead of falling back
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- The CSS rules for `.g-stage-selected-highlight` still exist, but the layer is no longer instantiated by the shared chrome markup.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open the AI listening orb and any shared selected surfaces to verify the corner image highlights now read cleanly without the full-surface white layer underneath.
+
+## Task title
+Fix AI listening-orb highlight image size and position
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the AI listening orb on the shared `list` highlight preset so it still follows the Celestial circle highlight setup.
+- Fixed the shared highlight-image geometry helper so `#siri-orb` and `.ai-flow-orb-sphere` no longer reuse the full Celestial circle image dimensions against the smaller orb.
+- Top-left and bottom-right highlight image dimensions now scale down from the Celestial circle base sizes relative to the AI orb size, and the top-left corner offset scales with them so the image center stays anchored to the corner correctly instead of drifting inward.
+- Left non-orb surfaces on the existing fixed-size geometry path.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax check:
+  - `node --check src/shared/celestial-selection-chrome.js`
+- Reviewed the shared orb highlight geometry diff in `src/shared/celestial-selection-chrome.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open `ai.html` and verify the listening-orb top-left and bottom-right image highlights now sit on the orb edge instead of reading as oversized / too centered.
+
+## Task title
+Match AI listening-orb highlight images to Celestial circle setup
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared Celestial chrome helper so the AI orb uses the same highlight-image preset family as the Celestial circle/list shell instead of the larger `pill` preset.
+- `#siri-orb` and `.ai-flow-orb-sphere` now resolve to the shared `list` preset, which gives the orb the smaller image-highlight geometry and placement used by the Celestial circle setup.
+- Left prototype-stage selection, compose fields, contact rows, and flight recommendation surfaces on the `pill` preset.
+- This change only adjusts the orb highlight-image geometry path; it does not reintroduce the broader listening-orb experiment stack.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Syntax check:
+  - `node --check src/shared/celestial-selection-chrome.js`
+- Reviewed the orb preset routing diff in `src/shared/celestial-selection-chrome.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task.md` does not exist in this repo snapshot, so I executed directly from the user request and recorded the result here.
+
+## Recommended next step
+1. Open `ai.html` and verify the listening-orb highlight images now match the Celestial circle-stage image setup more closely.
+
+## Task title
 Revert all listening-orb experiment changes after investigation
 
 ## Completion status

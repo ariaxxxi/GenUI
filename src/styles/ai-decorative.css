@@ -67,6 +67,16 @@
   opacity: 1;
   transform: scale(1);
 }
+#drop-main.listening-orb:not(.compose-await-orb):not(.confirm-surface):not(.magic-glow) #siri-orb,
+#drop-main.listening-orb:not(.compose-await-orb):not(.confirm-surface):not(.magic-glow) #siri-orb.visible {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: var(--g-stage-h, 80px);
+  height: var(--g-stage-h, 80px);
+  margin-top: calc(var(--g-stage-h, 80px) * -0.5);
+  margin-left: calc(var(--g-stage-h, 80px) * -0.5);
+}
 .ai-flow-orb-visual {
   position: absolute;
   inset: 0;

@@ -21,7 +21,7 @@ function normalizeCssColor(value) {
 }
 
 function renderSelectedChrome(direction = "bottom") {
-  return `<span class="g-selection-chrome" data-stage-direction="${esc(direction || "bottom")}" aria-hidden="true"><span class="g-stage-selected-refraction"><span class="g-stage-selected-blob g-stage-selected-blob--top-left"></span><span class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></span></span><span class="g-stage-selected-sharp-pass"><span class="g-stage-selected-sharp-highlight"></span></span><span class="g-stage-selected-accent-rim"></span><span class="g-stage-selected-highlight"></span><span class="g-stage-selected-highlight-mask"><span class="g-stage-selected-highlight-mask-image"></span></span></span>`;
+  return `<span class="g-selection-chrome" data-stage-direction="${esc(direction || "bottom")}" aria-hidden="true"><span class="g-stage-selected-refraction"><span class="g-stage-selected-blob g-stage-selected-blob--top-left"></span><span class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></span></span><span class="g-stage-selected-sharp-pass"><span class="g-stage-selected-sharp-highlight"></span></span><span class="g-stage-selected-accent-rim"></span><span class="g-stage-selected-highlight-mask"><span class="g-stage-selected-highlight-mask-image"></span></span></span>`;
 }
 
 function renderFlightMetaRow(stops = "", price = "", priceColor = "") {

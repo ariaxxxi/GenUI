@@ -141,8 +141,11 @@ export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrid
 
 function presetKeyForSelectionHost(hostEl) {
   if (!hostEl) return "list";
-  if (hostEl.matches("#prototype-stage-selection, .g-contact-row, .g-compose-field, .g-flight-rec-option, #siri-orb, .ai-flow-orb-sphere")) {
+  if (hostEl.matches("#prototype-stage-selection, .g-contact-row, .g-compose-field, .g-flight-rec-option")) {
     return "pill";
+  }
+  if (hostEl.matches("#siri-orb, .ai-flow-orb-sphere")) {
+    return "list";
   }
   return "list";
 }
@@ -157,10 +160,11 @@ function hostChromePair(node) {
     };
   }
   if (node.classList?.contains("ai-flow-orb-selection")) {
+    const hostEl = node.closest(".ai-flow-orb-sphere") || document.getElementById("siri-orb") || node;
     return {
       chromeEl: node,
-      hostEl: node.closest(".ai-flow-orb-sphere") || document.getElementById("siri-orb") || node,
-      presetKey: "pill",
+      hostEl,
+      presetKey: presetKeyForSelectionHost(hostEl),
     };
   }
   const chromeEl = node.querySelector?.(":scope > .g-selection-chrome");
