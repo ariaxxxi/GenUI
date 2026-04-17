@@ -48,6 +48,9 @@ export function createMessageSendRender({
   const COMPOSE_AWAIT_ORB_SIZE = 48;
   const COMPOSE_AWAIT_ORB_GAP = 16;
   const COMPOSE_AWAIT_ORB_SHIFT = COMPOSE_AWAIT_ORB_SIZE + COMPOSE_AWAIT_ORB_GAP;
+  const CONFIRM_LISTENING_ORB_SIZE = 48;
+  const CONFIRM_LISTENING_ORB_GAP = 16;
+  const CONFIRM_LISTENING_ORB_SHIFT = CONFIRM_LISTENING_ORB_SIZE + CONFIRM_LISTENING_ORB_GAP;
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
   const DISAMBIGUATION_ENTER_MS = 800;
@@ -93,13 +96,17 @@ export function createMessageSendRender({
 
   function composeGeo() {
     const flow = getFlow();
-    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
+    const showConfirmListeningOrb = flow.state === GS.CONFIRM;
+    const showComposeAwaitOrb = flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive;
     const hasText = flow.state === GS.CONFIRM
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
     const w = measureComposeFieldWidth(hasText);
     const h = measureComposeFieldHeight(hasText, w);
-    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? COMPOSE_AWAIT_ORB_SHIFT : 0);
+    const orbShift = showConfirmListeningOrb
+      ? CONFIRM_LISTENING_ORB_SHIFT
+      : (showComposeAwaitOrb ? COMPOSE_AWAIT_ORB_SHIFT : 0);
+    const bottom = COMPOSE_FIELD_BOTTOM - orbShift;
     return {
       ...SHAPES["card-form"],
       main: {
@@ -547,6 +554,16 @@ export function createMessageSendRender({
     dropMain?.classList.toggle("home-glow", shouldShowHomeGlow);
     dropMain?.classList.toggle("flow-orb-muted", muteOrbChrome);
     dropMain?.classList.toggle("sending-orb-fade-in", enteringSendingFromConfirm);
+    if (dropMain) {
+      if (showComposeAwaitOrb) {
+        const bottomOrbSize = flow.state === GS.CONFIRM ? CONFIRM_LISTENING_ORB_SIZE : COMPOSE_AWAIT_ORB_SIZE;
+        dropMain.style.setProperty("--g-compose-await-orb-size", `${bottomOrbSize}px`);
+        dropMain.style.setProperty("--g-compose-await-orb-radius", `${Math.round(bottomOrbSize / 2)}px`);
+      } else {
+        dropMain.style.removeProperty("--g-compose-await-orb-size");
+        dropMain.style.removeProperty("--g-compose-await-orb-radius");
+      }
+    }
     C.rich.classList.toggle("visible", flow.active);
     const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);

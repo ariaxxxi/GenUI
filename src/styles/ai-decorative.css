@@ -258,6 +258,16 @@
     transform: scale(1);
   }
 }
+@keyframes confirm-listening-orb-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 12px) scale(0.76);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
 body.sleep-to-listening #drop-main.listening-orb #siri-orb,
 body.sleep-to-listening #drop-main.listening-orb #siri-orb.visible {
   animation: sleep-listening-orb-in 520ms var(--motion-ease) both;
@@ -524,8 +534,10 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   height: var(--g-compose-await-orb-size);
   border-radius: var(--g-compose-await-orb-radius);
   --g-stage-h: var(--g-compose-await-orb-size);
-  opacity: 1 !important;
-  transform: translateX(-50%) scale(1) !important;
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  background: transparent !important;
+  animation: confirm-listening-orb-in 420ms var(--motion-ease) both;
   pointer-events: none;
 }
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb::before,
@@ -533,26 +545,6 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
 #drop-main.confirm-surface #siri-orb::before,
 #drop-main.confirm-surface #siri-orb::after {
   content: none;
-}
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere {
-  box-shadow: 0 0 40px rgba(255, 255, 255, 0.02);
-  opacity: 1;
-  animation: ai-flow-orb-breathe-scale 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere::before {
-  opacity: 1;
-}
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere::after {
-  opacity: 1;
-  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.25);
-}
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection {
-  opacity: 1;
-  transition: none !important;
-}
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-sharp-pass,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight-mask {
-  opacity: 1;
 }
 #drop-main.compose-await-orb #siri-orb canvas {
   border-radius: inherit;

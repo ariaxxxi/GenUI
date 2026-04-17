@@ -1,6 +1,187 @@
 # Handoff
 
 ## Task title
+Reduce confirm orb highlight images further to 0.5x
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Lowered the confirm-stage `#siri-orb` runtime `highlightScale` override in [src/shared/celestial-selection-chrome.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js) from `60` to `50`.
+- This reduces the confirm orb’s two highlight image layers from `0.6x` to `0.5x` of the prior default size, while keeping the change limited to the confirm bottom orb.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/celestial-selection-chrome.js`
+- `git diff --check`
+- `rg -n "highlightScale = 50" src/shared/celestial-selection-chrome.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm-step orb highlight images now read at the smaller `0.5x` scale.
+
+## Task title
+Scale confirm orb highlight images down to 0.6x
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Added a confirm-stage runtime override in [src/shared/celestial-selection-chrome.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js) so `#siri-orb` uses `highlightScale = 60` while `drop-main` is in `confirm-surface`.
+- This scales the two shared highlight image layers down to `0.6x` through the same selected-chrome geometry system, instead of leaving them at the default listening-orb image size.
+- The override is limited to the confirm bottom orb and does not change other selected-chrome surfaces.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/celestial-selection-chrome.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/celestial-selection-chrome.js`
+- `git diff --check`
+- `rg -n "highlightScale = 60|chromeRuntimeOverrides|confirm-surface" src/shared/celestial-selection-chrome.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm-step orb’s two highlight images now render at `0.6x` of their previous size.
+
+## Task title
+Start confirm orb fade-in at the same time as compose-to-confirm morph
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so transitions from `GS.COMPOSE` to `GS.CONFIRM` no longer wait on the `380ms` compose-exit timeout.
+- Before this change, the confirm render, class swap, and orb animation all started only after that delay, which made the bottom orb appear after the compose container had already moved.
+- Confirm now enters immediately, so the orb fade/scale animation can start on the same transition boundary as the compose container morph.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `git diff --check`
+- `rg -n "state !== GS\\.COMPOSE && state !== GS\\.CONFIRM" src/flows/message-send.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm bottom orb now starts fading/scaling in as soon as the compose container begins moving.
+
+## Task title
+Scale confirm-step listening orb down to 0.6x
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Reduced the confirm-step bottom listening orb source size in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) from `80px` to `48px`, which is `0.6x` of the prior confirm orb size.
+- This keeps the confirm orb size change consistent across spacing, card clearance, radius, and the CSS variable that drives the orb box.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `git diff --check`
+- `rg -n "CONFIRM_LISTENING_ORB_SIZE" src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm-step bottom orb now reads at the smaller `48px` size.
+
+## Task title
+Drive confirm orb through the same live visualization path as listening orb
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so the confirm-stage bottom orb counts as an active listening orb for visualization purposes.
+- Before this change, confirm still failed the `orbVisible` gate because `data-current-shape` was not `listening`, so `--ai-listening-rim-level` stayed cleared and the orb rendered mostly as the two highlight-image blobs.
+- Confirm now shares the same live orb-visualization path as the normal listening orb, which restores the reactive rim/highlight behavior instead of leaving the orb on the zeroed visual baseline.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/ai/voice-engine.js`
+- `git diff --check`
+- `rg -n "confirmListeningOrb|orbVisible =|confirm-surface" src/ai/voice-engine.js`
+
+## Remaining issues / caveats
+- I did not complete a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm orb now reads like the normal listening orb instead of showing only the clipped highlight-image blobs.
+
+## Task title
+Use full listening-orb size and geometry for confirm bottom orb
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Added a dedicated confirm bottom-orb size path in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js): confirm now reserves space for an `80px` listening orb instead of reusing the smaller compose-await orb geometry.
+- When confirm is active, `drop-main` now gets inline `--g-compose-await-orb-size` and radius values matching that full listening-orb size, so the orb styling and selected-chrome geometry run against the correct dimensions.
+- Removed the `!important` transform lock from the confirm orb rule in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the confirm entry animation can actually animate.
+- Confirm still uses the dedicated `confirm-listening-orb-in` animation, but now it runs on the real listening-orb-sized surface rather than the tiny compose-await orb.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send-render.js`
+- `git diff --check`
+- `rg -n "CONFIRM_LISTENING_ORB_SIZE|g-compose-await-orb-size|confirm-listening-orb-in|confirm-surface #siri-orb," src/flows/message-send-render.js src/styles/ai-decorative.css`
+
+## Remaining issues / caveats
+- I attempted a browser-side verification pass, but local Chrome automation was not available in this environment during this turn, so I could not complete a trustworthy visual confirmation.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm orb now matches the standard listening orb’s size and appearance, and that it scales/fades in during the compose-to-confirm morph.
+
+## Task title
+Make confirm orb match listening-orb visuals and enter with morph
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Removed the confirm-only internal layer overrides in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) that were making confirm look different from the real listening orb.
+- Confirm now uses the normal listening-orb visual stack again instead of a confirm-specific shell approximation.
+- Added `@keyframes confirm-listening-orb-in` and applied it to `#drop-main.confirm-surface #siri-orb` so the confirm orb fades in and rises from below while scaling up, instead of appearing abruptly after the compose-container motion.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `git diff --check`
+- `rg -n "confirm-listening-orb-in|confirm-surface #siri-orb \\.ai-flow-orb-sphere|confirm-surface #siri-orb,|confirm-surface #siri-orb\\.visible" src/styles/ai-decorative.css`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. Open `ai.html` and verify the confirm orb now matches the standard listening orb styling and enters during the compose-to-confirm morph instead of snapping in afterward.
+
+## Task title
 Exclude confirm from compose-await shell suppression selectors
 
 ## Completion status

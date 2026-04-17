@@ -176,6 +176,11 @@ function hostChromePair(node) {
   };
 }
 
+function chromeRuntimeOverrides(hostEl, preset) {
+  void hostEl;
+  return { maskBlur: preset.maskBlur };
+}
+
 function chromeColorOverrides(hostEl, chromeEl, preset) {
   const presetCss = {
     blobTopCore: hexToCssColor(preset.blobTopCore, "rgb(144 172 255)"),
@@ -212,7 +217,7 @@ export function applyAiCelestialChrome(root = document) {
       preset,
       chromeColorOverrides(pair.hostEl, pair.chromeEl, preset),
       null,
-      { maskBlur: preset.maskBlur },
+      chromeRuntimeOverrides(pair.hostEl, preset),
     );
     if (!pair.chromeEl.dataset.stageDirection) {
       pair.chromeEl.dataset.stageDirection = DEFAULT_DIRECTION;

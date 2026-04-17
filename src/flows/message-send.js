@@ -390,7 +390,7 @@ export function createMessageSendFlow(ctx) {
     }
     if (timers.dots) clearInterval(timers.dots);
     timers.dots = null;
-    if (flow.state === GS.COMPOSE && state !== GS.COMPOSE) {
+    if (flow.state === GS.COMPOSE && state !== GS.COMPOSE && state !== GS.CONFIRM) {
       const field = ctx.C.rich?.querySelector("[data-compose-field]");
       if (field) {
         timers.composeExit = setTimeout(() => {

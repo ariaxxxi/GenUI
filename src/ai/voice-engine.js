@@ -64,7 +64,8 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const orb = getListeningOrb();
     const dropMain = document.getElementById('drop-main');
     const listeningShape = document.body?.dataset?.currentShape === 'listening';
-    const orbVisible = !!(orb && dropMain && listeningShape && dropMain.classList.contains('listening-orb'));
+    const confirmListeningOrb = !!(dropMain && dropMain.classList.contains('confirm-surface') && dropMain.classList.contains('listening-orb'));
+    const orbVisible = !!(orb && dropMain && dropMain.classList.contains('listening-orb') && (listeningShape || confirmListeningOrb));
     const orbSuppressed = !!(dropMain && (
       dropMain.classList.contains('disambiguation-surface') ||
       dropMain.classList.contains('flow-orb-muted')
