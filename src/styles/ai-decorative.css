@@ -123,10 +123,16 @@
   overflow: hidden;
 }
 .ai-flow-orb-selection .g-stage-selected-accent-rim {
+  opacity: 0.96;
   animation: ai-flow-orb-breathe-rim 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .ai-flow-orb-selection .g-stage-selected-highlight {
+  opacity: 1;
   animation: ai-flow-orb-breathe-highlight 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.ai-flow-orb-selection .g-stage-selected-sharp-highlight,
+.ai-flow-orb-selection .g-stage-selected-highlight-mask-image {
+  opacity: 1;
 }
 #drop-main.magic-glow #siri-orb .ai-flow-orb-sphere,
 #drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-sphere {

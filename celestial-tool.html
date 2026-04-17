@@ -340,9 +340,9 @@
       z-index: 1;
       opacity: 0;
       mix-blend-mode: screen;
-      box-shadow:
+      box-shadow: var(--inner-glow-shadow-inactive,
         inset 0 0 var(--inner-glow-blur, 5px) 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8)),
-        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        inset 0 1px 0 rgba(255, 255, 255, 0.16));
       transition:
         opacity var(--inner-glow-opacity-duration, 420ms) var(--motion-ease),
         box-shadow 420ms var(--motion-ease);
@@ -350,6 +350,9 @@
 
     .test-shell[data-active="true"] .test-shell-inner-glow {
       opacity: 1;
+      box-shadow: var(--inner-glow-shadow-active,
+        inset 0 0 var(--inner-glow-blur, 5px) 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16));
     }
 
     .test-shell-accent-rim {
@@ -358,7 +361,7 @@
       border-radius: inherit;
       pointer-events: none;
       z-index: 2;
-      box-shadow:
+      box-shadow: var(--accent-rim-shadow-inactive,
         inset calc(var(--unit, 1px) * 13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
           color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
         inset calc(var(--unit, 1px) * -13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
@@ -368,13 +371,26 @@
         inset 0 calc(var(--unit, 1px) * -9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
           color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
         inset 0 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -5)
-          rgba(255, 255, 255, 0.03);
+          rgba(255, 255, 255, 0.03));
       opacity: 0;
-      transition: box-shadow 420ms var(--motion-ease), opacity 420ms var(--motion-ease);
+      transition:
+        box-shadow 420ms var(--motion-ease),
+        opacity 420ms var(--motion-ease);
     }
 
     .test-shell[data-active="true"] .test-shell-accent-rim {
       opacity: 0.96;
+      box-shadow: var(--accent-rim-shadow-active,
+        inset calc(var(--unit, 1px) * 13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
+        inset calc(var(--unit, 1px) * -13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
+        inset 0 calc(var(--unit, 1px) * 9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
+        inset 0 calc(var(--unit, 1px) * -9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
+        inset 0 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -5)
+          rgba(255, 255, 255, 0.03));
     }
 
     .test-shell[data-rim-enabled="false"] .test-shell-accent-rim {
@@ -396,7 +412,7 @@
       left: 0;
       width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
       height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
-      background-image: url('../../../src/assets/button-highlight-top-left.png');
+      background-image: url('src/assets/button-highlight-top-left.png');
       background-repeat: no-repeat;
       background-position: left top;
       background-size: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0)) var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
@@ -426,7 +442,7 @@
       bottom: 0;
       width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
       height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
-      background-image: url('../../../src/assets/figma-proto-button-highlight-bottom-mask.png');
+      background-image: url('src/assets/figma-proto-button-highlight-bottom-mask.png');
       background-repeat: no-repeat;
       background-size: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0)) var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
       background-position: bottom right;
@@ -642,7 +658,7 @@
     .celestial-top-left-highlight {
       width: var(--glint-width, 146px);
       height: var(--glint-height, 58px);
-      background-image: url('../../../src/assets/button-highlight-top-left.png');
+      background-image: url('src/assets/button-highlight-top-left.png');
       background-size: 100% 100%;
       background-position: left top;
       filter: blur(calc(var(--unit, 1px) * 1.8));
@@ -656,7 +672,7 @@
       left: auto;
       top: auto;
       bottom: 0;
-      background-image: url('../../../src/assets/figma-proto-button-highlight-bottom-mask.png');
+      background-image: url('src/assets/figma-proto-button-highlight-bottom-mask.png');
       background-size: 100% 100%;
       background-position: bottom right;
       filter: blur(calc(var(--unit, 1px) * 1.8));
@@ -1280,6 +1296,96 @@
       };
     }
 
+    function getDirectionalChromeShadows(direction, unit, innerGlowBlurPx) {
+      const leftStrong = `${(unit * 16).toFixed(2)}px`;
+      const rightStrong = `${(unit * -16).toFixed(2)}px`;
+      const sideWeak = `${(unit * 4.5).toFixed(2)}px`;
+      const sideWeakNeg = `${(unit * -4.5).toFixed(2)}px`;
+      const topStrong = `${(unit * 14).toFixed(2)}px`;
+      const bottomStrong = `${(unit * -14).toFixed(2)}px`;
+      const verticalWeak = `${(unit * 3.5).toFixed(2)}px`;
+      const verticalWeakNeg = `${(unit * -3.5).toFixed(2)}px`;
+      const rimBlurStrong = `${(unit * 18).toFixed(2)}px`;
+      const rimBlurSoft = `${(unit * 8).toFixed(2)}px`;
+      const rimSpread = `${(unit * -6).toFixed(2)}px`;
+      const hazeSoft = `${(unit * 10).toFixed(2)}px`;
+      const hazeSpread = `${(unit * -6).toFixed(2)}px`;
+      const glowStrong = `${(innerGlowBlurPx * 1.35).toFixed(2)}px`;
+      const glowSoft = `${Math.max(innerGlowBlurPx * 0.55, unit * 1.1).toFixed(2)}px`;
+      const lineSoft = "rgba(255, 255, 255, 0.1)";
+      const lineStrong = "rgba(255, 255, 255, 0.22)";
+
+      const activeRim = [
+        `inset ${(unit * 13).toFixed(2)}px 0 ${(unit * 14).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%)`,
+        `inset ${(unit * -13).toFixed(2)}px 0 ${(unit * 14).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%)`,
+        `inset 0 ${(unit * 9).toFixed(2)}px ${(unit * 11).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb))`,
+        `inset 0 ${(unit * -9).toFixed(2)}px ${(unit * 11).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb))`,
+        `inset 0 0 ${(unit * 14).toFixed(2)}px ${(unit * -5).toFixed(2)}px rgba(255, 255, 255, 0.03)`,
+      ].join(", ");
+
+      const activeGlow = [
+        `inset 0 0 ${innerGlowBlurPx.toFixed(2)}px 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+        `inset 0 1px 0 rgba(255, 255, 255, 0.16)`,
+      ].join(", ");
+
+      const rimByDirection = {
+        bottom: [
+          `inset ${sideWeak} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 28%, white 8%)`,
+          `inset ${sideWeakNeg} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 28%, white 8%)`,
+          `inset 0 ${verticalWeak} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 14%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${bottomStrong} ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 84%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+        top: [
+          `inset ${sideWeak} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 28%, white 8%)`,
+          `inset ${sideWeakNeg} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 28%, white 8%)`,
+          `inset 0 ${topStrong} ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 82%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${verticalWeakNeg} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 14%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+        left: [
+          `inset ${leftStrong} 0 ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 84%, white 16%)`,
+          `inset ${sideWeakNeg} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 22%, white 6%)`,
+          `inset 0 ${verticalWeak} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 18%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${verticalWeakNeg} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 18%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+        right: [
+          `inset ${sideWeak} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 22%, white 6%)`,
+          `inset ${rightStrong} 0 ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 86%, white 14%)`,
+          `inset 0 ${verticalWeak} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 18%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${verticalWeakNeg} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 18%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+      };
+
+      const glowByDirection = {
+        bottom: [
+          `inset 0 ${(unit * -2).toFixed(2)}px ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset 0 ${(unit * -1.35).toFixed(2)}px 0 ${lineStrong}`,
+        ].join(", "),
+        top: [
+          `inset 0 ${(unit * 2).toFixed(2)}px ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset 0 ${(unit * 1.35).toFixed(2)}px 0 ${lineStrong}`,
+        ].join(", "),
+        left: [
+          `inset ${(unit * 2).toFixed(2)}px 0 ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset ${(unit * 1.25).toFixed(2)}px 0 0 ${lineSoft}`,
+        ].join(", "),
+        right: [
+          `inset ${(unit * -2).toFixed(2)}px 0 ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset ${(unit * -1.25).toFixed(2)}px 0 0 ${lineSoft}`,
+        ].join(", "),
+      };
+
+      return {
+        activeRim,
+        inactiveRim: rimByDirection[direction] || rimByDirection.bottom,
+        activeGlow,
+        inactiveGlow: glowByDirection[direction] || glowByDirection.bottom,
+      };
+    }
+
     function applyShellMetrics(targetShell, direction) {
       const width = clampWidth(state.width);
       const height = clampHeight(state.height);
@@ -1313,6 +1419,12 @@
 
       const unit = Math.max(0.65, Math.min(width, height) / 320);
       targetShell.style.setProperty("--unit", `${unit}px`);
+      const innerGlowBlurPx = (height * state.innerGlowBlur) / 56;
+      const chromeShadows = getDirectionalChromeShadows(direction, unit, innerGlowBlurPx);
+      targetShell.style.setProperty("--accent-rim-shadow-active", chromeShadows.activeRim);
+      targetShell.style.setProperty("--accent-rim-shadow-inactive", chromeShadows.inactiveRim);
+      targetShell.style.setProperty("--inner-glow-shadow-active", chromeShadows.activeGlow);
+      targetShell.style.setProperty("--inner-glow-shadow-inactive", chromeShadows.inactiveGlow);
       targetShell.style.setProperty("--blob-size", `${Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)))}px`);
       const baseHighlightWidth = 112 + height;
       const baseHighlightHeight = 39 + (height * 0.5);
@@ -1337,6 +1449,7 @@
       targetShell.style.setProperty("--highlight-bottom-start-y", highlightLayout.bottomStart.y);
       targetShell.style.setProperty("--highlight-bottom-end-x", highlightLayout.bottomEnd.x);
       targetShell.style.setProperty("--highlight-bottom-end-y", highlightLayout.bottomEnd.y);
+
     }
 
     function updateShellMetrics() {

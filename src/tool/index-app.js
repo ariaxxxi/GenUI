@@ -576,6 +576,7 @@ initManualBindings({
   handleSend: actions.handleSend,
   manualShape: manualDemo.manualShape,
   openCustom: manualDemo.openCustom,
+  movePrototypeListSelection: morphApi.movePrototypeListSelection,
   flight,
   rebuildAnim: anim.rebuildAnim,
   initStarfield: anim.initStarfield,

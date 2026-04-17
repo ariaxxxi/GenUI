@@ -1,6 +1,175 @@
 # Handoff
 
 ## Task title
+Enable ArrowUp and ArrowDown for prototype list-stage hover selection
+
+## Completion status
+- Completed
+
+## Summary
+- Added keyboard list-selection state for the prototype list stage so `ArrowUp` and `ArrowDown` now move the highlighted pill when the current manual prototype shape is `list`.
+- Extended `src/shared/morph-render.js` to persist:
+  - current prototype list content
+  - current selected pill index
+- Added `movePrototypeListSelection(delta)` to the morph-render API and made `showPrototypeListStage(...)` accept a selected index so the list can be re-rendered with the next hovered item.
+- Wired manual keyboard bindings in `src/tool/modules/manual-bindings.js` so ArrowUp/ArrowDown call that API only when `selectedScenario().shape === 'list'`.
+- Passed the new morph API method through `src/tool/index-app.js`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/index-app.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Verified new API references and keyboard hooks exist:
+  - `rg -n "movePrototypeListSelection|prototypeListSelectedIndex|prototypeListContent|ArrowUp|ArrowDown" src/shared/morph-render.js src/tool/modules/manual-bindings.js src/tool/index-app.js`
+- Reviewed the scoped diff:
+  - `git diff -- src/shared/morph-render.js src/tool/modules/manual-bindings.js src/tool/index-app.js`
+
+## Remaining issues / caveats
+- This patch updates keyboard selection only for the manual prototype list stage.
+- It does not add pointer hover syncing for `data-prototype-list-pill`; the rendered list did not previously expose that path.
+
+## Recommended next step
+1. If you want mouse hover and keyboard hover to stay in lockstep, add a delegated pointer handler on `#list-pills` for `data-prototype-list-pill` that calls the same selection API.
+
+## Task title
+Roll Celestial selected-state visuals into shared prototype, AI flow, Bubble Home, and design docs
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared selected chrome in `src/styles/shared.css` so prototype mode and all `renderSelectedChrome()` consumers now use the Celestial-selected layer visibility and timing:
+  - inner glow and accent rim now fade/settle independently
+  - top-left and bottom-right highlight PNGs now animate to full visibility
+  - visual order is enforced with `z-index`
+  - chrome wrapper fade now matches the longer Celestial timing rather than the older fast fade
+- Updated AI message / flight flow selected hosts in `src/styles/ai-glass.css` so the selected base now matches the Celestial shell:
+  - black selected fill
+  - neutral gray 1px inset outline
+- Updated AI orb overrides in `src/styles/ai-decorative.css` so the orb selection still renders the rim, inner glow, and both highlight PNGs after the shared chrome opacity changes.
+- Updated Bubble Home custom selection chrome in `src/styles/bubble2-page.css` so child highlights and orb highlights follow the same opacity/timing model as the Celestial reference.
+- Simplified Bubble Home highlighted child surfaces and orb sphere base to a black shell with neutral gray outline so it no longer stacks the older glossy shell treatment under the Celestial chrome.
+- Rewrote `design.md` so the Celestial tool is the documented source of truth for selected-state visuals and motion across the system.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/design.md`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed repo diff for the shared chrome selectors, Bubble Home custom selectors, and design doc update:
+  - `git diff -- src/styles/shared.css src/styles/ai-glass.css src/styles/ai-decorative.css src/styles/bubble2-page.css design.md`
+- Verified expected selectors are present after the patch:
+  - `rg -n "g-stage-selected-accent-rim|g-stage-selected-highlight|g-stage-selected-sharp-highlight|g-stage-selected-highlight-mask-image|bubble2-child-selection-accent-rim|bubble2-orb-selection-accent-rim|Celestial Selected State" src/styles/shared.css src/styles/ai-glass.css src/styles/ai-decorative.css src/styles/bubble2-page.css design.md`
+
+## Remaining issues / caveats
+- This rollout aligns the shared selected chrome visuals, layer timings, and selected-shell base treatment, but it does not add full directional refraction motion to product surfaces that do not carry direction state.
+- Bubble Home orb behavior still keeps its page-specific breathing animation; only the selected chrome stack and shell base were aligned.
+- I did not run an in-browser visual regression pass in this turn, so the next step should be a live comparison of:
+  - prototype mode
+  - Bubble Home
+  - AI message flow
+  - AI flight flow
+
+## Recommended next step
+1. Run the affected pages side by side with `celestial-tool.html` and tune any residual page-specific overrides, especially AI orb states and Bubble Home orb breathing states, if they still read stronger or weaker than the Celestial reference.
+
+## Task title
+Add directional shadow-bias motion to Celestial tool rim and inner glow
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the accent rim and inner glow now animate by shadow bias rather than by reveal masking.
+- Added per-direction inactive shadow recipes for both layers:
+  - `bottom` starts with stronger bottom-biased inset shadows
+  - `top` starts with stronger top-biased inset shadows
+  - `left` starts with stronger left-biased inset shadows
+  - `right` starts with stronger right-biased inset shadows
+- Active state still settles to the balanced prototype-style rim and inner-glow stacks.
+- The effect now reads as directional energy shifting into place procedurally, while deactivation reverses back through the biased state.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- This is a procedural approximation using animated `box-shadow` values. It is directionally biased, but still subtler than moving raster assets like the blob and highlight layers.
+
+## Recommended next step
+1. If the bias feels too subtle or too strong in any one direction, tune the inactive shadow strengths per direction without changing the balanced active stack.
+
+## Task title
+Remove directional reveal mask from Celestial tool rim and inner glow
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the `clip-path` directional reveal from:
+  - `.test-shell-inner-glow`
+  - `.test-shell-accent-rim`
+- Removed the JS helper and CSS variables that were generating directional reveal insets.
+- The rim and inner glow are back to timing-only behavior, using opacity and box-shadow transitions without any geometric masking.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Without a reveal mask or directional biasing, rim and inner glow no longer have a directional read; they just fade with the current timing.
+
+## Recommended next step
+1. If you still want some directional feel later without masking, use per-direction transition delay or shadow-bias animation instead.
+
+## Task title
+Add directional reveal motion to Celestial tool rim and inner glow
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the inner glow and accent rim now reveal directionally instead of only fading.
+- Added a shared directional reveal model driven by the current shell direction:
+  - `top` starts clipped from the top
+  - `bottom` starts clipped from the bottom
+  - `left` starts clipped from the left
+  - `right` starts clipped from the right
+- Implemented the effect with animated `clip-path: inset(...)` on:
+  - `.test-shell-inner-glow`
+  - `.test-shell-accent-rim`
+- Because inactive state uses the directional start inset and active state uses the full inset, deactivation automatically reverses the motion in the opposite state transition.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The reveal is a hard directional clip rather than a feathered gradient mask. It reads clearly as motion, but it is more geometric than the blob movement.
+
+## Recommended next step
+1. If a softer reveal is needed later, replace the clip-path reveal with a directional gradient mask while keeping the same start/end direction logic.
+
+## Task title
 Add accent rim toggle to Celestial tool
 
 ## Completion status

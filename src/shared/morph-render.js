@@ -11,6 +11,8 @@ export function createMorphRender(ctx) {
   let prototypeListSettleTimer = null;
   let prototypeListCollapseTimer = null;
   const prototypeListRoot = document.getElementById('list-pills');
+  state.prototypeListContent = state.prototypeListContent || null;
+  state.prototypeListSelectedIndex = Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0;
 
   function clearThinkingVisualEnterTimer() {
     if (!thinkingVisualEnterTimer) return;
@@ -107,7 +109,7 @@ export function createMorphRender(ctx) {
     return true;
   }
 
-  function showPrototypeListStage(contentData = {}, { entering = false } = {}) {
+  function showPrototypeListStage(contentData = {}, { entering = false, selectedIndex = null } = {}) {
     if (!prototypeListRoot) return;
     clearPrototypeListCollapseTimer();
     clearPrototypeListSettleTimer();
@@ -123,18 +125,26 @@ export function createMorphRender(ctx) {
       bottomY = Math.round((Number(listGeo?.ty) || -45) - orbClearance - (pillHeight / 2));
     }
     const orbAnchor = getPrototypeThinkingOrbAnchor();
-    const items = layoutDisambiguationPillItems(
-      prototypeListEntriesFromContent(contentData),
+    const entries = prototypeListEntriesFromContent(contentData);
+    const resolvedSelectedIndex = clamp(
+      Number.isFinite(selectedIndex) ? selectedIndex : state.prototypeListSelectedIndex,
       0,
+      Math.max(0, entries.length - 1),
+    );
+    const items = layoutDisambiguationPillItems(
+      entries,
+      resolvedSelectedIndex,
       'stack',
       { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y }
     );
+    state.prototypeListContent = contentData;
+    state.prototypeListSelectedIndex = resolvedSelectedIndex;
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '1';
     prototypeListRoot.dataset.listListeningOrb = listStageShowsOrb(contentData) ? '1' : '';
     prototypeListRoot.innerHTML = renderDisambiguationPills({
       items,
-      selectedIndex: 0,
+      selectedIndex: resolvedSelectedIndex,
       rowDataAttr: 'data-prototype-list-pill',
       clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
     });
@@ -152,10 +162,28 @@ export function createMorphRender(ctx) {
     clearPrototypeListSettleTimer();
     if (immediate) clearPrototypeListCollapseTimer();
     if (!immediate && prototypeListRoot.dataset.collapsing === '1') return;
+    state.prototypeListContent = null;
+    state.prototypeListSelectedIndex = 0;
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '';
     prototypeListRoot.dataset.listListeningOrb = '';
     prototypeListRoot.innerHTML = '';
+  }
+
+  function movePrototypeListSelection(delta = 0) {
+    if (!prototypeListRoot || prototypeListRoot.dataset.active !== '1') return false;
+    const contentData = state.prototypeListContent;
+    if (!contentData) return false;
+    const entries = prototypeListEntriesFromContent(contentData);
+    if (!entries.length) return false;
+    const nextIndex = clamp(
+      (Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0) + delta,
+      0,
+      entries.length - 1,
+    );
+    if (nextIndex === state.prototypeListSelectedIndex) return false;
+    showPrototypeListStage(contentData, { entering: false, selectedIndex: nextIndex });
+    return true;
   }
 
   function collapsePrototypeListStack(ms = 600) {
@@ -619,5 +647,5 @@ export function createMorphRender(ctx) {
     if (!skipActiveUpdate) callbacks.updateActive(shape);
   }
 
-  return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, showPrototypeListStage, clearPrototypeListStage, collapsePrototypeListStack, morphCore };
+  return { applyGeometry, clearUiFadeTimers, applyCardDetailLayout, resetDetailInlineLayout, setOpacityWithDelay, isIconOnlyThumb, applyThumbVisualMode, applyTypographyStyles, ensureStageMediaEls, hideAllStageMedia, applyCardMediaLayout, applyOutgoingCardMediaLayout, setUiMotionProfile, applyContentPositions, applyContent, showRich, hideRich, showPrototypeListStage, clearPrototypeListStage, collapsePrototypeListStack, movePrototypeListSelection, morphCore };
 }
