@@ -1,6 +1,206 @@
 # Handoff
 
 ## Task title
+Add refraction mask toggle to Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to add a `Mask enabled` toggle under `Layer 1 · Refraction Mask`.
+- Added `state.maskEnabled` and wired it into the shell metric update path.
+- When the toggle is off, the blob layer no longer uses the luminance mask:
+  - `--zero-spread-mask-url: none`
+- This applies to both single-shell preview and list preview chips.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Disabling the mask shows the full blob layer, so the visual can extend more broadly than the selected-style reference by design.
+
+## Recommended next step
+1. If needed, add a similar toggle for highlights or inner glow so each layer can be isolated in the tool.
+
+## Task title
+Remove hollow center from Celestial tool blobs
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the transparent center stop from both blob gradients.
+- The visible "hole" was caused by each radial gradient starting with a transparent `0%` stop and only reaching the configured core color at `28%`.
+- Both blobs now start with the configured core color at `0%`, so the blob reads as a solid color field when blur is low or zero.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The blobs still use `mix-blend-mode: screen`, so their perceived color will continue to depend on overlap and the black shell under them.
+
+## Recommended next step
+1. If you need the blob swatches to look even more literal, reduce or remove `mix-blend-mode: screen` next.
+
+## Task title
+Remove blob gradient falloff in Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the transparent outer stop from both accent blob gradients.
+- The top-left and bottom-right blobs now keep their edge color through the full gradient instead of fading to transparent internally.
+- Edge softness is now driven by the blob blur/filter and mask, not by a transparent radial falloff stop.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The blobs still animate with element opacity for active/inactive transitions.
+
+## Recommended next step
+1. If the blobs now feel too dense, reduce blur or retune the edge color rather than reintroducing transparency.
+
+## Task title
+Retune Celestial tool geometry duration to 600ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so shell geometry transitions now run at `600ms` instead of `450ms`.
+- Kept the prototype-mode curve unchanged:
+  - `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+- This affects:
+  - `width`
+  - `height`
+  - `border-radius`
+  - `transform`
+  - `box-shadow`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- This only changes shell geometry timing. Layer-specific blob/highlight/inner-glow durations are unchanged.
+
+## Recommended next step
+1. If the geometry now feels right, leave the layer timings separate unless you want full motion-duration parity too.
+
+## Task title
+Match Celestial tool geometry duration to prototype mode
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so shell geometry transitions now use the prototype default duration as well as the prototype curve.
+- Changed the single-shell/list-shell geometry transition duration from `260ms` to `450ms` for:
+  - `width`
+  - `height`
+  - `border-radius`
+  - `transform`
+  - `box-shadow`
+- This now matches the prototype default timing model from [src/shared/anim-controls.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/anim-controls.js), where the base duration is `450ms`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Only the shell geometry transition duration was updated here. Blob/highlight/inner-glow durations remain on their current tool-specific values.
+
+## Recommended next step
+1. If needed, align the rest of the layer-specific durations to prototype defaults in a separate pass.
+
+## Task title
+Match Celestial tool motion curve to prototype mode
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to use the same default stage-to-stage motion curve as prototype mode.
+- Replaced the tool's local `--motion-ease` value with the prototype default bezier from [src/shared/anim-controls.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/anim-controls.js):
+  - `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+- This change now affects the shell geometry transitions plus blob, highlight, and inner-glow timing that already rely on `var(--motion-ease)`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- This updates the curve only. Durations remain the current tool-specific values.
+
+## Recommended next step
+1. If needed, align the tool's durations to the prototype transition timing constants next, now that the easing curve matches.
+
+## Task title
+Add vertical three-chip list preview to Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to add a new `List` preset that renders a vertical stack of three chips in the preview stage.
+- Reused the same shell layer stack for each chip:
+  - refraction mask
+  - accent blobs
+  - selected-style highlights
+  - inner glow
+- Added list-mode keyboard interaction on the focused preview stage:
+  - `ArrowDown` moves highlight to the next chip
+  - `ArrowUp` moves highlight to the previous chip
+- Wired per-chip motion directions so list navigation behaves as requested:
+  - moving down: current chip deactivates with `bottom`, next chip activates with `top`
+  - moving up: current chip deactivates with `top`, previous chip activates with `bottom`
+- Kept the existing single-shell preview intact for the other presets.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- List navigation uses preview-stage keyboard focus, not global window-level hotkeys. The preview is auto-focused when `List` is selected, and clicking the preview refocuses it.
+- Geometry and layer controls continue to tune the shared chip styling in both single-shell and list preview modes.
+
+## Recommended next step
+1. If needed, add a small visible focus hint or caption near the preview stage so arrow-key navigation affordance is more obvious in list mode.
+
+## Task title
 Neutralize demo panel surfaces
 
 ## Completion status

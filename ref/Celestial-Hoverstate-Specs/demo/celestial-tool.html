@@ -15,7 +15,7 @@
       --accent-a: rgb(139 174 255);
       --accent-b: rgb(135 104 255);
       --shadow-deep: 0 30px 80px rgba(0, 0, 0, 0.45);
-      --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --motion-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
       --blob-top-glow: rgba(0, 0, 0, 0);
       --blob-bottom-glow: rgba(0, 0, 0, 0);
       --blob-top-core: rgba(73, 121, 255, 0.86);
@@ -236,6 +236,11 @@
       padding: 28px;
     }
 
+    .preview-stage:focus-visible {
+      outline: 1px solid rgba(255, 255, 255, 0.12);
+      outline-offset: 2px;
+    }
+
     .preview-stage::after {
       content: "";
       position: absolute;
@@ -258,13 +263,39 @@
       --inner-glow-opacity-duration: 420ms;
       transform: translateZ(0);
       transition:
-        width 260ms var(--motion-ease),
-        height 260ms var(--motion-ease),
-        border-radius 260ms var(--motion-ease),
-        transform 260ms var(--motion-ease),
-        box-shadow 260ms var(--motion-ease);
+        width 600ms var(--motion-ease),
+        height 600ms var(--motion-ease),
+        border-radius 600ms var(--motion-ease),
+        transform 600ms var(--motion-ease),
+        box-shadow 600ms var(--motion-ease);
       cursor: pointer;
       will-change: width, height, border-radius, transform;
+    }
+
+    .test-shell-list {
+      display: none;
+      gap: 18px;
+      justify-items: center;
+    }
+
+    .preview-stage[data-view-mode="single"] .test-shell--single {
+      display: block;
+    }
+
+    .preview-stage[data-view-mode="list"] .test-shell--single {
+      display: none;
+    }
+
+    .preview-stage[data-view-mode="list"] .test-shell-list {
+      display: grid;
+    }
+
+    .test-shell-list .test-shell {
+      cursor: default;
+    }
+
+    .test-shell-list .test-shell:hover {
+      transform: translateZ(0);
     }
 
     .test-shell:hover {
@@ -311,7 +342,10 @@
       pointer-events: none;
       z-index: 1;
       opacity: 0;
-      box-shadow: inset 0 0 var(--inner-glow-blur, 5px) 0 var(--inner-glow-color, rgba(255, 255, 255, 0.8));
+      mix-blend-mode: screen;
+      box-shadow:
+        inset 0 0 var(--inner-glow-blur, 5px) 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
       transition:
         opacity var(--inner-glow-opacity-duration, 420ms) var(--motion-ease),
         box-shadow 420ms var(--motion-ease);
@@ -412,10 +446,10 @@
       transform: translate(var(--blob-top-start-x, -34%), var(--blob-top-start-y, -36%));
       background:
         radial-gradient(circle at 36% 36%,
-          var(--blob-top-glow) 0%,
+          var(--blob-top-core) 0%,
           var(--blob-top-core) 28%,
           var(--blob-top-edge) 56%,
-          rgba(0, 0, 0, 0) 82%);
+          var(--blob-top-edge) 100%);
     }
 
     .test-shell-blob--bottom-right {
@@ -424,10 +458,10 @@
       transform: translate(var(--blob-bottom-start-x, 36%), var(--blob-bottom-start-y, 38%));
       background:
         radial-gradient(circle at 64% 64%,
-          var(--blob-bottom-glow) 0%,
+          var(--blob-bottom-core) 0%,
           var(--blob-bottom-core) 28%,
           var(--blob-bottom-edge) 56%,
-          rgba(0, 0, 0, 0) 82%);
+          var(--blob-bottom-edge) 100%);
     }
 
     .test-shell[data-active="true"] .test-shell-blob--top-left {
@@ -720,19 +754,19 @@
 
             <div class="control">
               <div class="control-header">
-                <label for="heightRange">Height</label>
-                <output id="heightValue">132px</output>
-              </div>
-              <input id="heightRange" type="range" min="40" max="420" step="1" value="132">
+              <label for="heightRange">Height</label>
+              <output id="heightValue">260px</output>
             </div>
+            <input id="heightRange" type="range" min="40" max="420" step="1" value="260">
+          </div>
 
-            <div class="control">
-              <div class="control-header">
-                <label for="radiusRange">Radius</label>
-                <output id="radiusValue">66px</output>
-              </div>
-              <input id="radiusRange" type="range" min="12" max="140" step="1" value="66">
+          <div class="control">
+            <div class="control-header">
+              <label for="radiusRange">Radius</label>
+              <output id="radiusValue">32px</output>
             </div>
+            <input id="radiusRange" type="range" min="12" max="140" step="1" value="32">
+          </div>
 
             <div class="control">
               <label for="directionSelect">Entry direction</label>
@@ -746,20 +780,21 @@
           </div>
 
           <div class="control">
-          <div class="segment-label">Preset geometry</div>
+            <div class="segment-label">Preset geometry</div>
           <div class="segment" id="presetButtons">
             <button type="button" data-preset="chip" aria-pressed="false">Chip</button>
-            <button type="button" data-preset="pill" aria-pressed="true">Pill</button>
+            <button type="button" data-preset="list" aria-pressed="false">List</button>
+            <button type="button" data-preset="pill" aria-pressed="false">Pill</button>
             <button type="button" data-preset="square" aria-pressed="false">Circle</button>
-            <button type="button" data-preset="card" aria-pressed="false">Card</button>
+            <button type="button" data-preset="card" aria-pressed="true">Card</button>
           </div>
         </div>
         </div>
       </article>
 
       <section class="preview-panel">
-        <div class="preview-stage">
-          <article class="test-shell" id="testShell" data-active="true" style="--shell-width: 420px; --shell-height: 132px; --shell-radius: 66px;">
+        <div class="preview-stage" id="previewStage" data-view-mode="single" tabindex="0">
+          <article class="test-shell test-shell--single" id="testShell" data-active="true" style="--shell-width: 420px; --shell-height: 260px; --shell-radius: 32px;">
             <div class="test-shell-content">
               <div class="test-shell-refraction" aria-hidden="true">
                 <div class="test-shell-blob test-shell-blob--top-left"></div>
@@ -774,10 +809,60 @@
               </div>
             </div>
           </article>
+
+          <div class="test-shell-list" id="testShellList" aria-label="Vertical list preview">
+            <article class="test-shell test-shell--list-item" data-active="true">
+              <div class="test-shell-content">
+                <div class="test-shell-refraction" aria-hidden="true">
+                  <div class="test-shell-blob test-shell-blob--top-left"></div>
+                  <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+                </div>
+                <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                  <div class="test-shell-top-left-highlight"></div>
+                </div>
+                <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                  <div class="test-shell-bottom-right-highlight"></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="test-shell test-shell--list-item" data-active="false">
+              <div class="test-shell-content">
+                <div class="test-shell-refraction" aria-hidden="true">
+                  <div class="test-shell-blob test-shell-blob--top-left"></div>
+                  <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+                </div>
+                <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                  <div class="test-shell-top-left-highlight"></div>
+                </div>
+                <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                  <div class="test-shell-bottom-right-highlight"></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="test-shell test-shell--list-item" data-active="false">
+              <div class="test-shell-content">
+                <div class="test-shell-refraction" aria-hidden="true">
+                  <div class="test-shell-blob test-shell-blob--top-left"></div>
+                  <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+                </div>
+                <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                  <div class="test-shell-top-left-highlight"></div>
+                </div>
+                <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                  <div class="test-shell-bottom-right-highlight"></div>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
 
         <div class="status-row">
-          <div class="status-chip" id="geometryStatus">420 × 132 · radius 66</div>
+          <div class="status-chip" id="geometryStatus">420 × 260 · radius 32</div>
           <div class="status-chip" id="motionStatus">Direction: bottom · active</div>
         </div>
       </section>
@@ -788,6 +873,11 @@
         </div>
 
         <div class="control-grid">
+          <label class="toggle" for="maskEnabledToggle">
+            <input id="maskEnabledToggle" type="checkbox" checked>
+            <span>Mask enabled</span>
+          </label>
+
           <div class="control">
             <div class="control-header">
               <label for="maskBlurRange">Mask blur</label>
@@ -881,7 +971,7 @@
           </div>
         </div>
 
-        <div class="helper-text">
+        <div class="helper-text" id="helperText">
           Click the container to toggle active. Hover also lifts the shell so you can inspect edges while resizing.
         </div>
       </aside>
@@ -891,29 +981,42 @@
   <script>
     const state = {
       width: 420,
-      height: 132,
-      radius: 66,
+      height: 260,
+      radius: 32,
       direction: "bottom",
       active: true,
-      blobTopCore: "#4f78ee",
-      blobTopEdge: "#5d35ee",
-      blobBottomCore: "#8ea7f2",
-      blobBottomEdge: "#572fff",
-      maskBlur: 24.5,
-      blobBlur: 52,
-      blobTopX: -30,
-      blobTopY: -36,
-      blobBottomX: 62,
-      blobBottomY: 38,
-      highlightTopX: 0,
-      highlightTopY: 0,
-      highlightBottomX: 0,
+      blobTopCore: "#6386ef",
+      blobTopEdge: "#a086ef",
+      blobBottomCore: "#5973ef",
+      blobBottomEdge: "#43367a",
+      maskBlur: 10.5,
+      blobBlur: 80,
+      blobTopX: -27,
+      blobTopY: -55,
+      blobBottomX: 27,
+      blobBottomY: 58,
+      highlightTopX: -20,
+      highlightTopY: -15,
+      highlightBottomX: 8,
       highlightBottomY: 0,
-      highlightScale: 157,
-      innerGlowBlur: 5,
+      highlightScale: 100,
+      innerGlowBlur: 2,
+      maskEnabled: true,
+      previewMode: "single",
+    };
+
+    const listState = {
+      activeIndex: 0,
+      items: [
+        { active: true, direction: "bottom" },
+        { active: false, direction: "top" },
+        { active: false, direction: "top" },
+      ],
     };
 
     const shell = document.getElementById("testShell");
+    const previewStage = document.getElementById("previewStage");
+    const listShells = Array.from(document.querySelectorAll(".test-shell--list-item"));
     const widthRange = document.getElementById("widthRange");
     const heightRange = document.getElementById("heightRange");
     const radiusRange = document.getElementById("radiusRange");
@@ -922,6 +1025,7 @@
     const blobTopEdgeInput = document.getElementById("blobTopEdge");
     const blobBottomCoreInput = document.getElementById("blobBottomCore");
     const blobBottomEdgeInput = document.getElementById("blobBottomEdge");
+    const maskEnabledToggle = document.getElementById("maskEnabledToggle");
     const maskBlurRange = document.getElementById("maskBlurRange");
     const blobBlurRange = document.getElementById("blobBlurRange");
     const blobTopXRange = document.getElementById("blobTopXRange");
@@ -939,6 +1043,7 @@
     const innerGlowBlurValue = document.getElementById("innerGlowBlurValue");
     const geometryStatus = document.getElementById("geometryStatus");
     const motionStatus = document.getElementById("motionStatus");
+    const helperText = document.getElementById("helperText");
     const presetButtons = Array.from(document.querySelectorAll("[data-preset]"));
 
     const presets = {
@@ -963,6 +1068,30 @@
         highlightBottomY: 0,
         highlightScale: 100,
         innerGlowBlur: 8,
+        previewMode: "single",
+      },
+      list: {
+        width: 160,
+        height: 64,
+        radius: 32,
+        direction: "bottom",
+        blobTopCore: "#8fb2ef",
+        blobTopEdge: "#8a72eb",
+        blobBottomCore: "#a8bbf0",
+        blobBottomEdge: "#572fff",
+        maskBlur: 30,
+        blobBlur: 37,
+        blobTopX: -26,
+        blobTopY: -36,
+        blobBottomX: 45,
+        blobBottomY: 38,
+        highlightTopX: 0,
+        highlightTopY: 0,
+        highlightBottomX: 0,
+        highlightBottomY: 0,
+        highlightScale: 100,
+        innerGlowBlur: 8,
+        previewMode: "list",
       },
       card: {
         width: 420,
@@ -985,6 +1114,7 @@
         highlightBottomY: 0,
         highlightScale: 100,
         innerGlowBlur: 2,
+        previewMode: "single",
       },
       pill: {
         width: 420,
@@ -1007,8 +1137,9 @@
         highlightBottomY: 0,
         highlightScale: 157,
         innerGlowBlur: 5,
+        previewMode: "single",
       },
-      square: { width: 90, height: 90, radius: 45 },
+      square: { width: 90, height: 90, radius: 45, previewMode: "single" },
     };
 
     function clampRadius(radius, width, height) {
@@ -1023,8 +1154,12 @@
       return Math.max(40, Math.min(420, height));
     }
 
-    function setPxVar(name, value) {
-      shell.style.setProperty(name, `${Math.round(value)}px`);
+    function resetListState() {
+      listState.activeIndex = 0;
+      listState.items.forEach((item, index) => {
+        item.active = index === 0;
+        item.direction = index === 0 ? "bottom" : "top";
+      });
     }
 
     function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
@@ -1107,7 +1242,7 @@
       };
     }
 
-    function updateShellMetrics() {
+    function applyShellMetrics(targetShell, direction) {
       const width = clampWidth(state.width);
       const height = clampHeight(state.height);
       state.width = width;
@@ -1121,43 +1256,53 @@
       state.radius = radius;
       radiusRange.value = String(radius);
 
-      shell.style.setProperty("--shell-width", `${width}px`);
-      shell.style.setProperty("--shell-height", `${height}px`);
-      shell.style.setProperty("--shell-radius", `${radius}px`);
-      shell.style.setProperty("--zero-spread-mask-url", buildZeroSpreadMaskUrl(width, height, radius, state.maskBlur));
-      shell.style.setProperty("--blob-top-core", state.blobTopCore);
-      shell.style.setProperty("--blob-top-edge", state.blobTopEdge);
-      shell.style.setProperty("--blob-bottom-core", state.blobBottomCore);
-      shell.style.setProperty("--blob-bottom-edge", state.blobBottomEdge);
-      shell.style.setProperty("--inner-glow-blur", `${(height * state.innerGlowBlur) / 56}px`);
-      shell.style.setProperty("--blob-blur", `${state.blobBlur}`);
+      targetShell.style.setProperty("--shell-width", `${width}px`);
+      targetShell.style.setProperty("--shell-height", `${height}px`);
+      targetShell.style.setProperty("--shell-radius", `${radius}px`);
+      targetShell.style.setProperty(
+        "--zero-spread-mask-url",
+        state.maskEnabled ? buildZeroSpreadMaskUrl(width, height, radius, state.maskBlur) : "none"
+      );
+      targetShell.style.setProperty("--blob-top-core", state.blobTopCore);
+      targetShell.style.setProperty("--blob-top-edge", state.blobTopEdge);
+      targetShell.style.setProperty("--blob-bottom-core", state.blobBottomCore);
+      targetShell.style.setProperty("--blob-bottom-edge", state.blobBottomEdge);
+      targetShell.style.setProperty("--inner-glow-blur", `${(height * state.innerGlowBlur) / 56}px`);
+      targetShell.style.setProperty("--blob-blur", `${state.blobBlur}`);
 
       const unit = Math.max(0.65, Math.min(width, height) / 320);
-      shell.style.setProperty("--unit", `${unit}px`);
-      shell.style.setProperty("--blob-size", `${Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)))}px`);
+      targetShell.style.setProperty("--unit", `${unit}px`);
+      targetShell.style.setProperty("--blob-size", `${Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)))}px`);
       const baseHighlightWidth = 112 + height;
       const baseHighlightHeight = 39 + (height * 0.5);
-      shell.style.setProperty("--highlight-width", `${Math.round(baseHighlightWidth * (state.highlightScale / 100))}px`);
-      shell.style.setProperty("--highlight-height", `${Math.round(baseHighlightHeight * (state.highlightScale / 100))}px`);
-      const blobLayout = getBlobLayout(state.direction);
-      shell.style.setProperty("--blob-top-start-x", blobLayout.topStart.x);
-      shell.style.setProperty("--blob-top-start-y", blobLayout.topStart.y);
-      shell.style.setProperty("--blob-top-end-x", blobLayout.topEnd.x);
-      shell.style.setProperty("--blob-top-end-y", blobLayout.topEnd.y);
-      shell.style.setProperty("--blob-bottom-start-x", blobLayout.bottomStart.x);
-      shell.style.setProperty("--blob-bottom-start-y", blobLayout.bottomStart.y);
-      shell.style.setProperty("--blob-bottom-end-x", blobLayout.bottomEnd.x);
-      shell.style.setProperty("--blob-bottom-end-y", blobLayout.bottomEnd.y);
+      targetShell.style.setProperty("--highlight-width", `${Math.round(baseHighlightWidth * (state.highlightScale / 100))}px`);
+      targetShell.style.setProperty("--highlight-height", `${Math.round(baseHighlightHeight * (state.highlightScale / 100))}px`);
+      const blobLayout = getBlobLayout(direction);
+      targetShell.style.setProperty("--blob-top-start-x", blobLayout.topStart.x);
+      targetShell.style.setProperty("--blob-top-start-y", blobLayout.topStart.y);
+      targetShell.style.setProperty("--blob-top-end-x", blobLayout.topEnd.x);
+      targetShell.style.setProperty("--blob-top-end-y", blobLayout.topEnd.y);
+      targetShell.style.setProperty("--blob-bottom-start-x", blobLayout.bottomStart.x);
+      targetShell.style.setProperty("--blob-bottom-start-y", blobLayout.bottomStart.y);
+      targetShell.style.setProperty("--blob-bottom-end-x", blobLayout.bottomEnd.x);
+      targetShell.style.setProperty("--blob-bottom-end-y", blobLayout.bottomEnd.y);
 
-      const highlightLayout = getHighlightLayout(state.direction);
-      shell.style.setProperty("--highlight-top-start-x", highlightLayout.topStart.x);
-      shell.style.setProperty("--highlight-top-start-y", highlightLayout.topStart.y);
-      shell.style.setProperty("--highlight-top-end-x", highlightLayout.topEnd.x);
-      shell.style.setProperty("--highlight-top-end-y", highlightLayout.topEnd.y);
-      shell.style.setProperty("--highlight-bottom-start-x", highlightLayout.bottomStart.x);
-      shell.style.setProperty("--highlight-bottom-start-y", highlightLayout.bottomStart.y);
-      shell.style.setProperty("--highlight-bottom-end-x", highlightLayout.bottomEnd.x);
-      shell.style.setProperty("--highlight-bottom-end-y", highlightLayout.bottomEnd.y);
+      const highlightLayout = getHighlightLayout(direction);
+      targetShell.style.setProperty("--highlight-top-start-x", highlightLayout.topStart.x);
+      targetShell.style.setProperty("--highlight-top-start-y", highlightLayout.topStart.y);
+      targetShell.style.setProperty("--highlight-top-end-x", highlightLayout.topEnd.x);
+      targetShell.style.setProperty("--highlight-top-end-y", highlightLayout.topEnd.y);
+      targetShell.style.setProperty("--highlight-bottom-start-x", highlightLayout.bottomStart.x);
+      targetShell.style.setProperty("--highlight-bottom-start-y", highlightLayout.bottomStart.y);
+      targetShell.style.setProperty("--highlight-bottom-end-x", highlightLayout.bottomEnd.x);
+      targetShell.style.setProperty("--highlight-bottom-end-y", highlightLayout.bottomEnd.y);
+    }
+
+    function updateShellMetrics() {
+      applyShellMetrics(shell, state.direction);
+      listShells.forEach((listShell, index) => {
+        applyShellMetrics(listShell, listState.items[index].direction);
+      });
     }
 
     function updateText() {
@@ -1170,12 +1315,25 @@
       blobBottomXValue.textContent = `${state.blobBottomX}%`;
       highlightScaleValue.textContent = `${state.highlightScale}%`;
       innerGlowBlurValue.textContent = `${state.innerGlowBlur}`;
-      geometryStatus.textContent = `${state.width} × ${state.height} · radius ${state.radius}`;
-      motionStatus.textContent = `Direction: ${state.direction} · ${state.active ? "active" : "idle"}`;
+      if (state.previewMode === "list") {
+        geometryStatus.textContent = `List · 3 chips · ${state.width} × ${state.height} · radius ${state.radius}`;
+        motionStatus.textContent = `Arrow Up / Down · active ${listState.activeIndex + 1} of 3`;
+        helperText.textContent = "Focus the preview and use ArrowUp / ArrowDown. Moving down plays bottom deactivate on the old chip and top activate on the next chip.";
+      } else {
+        geometryStatus.textContent = `${state.width} × ${state.height} · radius ${state.radius}`;
+        motionStatus.textContent = `Direction: ${state.direction} · ${state.active ? "active" : "idle"}`;
+        helperText.textContent = "Click the container to toggle active. Hover also lifts the shell so you can inspect edges while resizing.";
+      }
+      directionSelect.disabled = state.previewMode === "list";
+      maskEnabledToggle.checked = state.maskEnabled;
+      previewStage.dataset.viewMode = state.previewMode;
     }
 
     function updateActiveState() {
       shell.dataset.active = String(state.active);
+      listShells.forEach((listShell, index) => {
+        listShell.dataset.active = String(listState.items[index].active);
+      });
       updateText();
     }
 
@@ -1208,6 +1366,11 @@
       if (typeof preset.highlightBottomY === "number") state.highlightBottomY = preset.highlightBottomY;
       if (typeof preset.highlightScale === "number") state.highlightScale = preset.highlightScale;
       if (typeof preset.innerGlowBlur === "number") state.innerGlowBlur = preset.innerGlowBlur;
+      if (typeof preset.maskEnabled === "boolean") state.maskEnabled = preset.maskEnabled;
+      state.previewMode = preset.previewMode === "list" ? "list" : "single";
+      if (state.previewMode === "list") {
+        resetListState();
+      }
       widthRange.value = String(state.width);
       heightRange.value = String(state.height);
       radiusRange.value = String(state.radius);
@@ -1226,6 +1389,9 @@
         button.setAttribute("aria-pressed", String(button.dataset.preset === name));
       });
       render();
+      if (state.previewMode === "list") {
+        previewStage.focus();
+      }
     }
 
     widthRange.addEventListener("input", () => {
@@ -1275,6 +1441,11 @@
       render();
     });
 
+    maskEnabledToggle.addEventListener("change", () => {
+      state.maskEnabled = maskEnabledToggle.checked;
+      render();
+    });
+
     blobBlurRange.addEventListener("input", () => {
       state.blobBlur = Number(blobBlurRange.value);
       render();
@@ -1307,8 +1478,29 @@
     });
 
     shell.addEventListener("click", () => {
+      if (state.previewMode === "list") return;
       state.active = !state.active;
       updateActiveState();
+    });
+
+    previewStage.addEventListener("pointerdown", () => {
+      previewStage.focus();
+    });
+
+    previewStage.addEventListener("keydown", (event) => {
+      if (state.previewMode !== "list") return;
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.max(0, Math.min(listState.items.length - 1, listState.activeIndex + delta));
+      if (nextIndex === listState.activeIndex) return;
+      event.preventDefault();
+      const movingDown = delta > 0;
+      listState.items[listState.activeIndex].direction = movingDown ? "bottom" : "top";
+      listState.items[listState.activeIndex].active = false;
+      listState.items[nextIndex].direction = movingDown ? "top" : "bottom";
+      listState.items[nextIndex].active = true;
+      listState.activeIndex = nextIndex;
+      render();
     });
 
     window.addEventListener("resize", render);
