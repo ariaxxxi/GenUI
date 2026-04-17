@@ -308,7 +308,7 @@ export function createFlightBookingFlow(ctx) {
       const recommendationCount = current.type === "recommendation" ? api.recommendationOptionsForUi().length : (current.options || []).length;
       const nextFocused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
       if (nextFocused !== flow.focused) { flow.focused = nextFocused; if (typeof ctx.playEarcon === "function") ctx.playEarcon("hover"); }
-      document.querySelectorAll("[data-flight-opt]").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
+      render.updateSelectionListUi?.(flow.focused);
       return;
     }
     if (current.type === "recommendation") {

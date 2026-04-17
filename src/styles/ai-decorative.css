@@ -121,6 +121,7 @@
 .ai-flow-orb-selection {
   z-index: 11;
   overflow: hidden;
+  opacity: 1;
 }
 .ai-flow-orb-selection .g-stage-selected-accent-rim {
   opacity: 0.96;
@@ -130,9 +131,26 @@
   opacity: 1;
   animation: ai-flow-orb-breathe-highlight 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-.ai-flow-orb-selection .g-stage-selected-sharp-highlight,
-.ai-flow-orb-selection .g-stage-selected-highlight-mask-image {
+.ai-flow-orb-selection .g-stage-selected-refraction {
   opacity: 1;
+}
+.ai-flow-orb-selection .g-stage-selected-sharp-highlight,
+.ai-flow-orb-selection .g-stage-selected-highlight-mask-image,
+.ai-flow-orb-selection .g-stage-selected-blob--top-left,
+.ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
+  opacity: 1;
+}
+.ai-flow-orb-selection .g-stage-selected-sharp-highlight {
+  transform: translate(var(--g-stage-selected-highlight-bottom-end-x), var(--g-stage-selected-highlight-bottom-end-y));
+}
+.ai-flow-orb-selection .g-stage-selected-highlight-mask-image {
+  transform: translate(var(--g-stage-selected-highlight-top-end-x), var(--g-stage-selected-highlight-top-end-y));
+}
+.ai-flow-orb-selection .g-stage-selected-blob--top-left {
+  transform: translate(var(--g-stage-selected-blob-top-end-x), var(--g-stage-selected-blob-top-end-y));
+}
+.ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
+  transform: translate(var(--g-stage-selected-blob-bottom-end-x), var(--g-stage-selected-blob-bottom-end-y));
 }
 #drop-main.magic-glow #siri-orb .ai-flow-orb-sphere,
 #drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-sphere {
@@ -324,9 +342,11 @@ body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
 #drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-sharp-pass,
 #drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-highlight,
 #drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-highlight-mask,
+#drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-refraction,
 #drop-main.flow-orb-muted #siri-orb .g-stage-selected-sharp-pass,
 #drop-main.flow-orb-muted #siri-orb .g-stage-selected-highlight,
-#drop-main.flow-orb-muted #siri-orb .g-stage-selected-highlight-mask {
+#drop-main.flow-orb-muted #siri-orb .g-stage-selected-highlight-mask,
+#drop-main.flow-orb-muted #siri-orb .g-stage-selected-refraction {
   opacity: 0;
 }
 #drop-main.flow-orb-muted #siri-orb .g-stage-selected-accent-rim,

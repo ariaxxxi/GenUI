@@ -152,6 +152,31 @@ export function createSidebarActions(ctx, refs) {
         draft.content.secondaryAccentColorByShape[newStage.id] = draft.content.secondaryAccentColorByShape[sourceShape];
       }
 
+      draft.content.selectedBlobTopCoreColorByShape = { ...(draft.content.selectedBlobTopCoreColorByShape || {}) };
+      if (draft.content.selectedBlobTopCoreColorByShape[sourceShape]) {
+        draft.content.selectedBlobTopCoreColorByShape[newStage.id] = draft.content.selectedBlobTopCoreColorByShape[sourceShape];
+      }
+
+      draft.content.selectedBlobTopEdgeColorByShape = { ...(draft.content.selectedBlobTopEdgeColorByShape || {}) };
+      if (draft.content.selectedBlobTopEdgeColorByShape[sourceShape]) {
+        draft.content.selectedBlobTopEdgeColorByShape[newStage.id] = draft.content.selectedBlobTopEdgeColorByShape[sourceShape];
+      }
+
+      draft.content.selectedBlobBottomCoreColorByShape = { ...(draft.content.selectedBlobBottomCoreColorByShape || {}) };
+      if (draft.content.selectedBlobBottomCoreColorByShape[sourceShape]) {
+        draft.content.selectedBlobBottomCoreColorByShape[newStage.id] = draft.content.selectedBlobBottomCoreColorByShape[sourceShape];
+      }
+
+      draft.content.selectedBlobBottomEdgeColorByShape = { ...(draft.content.selectedBlobBottomEdgeColorByShape || {}) };
+      if (draft.content.selectedBlobBottomEdgeColorByShape[sourceShape]) {
+        draft.content.selectedBlobBottomEdgeColorByShape[newStage.id] = draft.content.selectedBlobBottomEdgeColorByShape[sourceShape];
+      }
+
+      draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
+      if (Object.prototype.hasOwnProperty.call(draft.content.selectedMaskBlurByShape, sourceShape)) {
+        draft.content.selectedMaskBlurByShape[newStage.id] = draft.content.selectedMaskBlurByShape[sourceShape];
+      }
+
       draft.content.stageRenderShapeById = { ...(draft.content.stageRenderShapeById || {}) };
       delete draft.content.stageRenderShapeById[newStage.id];
       draft.content.hiddenStageIds = (draft.content.hiddenStageIds || []).filter((id) => id !== newStage.id);

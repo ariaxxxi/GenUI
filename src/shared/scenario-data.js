@@ -18,6 +18,10 @@ import {
   availableScenarioShapes as shapeAvailableScenarioShapes,
   renderShapeForStageId as shapeRenderShapeForStageId,
 } from '../shapes.js';
+import {
+  celestialSelectedBlobColorDefaultsForRenderShape,
+  celestialSelectedMaskBlurDefaultForRenderShape,
+} from './celestial-selected-presets.js';
 
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
@@ -32,6 +36,10 @@ const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
   { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
 ]);
+
+function selectedBlobDefaultsForRenderShape(renderShape = 'pill') {
+  return celestialSelectedBlobColorDefaultsForRenderShape(renderShape);
+}
 
 export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }) {
   const clamp = typeof clampFn === 'function' ? clampFn : ((v, lo, hi) => Math.max(lo, Math.min(hi, v)));
@@ -298,7 +306,14 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   function normalizeAccentColorByShape(value = {}, fallbackShape = 'pill') {
     const output = {};
     scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
-      output[shape] = normalizeHexColor(value?.[shape], stageById(shape)?.accentColor || '#90acff');
+      const stage = stageById(shape);
+      const defaults = selectedBlobDefaultsForRenderShape(stage?.renderShape || shape);
+      const legacyFallback = stage?.accentColor || '#90acff';
+      const raw = value?.[shape];
+      output[shape] = normalizeHexColor(raw, defaults.accent);
+      if (normalizeHexColor(raw, legacyFallback) === normalizeHexColor(legacyFallback, legacyFallback)) {
+        output[shape] = defaults.accent;
+      }
     });
     return output;
   }
@@ -306,7 +321,85 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   function normalizeSecondaryAccentColorByShape(value = {}, fallbackShape = 'pill') {
     const output = {};
     scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
-      output[shape] = normalizeHexColor(value?.[shape], stageById(shape)?.secondaryAccentColor || '#9761ff');
+      const stage = stageById(shape);
+      const defaults = selectedBlobDefaultsForRenderShape(stage?.renderShape || shape);
+      const legacyFallback = stage?.secondaryAccentColor || '#9761ff';
+      const raw = value?.[shape];
+      output[shape] = normalizeHexColor(raw, defaults.secondaryAccent);
+      if (normalizeHexColor(raw, legacyFallback) === normalizeHexColor(legacyFallback, legacyFallback)) {
+        output[shape] = defaults.secondaryAccent;
+      }
+    });
+    return output;
+  }
+
+  function normalizeSelectedBlobTopCoreColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      const stage = stageById(shape);
+      const defaults = selectedBlobDefaultsForRenderShape(stage?.renderShape || shape);
+      const legacyFallback = stage?.accentColor || '#90acff';
+      const raw = value?.[shape];
+      output[shape] = normalizeHexColor(raw, defaults.topCore);
+      if (normalizeHexColor(raw, legacyFallback) === normalizeHexColor(legacyFallback, legacyFallback)) {
+        output[shape] = defaults.topCore;
+      }
+    });
+    return output;
+  }
+
+  function normalizeSelectedBlobTopEdgeColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      const stage = stageById(shape);
+      const defaults = selectedBlobDefaultsForRenderShape(stage?.renderShape || shape);
+      const legacyFallback = stage?.secondaryAccentColor || '#9761ff';
+      const raw = value?.[shape];
+      output[shape] = normalizeHexColor(raw, defaults.topEdge);
+      if (normalizeHexColor(raw, legacyFallback) === normalizeHexColor(legacyFallback, legacyFallback)) {
+        output[shape] = defaults.topEdge;
+      }
+    });
+    return output;
+  }
+
+  function normalizeSelectedBlobBottomCoreColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      const stage = stageById(shape);
+      const defaults = selectedBlobDefaultsForRenderShape(stage?.renderShape || shape);
+      const legacyFallback = stage?.accentColor || '#90acff';
+      const raw = value?.[shape];
+      output[shape] = normalizeHexColor(raw, defaults.bottomCore);
+      if (normalizeHexColor(raw, legacyFallback) === normalizeHexColor(legacyFallback, legacyFallback)) {
+        output[shape] = defaults.bottomCore;
+      }
+    });
+    return output;
+  }
+
+  function normalizeSelectedBlobBottomEdgeColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      const stage = stageById(shape);
+      const defaults = selectedBlobDefaultsForRenderShape(stage?.renderShape || shape);
+      const legacyFallback = stage?.secondaryAccentColor || '#9761ff';
+      const raw = value?.[shape];
+      output[shape] = normalizeHexColor(raw, defaults.bottomEdge);
+      if (normalizeHexColor(raw, legacyFallback) === normalizeHexColor(legacyFallback, legacyFallback)) {
+        output[shape] = defaults.bottomEdge;
+      }
+    });
+    return output;
+  }
+
+  function normalizeSelectedMaskBlurByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      const renderShape = stageById(shape)?.renderShape || shape;
+      const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
+      const raw = Number(value?.[shape]);
+      output[shape] = Number.isFinite(raw) ? clamp(raw, 0, 120) : fallback;
     });
     return output;
   }
@@ -455,11 +548,52 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function stageAccentColorForShape(scenario, shape) {
-    return normalizeHexColor(scenario?.content?.accentColorByShape?.[shape], stageById(shape)?.accentColor || '#90acff');
+    const defaults = selectedBlobDefaultsForRenderShape(stageById(shape, scenario)?.renderShape || shape);
+    return normalizeHexColor(scenario?.content?.accentColorByShape?.[shape], defaults.accent);
   }
 
   function stageSecondaryAccentColorForShape(scenario, shape) {
-    return normalizeHexColor(scenario?.content?.secondaryAccentColorByShape?.[shape], stageById(shape)?.secondaryAccentColor || '#9761ff');
+    const defaults = selectedBlobDefaultsForRenderShape(stageById(shape, scenario)?.renderShape || shape);
+    return normalizeHexColor(scenario?.content?.secondaryAccentColorByShape?.[shape], defaults.secondaryAccent);
+  }
+
+  function stageSelectedBlobTopCoreColorForShape(scenario, shape) {
+    const defaults = selectedBlobDefaultsForRenderShape(stageById(shape, scenario)?.renderShape || shape);
+    return normalizeHexColor(
+      scenario?.content?.selectedBlobTopCoreColorByShape?.[shape],
+      defaults.topCore,
+    );
+  }
+
+  function stageSelectedBlobTopEdgeColorForShape(scenario, shape) {
+    const defaults = selectedBlobDefaultsForRenderShape(stageById(shape, scenario)?.renderShape || shape);
+    return normalizeHexColor(
+      scenario?.content?.selectedBlobTopEdgeColorByShape?.[shape],
+      defaults.topEdge,
+    );
+  }
+
+  function stageSelectedBlobBottomCoreColorForShape(scenario, shape) {
+    const defaults = selectedBlobDefaultsForRenderShape(stageById(shape, scenario)?.renderShape || shape);
+    return normalizeHexColor(
+      scenario?.content?.selectedBlobBottomCoreColorByShape?.[shape],
+      defaults.bottomCore,
+    );
+  }
+
+  function stageSelectedBlobBottomEdgeColorForShape(scenario, shape) {
+    const defaults = selectedBlobDefaultsForRenderShape(stageById(shape, scenario)?.renderShape || shape);
+    return normalizeHexColor(
+      scenario?.content?.selectedBlobBottomEdgeColorByShape?.[shape],
+      defaults.bottomEdge,
+    );
+  }
+
+  function stageSelectedMaskBlurForShape(scenario, shape) {
+    const renderShape = stageById(shape, scenario)?.renderShape || shape;
+    const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
+    const raw = Number(scenario?.content?.selectedMaskBlurByShape?.[shape]);
+    return Number.isFinite(raw) ? clamp(raw, 0, 120) : fallback;
   }
 
   function normalizeTriggers(value) {
@@ -514,6 +648,11 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
         secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
+        selectedBlobTopCoreColorByShape: normalizeSelectedBlobTopCoreColorByShape(content.selectedBlobTopCoreColorByShape, shape),
+        selectedBlobTopEdgeColorByShape: normalizeSelectedBlobTopEdgeColorByShape(content.selectedBlobTopEdgeColorByShape, shape),
+        selectedBlobBottomCoreColorByShape: normalizeSelectedBlobBottomCoreColorByShape(content.selectedBlobBottomCoreColorByShape, shape),
+        selectedBlobBottomEdgeColorByShape: normalizeSelectedBlobBottomEdgeColorByShape(content.selectedBlobBottomEdgeColorByShape, shape),
+        selectedMaskBlurByShape: normalizeSelectedMaskBlurByShape(content.selectedMaskBlurByShape, shape),
         listChipIconsByShape: normalizedListChipIconsByShape,
         canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
       },
@@ -646,6 +785,11 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    stageSelectedBlobTopCoreColorForShape,
+    stageSelectedBlobTopEdgeColorForShape,
+    stageSelectedBlobBottomCoreColorForShape,
+    stageSelectedBlobBottomEdgeColorForShape,
+    stageSelectedMaskBlurForShape,
     createDefaultListItem,
     normalizeListItem,
     normalizeListItems,

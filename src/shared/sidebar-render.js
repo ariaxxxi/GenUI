@@ -39,6 +39,7 @@ export function createSidebarRender(ctx, refs) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'scenario-item' + (item.id === ctx.getSelectedScenarioId() ? ' active' : '');
+      button.dataset.scenarioId = item.id;
       const stage = ctx.stageById(item.shape);
       button.innerHTML = `<span class="scenario-item-name">${item.name}</span><span class="scenario-item-meta">${stage?.name || item.shape}</span>`;
       button.addEventListener('click', () => refs.actions.selectScenario(item.id));
@@ -95,17 +96,28 @@ export function createSidebarRender(ctx, refs) {
     const builtin = ctx.builtinStageById(stage?.id);
     const sizeOverride = ctx.scenarioStageSizeOverride(scenario, scenario?.shape);
     const stageSelected = ctx.stageSelectedForShape ? ctx.stageSelectedForShape(scenario, scenario?.shape) : !!stage?.selected;
-    const stageAccentColor = ctx.stageAccentColorForShape ? ctx.stageAccentColorForShape(scenario, scenario?.shape) : String(stage?.accentColor || '#90acff');
-    const stageAccentSecondaryColor = ctx.stageSecondaryAccentColorForShape ? ctx.stageSecondaryAccentColorForShape(scenario, scenario?.shape) : String(stage?.secondaryAccentColor || '#9761ff');
+    const stageBlobTopCoreColor = ctx.stageSelectedBlobTopCoreColorForShape
+      ? ctx.stageSelectedBlobTopCoreColorForShape(scenario, scenario?.shape)
+      : String(stage?.accentColor || '#90acff');
+    const stageBlobTopEdgeColor = ctx.stageSelectedBlobTopEdgeColorForShape
+      ? ctx.stageSelectedBlobTopEdgeColorForShape(scenario, scenario?.shape)
+      : String(stage?.secondaryAccentColor || '#9761ff');
+    const stageBlobBottomCoreColor = ctx.stageSelectedBlobBottomCoreColorForShape
+      ? ctx.stageSelectedBlobBottomCoreColorForShape(scenario, scenario?.shape)
+      : String(stage?.accentColor || '#90acff');
+    const stageBlobBottomEdgeColor = ctx.stageSelectedBlobBottomEdgeColorForShape
+      ? ctx.stageSelectedBlobBottomEdgeColorForShape(scenario, scenario?.shape)
+      : String(stage?.secondaryAccentColor || '#9761ff');
+    const stageMaskBlur = ctx.stageSelectedMaskBlurForShape
+      ? ctx.stageSelectedMaskBlurForShape(scenario, scenario?.shape)
+      : '';
     const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
     const isCardLike = renderShape === 'card' || renderShape === 'card-s';
-    if (ctx.UI.stageNameInput) ctx.UI.stageNameInput.value = stage?.name || '';
     if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
     if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
     if (ctx.UI.stageHeightInput) ctx.UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
     if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
-    if (ctx.UI.stagePhoneBlurToggle) ctx.UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
     if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.toggle('hidden', renderShape !== 'list');
     if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.toggle('hidden', renderShape !== 'list');
@@ -124,18 +136,29 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
     }
     if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
-    if (ctx.UI.stageAccentColor) {
-      ctx.UI.stageAccentColor.value = String(stageAccentColor || '#90acff');
-      ctx.UI.stageAccentColor.disabled = !stage;
+    if (ctx.UI.stageBlobTopCoreColor) {
+      ctx.UI.stageBlobTopCoreColor.value = String(stageBlobTopCoreColor || '#90acff');
+      ctx.UI.stageBlobTopCoreColor.disabled = !stage;
     }
-    if (ctx.UI.stageAccentSecondaryColor) {
-      ctx.UI.stageAccentSecondaryColor.value = String(stageAccentSecondaryColor || '#9761ff');
-      ctx.UI.stageAccentSecondaryColor.disabled = !stage;
+    if (ctx.UI.stageBlobTopEdgeColor) {
+      ctx.UI.stageBlobTopEdgeColor.value = String(stageBlobTopEdgeColor || '#9761ff');
+      ctx.UI.stageBlobTopEdgeColor.disabled = !stage;
+    }
+    if (ctx.UI.stageBlobBottomCoreColor) {
+      ctx.UI.stageBlobBottomCoreColor.value = String(stageBlobBottomCoreColor || '#90acff');
+      ctx.UI.stageBlobBottomCoreColor.disabled = !stage;
+    }
+    if (ctx.UI.stageBlobBottomEdgeColor) {
+      ctx.UI.stageBlobBottomEdgeColor.value = String(stageBlobBottomEdgeColor || '#9761ff');
+      ctx.UI.stageBlobBottomEdgeColor.disabled = !stage;
+    }
+    if (ctx.UI.stageMaskBlurInput) {
+      ctx.UI.stageMaskBlurInput.value = Number.isFinite(stageMaskBlur) ? String(stageMaskBlur) : '';
+      ctx.UI.stageMaskBlurInput.disabled = !stage;
     }
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
     if (ctx.UI.stageDuplicate) ctx.UI.stageDuplicate.disabled = !stage;
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage;
-    if (ctx.UI.stageReset) ctx.UI.stageReset.disabled = !stage || !builtin;
     renderStageComponentControls(stage);
   }
 
@@ -200,7 +223,6 @@ export function createSidebarRender(ctx, refs) {
     const hasIcon = ctx.stageHasComponent(stage, 'icon');
     const hasImage = ctx.stageHasComponent(stage, 'image');
     const hasIntentHeader = ctx.stageHasComponent(stage, 'intent-header');
-    if (ctx.UI.scenarioName) ctx.UI.scenarioName.value = scenario?.name || '';
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
     const stageText = ctx.stageTextForShape(scenario, scenario?.shape);
