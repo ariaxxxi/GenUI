@@ -1,0 +1,1672 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Celestial Visual</title>
+  <style>
+    :root {
+      --bg-0: rgba(0, 0, 0, 1);
+      --bg-1: rgba(6, 7, 10, 1);
+      --panel: rgba(10, 10, 12, 0.94);
+      --panel-border: rgba(255, 255, 255, 0.07);
+      --text: rgba(248, 250, 255, 0.96);
+      --muted: rgba(202, 209, 226, 0.68);
+      --accent-a: rgb(139 174 255);
+      --accent-b: rgb(135 104 255);
+      --shadow-deep: 0 30px 80px rgba(0, 0, 0, 0.45);
+      --motion-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
+      --blob-top-glow: rgba(0, 0, 0, 0);
+      --blob-bottom-glow: rgba(0, 0, 0, 0);
+      --blob-top-core: rgba(73, 121, 255, 0.86);
+      --blob-top-edge: rgba(87, 47, 255, 0.68);
+      --blob-bottom-core: rgba(73, 121, 255, 0.86);
+      --blob-bottom-edge: rgba(87, 47, 255, 0.68);
+      --inner-glow-color: rgba(255, 255, 255, 0.8);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background: linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.86), transparent 88%);
+      opacity: 0.35;
+    }
+
+    main {
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0 0 24px;
+      display: grid;
+      align-items: stretch;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(250px, 320px) minmax(520px, 1fr) minmax(320px, 400px);
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .hero-copy,
+    .control-panel,
+    .preview-panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow-deep);
+    }
+
+    .hero-copy {
+      padding: 20px 22px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .hero-geometry {
+      margin-top: 6px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .control-panel {
+      padding: 22px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .control label,
+    .segment-label {
+      color: rgba(225, 229, 240, 0.72);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .control output,
+    .helper-text {
+      color: rgba(183, 190, 208, 0.62);
+      font-size: 12px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: rgba(214, 218, 230, 0.9);
+    }
+
+    select,
+    input[type="color"],
+    button,
+    .toggle {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      color: rgba(232, 236, 245, 0.88);
+      border-radius: 16px;
+      font: inherit;
+    }
+
+    select {
+      min-height: 42px;
+      padding: 0 14px;
+      appearance: none;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      min-height: 42px;
+      padding: 6px;
+    }
+
+    .segment {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .segment button {
+      padding: 11px 14px;
+      cursor: pointer;
+      transition:
+        transform 180ms var(--motion-ease),
+        border-color 180ms var(--motion-ease),
+        background 180ms var(--motion-ease);
+    }
+
+    .segment button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, 0.075);
+      border-color: rgba(255, 255, 255, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .toggle input {
+      margin: 0;
+    }
+
+    .preview-panel {
+      padding: 22px;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 18px;
+    }
+
+    .preview-title {
+      justify-self: center;
+      margin: 0;
+      color: rgba(214, 219, 232, 0.42);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.34em;
+      line-height: 1;
+      text-transform: uppercase;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .preview-stage {
+      min-height: 100%;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: #000000;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+    }
+
+    .preview-stage:focus-visible {
+      outline: 1px solid rgba(255, 255, 255, 0.12);
+      outline-offset: 2px;
+    }
+
+    .preview-stage::after {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border-radius: 18px;
+      border: 1px dashed rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+    }
+
+    .test-shell {
+      position: relative;
+      width: var(--shell-width, 440px);
+      height: var(--shell-height, 260px);
+      border-radius: var(--shell-radius, 32px);
+      isolation: isolate;
+      --blob-transform-duration: 700ms;
+      --blob-opacity-duration: 700ms;
+      --highlight-transform-duration: 700ms;
+      --highlight-opacity-duration: 700ms;
+      --inner-glow-opacity-duration: 420ms;
+      transform: translateZ(0);
+      transition:
+        width 600ms var(--motion-ease),
+        height 600ms var(--motion-ease),
+        border-radius 600ms var(--motion-ease),
+        transform 600ms var(--motion-ease),
+        box-shadow 600ms var(--motion-ease);
+      cursor: pointer;
+      will-change: width, height, border-radius, transform;
+    }
+
+    .test-shell-list {
+      display: none;
+      gap: 18px;
+      justify-items: center;
+    }
+
+    .preview-stage[data-view-mode="single"] .test-shell--single {
+      display: block;
+    }
+
+    .preview-stage[data-view-mode="list"] .test-shell--single {
+      display: none;
+    }
+
+    .preview-stage[data-view-mode="list"] .test-shell-list {
+      display: grid;
+    }
+
+    .test-shell-list .test-shell {
+      cursor: default;
+    }
+
+    .test-shell-list .test-shell:hover {
+      transform: translateZ(0);
+    }
+
+    .test-shell:hover {
+      transform: translateY(-2px);
+    }
+
+    .test-shell[data-active="true"] {
+      box-shadow: 0 32px 96px rgba(0, 0, 0, 0.58);
+    }
+
+    .test-shell-content {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      overflow: hidden;
+      background: #000000;
+      box-shadow: inset 0 0 0 1px rgba(129, 129, 129, 0.5);
+      isolation: isolate;
+    }
+
+    .test-shell-refraction {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      overflow: hidden;
+      pointer-events: none;
+      -webkit-mask-image: var(--zero-spread-mask-url);
+      mask-image: var(--zero-spread-mask-url);
+      -webkit-mask-mode: luminance;
+      mask-mode: luminance;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-position: center;
+      mask-position: center;
+      z-index: 0;
+    }
+
+    .test-shell-inner-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+      mix-blend-mode: screen;
+      box-shadow: var(--inner-glow-shadow-inactive,
+        inset 0 0 var(--inner-glow-blur, 5px) 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16));
+      transition:
+        opacity var(--inner-glow-opacity-duration, 420ms) var(--motion-ease),
+        box-shadow 420ms var(--motion-ease);
+    }
+
+    .test-shell[data-active="true"] .test-shell-inner-glow {
+      opacity: 1;
+      box-shadow: var(--inner-glow-shadow-active,
+        inset 0 0 var(--inner-glow-blur, 5px) 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16));
+    }
+
+    .test-shell-accent-rim {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 2;
+      box-shadow: var(--accent-rim-shadow-inactive,
+        inset calc(var(--unit, 1px) * 13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
+        inset calc(var(--unit, 1px) * -13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
+        inset 0 calc(var(--unit, 1px) * 9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
+        inset 0 calc(var(--unit, 1px) * -9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
+        inset 0 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -5)
+          rgba(255, 255, 255, 0.03));
+      opacity: 0;
+      transition:
+        box-shadow 420ms var(--motion-ease),
+        opacity 420ms var(--motion-ease);
+    }
+
+    .test-shell[data-active="true"] .test-shell-accent-rim {
+      opacity: 0.96;
+      box-shadow: var(--accent-rim-shadow-active,
+        inset calc(var(--unit, 1px) * 13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
+        inset calc(var(--unit, 1px) * -13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
+        inset 0 calc(var(--unit, 1px) * 9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
+        inset 0 calc(var(--unit, 1px) * -9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
+        inset 0 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -5)
+          rgba(255, 255, 255, 0.03));
+    }
+
+    .test-shell[data-rim-enabled="false"] .test-shell-accent-rim {
+      opacity: 0 !important;
+    }
+
+    .test-shell-top-left-highlight-mask {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .test-shell-top-left-highlight {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
+      height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      background-image: url('src/assets/button-highlight-top-left.png');
+      background-repeat: no-repeat;
+      background-position: left top;
+      background-size: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0)) var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      mix-blend-mode: screen;
+      filter: blur(calc((var(--shell-height, 56px) - 56px) * 0.0328));
+      opacity: 0;
+      transform: translate(var(--highlight-top-start-x, 0px), var(--highlight-top-start-y, 0px));
+      transition:
+        transform var(--highlight-transform-duration, 700ms) var(--motion-ease),
+        opacity var(--highlight-opacity-duration, 420ms) var(--motion-ease),
+        filter 450ms var(--motion-ease);
+    }
+
+    .test-shell-bottom-right-pass {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
+      height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .test-shell-bottom-right-highlight {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
+      height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      background-image: url('src/assets/figma-proto-button-highlight-bottom-mask.png');
+      background-repeat: no-repeat;
+      background-size: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0)) var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      background-position: bottom right;
+      mix-blend-mode: screen;
+      filter: blur(calc((var(--shell-height, 56px) - 56px) * 0.0328));
+      opacity: 0;
+      transform: translate(var(--highlight-bottom-start-x, 0px), var(--highlight-bottom-start-y, 0px));
+      transition:
+        transform var(--highlight-transform-duration, 700ms) var(--motion-ease),
+        opacity var(--highlight-opacity-duration, 420ms) var(--motion-ease),
+        filter 450ms var(--motion-ease);
+    }
+
+    .test-shell[data-active="true"] .test-shell-top-left-highlight {
+      opacity: 1;
+      transform: translate(var(--highlight-top-end-x, 0px), var(--highlight-top-end-y, 0px));
+    }
+
+    .test-shell[data-active="true"] .test-shell-bottom-right-highlight {
+      opacity: 1;
+      transform: translate(var(--highlight-bottom-end-x, 0px), var(--highlight-bottom-end-y, 0px));
+    }
+
+    .test-shell-blob {
+      position: absolute;
+      width: var(--blob-size, 220px);
+      height: var(--blob-size, 220px);
+      border-radius: 50%;
+      filter: blur(calc(var(--unit, 1px) * var(--blob-blur, 28)));
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0;
+      transition:
+        transform var(--blob-transform-duration, 700ms) var(--motion-ease),
+        opacity var(--blob-opacity-duration, 420ms) var(--motion-ease),
+        filter 420ms var(--motion-ease);
+      will-change: transform, opacity;
+    }
+
+    .test-shell-blob--top-left {
+      left: 0;
+      top: 0;
+      transform: translate(var(--blob-top-start-x, -34%), var(--blob-top-start-y, -36%));
+      background:
+        radial-gradient(circle at 36% 36%,
+          var(--blob-top-core) 0%,
+          var(--blob-top-core) 28%,
+          var(--blob-top-edge) 56%,
+          var(--blob-top-edge) 100%);
+    }
+
+    .test-shell-blob--bottom-right {
+      right: 0;
+      bottom: 0;
+      transform: translate(var(--blob-bottom-start-x, 36%), var(--blob-bottom-start-y, 38%));
+      background:
+        radial-gradient(circle at 64% 64%,
+          var(--blob-bottom-core) 0%,
+          var(--blob-bottom-core) 28%,
+          var(--blob-bottom-edge) 56%,
+          var(--blob-bottom-edge) 100%);
+    }
+
+    .test-shell[data-active="true"] .test-shell-blob--top-left {
+      transform: translate(var(--blob-top-end-x, -34%), var(--blob-top-end-y, -36%));
+      opacity: 1;
+    }
+
+    .test-shell[data-active="true"] .test-shell-blob--bottom-right {
+      transform: translate(var(--blob-bottom-end-x, 36%), var(--blob-bottom-end-y, 38%));
+      opacity: 1;
+    }
+
+    .celestial-chrome {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      overflow: hidden;
+      pointer-events: none;
+      isolation: isolate;
+    }
+
+    .celestial-rim,
+    .celestial-inner-highlight,
+    .celestial-refraction,
+    .celestial-caustic-mask,
+    .celestial-top-left-highlight,
+    .celestial-bottom-right-highlight,
+    .celestial-sheen {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+    }
+
+    .celestial-rim {
+      box-shadow:
+        inset calc(var(--unit, 1px) * 1.6) 0 calc(var(--unit, 1px) * 18) rgba(255, 214, 243, 0.42),
+        inset calc(var(--unit, 1px) * -1.6) 0 calc(var(--unit, 1px) * 18) rgba(171, 149, 255, 0.42),
+        inset 0 calc(var(--unit, 1px) * 1.3) calc(var(--unit, 1px) * 14) rgba(255, 255, 255, 0.46),
+        inset 0 calc(var(--unit, 1px) * -1.1) calc(var(--unit, 1px) * 14) rgba(255, 223, 246, 0.3),
+        inset 0 0 calc(var(--unit, 1px) * 22) rgba(255, 255, 255, 0.035);
+      opacity: 0.98;
+      transition:
+        opacity 420ms var(--motion-ease),
+        box-shadow 420ms var(--motion-ease);
+    }
+
+    .celestial-inner-highlight {
+      mix-blend-mode: screen;
+      box-shadow:
+        inset 0 0 calc(var(--unit, 1px) * 7) calc(var(--unit, 1px) * 1.1) rgba(255, 255, 255, 0.72),
+        inset 0 calc(var(--unit, 1px) * 1.2) 0 rgba(255, 255, 255, 0.2);
+      opacity: 0.82;
+      transition: opacity 420ms var(--motion-ease);
+    }
+
+    .celestial-sheen {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 18%),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0) 18%);
+      opacity: 0.4;
+    }
+
+    .celestial-refraction {
+      z-index: 4;
+      pointer-events: none;
+      overflow: hidden;
+      -webkit-mask-image: var(--zero-spread-mask-url);
+      mask-image: var(--zero-spread-mask-url);
+      -webkit-mask-mode: luminance;
+      mask-mode: luminance;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-position: center;
+      mask-position: center;
+    }
+
+    .celestial-caustic-mask {
+      overflow: hidden;
+      filter: saturate(1.08);
+    }
+
+    .celestial-caustic {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--pass-width, 240px);
+      height: var(--pass-height, 240px);
+      margin-left: calc(var(--pass-width, 240px) * -0.5);
+      margin-top: calc(var(--pass-height, 240px) * -0.5);
+      mix-blend-mode: screen;
+      opacity: 0;
+      filter: blur(calc(var(--unit, 1px) * 18));
+      transition:
+        transform 720ms var(--motion-ease),
+        opacity 520ms var(--motion-ease),
+        filter 520ms var(--motion-ease);
+      will-change: transform, opacity;
+    }
+
+    .celestial-caustic-a {
+      background:
+        radial-gradient(circle at 50% 50%,
+          rgba(255, 252, 255, 0.98) 0%,
+          rgba(255, 244, 251, 0.92) 7%,
+          rgba(255, 201, 236, 0.82) 16%,
+          rgba(241, 104, 194, 0.58) 30%,
+          rgba(182, 44, 132, 0.34) 46%,
+          rgba(86, 16, 59, 0.18) 62%,
+          rgba(0, 0, 0, 0) 78%);
+      transform: translate(var(--a-start-x, 0px), var(--a-start-y, 0px)) scale(0.92);
+      opacity: 0.02;
+    }
+
+    .celestial-caustic-b {
+      background:
+        radial-gradient(circle at 50% 50%,
+          rgba(246, 242, 255, 0.98) 0%,
+          rgba(232, 224, 255, 0.92) 7%,
+          rgba(191, 171, 255, 0.82) 16%,
+          rgba(128, 103, 255, 0.58) 30%,
+          rgba(76, 56, 198, 0.34) 46%,
+          rgba(28, 23, 89, 0.18) 62%,
+          rgba(0, 0, 0, 0) 78%);
+      transform: translate(var(--b-start-x, 0px), var(--b-start-y, 0px)) scale(0.92);
+      opacity: 0.02;
+    }
+
+    .test-shell[data-active="true"] .celestial-caustic-a {
+      transform: translate(var(--a-end-x, 0px), var(--a-end-y, 0px)) scale(1);
+      opacity: 1;
+    }
+
+    .test-shell[data-active="true"] .celestial-caustic-b {
+      transform: translate(var(--b-end-x, 0px), var(--b-end-y, 0px)) scale(1.02);
+      opacity: 1;
+    }
+
+    .celestial-top-left-highlight,
+    .celestial-bottom-right-highlight {
+      background-repeat: no-repeat;
+      mix-blend-mode: screen;
+      opacity: 0.52;
+      transition:
+        opacity 420ms var(--motion-ease),
+        transform 720ms var(--motion-ease),
+        filter 420ms var(--motion-ease);
+    }
+
+    .celestial-top-left-highlight {
+      width: var(--glint-width, 146px);
+      height: var(--glint-height, 58px);
+      background-image: url('src/assets/button-highlight-top-left.png');
+      background-size: 100% 100%;
+      background-position: left top;
+      filter: blur(calc(var(--unit, 1px) * 1.8));
+      transform: translate(var(--tl-start-x, 0px), var(--tl-start-y, 0px));
+    }
+
+    .celestial-bottom-right-highlight {
+      width: var(--glint-width, 146px);
+      height: var(--glint-height, 58px);
+      right: 0;
+      left: auto;
+      top: auto;
+      bottom: 0;
+      background-image: url('src/assets/figma-proto-button-highlight-bottom-mask.png');
+      background-size: 100% 100%;
+      background-position: bottom right;
+      filter: blur(calc(var(--unit, 1px) * 1.8));
+      transform: translate(var(--br-start-x, 0px), var(--br-start-y, 0px));
+    }
+
+    .test-shell[data-active="true"] .celestial-top-left-highlight {
+      opacity: 0.34;
+      transform: translate(0px, 0px);
+    }
+
+    .test-shell[data-active="true"] .celestial-bottom-right-highlight {
+      opacity: 0.3;
+      transform: translate(0px, 0px);
+    }
+
+    .test-shell[data-active="false"] .celestial-rim,
+    .test-shell[data-active="false"] .celestial-inner-highlight {
+      opacity: 0.76;
+    }
+
+    .status-row {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(215, 223, 243, 0.8);
+      font-size: 13px;
+    }
+
+    .status-chip {
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    @media (max-width: 1220px) {
+      .workspace {
+        grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .hero-copy {
+        grid-column: 1;
+      }
+
+      .preview-panel {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+      }
+
+      .control-panel {
+        grid-column: 1;
+      }
+    }
+
+    @media (max-width: 980px) {
+      main {
+        min-height: auto;
+        padding-bottom: 18px;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+
+      .preview-panel,
+      .control-panel,
+      .hero-copy {
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      .preview-panel {
+        order: 2;
+      }
+
+      .control-panel {
+        order: 3;
+      }
+
+      .preview-stage {
+        min-height: 520px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main {
+        width: 100%;
+        padding-top: 0;
+      }
+
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-stage {
+        padding: 16px;
+        min-height: 460px;
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="workspace">
+      <article class="hero-copy">
+        <div class="hero-geometry">
+          <div class="control-grid">
+            <div class="control">
+              <div class="control-header">
+                <label for="widthRange">Width</label>
+                <output id="widthValue">420px</output>
+              </div>
+              <input id="widthRange" type="range" min="90" max="420" step="1" value="420">
+            </div>
+
+            <div class="control">
+              <div class="control-header">
+              <label for="heightRange">Height</label>
+              <output id="heightValue">260px</output>
+            </div>
+            <input id="heightRange" type="range" min="40" max="420" step="1" value="260">
+          </div>
+
+          <div class="control">
+            <div class="control-header">
+              <label for="radiusRange">Radius</label>
+              <output id="radiusValue">32px</output>
+            </div>
+            <input id="radiusRange" type="range" min="12" max="140" step="1" value="32">
+          </div>
+
+            <div class="control">
+              <label for="directionSelect">Entry direction</label>
+              <select id="directionSelect">
+                <option value="bottom">Bottom</option>
+                <option value="top">Top</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control">
+            <div class="segment-label">Preset geometry</div>
+          <div class="segment" id="presetButtons">
+            <button type="button" data-preset="chip" aria-pressed="false">Chip</button>
+            <button type="button" data-preset="list" aria-pressed="false">List</button>
+            <button type="button" data-preset="pill" aria-pressed="false">Pill</button>
+            <button type="button" data-preset="square" aria-pressed="false">Circle</button>
+            <button type="button" data-preset="card" aria-pressed="true">Card</button>
+          </div>
+        </div>
+        </div>
+      </article>
+
+      <section class="preview-panel">
+        <h1 class="preview-title">Celestial</h1>
+        <div class="preview-stage" id="previewStage" data-view-mode="single" tabindex="0">
+          <article class="test-shell test-shell--single" id="testShell" data-active="true" style="--shell-width: 420px; --shell-height: 260px; --shell-radius: 32px;">
+            <div class="test-shell-content">
+              <div class="test-shell-refraction" aria-hidden="true">
+                <div class="test-shell-blob test-shell-blob--top-left"></div>
+                <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+              </div>
+              <div class="test-shell-inner-glow" aria-hidden="true"></div>
+              <div class="test-shell-accent-rim" aria-hidden="true"></div>
+              <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                <div class="test-shell-top-left-highlight"></div>
+              </div>
+              <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                <div class="test-shell-bottom-right-highlight"></div>
+              </div>
+            </div>
+          </article>
+
+          <div class="test-shell-list" id="testShellList" aria-label="Vertical list preview">
+            <article class="test-shell test-shell--list-item" data-active="true">
+              <div class="test-shell-content">
+                <div class="test-shell-refraction" aria-hidden="true">
+                  <div class="test-shell-blob test-shell-blob--top-left"></div>
+                  <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+                </div>
+                <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-accent-rim" aria-hidden="true"></div>
+                <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                  <div class="test-shell-top-left-highlight"></div>
+                </div>
+                <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                  <div class="test-shell-bottom-right-highlight"></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="test-shell test-shell--list-item" data-active="false">
+              <div class="test-shell-content">
+                <div class="test-shell-refraction" aria-hidden="true">
+                  <div class="test-shell-blob test-shell-blob--top-left"></div>
+                  <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+                </div>
+                <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-accent-rim" aria-hidden="true"></div>
+                <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                  <div class="test-shell-top-left-highlight"></div>
+                </div>
+                <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                  <div class="test-shell-bottom-right-highlight"></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="test-shell test-shell--list-item" data-active="false">
+              <div class="test-shell-content">
+                <div class="test-shell-refraction" aria-hidden="true">
+                  <div class="test-shell-blob test-shell-blob--top-left"></div>
+                  <div class="test-shell-blob test-shell-blob--bottom-right"></div>
+                </div>
+                <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-accent-rim" aria-hidden="true"></div>
+                <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
+                  <div class="test-shell-top-left-highlight"></div>
+                </div>
+                <div class="test-shell-bottom-right-pass" aria-hidden="true">
+                  <div class="test-shell-bottom-right-highlight"></div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="status-row">
+          <div class="status-chip" id="geometryStatus">420 × 260 · radius 32</div>
+          <div class="status-chip" id="motionStatus">Direction: bottom · active</div>
+        </div>
+      </section>
+
+      <aside class="control-panel">
+        <div class="control">
+          <div class="segment-label">Layer 1 · Refraction Mask</div>
+        </div>
+
+        <div class="control-grid">
+          <label class="toggle" for="maskEnabledToggle">
+            <input id="maskEnabledToggle" type="checkbox" checked>
+            <span>Mask enabled</span>
+          </label>
+
+          <div class="control">
+            <div class="control-header">
+              <label for="maskBlurRange">Mask blur</label>
+              <output id="maskBlurValue">30</output>
+            </div>
+            <input id="maskBlurRange" type="range" min="0" max="60" step="0.5" value="30">
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="segment-label">Layer 2 · Accent Blobs</div>
+        </div>
+
+        <div class="control-grid">
+          <div class="control">
+            <label for="blobTopCore">Top-left core</label>
+            <input id="blobTopCore" type="color" value="#90acff">
+          </div>
+
+          <div class="control">
+            <label for="blobTopEdge">Top-left edge</label>
+            <input id="blobTopEdge" type="color" value="#90acff">
+          </div>
+
+          <div class="control">
+            <label for="blobBottomCore">Bottom-right core</label>
+            <input id="blobBottomCore" type="color" value="#9761ff">
+          </div>
+
+          <div class="control">
+            <label for="blobBottomEdge">Bottom-right edge</label>
+            <input id="blobBottomEdge" type="color" value="#9761ff">
+          </div>
+
+          <div class="control">
+            <div class="control-header">
+              <label for="blobBlurRange">Blob blur</label>
+              <output id="blobBlurValue">40</output>
+            </div>
+            <input id="blobBlurRange" type="range" min="0" max="80" step="0.5" value="40">
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="segment-label">Layer 2 · Blob Position</div>
+        </div>
+
+        <div class="control-grid">
+          <div class="control">
+            <div class="control-header">
+              <label for="blobTopXRange">Top-left X</label>
+              <output id="blobTopXValue">-34%</output>
+            </div>
+            <input id="blobTopXRange" type="range" min="-80" max="80" step="1" value="-34">
+          </div>
+
+          <div class="control">
+            <div class="control-header">
+              <label for="blobBottomXRange">Bottom-right X</label>
+              <output id="blobBottomXValue">36%</output>
+            </div>
+            <input id="blobBottomXRange" type="range" min="-80" max="80" step="1" value="36">
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="segment-label">Layer 3 · Highlights</div>
+        </div>
+
+        <div class="control-grid">
+          <div class="control">
+            <div class="control-header">
+              <label for="highlightScaleRange">Scale</label>
+              <output id="highlightScaleValue">100%</output>
+            </div>
+            <input id="highlightScaleRange" type="range" min="40" max="200" step="1" value="100">
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="segment-label">Layer 4 · Inner Glow</div>
+        </div>
+
+        <div class="control-grid">
+          <label class="toggle" for="rimEnabledToggle">
+            <input id="rimEnabledToggle" type="checkbox" checked>
+            <span>Rim enabled</span>
+          </label>
+
+          <div class="control">
+            <div class="control-header">
+              <label for="innerGlowBlurRange">Inner glow blur</label>
+              <output id="innerGlowBlurValue">5</output>
+            </div>
+            <input id="innerGlowBlurRange" type="range" min="0" max="40" step="0.5" value="5">
+          </div>
+        </div>
+
+        <div class="helper-text" id="helperText">
+          Click the container to toggle active. Hover also lifts the shell so you can inspect edges while resizing.
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      width: 420,
+      height: 260,
+      radius: 32,
+      direction: "bottom",
+      active: true,
+      blobTopCore: "#6386ef",
+      blobTopEdge: "#a086ef",
+      blobBottomCore: "#5973ef",
+      blobBottomEdge: "#43367a",
+      maskBlur: 10.5,
+      blobBlur: 80,
+      blobTopX: -27,
+      blobTopY: -55,
+      blobBottomX: 27,
+      blobBottomY: 58,
+      highlightTopX: -20,
+      highlightTopY: -15,
+      highlightBottomX: 8,
+      highlightBottomY: 0,
+      highlightScale: 100,
+      innerGlowBlur: 2,
+      maskEnabled: true,
+      rimEnabled: true,
+      previewMode: "single",
+    };
+
+    const listState = {
+      activeIndex: 0,
+      items: [
+        { active: true, direction: "bottom" },
+        { active: false, direction: "top" },
+        { active: false, direction: "top" },
+      ],
+    };
+
+    const shell = document.getElementById("testShell");
+    const previewStage = document.getElementById("previewStage");
+    const listShells = Array.from(document.querySelectorAll(".test-shell--list-item"));
+    const widthRange = document.getElementById("widthRange");
+    const heightRange = document.getElementById("heightRange");
+    const radiusRange = document.getElementById("radiusRange");
+    const directionSelect = document.getElementById("directionSelect");
+    const blobTopCoreInput = document.getElementById("blobTopCore");
+    const blobTopEdgeInput = document.getElementById("blobTopEdge");
+    const blobBottomCoreInput = document.getElementById("blobBottomCore");
+    const blobBottomEdgeInput = document.getElementById("blobBottomEdge");
+    const maskEnabledToggle = document.getElementById("maskEnabledToggle");
+    const maskBlurRange = document.getElementById("maskBlurRange");
+    const blobBlurRange = document.getElementById("blobBlurRange");
+    const blobTopXRange = document.getElementById("blobTopXRange");
+    const blobBottomXRange = document.getElementById("blobBottomXRange");
+    const highlightScaleRange = document.getElementById("highlightScaleRange");
+    const innerGlowBlurRange = document.getElementById("innerGlowBlurRange");
+    const rimEnabledToggle = document.getElementById("rimEnabledToggle");
+    const widthValue = document.getElementById("widthValue");
+    const heightValue = document.getElementById("heightValue");
+    const radiusValue = document.getElementById("radiusValue");
+    const maskBlurValue = document.getElementById("maskBlurValue");
+    const blobBlurValue = document.getElementById("blobBlurValue");
+    const blobTopXValue = document.getElementById("blobTopXValue");
+    const blobBottomXValue = document.getElementById("blobBottomXValue");
+    const highlightScaleValue = document.getElementById("highlightScaleValue");
+    const innerGlowBlurValue = document.getElementById("innerGlowBlurValue");
+    const geometryStatus = document.getElementById("geometryStatus");
+    const motionStatus = document.getElementById("motionStatus");
+    const helperText = document.getElementById("helperText");
+    const presetButtons = Array.from(document.querySelectorAll("[data-preset]"));
+
+    const presets = {
+      chip: {
+        width: 160,
+        height: 64,
+        radius: 32,
+        direction: "bottom",
+        blobTopCore: "#8fb2ef",
+        blobTopEdge: "#8a72eb",
+        blobBottomCore: "#a8bbf0",
+        blobBottomEdge: "#572fff",
+        maskBlur: 30,
+        blobBlur: 37,
+        blobTopX: -26,
+        blobTopY: -36,
+        blobBottomX: 45,
+        blobBottomY: 38,
+        highlightTopX: 0,
+        highlightTopY: 0,
+        highlightBottomX: 0,
+        highlightBottomY: 0,
+        highlightScale: 100,
+        innerGlowBlur: 8,
+        previewMode: "single",
+      },
+      list: {
+        width: 160,
+        height: 64,
+        radius: 32,
+        direction: "bottom",
+        blobTopCore: "#8fb2ef",
+        blobTopEdge: "#8a72eb",
+        blobBottomCore: "#a8bbf0",
+        blobBottomEdge: "#572fff",
+        maskBlur: 30,
+        blobBlur: 37,
+        blobTopX: -26,
+        blobTopY: -36,
+        blobBottomX: 45,
+        blobBottomY: 38,
+        highlightTopX: 0,
+        highlightTopY: 0,
+        highlightBottomX: 0,
+        highlightBottomY: 0,
+        highlightScale: 100,
+        innerGlowBlur: 8,
+        previewMode: "list",
+      },
+      card: {
+        width: 420,
+        height: 260,
+        radius: 32,
+        direction: "bottom",
+        blobTopCore: "#6386ef",
+        blobTopEdge: "#a086ef",
+        blobBottomCore: "#5973ef",
+        blobBottomEdge: "#43367a",
+        maskBlur: 10.5,
+        blobBlur: 80,
+        blobTopX: -27,
+        blobTopY: -55,
+        blobBottomX: 27,
+        blobBottomY: 58,
+        highlightTopX: -20,
+        highlightTopY: -15,
+        highlightBottomX: 8,
+        highlightBottomY: 0,
+        highlightScale: 100,
+        innerGlowBlur: 2,
+        previewMode: "single",
+      },
+      pill: {
+        width: 420,
+        height: 132,
+        radius: 66,
+        direction: "bottom",
+        blobTopCore: "#4f78ee",
+        blobTopEdge: "#5d35ee",
+        blobBottomCore: "#8ea7f2",
+        blobBottomEdge: "#572fff",
+        maskBlur: 24.5,
+        blobBlur: 52,
+        blobTopX: -30,
+        blobTopY: -36,
+        blobBottomX: 62,
+        blobBottomY: 38,
+        highlightTopX: 0,
+        highlightTopY: 0,
+        highlightBottomX: 0,
+        highlightBottomY: 0,
+        highlightScale: 157,
+        innerGlowBlur: 5,
+        previewMode: "single",
+      },
+      square: { width: 90, height: 90, radius: 45, previewMode: "single" },
+    };
+
+    function clampRadius(radius, width, height) {
+      return Math.max(12, Math.min(radius, Math.floor(Math.min(width, height) / 2)));
+    }
+
+    function clampWidth(width) {
+      return Math.max(90, Math.min(420, width));
+    }
+
+    function clampHeight(height) {
+      return Math.max(40, Math.min(420, height));
+    }
+
+    function resetListState() {
+      listState.activeIndex = 0;
+      listState.items.forEach((item, index) => {
+        item.active = index === 0;
+        item.direction = index === 0 ? "bottom" : "top";
+      });
+    }
+
+    function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
+      const blur = Math.max(0, (height * blurBase) / 56);
+      const stdDeviation = blur / 2;
+      const spread = Math.max(0, (height * 3) / 56);
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" fill="none">
+          <g filter="url(#f)">
+            <rect width="${width}" height="${height}" rx="${radius}" fill="black"/>
+          </g>
+          <defs>
+            <filter id="f" x="0" y="0" width="${width}" height="${height}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+              <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+              <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+              <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+              <feOffset/>
+              <feMorphology in="hardAlpha" operator="dilate" radius="${spread}" result="spreadAlpha"/>
+              <feGaussianBlur in="spreadAlpha" stdDeviation="${stdDeviation}" result="blurredSpread"/>
+              <feComposite in="blurredSpread" in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadowAlpha"/>
+              <feColorMatrix in="innerShadowAlpha" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" result="innerShadowColor"/>
+              <feBlend mode="normal" in="innerShadowColor" in2="shape" result="effect1_innerShadow"/>
+            </filter>
+          </defs>
+        </svg>
+      `.replace(/\s+/g, " ").trim();
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    }
+
+    function getBlobLayout(direction) {
+      const settled = {
+        top: { x: `${state.blobTopX}%`, y: `${state.blobTopY}%` },
+        bottom: { x: `${state.blobBottomX}%`, y: `${state.blobBottomY}%` },
+      };
+
+      const entryOffsets = {
+        bottom: { x: "0%", y: "92%" },
+        top: { x: "0%", y: "-92%" },
+        left: { x: "-92%", y: "0%" },
+        right: { x: "92%", y: "0%" },
+      };
+
+      const offset = entryOffsets[direction] || entryOffsets.bottom;
+
+      return {
+        topStart: {
+          x: `calc(${settled.top.x} + ${offset.x})`,
+          y: `calc(${settled.top.y} + ${offset.y})`,
+        },
+        topEnd: settled.top,
+        bottomStart: {
+          x: `calc(${settled.bottom.x} + ${offset.x})`,
+          y: `calc(${settled.bottom.y} + ${offset.y})`,
+        },
+        bottomEnd: settled.bottom,
+      };
+    }
+
+    function getHighlightLayout(direction) {
+      const exitOffsets = {
+        bottom: { x: "0px", y: "22px" },
+        top: { x: "0px", y: "-22px" },
+        left: { x: "-22px", y: "0px" },
+        right: { x: "22px", y: "0px" },
+      };
+
+      const offset = exitOffsets[direction] || exitOffsets.bottom;
+
+      return {
+        topStart: {
+          x: `calc(${state.highlightTopX}px + ${offset.x})`,
+          y: `calc(${state.highlightTopY}px + ${offset.y})`,
+        },
+        topEnd: { x: `${state.highlightTopX}px`, y: `${state.highlightTopY}px` },
+        bottomStart: {
+          x: `calc(${state.highlightBottomX}px + ${offset.x})`,
+          y: `calc(${state.highlightBottomY}px + ${offset.y})`,
+        },
+        bottomEnd: { x: `${state.highlightBottomX}px`, y: `${state.highlightBottomY}px` },
+      };
+    }
+
+    function getDirectionalChromeShadows(direction, unit, innerGlowBlurPx) {
+      const leftStrong = `${(unit * 16).toFixed(2)}px`;
+      const rightStrong = `${(unit * -16).toFixed(2)}px`;
+      const sideWeak = `${(unit * 4.5).toFixed(2)}px`;
+      const sideWeakNeg = `${(unit * -4.5).toFixed(2)}px`;
+      const topStrong = `${(unit * 14).toFixed(2)}px`;
+      const bottomStrong = `${(unit * -14).toFixed(2)}px`;
+      const verticalWeak = `${(unit * 3.5).toFixed(2)}px`;
+      const verticalWeakNeg = `${(unit * -3.5).toFixed(2)}px`;
+      const rimBlurStrong = `${(unit * 18).toFixed(2)}px`;
+      const rimBlurSoft = `${(unit * 8).toFixed(2)}px`;
+      const rimSpread = `${(unit * -6).toFixed(2)}px`;
+      const hazeSoft = `${(unit * 10).toFixed(2)}px`;
+      const hazeSpread = `${(unit * -6).toFixed(2)}px`;
+      const glowStrong = `${(innerGlowBlurPx * 1.35).toFixed(2)}px`;
+      const glowSoft = `${Math.max(innerGlowBlurPx * 0.55, unit * 1.1).toFixed(2)}px`;
+      const lineSoft = "rgba(255, 255, 255, 0.1)";
+      const lineStrong = "rgba(255, 255, 255, 0.22)";
+
+      const activeRim = [
+        `inset ${(unit * 13).toFixed(2)}px 0 ${(unit * 14).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%)`,
+        `inset ${(unit * -13).toFixed(2)}px 0 ${(unit * 14).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%)`,
+        `inset 0 ${(unit * 9).toFixed(2)}px ${(unit * 11).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb))`,
+        `inset 0 ${(unit * -9).toFixed(2)}px ${(unit * 11).toFixed(2)}px ${(unit * -7).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb))`,
+        `inset 0 0 ${(unit * 14).toFixed(2)}px ${(unit * -5).toFixed(2)}px rgba(255, 255, 255, 0.03)`,
+      ].join(", ");
+
+      const activeGlow = [
+        `inset 0 0 ${innerGlowBlurPx.toFixed(2)}px 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+        `inset 0 1px 0 rgba(255, 255, 255, 0.16)`,
+      ].join(", ");
+
+      const rimByDirection = {
+        bottom: [
+          `inset ${sideWeak} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 28%, white 8%)`,
+          `inset ${sideWeakNeg} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 28%, white 8%)`,
+          `inset 0 ${verticalWeak} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 14%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${bottomStrong} ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 84%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+        top: [
+          `inset ${sideWeak} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 28%, white 8%)`,
+          `inset ${sideWeakNeg} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 28%, white 8%)`,
+          `inset 0 ${topStrong} ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 82%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${verticalWeakNeg} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 14%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+        left: [
+          `inset ${leftStrong} 0 ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-rgb) 84%, white 16%)`,
+          `inset ${sideWeakNeg} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 22%, white 6%)`,
+          `inset 0 ${verticalWeak} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 18%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${verticalWeakNeg} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 18%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+        right: [
+          `inset ${sideWeak} 0 ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 22%, white 6%)`,
+          `inset ${rightStrong} 0 ${rimBlurStrong} ${(unit * -5).toFixed(2)}px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 86%, white 14%)`,
+          `inset 0 ${verticalWeak} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-rgb) 18%, var(--g-stage-selected-secondary-rgb))`,
+          `inset 0 ${verticalWeakNeg} ${rimBlurSoft} ${rimSpread} color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 18%, var(--g-stage-selected-rgb))`,
+          `inset 0 0 ${hazeSoft} ${hazeSpread} rgba(255, 255, 255, 0.015)`,
+        ].join(", "),
+      };
+
+      const glowByDirection = {
+        bottom: [
+          `inset 0 ${(unit * -2).toFixed(2)}px ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset 0 ${(unit * -1.35).toFixed(2)}px 0 ${lineStrong}`,
+        ].join(", "),
+        top: [
+          `inset 0 ${(unit * 2).toFixed(2)}px ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset 0 ${(unit * 1.35).toFixed(2)}px 0 ${lineStrong}`,
+        ].join(", "),
+        left: [
+          `inset ${(unit * 2).toFixed(2)}px 0 ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset ${(unit * 1.25).toFixed(2)}px 0 0 ${lineSoft}`,
+        ].join(", "),
+        right: [
+          `inset ${(unit * -2).toFixed(2)}px 0 ${glowStrong} 1px var(--inner-glow-color, rgba(255, 255, 255, 0.8))`,
+          `inset ${(unit * -1.25).toFixed(2)}px 0 0 ${lineSoft}`,
+        ].join(", "),
+      };
+
+      return {
+        activeRim,
+        inactiveRim: rimByDirection[direction] || rimByDirection.bottom,
+        activeGlow,
+        inactiveGlow: glowByDirection[direction] || glowByDirection.bottom,
+      };
+    }
+
+    function applyShellMetrics(targetShell, direction) {
+      const width = clampWidth(state.width);
+      const height = clampHeight(state.height);
+      state.width = width;
+      state.height = height;
+      widthRange.value = String(width);
+      heightRange.value = String(height);
+      blobTopXRange.value = String(state.blobTopX);
+      blobBottomXRange.value = String(state.blobBottomX);
+      highlightScaleRange.value = String(state.highlightScale);
+      const radius = clampRadius(state.radius, width, height);
+      state.radius = radius;
+      radiusRange.value = String(radius);
+
+      targetShell.style.setProperty("--shell-width", `${width}px`);
+      targetShell.style.setProperty("--shell-height", `${height}px`);
+      targetShell.style.setProperty("--shell-radius", `${radius}px`);
+      targetShell.style.setProperty(
+        "--zero-spread-mask-url",
+        state.maskEnabled ? buildZeroSpreadMaskUrl(width, height, radius, state.maskBlur) : "none"
+      );
+      targetShell.style.setProperty("--blob-top-core", state.blobTopCore);
+      targetShell.style.setProperty("--blob-top-edge", state.blobTopEdge);
+      targetShell.style.setProperty("--blob-bottom-core", state.blobBottomCore);
+      targetShell.style.setProperty("--blob-bottom-edge", state.blobBottomEdge);
+      targetShell.style.setProperty("--g-stage-selected-rgb", state.blobTopCore);
+      targetShell.style.setProperty("--g-stage-selected-secondary-rgb", state.blobBottomCore);
+      targetShell.style.setProperty("--inner-glow-blur", `${(height * state.innerGlowBlur) / 56}px`);
+      targetShell.style.setProperty("--blob-blur", `${state.blobBlur}`);
+      targetShell.dataset.rimEnabled = String(state.rimEnabled);
+
+      const unit = Math.max(0.65, Math.min(width, height) / 320);
+      targetShell.style.setProperty("--unit", `${unit}px`);
+      const innerGlowBlurPx = (height * state.innerGlowBlur) / 56;
+      const chromeShadows = getDirectionalChromeShadows(direction, unit, innerGlowBlurPx);
+      targetShell.style.setProperty("--accent-rim-shadow-active", chromeShadows.activeRim);
+      targetShell.style.setProperty("--accent-rim-shadow-inactive", chromeShadows.inactiveRim);
+      targetShell.style.setProperty("--inner-glow-shadow-active", chromeShadows.activeGlow);
+      targetShell.style.setProperty("--inner-glow-shadow-inactive", chromeShadows.inactiveGlow);
+      targetShell.style.setProperty("--blob-size", `${Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)))}px`);
+      const baseHighlightWidth = 112 + height;
+      const baseHighlightHeight = 39 + (height * 0.5);
+      targetShell.style.setProperty("--highlight-width", `${Math.round(baseHighlightWidth * (state.highlightScale / 100))}px`);
+      targetShell.style.setProperty("--highlight-height", `${Math.round(baseHighlightHeight * (state.highlightScale / 100))}px`);
+      const blobLayout = getBlobLayout(direction);
+      targetShell.style.setProperty("--blob-top-start-x", blobLayout.topStart.x);
+      targetShell.style.setProperty("--blob-top-start-y", blobLayout.topStart.y);
+      targetShell.style.setProperty("--blob-top-end-x", blobLayout.topEnd.x);
+      targetShell.style.setProperty("--blob-top-end-y", blobLayout.topEnd.y);
+      targetShell.style.setProperty("--blob-bottom-start-x", blobLayout.bottomStart.x);
+      targetShell.style.setProperty("--blob-bottom-start-y", blobLayout.bottomStart.y);
+      targetShell.style.setProperty("--blob-bottom-end-x", blobLayout.bottomEnd.x);
+      targetShell.style.setProperty("--blob-bottom-end-y", blobLayout.bottomEnd.y);
+
+      const highlightLayout = getHighlightLayout(direction);
+      targetShell.style.setProperty("--highlight-top-start-x", highlightLayout.topStart.x);
+      targetShell.style.setProperty("--highlight-top-start-y", highlightLayout.topStart.y);
+      targetShell.style.setProperty("--highlight-top-end-x", highlightLayout.topEnd.x);
+      targetShell.style.setProperty("--highlight-top-end-y", highlightLayout.topEnd.y);
+      targetShell.style.setProperty("--highlight-bottom-start-x", highlightLayout.bottomStart.x);
+      targetShell.style.setProperty("--highlight-bottom-start-y", highlightLayout.bottomStart.y);
+      targetShell.style.setProperty("--highlight-bottom-end-x", highlightLayout.bottomEnd.x);
+      targetShell.style.setProperty("--highlight-bottom-end-y", highlightLayout.bottomEnd.y);
+
+    }
+
+    function updateShellMetrics() {
+      applyShellMetrics(shell, state.direction);
+      listShells.forEach((listShell, index) => {
+        applyShellMetrics(listShell, listState.items[index].direction);
+      });
+    }
+
+    function updateText() {
+      widthValue.textContent = `${state.width}px`;
+      heightValue.textContent = `${state.height}px`;
+      radiusValue.textContent = `${state.radius}px`;
+      maskBlurValue.textContent = `${state.maskBlur}`;
+      blobBlurValue.textContent = `${state.blobBlur}`;
+      blobTopXValue.textContent = `${state.blobTopX}%`;
+      blobBottomXValue.textContent = `${state.blobBottomX}%`;
+      highlightScaleValue.textContent = `${state.highlightScale}%`;
+      innerGlowBlurValue.textContent = `${state.innerGlowBlur}`;
+      if (state.previewMode === "list") {
+        geometryStatus.textContent = `List · 3 chips · ${state.width} × ${state.height} · radius ${state.radius}`;
+        motionStatus.textContent = `Arrow Up / Down · active ${listState.activeIndex + 1} of 3`;
+        helperText.textContent = "Focus the preview and use ArrowUp / ArrowDown. Moving down plays bottom deactivate on the old chip and top activate on the next chip.";
+      } else {
+        geometryStatus.textContent = `${state.width} × ${state.height} · radius ${state.radius}`;
+        motionStatus.textContent = `Direction: ${state.direction} · ${state.active ? "active" : "idle"}`;
+        helperText.textContent = "Click the container to toggle active. Hover also lifts the shell so you can inspect edges while resizing.";
+      }
+      directionSelect.disabled = state.previewMode === "list";
+      maskEnabledToggle.checked = state.maskEnabled;
+      rimEnabledToggle.checked = state.rimEnabled;
+      previewStage.dataset.viewMode = state.previewMode;
+    }
+
+    function updateActiveState() {
+      shell.dataset.active = String(state.active);
+      listShells.forEach((listShell, index) => {
+        listShell.dataset.active = String(listState.items[index].active);
+      });
+      updateText();
+    }
+
+    function render() {
+      updateShellMetrics();
+      updateActiveState();
+      updateText();
+    }
+
+    function setPreset(name) {
+      const preset = presets[name];
+      if (!preset) return;
+      state.width = preset.width;
+      state.height = preset.height;
+      state.radius = preset.radius;
+      if (typeof preset.direction === "string") state.direction = preset.direction;
+      if (typeof preset.blobTopCore === "string") state.blobTopCore = preset.blobTopCore;
+      if (typeof preset.blobTopEdge === "string") state.blobTopEdge = preset.blobTopEdge;
+      if (typeof preset.blobBottomCore === "string") state.blobBottomCore = preset.blobBottomCore;
+      if (typeof preset.blobBottomEdge === "string") state.blobBottomEdge = preset.blobBottomEdge;
+      if (typeof preset.maskBlur === "number") state.maskBlur = preset.maskBlur;
+      if (typeof preset.blobBlur === "number") state.blobBlur = preset.blobBlur;
+      if (typeof preset.blobTopX === "number") state.blobTopX = preset.blobTopX;
+      if (typeof preset.blobTopY === "number") state.blobTopY = preset.blobTopY;
+      if (typeof preset.blobBottomX === "number") state.blobBottomX = preset.blobBottomX;
+      if (typeof preset.blobBottomY === "number") state.blobBottomY = preset.blobBottomY;
+      if (typeof preset.highlightTopX === "number") state.highlightTopX = preset.highlightTopX;
+      if (typeof preset.highlightTopY === "number") state.highlightTopY = preset.highlightTopY;
+      if (typeof preset.highlightBottomX === "number") state.highlightBottomX = preset.highlightBottomX;
+      if (typeof preset.highlightBottomY === "number") state.highlightBottomY = preset.highlightBottomY;
+      if (typeof preset.highlightScale === "number") state.highlightScale = preset.highlightScale;
+      if (typeof preset.innerGlowBlur === "number") state.innerGlowBlur = preset.innerGlowBlur;
+      if (typeof preset.maskEnabled === "boolean") state.maskEnabled = preset.maskEnabled;
+      if (typeof preset.rimEnabled === "boolean") state.rimEnabled = preset.rimEnabled;
+      state.previewMode = preset.previewMode === "list" ? "list" : "single";
+      if (state.previewMode === "list") {
+        resetListState();
+      }
+      widthRange.value = String(state.width);
+      heightRange.value = String(state.height);
+      radiusRange.value = String(state.radius);
+      directionSelect.value = state.direction;
+      blobTopCoreInput.value = state.blobTopCore;
+      blobTopEdgeInput.value = state.blobTopEdge;
+      blobBottomCoreInput.value = state.blobBottomCore;
+      blobBottomEdgeInput.value = state.blobBottomEdge;
+      maskBlurRange.value = String(state.maskBlur);
+      blobBlurRange.value = String(state.blobBlur);
+      blobTopXRange.value = String(state.blobTopX);
+      blobBottomXRange.value = String(state.blobBottomX);
+      highlightScaleRange.value = String(state.highlightScale);
+      innerGlowBlurRange.value = String(state.innerGlowBlur);
+      presetButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.preset === name));
+      });
+      render();
+      if (state.previewMode === "list") {
+        previewStage.focus();
+      }
+    }
+
+    widthRange.addEventListener("input", () => {
+      state.width = Number(widthRange.value);
+      state.radius = clampRadius(state.radius, state.width, state.height);
+      render();
+    });
+
+    heightRange.addEventListener("input", () => {
+      state.height = Number(heightRange.value);
+      state.radius = clampRadius(state.radius, state.width, state.height);
+      render();
+    });
+
+    radiusRange.addEventListener("input", () => {
+      state.radius = Number(radiusRange.value);
+      render();
+    });
+
+    directionSelect.addEventListener("change", () => {
+      state.direction = directionSelect.value;
+      render();
+    });
+
+    blobTopCoreInput.addEventListener("input", () => {
+      state.blobTopCore = blobTopCoreInput.value;
+      render();
+    });
+
+    blobTopEdgeInput.addEventListener("input", () => {
+      state.blobTopEdge = blobTopEdgeInput.value;
+      render();
+    });
+
+    blobBottomCoreInput.addEventListener("input", () => {
+      state.blobBottomCore = blobBottomCoreInput.value;
+      render();
+    });
+
+    blobBottomEdgeInput.addEventListener("input", () => {
+      state.blobBottomEdge = blobBottomEdgeInput.value;
+      render();
+    });
+
+    maskBlurRange.addEventListener("input", () => {
+      state.maskBlur = Number(maskBlurRange.value);
+      render();
+    });
+
+    maskEnabledToggle.addEventListener("change", () => {
+      state.maskEnabled = maskEnabledToggle.checked;
+      render();
+    });
+
+    blobBlurRange.addEventListener("input", () => {
+      state.blobBlur = Number(blobBlurRange.value);
+      render();
+    });
+
+    blobTopXRange.addEventListener("input", () => {
+      state.blobTopX = Number(blobTopXRange.value);
+      render();
+    });
+
+    blobBottomXRange.addEventListener("input", () => {
+      state.blobBottomX = Number(blobBottomXRange.value);
+      render();
+    });
+
+    highlightScaleRange.addEventListener("input", () => {
+      state.highlightScale = Number(highlightScaleRange.value);
+      render();
+    });
+
+    innerGlowBlurRange.addEventListener("input", () => {
+      state.innerGlowBlur = Number(innerGlowBlurRange.value);
+      render();
+    });
+
+    rimEnabledToggle.addEventListener("change", () => {
+      state.rimEnabled = rimEnabledToggle.checked;
+      render();
+    });
+
+    presetButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setPreset(button.dataset.preset);
+      });
+    });
+
+    shell.addEventListener("click", () => {
+      if (state.previewMode === "list") return;
+      state.active = !state.active;
+      updateActiveState();
+    });
+
+    previewStage.addEventListener("pointerdown", () => {
+      previewStage.focus();
+    });
+
+    previewStage.addEventListener("keydown", (event) => {
+      if (state.previewMode !== "list") return;
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.max(0, Math.min(listState.items.length - 1, listState.activeIndex + delta));
+      if (nextIndex === listState.activeIndex) return;
+      event.preventDefault();
+      const movingDown = delta > 0;
+      listState.items[listState.activeIndex].direction = movingDown ? "bottom" : "top";
+      listState.items[listState.activeIndex].active = false;
+      listState.items[nextIndex].direction = movingDown ? "top" : "bottom";
+      listState.items[nextIndex].active = true;
+      listState.activeIndex = nextIndex;
+      render();
+    });
+
+    window.addEventListener("resize", render);
+
+    render();
+  </script>
+</body>
+</html>

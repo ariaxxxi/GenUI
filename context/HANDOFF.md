@@ -1,6 +1,1491 @@
 # Handoff
 
 ## Task title
+Enable ArrowUp and ArrowDown for prototype list-stage hover selection
+
+## Completion status
+- Completed
+
+## Summary
+- Added keyboard list-selection state for the prototype list stage so `ArrowUp` and `ArrowDown` now move the highlighted pill when the current manual prototype shape is `list`.
+- Extended `src/shared/morph-render.js` to persist:
+  - current prototype list content
+  - current selected pill index
+- Added `movePrototypeListSelection(delta)` to the morph-render API and made `showPrototypeListStage(...)` accept a selected index so the list can be re-rendered with the next hovered item.
+- Wired manual keyboard bindings in `src/tool/modules/manual-bindings.js` so ArrowUp/ArrowDown call that API only when `selectedScenario().shape === 'list'`.
+- Passed the new morph API method through `src/tool/index-app.js`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/index-app.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Verified new API references and keyboard hooks exist:
+  - `rg -n "movePrototypeListSelection|prototypeListSelectedIndex|prototypeListContent|ArrowUp|ArrowDown" src/shared/morph-render.js src/tool/modules/manual-bindings.js src/tool/index-app.js`
+- Reviewed the scoped diff:
+  - `git diff -- src/shared/morph-render.js src/tool/modules/manual-bindings.js src/tool/index-app.js`
+
+## Remaining issues / caveats
+- This patch updates keyboard selection only for the manual prototype list stage.
+- It does not add pointer hover syncing for `data-prototype-list-pill`; the rendered list did not previously expose that path.
+
+## Recommended next step
+1. If you want mouse hover and keyboard hover to stay in lockstep, add a delegated pointer handler on `#list-pills` for `data-prototype-list-pill` that calls the same selection API.
+
+## Task title
+Roll Celestial selected-state visuals into shared prototype, AI flow, Bubble Home, and design docs
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the shared selected chrome in `src/styles/shared.css` so prototype mode and all `renderSelectedChrome()` consumers now use the Celestial-selected layer visibility and timing:
+  - inner glow and accent rim now fade/settle independently
+  - top-left and bottom-right highlight PNGs now animate to full visibility
+  - visual order is enforced with `z-index`
+  - chrome wrapper fade now matches the longer Celestial timing rather than the older fast fade
+- Updated AI message / flight flow selected hosts in `src/styles/ai-glass.css` so the selected base now matches the Celestial shell:
+  - black selected fill
+  - neutral gray 1px inset outline
+- Updated AI orb overrides in `src/styles/ai-decorative.css` so the orb selection still renders the rim, inner glow, and both highlight PNGs after the shared chrome opacity changes.
+- Updated Bubble Home custom selection chrome in `src/styles/bubble2-page.css` so child highlights and orb highlights follow the same opacity/timing model as the Celestial reference.
+- Simplified Bubble Home highlighted child surfaces and orb sphere base to a black shell with neutral gray outline so it no longer stacks the older glossy shell treatment under the Celestial chrome.
+- Rewrote `design.md` so the Celestial tool is the documented source of truth for selected-state visuals and motion across the system.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/design.md`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/bubble2-page.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Reviewed repo diff for the shared chrome selectors, Bubble Home custom selectors, and design doc update:
+  - `git diff -- src/styles/shared.css src/styles/ai-glass.css src/styles/ai-decorative.css src/styles/bubble2-page.css design.md`
+- Verified expected selectors are present after the patch:
+  - `rg -n "g-stage-selected-accent-rim|g-stage-selected-highlight|g-stage-selected-sharp-highlight|g-stage-selected-highlight-mask-image|bubble2-child-selection-accent-rim|bubble2-orb-selection-accent-rim|Celestial Selected State" src/styles/shared.css src/styles/ai-glass.css src/styles/ai-decorative.css src/styles/bubble2-page.css design.md`
+
+## Remaining issues / caveats
+- This rollout aligns the shared selected chrome visuals, layer timings, and selected-shell base treatment, but it does not add full directional refraction motion to product surfaces that do not carry direction state.
+- Bubble Home orb behavior still keeps its page-specific breathing animation; only the selected chrome stack and shell base were aligned.
+- I did not run an in-browser visual regression pass in this turn, so the next step should be a live comparison of:
+  - prototype mode
+  - Bubble Home
+  - AI message flow
+  - AI flight flow
+
+## Recommended next step
+1. Run the affected pages side by side with `celestial-tool.html` and tune any residual page-specific overrides, especially AI orb states and Bubble Home orb breathing states, if they still read stronger or weaker than the Celestial reference.
+
+## Task title
+Add directional shadow-bias motion to Celestial tool rim and inner glow
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the accent rim and inner glow now animate by shadow bias rather than by reveal masking.
+- Added per-direction inactive shadow recipes for both layers:
+  - `bottom` starts with stronger bottom-biased inset shadows
+  - `top` starts with stronger top-biased inset shadows
+  - `left` starts with stronger left-biased inset shadows
+  - `right` starts with stronger right-biased inset shadows
+- Active state still settles to the balanced prototype-style rim and inner-glow stacks.
+- The effect now reads as directional energy shifting into place procedurally, while deactivation reverses back through the biased state.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- This is a procedural approximation using animated `box-shadow` values. It is directionally biased, but still subtler than moving raster assets like the blob and highlight layers.
+
+## Recommended next step
+1. If the bias feels too subtle or too strong in any one direction, tune the inactive shadow strengths per direction without changing the balanced active stack.
+
+## Task title
+Remove directional reveal mask from Celestial tool rim and inner glow
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the `clip-path` directional reveal from:
+  - `.test-shell-inner-glow`
+  - `.test-shell-accent-rim`
+- Removed the JS helper and CSS variables that were generating directional reveal insets.
+- The rim and inner glow are back to timing-only behavior, using opacity and box-shadow transitions without any geometric masking.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Without a reveal mask or directional biasing, rim and inner glow no longer have a directional read; they just fade with the current timing.
+
+## Recommended next step
+1. If you still want some directional feel later without masking, use per-direction transition delay or shadow-bias animation instead.
+
+## Task title
+Add directional reveal motion to Celestial tool rim and inner glow
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the inner glow and accent rim now reveal directionally instead of only fading.
+- Added a shared directional reveal model driven by the current shell direction:
+  - `top` starts clipped from the top
+  - `bottom` starts clipped from the bottom
+  - `left` starts clipped from the left
+  - `right` starts clipped from the right
+- Implemented the effect with animated `clip-path: inset(...)` on:
+  - `.test-shell-inner-glow`
+  - `.test-shell-accent-rim`
+- Because inactive state uses the directional start inset and active state uses the full inset, deactivation automatically reverses the motion in the opposite state transition.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The reveal is a hard directional clip rather than a feathered gradient mask. It reads clearly as motion, but it is more geometric than the blob movement.
+
+## Recommended next step
+1. If a softer reveal is needed later, replace the clip-path reveal with a directional gradient mask while keeping the same start/end direction logic.
+
+## Task title
+Add accent rim toggle to Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to add a `Rim enabled` toggle.
+- Added `state.rimEnabled` and wired it into every shell instance via `data-rim-enabled`.
+- Added a CSS guard so disabling the rim forces the accent rim layer fully hidden:
+  - `.test-shell[data-rim-enabled="false"] .test-shell-accent-rim { opacity: 0 !important; }`
+- This works for both the single preview and the list preview.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The rim toggle only hides the accent rim overlay. It does not affect the white highlight PNG layers or the inner glow.
+
+## Recommended next step
+1. If needed, add a grouped "layer visibility" section so mask, rim, highlights, and inner glow can all be isolated consistently.
+
+## Task title
+Restore prototype-strength highlight visibility in Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the white highlight image layers now render at full active opacity instead of the previously reduced values.
+- Changed:
+  - top-left highlight active opacity from `0.34` to `1`
+  - bottom-right highlight active opacity from `0.3` to `1`
+- This brings the highlight read much closer to prototype mode, where the PNG highlight layers are not dimmed down this way.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The tool still allows highlight scale tuning, so visual parity can still vary if the current scale differs from prototype geometry.
+
+## Recommended next step
+1. If the highlights are still off after this, compare the current highlight scale and offsets against the exact prototype chip geometry next.
+
+## Task title
+Fade Celestial tool accent rim out on deactivation
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the prototype-style accent rim now follows the shell active state.
+- Changed the rim default to `opacity: 0`.
+- Added an active-state rule so the rim shows only while the shell is active:
+  - `.test-shell[data-active="true"] .test-shell-accent-rim { opacity: 0.96; }`
+- Result: deactivation now fades the color rim out along with the other active-only layers.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The rim still uses the current tool timing of `420ms` for opacity/box-shadow transitions.
+
+## Recommended next step
+1. If needed, expose a rim toggle in the panel so the overlay can be isolated independently.
+
+## Task title
+Add prototype accent rim and flush side panels in Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the outer left/right page gutters so the side panels sit flush to the viewport edges.
+- Added a new dedicated accent rim overlay layer above the inner glow and below the white highlight layers for every shell instance.
+- Mirrored the prototype selected-style rim structure from [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css):
+  - left inner glow uses the first accent color
+  - right inner glow uses the second accent color
+  - top and bottom mix both accents
+  - faint white inner haze remains
+- In the tool, the rim accent inputs are sourced from:
+  - `Top-left core` -> `--g-stage-selected-rgb`
+  - `Bottom-right core` -> `--g-stage-selected-secondary-rgb`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The rim is scaled using the tool's `--unit` size proxy rather than fixed prototype pixel values, so it remains geometry-aware across different shell sizes.
+
+## Recommended next step
+1. If needed, expose a rim toggle so the new overlay can be isolated the same way as the refraction mask.
+
+## Task title
+Subdue Celestial tool title and move it to preview panel
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the large title and description from the left panel.
+- Added a new subtle preview-panel title centered above the stage:
+  - text: `Celestial`
+  - all caps
+  - thin weight
+  - small size
+  - dim, low-contrast color
+- Kept the title intentionally quiet so it reads as a subtle label rather than a dominant header.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The left panel still reserves its existing geometry-control layout space; this pass only removed the visual copy block.
+
+## Recommended next step
+1. If needed, tighten the top spacing in the left panel now that the copy block is gone.
+
+## Task title
+Add refraction mask toggle to Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to add a `Mask enabled` toggle under `Layer 1 · Refraction Mask`.
+- Added `state.maskEnabled` and wired it into the shell metric update path.
+- When the toggle is off, the blob layer no longer uses the luminance mask:
+  - `--zero-spread-mask-url: none`
+- This applies to both single-shell preview and list preview chips.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Disabling the mask shows the full blob layer, so the visual can extend more broadly than the selected-style reference by design.
+
+## Recommended next step
+1. If needed, add a similar toggle for highlights or inner glow so each layer can be isolated in the tool.
+
+## Task title
+Remove hollow center from Celestial tool blobs
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the transparent center stop from both blob gradients.
+- The visible "hole" was caused by each radial gradient starting with a transparent `0%` stop and only reaching the configured core color at `28%`.
+- Both blobs now start with the configured core color at `0%`, so the blob reads as a solid color field when blur is low or zero.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The blobs still use `mix-blend-mode: screen`, so their perceived color will continue to depend on overlap and the black shell under them.
+
+## Recommended next step
+1. If you need the blob swatches to look even more literal, reduce or remove `mix-blend-mode: screen` next.
+
+## Task title
+Remove blob gradient falloff in Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the transparent outer stop from both accent blob gradients.
+- The top-left and bottom-right blobs now keep their edge color through the full gradient instead of fading to transparent internally.
+- Edge softness is now driven by the blob blur/filter and mask, not by a transparent radial falloff stop.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The blobs still animate with element opacity for active/inactive transitions.
+
+## Recommended next step
+1. If the blobs now feel too dense, reduce blur or retune the edge color rather than reintroducing transparency.
+
+## Task title
+Retune Celestial tool geometry duration to 600ms
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so shell geometry transitions now run at `600ms` instead of `450ms`.
+- Kept the prototype-mode curve unchanged:
+  - `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+- This affects:
+  - `width`
+  - `height`
+  - `border-radius`
+  - `transform`
+  - `box-shadow`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- This only changes shell geometry timing. Layer-specific blob/highlight/inner-glow durations are unchanged.
+
+## Recommended next step
+1. If the geometry now feels right, leave the layer timings separate unless you want full motion-duration parity too.
+
+## Task title
+Match Celestial tool geometry duration to prototype mode
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so shell geometry transitions now use the prototype default duration as well as the prototype curve.
+- Changed the single-shell/list-shell geometry transition duration from `260ms` to `450ms` for:
+  - `width`
+  - `height`
+  - `border-radius`
+  - `transform`
+  - `box-shadow`
+- This now matches the prototype default timing model from [src/shared/anim-controls.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/anim-controls.js), where the base duration is `450ms`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Only the shell geometry transition duration was updated here. Blob/highlight/inner-glow durations remain on their current tool-specific values.
+
+## Recommended next step
+1. If needed, align the rest of the layer-specific durations to prototype defaults in a separate pass.
+
+## Task title
+Match Celestial tool motion curve to prototype mode
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to use the same default stage-to-stage motion curve as prototype mode.
+- Replaced the tool's local `--motion-ease` value with the prototype default bezier from [src/shared/anim-controls.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/anim-controls.js):
+  - `cubic-bezier(0.35, 0.23, 0.13, 0.98)`
+- This change now affects the shell geometry transitions plus blob, highlight, and inner-glow timing that already rely on `var(--motion-ease)`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- This updates the curve only. Durations remain the current tool-specific values.
+
+## Recommended next step
+1. If needed, align the tool's durations to the prototype transition timing constants next, now that the easing curve matches.
+
+## Task title
+Add vertical three-chip list preview to Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to add a new `List` preset that renders a vertical stack of three chips in the preview stage.
+- Reused the same shell layer stack for each chip:
+  - refraction mask
+  - accent blobs
+  - selected-style highlights
+  - inner glow
+- Added list-mode keyboard interaction on the focused preview stage:
+  - `ArrowDown` moves highlight to the next chip
+  - `ArrowUp` moves highlight to the previous chip
+- Wired per-chip motion directions so list navigation behaves as requested:
+  - moving down: current chip deactivates with `bottom`, next chip activates with `top`
+  - moving up: current chip deactivates with `top`, previous chip activates with `bottom`
+- Kept the existing single-shell preview intact for the other presets.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- List navigation uses preview-stage keyboard focus, not global window-level hotkeys. The preview is auto-focused when `List` is selected, and clicking the preview refocuses it.
+- Geometry and layer controls continue to tune the shared chip styling in both single-shell and list preview modes.
+
+## Recommended next step
+1. If needed, add a small visible focus hint or caption near the preview stage so arrow-key navigation affordance is more obvious in list mode.
+
+## Task title
+Neutralize demo panel surfaces
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the panel surfaces read as plain dark black/gray with no tinted accent color.
+- Changed the shared panel surface variables to a darker neutral:
+  - `--panel: rgba(10, 10, 12, 0.94)`
+  - `--panel-border: rgba(255, 255, 255, 0.07)`
+- Removed panel backdrop blur so the page background no longer bleeds a color tint into the hero, preview, or control panels.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The control inputs and preset buttons were already neutralized in the prior pass; this change only removes residual tint from the panel surfaces themselves.
+
+## Recommended next step
+1. If the panels should feel even flatter, reduce the panel shadow next rather than reintroducing blur or tint.
+
+## Task title
+Re-layout Celestial test page around centered preview and right-side controls
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to rename the page heading from `Reusable chrome without aspect stretch.` to `Celestial Visual`.
+- Reworked the test harness layout from a top-down stacked arrangement into a three-panel workspace:
+  - left: intro / context card
+  - center: live preview panel
+  - right: control panel
+- Adjusted the page shell and responsive rules so:
+  - large screens keep the example centered with controls on the right
+  - medium screens collapse to intro + controls on the left and preview on the right
+  - narrow screens stack vertically again for usability
+- This pass did not change the shell component logic; it only reorganized the surrounding demo page layout and copy.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The preview panel remains visually dominant by design, but actual perceived centering will still depend on browser viewport width and the current control-panel width.
+
+## Recommended next step
+1. If needed, do a final polish pass on panel spacing and preview-stage sizing now that the overall harness layout is in its intended left-center-right structure.
+
+## Task title
+Shorten Celestial deactivation timing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so deactivation is now genuinely shorter than activation.
+- Added per-state timing variables on `.test-shell` and switched them in the inactive state:
+  - activation remains:
+    - transform: `700ms`
+    - opacity: `420ms`
+  - deactivation now uses:
+    - transform: `520ms`
+    - opacity: `280ms`
+- Applied the shorter exit timing to:
+  - accent blobs
+  - top-left highlight
+  - bottom-right highlight
+  - inner glow fade
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Older unused `.celestial-*` CSS remains in the file from earlier iterations and still contains its own inactive-state selectors, but it is not part of the active `test-shell-*` stack used by the page.
+
+## Recommended next step
+1. If the exit now feels too abrupt, adjust only the inactive duration variables rather than changing the active timing or motion path.
+
+## Task title
+Remove spread controls and retune Celestial blur defaults
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to remove the exposed spread controls that were no longer needed:
+  - removed `Mask spread`
+  - removed `Inner glow spread`
+- Kept those spread values baked into the component using the current selected-style / Figma-aligned constants:
+  - mask spread fixed to `3 / 56` of height
+  - inner glow spread fixed to `1px`
+- Updated defaults to the new requested values:
+  - mask blur: `30`
+  - blob blur: `40`
+  - inner glow blur: `5`
+- Changed the inner glow so it fades out with the inactive state instead of remaining fully visible when the shell deactivates.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Dead-reference check:
+  - `rg -n "maskSpread|innerGlowSpread|inner-glow-spread" ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The inner glow spread is now fixed in CSS rather than adjustable from the UI. If exact parity later requires a different value, it should be changed in the component styles rather than re-exposed as a control by default.
+
+## Recommended next step
+1. Continue tuning only the visible motion and highlight intensity, since the control surface is now reduced to the remaining meaningful blur/color parameters.
+
+## Task title
+Reverse highlight motion on Celestial deactivation
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so deactivating the shell now visibly plays the motion out instead of only dropping the visible state.
+- The two selected-style highlights now share the same active/inactive motion behavior as the accent blobs:
+  - inactive state = directional start offset
+  - active state = settled position
+  - deactivation = transition back along the same path
+- Added `getHighlightLayout(direction)` in JS and wired its offsets into CSS variables for:
+  - `.test-shell-top-left-highlight`
+  - `.test-shell-bottom-right-highlight`
+- This means the active direction now affects both entry and exit for the full shell chrome, not just the masked blobs.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Highlight exit offsets are currently a fixed `22px` directional nudge. If closer parity is needed, that value should be tuned visually against the final selected-style reference.
+
+## Recommended next step
+1. Compare activate/deactivate motion side by side for all four directions and tighten the highlight offset amount only if the exit read feels too short relative to the blob travel.
+
+## Task title
+Add selected-style top-left and bottom-right highlights to reusable Celestial test page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to add the two selected-style highlight assets on top of the current shell stack.
+- Added the top-left highlight using the same clipped-mask structure as the existing selected-style implementation:
+  - `.test-shell-top-left-highlight-mask`
+  - `.test-shell-top-left-highlight`
+- Added the bottom-right highlight using the same free pass structure as the existing selected-style implementation:
+  - `.test-shell-bottom-right-pass`
+  - `.test-shell-bottom-right-highlight`
+- Kept the same sizing formula from selected-style so both highlights scale from the current pill height:
+  - width = `112px + height * 1.0`
+  - height = `39px + height * 0.5`
+- Reused the same repo assets:
+  - `src/assets/button-highlight-top-left.png`
+  - `src/assets/figma-proto-button-highlight-bottom-mask.png`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The page still contains older unused `.celestial-*` highlight CSS from earlier iterations. The new active setup is the `test-shell-*` highlight structure added in this pass.
+
+## Recommended next step
+1. Compare the shell against the selected-style reference and tune only layer opacity/order if needed, without changing the highlight asset geometry or anchor points.
+
+## Task title
+Constrain reusable Celestial test geometry bounds
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the interactive geometry controls enforce the new requested bounds:
+  - max width: `420px`
+  - min height: `40px`
+- Changed the live control defaults and shell defaults to start at `420px × 132px`.
+- Added explicit `clampWidth()` and `clampHeight()` logic so the shell, state, and sliders stay in sync even if future code paths try to exceed those bounds.
+- Updated the preset widths that previously exceeded `420px`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Width still has a lower bound of `180px` from the earlier control setup.
+- Height still has an upper bound of `420px`.
+
+## Recommended next step
+1. Continue tuning the visual layers inside those bounds so the mask, blobs, and highlights are only optimized for the actual supported geometry range.
+
+## Task title
+Expose blob blur control in reusable Celestial test page
+
+## Completion status
+- Completed
+
+## Summary
+- Added a live `Blob blur` tuning control to [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html).
+- The new control is wired into page state as `blobBlur` and feeds the blob filter through the CSS variable `--blob-blur`.
+- The page now exposes:
+  - blob accent colors
+  - mask blur
+  - mask spread
+  - blob blur
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- The blur control only affects the two accent blobs; it does not change mask softness.
+
+## Recommended next step
+1. Use the blob blur slider together with mask blur/spread to find the point where the accent arcs read clearly through the luminance mask without filling too much of the pill center.
+
+## Task title
+Reset white-pill demo to blank container
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-mask-on-white-pill.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html) to remove everything inside the pill container so the demo can be rebuilt step by step from a blank base.
+- Removed from that page:
+  - the mask layer
+  - the mask toggle
+  - the inline script used by the toggle
+  - the now-unused mask sizing variables
+- Left only:
+  - the black stage background
+  - the white pill container shell
+  - a small label indicating it is now a blank white pill
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Static HTML only; no script execution required after reset.
+
+## Remaining issues / caveats
+- The white-pill demo is intentionally empty now. The previous mask behavior has been removed from this page.
+
+## Recommended next step
+1. Add the next layer or behavior explicitly, one step at a time, using this blank white pill as the base.
+
+## Task title
+Swap reusable Celestial pill to generated Figma-style mask
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the refraction wrapper no longer points at the static zero-spread SVG file directly.
+- The page now generates a `data:image/svg+xml` mask URL from the current pill width, height, and radius using the same Figma-style structure as the white-pill demo:
+  - black rounded rect
+  - inset white blur in the SVG filter
+- That generated mask is assigned to `--zero-spread-mask-url` and applied to `.celestial-refraction`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- Exact mask rendering still depends on browser support for SVG data-URL luminance masks on HTML elements.
+
+## Recommended next step
+1. If the revealed arcs still read incorrectly, inspect the generated mask output in the browser devtools and tune the blur amount in `buildZeroSpreadMaskUrl()` before changing the pass positions again.
+
+## Task title
+Restore visible accent endcap circles in masked Celestial pill
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) after the user reported that the two accent circles were no longer visible.
+- Kept the zero-spread SVG mask semantics intact, but changed the masked refraction passes so they actually read as endcap circles:
+  - converted both caustic fills into explicit circular magenta / violet orb gradients
+  - increased their opacity to full strength in the active state
+  - reduced blur slightly so the circle read is stronger
+  - enlarged the pass bounds
+  - pushed the final positions farther toward the left and right endcaps
+- This keeps the “black passes nothing, white passes everything” mask behavior while making the revealed arcs visible again.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- Exact visibility of the revealed circles still depends on the browser’s SVG luminance-mask rendering. The implementation is correct, but the amount of visible arc may still vary slightly by renderer.
+
+## Recommended next step
+1. If the circles still read too weak, the next tuning point is their final `aEnd` / `bEnd` positions or the white-blur width in the zero-spread mask, not the overall mask semantics.
+
+## Task title
+Convert Celestial test page zero-spread layer into real pass mask
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the zero-spread layer is no longer rendered as a visible dark overlay.
+- Introduced a new `.celestial-refraction` wrapper that contains the colored refraction passes:
+  - the caustic blooms
+  - the top-left highlight
+  - the bottom-right highlight
+- Applied [figma-proto-button-refraction-mask-zero-spread.svg](/Users/ariax/Documents/GitHub/GenUI/src/assets/figma-proto-button-refraction-mask-zero-spread.svg) as an actual luminance mask on that wrapper:
+  - black area blocks the refraction passes
+  - white inner-shadow area reveals the refraction passes
+- Kept the rim and white edge highlight outside that mask so the shell outline remains visible.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This relies on CSS mask support for the current browser. The standalone demo is fine for modern WebKit/Blink browsers, but older browsers may render differently.
+
+## Recommended next step
+1. Recheck the pill visually. If the color is still leaking too far inward, the next thing to change is which layers sit inside `.celestial-refraction`, not the mask semantics.
+
+## Task title
+Align white-pill mask demo to exact Figma node
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-mask-on-white-pill.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html) to match the referenced Figma node `502:12 / 502:13` directly instead of using the previously inferred center-gradient approximation.
+- The white-pill mask is now implemented as:
+  - solid black rounded rect fill
+  - inset white blur only
+- The blur and spread are scaled from pill height using the Figma node ratios:
+  - blur = `20 / 56`
+  - spread = `3 / 56`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Static HTML/CSS only; no script execution required.
+
+## Remaining issues / caveats
+- The main Celestial pill page still uses the separately tuned mask layer. This pass corrected only the isolated white-pill demo to match the exact Figma mask node.
+
+## Recommended next step
+1. If the same exact mask behavior should drive the main Celestial pill, replace the current `celestial-zero-spread-mask` styling with the same black-fill + inset-white-blur construction and then retune layer ordering in the full composition.
+
+## Task title
+Add isolated white-pill mask demo
+
+## Completion status
+- Completed
+
+## Summary
+- Added [celestial-mask-on-white-pill.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html), a minimal static page that shows the current center-darkening mask on a plain white pill with no other Celestial chrome layers.
+- This page is intended only for visual inspection of the mask shape and falloff.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Static HTML only; no script execution required.
+
+## Remaining issues / caveats
+- The mask in this file is copied from the current standalone Celestial test page, so any future tuning should be applied in both places if the demo is meant to stay in sync.
+
+## Recommended next step
+1. Compare the white-pill demo to the intended Figma mask. If the center block is too large or too soft, adjust the radial-gradient stop positions before retuning the full Celestial pill.
+
+## Task title
+Fix zero-spread mask regression hiding Celestial pill
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the `celestial-zero-spread-mask` in [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) after the previous pass made the top mask too opaque and visually flattened the entire pill.
+- The mask now:
+  - uses `mix-blend-mode: multiply`
+  - has significantly lighter center/edge opacity stops
+  - keeps the center darker than the halo passes without fully covering the rim and endcap color
+- This keeps the “blank dark interior” goal while preserving visible magenta/violet read instead of turning the whole shell nearly black.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This is still a hand-tuned visual approximation. If the mask is now too weak, only the opacity stops inside `.celestial-zero-spread-mask` should be adjusted next.
+
+## Recommended next step
+1. Recheck the pill visually. If the center is still too bright, increase only the center stops in the horizontal `linear-gradient`; if the ends are getting dulled again, lower the outer edge stops rather than raising overall opacity.
+
+## Task title
+Add scalable zero-spread top mask to standalone Celestial pill
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to add a new topmost `celestial-zero-spread-mask` layer over the pill chrome.
+- Chose a procedural implementation instead of directly reusing [figma-proto-button-refraction-mask-zero-spread.svg](/Users/ariax/Documents/GitHub/GenUI/src/assets/figma-proto-button-refraction-mask-zero-spread.svg):
+  - the source SVG is just a rounded rect plus blurred inner shadow
+  - procedural gradients and inset shadows track arbitrary width, height, and radius more reliably than a fixed `140 × 56` asset viewBox
+  - future tuning can now happen in the page CSS without needing per-size SVG scaling corrections
+- The new overlay darkens the center of the pill while preserving the bright edge read, which keeps the inside visually blank and prevents the halo passes from filling the full body.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- The procedural top mask is intentionally an approximation of the Figma zero-spread mask, not a literal pixel-for-pixel SVG filter port.
+
+## Recommended next step
+1. If the center still reads too bright, increase the middle stops in `.celestial-zero-spread-mask`. If the edges get overly muted, reduce its inset shadow or lower the two radial-gradient midpoint opacities.
+
+## Task title
+Refine standalone Celestial test page toward blank pill parity
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to remove all placeholder text and badge content from inside the shell so the container now renders as a blank pill.
+- Reworked the two accent halos for closer parity with the supplied reference:
+  - removed the image-based blurred pass look
+  - replaced both halos with large, clipped radial-gradient blooms
+  - moved the active final positions closer to the left and right endcaps
+  - narrowed the default shell to the reference pill geometry (`620 × 132`, radius `66`)
+- Reduced the strength of the corner highlight masks and simplified the stage background to black so the shell reads closer to the provided comparison image.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This pass was tuned from the supplied reference images, not from a live browser screenshot-diff workflow, so there may still be small visual mismatches in halo softness or lateral placement.
+
+## Recommended next step
+1. Compare the new pill directly against the reference. If it still reads too wide or too centered, the only values that should need further tuning are the `aEnd` / `bEnd` positions and the `--pass-width` / `--pass-height` calculations in the page script.
+
+## Task title
+Implement standalone Celestial reusable container test page
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new standalone test harness at [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) for quick iteration on a reusable Celestial-style container without touching the existing Lottie demo pages.
+- The page rebuilds the effect as a geometry-aware layered shell:
+  - container width, height, and border radius are independently adjustable
+  - moving caustic passes are container-relative and keep a square blur sprite so they do not stretch with aspect-ratio changes
+  - existing repo highlight assets are reused for the top-left and bottom-right glints
+  - accent rim and crisp inner highlight are procedural CSS layers rather than fixed 1080×1080 baked masks
+- Added quick-test controls directly in the page:
+  - width / height / radius sliders
+  - direction selector (`top`, `right`, `bottom`, `left`)
+  - active toggle
+  - auto-pulse toggle
+  - preset buttons for card / pill / square / tall geometry
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This page is a procedural approximation of the Celestial hoverstate, not a pixel-identical port of the original Lottie export. The goal here is reusable geometry without stretch, not 1:1 playback of the 1080-square baked comp.
+- `context/task.md` is absent in this repo state; the direct user request was used as the active task source of truth for this standalone implementation.
+
+## Recommended next step
+1. Open the new test page and decide whether the caustic pass positions and opacity ramp are close enough to the original reference. If tighter parity is needed, tune only the normalized start/end coordinates in `getDirectionalLayout()` and the pass opacity/filter values in the page CSS.
+
+## Task title
+Animate disambiguation chips into compose and remove confirm to send shell fade
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to support an outgoing disambiguation overlay layer that reuses the existing prototype pill transition path:
+  - captures the current disambiguation contacts before entering compose
+  - renders them as `g-disambiguation-pills prototype-disambiguation-pills exiting-to-compose`
+  - keeps that layer mounted for the existing `prototype-disambiguation-pill-out` animation window, then clears it
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so choosing a disambiguation contact primes that outgoing pill layer before the flow switches to compose.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so confirm → send no longer drops the shell styling immediately:
+  - listening-shell suppression is skipped while `sending-orb-fade-in` is active
+  - send-entry orb fade duration is lengthened so the orb takes over after the shell morph, not during a blank fade window
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Live Playwright validation against served `ai.html`:
+  - disambiguation → compose screenshots:
+    - `/tmp/genui-transition-check/compose-exit-40.png`
+    - `/tmp/genui-transition-check/compose-exit-180.png`
+    - `/tmp/genui-transition-check/compose-exit-420.png`
+  - confirm → send opacity samples:
+    - `50ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity=0`
+    - `180ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity=0`
+    - `320ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity≈0.12`
+    - `420ms`: `dropOpacity=1`, `richOpacity=1`, `orbOpacity≈0.89`
+  - confirm → send screenshots:
+    - `/tmp/genui-transition-check/send-180.png`
+    - `/tmp/genui-transition-check/send-320.png`
+    - `/tmp/genui-transition-check/send-420.png`
+
+## Remaining issues / caveats
+- The outgoing disambiguation layer is intentionally mounted inside `#c-rich` for the 600ms prototype exit window. During that window, compose chip-menu UI-only updates intentionally bail out if they detect the outgoing layer, then resume once it clears.
+- `context/task.md` remains stale and did not drive this pass; the user request was the effective source of truth.
+
+## Recommended next step
+1. Manually verify whether the disambiguation pill drop distance feels correct. If the chips should fall farther or fan outward before collapsing, only the `xStart` / `yStart` values in `primeDisambiguationExitLayer()` need adjustment.
+
+## Task title
+Remove remaining duplicate selected-shell transitions in compose entry and confirm to send
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the compose-entry preserve-shell path from [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so entering compose no longer applies a second transition-only shell class to `#drop-main`.
+- Removed the old compose-entry and send-entry shell-preservation logic from [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js), then restored a send-only timer that is now used only for centered orb fade-in timing.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so:
+  - plain compose surfaces immediately suppress `#siri-orb`, preventing any inner selected-shell carry-over after disambiguation → compose
+  - sending surfaces force the orb to stay centered with no horizontal transform interpolation from the confirm orb position
+  - confirm → send now uses opacity-only fade-in on the orb, with `drop-main` remaining the only container shell
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Live browser validation against served `ai.html` at `http://127.0.0.1:4317/ai.html` using Playwright:
+  - compose entry at `40ms`: `drop-main` classes = `drop compose-surface`; `#siri-orb` opacity = `0`
+  - compose entry at `180ms`: `drop-main` classes = `drop compose-surface`; `#siri-orb` opacity = `0`
+  - compose entry at `520ms`: `drop-main` classes = `drop compose-surface`; `#siri-orb` opacity = `0`
+  - confirm → send at `50ms`: `drop-main` classes = `drop listening-orb sending-surface sending-orb-fade-in`; `#siri-orb` transform = centered `scale(1)` with opacity `0`
+  - confirm → send at `230ms`: `drop-main` classes = `drop listening-orb sending-surface`; `#siri-orb` transform = centered `scale(1)` with no left-translation component
+- Visual screenshots captured during validation:
+  - `/tmp/genui-repro-fixed2/compose-180.png`
+  - `/tmp/genui-repro-fixed2/send-050.png`
+  - `/tmp/genui-repro-fixed2/send-230.png`
+
+## Remaining issues / caveats
+- `context/task.md` is still stale and does not reflect this AI-mode regression pass; the user request remained the effective source of truth for this work.
+- I did not complete a separate long-press screenshot pass in this turn because the visible compose-field locator hits both the real field and the offscreen measurement clone. The reported issues for compose entry and confirm → send are validated live.
+
+## Recommended next step
+1. Reopen AI mode and recheck the same two transitions manually:
+   - disambiguation → compose should not show any inner selected shell after compose starts
+   - confirm → send should fade the orb in at the center without any container translating in from the left
+
+## Task title
+Make AI-mode listening and confirm orbs reuse the bubble-page orb setup and suppress the flow shell flash
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [ai.html](/Users/ariax/Documents/GitHub/GenUI/ai.html) so the `#siri-orb` selection-layer order now matches the bubble page setup:
+  - accent rim
+  - white highlight
+  - sharp pass
+  - highlight mask
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so `#drop-main.listening-orb:not(.compose-surface)` no longer renders the base drop shell background, box-shadow, stroke pseudo-elements, or home-glow layer. This leaves the listening-stage orb visually driven by the orb visual itself, like the bubble page orb.
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to stop applying the AI-flow orb mute class during disambiguation / confirm. The confirm-step orb now keeps the normal bubble-orb chrome instead of switching to the muted flow-specific orb treatment.
+- Updated [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css) so `#prototype-stage-selection` is forced hidden while `glass-flow-active` is set. This removes the large selected-style shell flash from active AI flows, including the compose long-press path.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ai.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed `muteOrbChrome = false` in `message-send-render`
+  - confirmed listening-orb shell suppression is applied to `#drop-main.listening-orb:not(.compose-surface)`
+  - confirmed `body.glass-flow-active #prototype-stage-selection` is hidden
+  - confirmed the AI orb layer order in `ai.html` now matches the bubble page structure
+
+## Remaining issues / caveats
+- I still did not complete a browser visual pass in this environment, so the final confirmation for listening, long-press, and confirm orb appearance is manual in AI mode.
+- The older `flow-orb-muted` CSS remains in the stylesheet but is no longer actively applied by the message-send flow after this pass.
+
+## Recommended next step
+1. Reopen AI mode and verify:
+   - the listening-stage orb now matches the bubble page orb instead of the brighter double-shell version
+   - long-press no longer flashes the large selected-style container before chips open
+   - the confirm-step orb remains visually consistent with the bubble page orb from entry through settle
+
+## Task title
+Stabilize compose long-press chip menu and make message-flow listening orb match the bubble orb
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) so the initial compose long-press hold uses `updateComposeMenuUiOnly()` instead of forcing a full compose rerender. This keeps the hold-state update limited to the existing chip stack/header DOM and avoids the extra pre-open flash on the compose surface.
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) so message-flow listening / chip-await states no longer enable `home-glow`; only the `magic` state does. That removes the extra blue fill pass that was making the chip-fired orb change appearance mid-entry.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the compose await orb no longer applies its own glow shell, backdrop blur, or extra white `::before` / `::after` strokes. The chip-fired orb now reuses the same base bubble-orb visual stack instead of swapping through multiple styles.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed message-flow `home-glow` is now only enabled for `magic`
+  - confirmed compose-await orb no longer renders custom `#siri-orb::before` / `::after` shell strokes
+  - confirmed long-press hold start/cancel paths now prefer `updateComposeMenuUiOnly()` over a full rerender
+
+## Remaining issues / caveats
+- I did not finish a browser visual pass for the long-press sequence in this environment, so the final check is still manual in AI mode.
+- The repo still has unrelated local modifications in the same AI-mode files; this pass stayed within the compose hold / orb-style paths only.
+
+## Recommended next step
+1. Reopen AI mode and verify:
+   - holding on the compose field no longer flashes a selected-style shrinking container before the chip stack opens
+   - the chip-fired orb below the compose field keeps one consistent bubble-orb style during its full entry
+   - the message-flow listening orb now matches the bubble-page orb styling without the extra AI-only glow layer
+
+## Task title
+Fix AI-mode send-message regressions in disambiguation, compose entry, and confirm-to-sending chrome
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) to tag three transition-specific AI-mode states on `#drop-main`:
+  - `flow-orb-muted` for disambiguation and confirm
+  - `compose-entry-preserve-orb` for disambiguation → compose
+  - `sending-orb-selection-enter` for confirm → sending
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so:
+  - disambiguation and confirm suppress the white orb outline/highlight layers and the home-glow / breathing treatment
+  - the outgoing orb stays full-size during disambiguation → compose, expands with the shell, and fades out instead of shrinking
+  - the sending-state orb selection chrome fades in after entry instead of sliding in visually from the left-side highlight assets
+  - the confirm await-orb white shell strokes are disabled while confirm is in the muted state
+- Updated [src/styles/ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css) so:
+  - disambiguation pills no longer render the white outline stroke
+  - focused confirm/info shells no longer render the explicit white outline ring
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed `message-send-render` now applies `flow-orb-muted`, `compose-entry-preserve-orb`, and `sending-orb-selection-enter`
+  - confirmed muted disambiguation / confirm states suppress white highlight layers and home glow in `ai-decorative.css`
+  - confirmed disambiguation pill outline opacity is `0` and focused info-shell white ring was removed in `ai-glass.css`
+
+## Remaining issues / caveats
+- I did not complete a browser render pass in this environment, so the final confirmation for the three regressions is still visual in AI mode.
+- `src/styles/ai-glass.css` and related AI-mode files already had unrelated local modifications in the worktree; this patch was limited to the specific regression paths above.
+
+## Recommended next step
+1. Reopen AI mode and verify:
+   - disambiguation and confirm no longer show the white orb/container outline or voice-glow treatment
+   - disambiguation → compose keeps the outgoing orb full-size, expands it with the shell, and fades it instead of shrinking
+   - saying `send` on confirm makes the sending-state selection chrome fade in from within the orb rather than appearing to travel in from the left
+
+## Task title
+Restore compose chip-selection orb and hide compose header during hold/select states
+
+## Completion status
+- Completed
+
+## Summary
+- Reintroduced a compose-only chip-selection orb state in [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js) and [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+- After selecting a suggestion chip, the listening orb now appears below the compose field again during the chip-fill animation, without reusing the old confirm/send auxiliary orb path.
+- Updated compose layout sizing so the field lifts upward when that compose-only orb is active.
+- Updated the compose header visibility rules so the header hides during:
+  - long-press hold before the chip stack opens
+  - chip stack open state
+  - chip-fill magic pending state
+- Added the compose-only orb positioning CSS back in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css), scoped to `compose-await-orb` only.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed compose-only orb state is driven by `composeChipMagicOrbActive`
+  - confirmed compose-only orb CSS is scoped to `.compose-await-orb`
+  - confirmed header hide logic now includes `composeMenuHolding` and `composeChipMagicPending`
+
+## Remaining issues / caveats
+- I did not complete a browser-render verification in this environment, so the final check is still visual in AI mode.
+
+## Recommended next step
+1. Reopen send-message in AI mode, long-press to open chips, then select a chip and verify:
+   - the header hides during hold/open
+   - the text fills
+   - the listening orb appears below the compose field before confirm
+
+## Task title
+Fix compose long-press suggestion menu regression after transition cleanup
+
+## Completion status
+- Completed
+
+## Summary
+- Removed a stale `manualComposeEntry` reference from [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js).
+- The long-press compose suggestion menu path still called `updateComposeMenuUiOnly()`, and that function was throwing once the removed `manualComposeEntry` variable was touched.
+- With that reference gone, the hold timer can update the compose chip stack normally again.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- Source verification:
+  - confirmed there are no remaining `manualComposeEntry` references in message-send render/flow files
+
+## Remaining issues / caveats
+- This was a source-level fix; I did not complete a clean browser automation confirmation in this environment.
+
+## Recommended next step
+1. Reopen the send-message compose step and long-press on the compose surface. The suggestion chip stack should now open instead of silently failing.
+
+## Task title
+Restore compose long-press gesture for suggestion chips
+
+## Completion status
+- Completed
+
+## Summary
+- Updated the compose/recommendation pointer gesture wiring in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js).
+- The long-press handlers now run in the capture phase and explicitly capture the active pointer on the pressed element before the compose flow blurs the simulator input.
+- On pointer release/cancel, the code now releases pointer capture cleanly and clears the tracked target reference.
+- This makes the hold gesture resilient to focus changes and DOM updates during compose, which were preventing the suggestion-chip hold from consistently opening.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Source verification:
+  - confirmed compose hold uses capture-phase `pointerdown` / `pointermove` / `pointerup`
+  - confirmed compose hold now stores the pressed element and calls `setPointerCapture(...)`
+  - confirmed release path clears pointer capture and resets tracked pointer target state
+
+## Remaining issues / caveats
+- I did not get a clean browser automation confirmation in this environment, so the final verification still needs a manual long-press check in AI mode.
+
+## Recommended next step
+1. Reopen the send-message compose step and hold on the compose container; the suggestion chips should open while the pointer is still held, then remain draggable/selectable.
+
+## Task title
+Remove duplicate AI message-flow orb/container transitions and disable voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Simplified the send-message flow render path in [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js):
+  - removed the confirm-to-sending preserved layer path
+  - removed the extra confirm/compose auxiliary orb path
+  - removed the outgoing disambiguation overlay stage
+  - removed the loading dots content inside the magic-stage orb
+- Simplified the state machine in [src/flows/message-send.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js):
+  - deleted the temporary compose-chip orb activation path
+  - deleted the confirm-to-sent transition preservation state
+  - made confirm → sending → sent use one shell at a time instead of overlapping carry-over layers
+  - made disambiguation → compose morph directly into the compose container
+- Disabled voice-driven visual effects in [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so command/dictation still work, but the extra glow/box-shadow visualization no longer modifies the orb, shell, compose field, or action buttons.
+- Prevented active AI flows from using the home-orb thinking bridge in [src/shared/morph.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js), which removes the old blurred orb flash when transitioning from listening into magic during the message flow.
+- Removed dead transition styling from [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) and [src/styles/ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css), and stopped applying `flight-voice-viz` in [src/flows/flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js).
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check` passed for:
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js`
+  - `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- Source verification:
+  - confirmed message-flow source no longer contains `composeChipMagicOrbActive`, `sentTransitionActive`, `message-confirm-to-sent`, `g-confirm-to-sent-layer`, or `confirm-exit-to-sent`
+  - confirmed message-flow CSS no longer contains the removed confirm-await / confirm-to-sent transition styling
+  - confirmed flight render no longer enables `flight-voice-viz`
+- Attempted browserless module import, but repo-level module loading still fails in Node because `/Users/ariax/Documents/GitHub/GenUI/src/utils.js` reads `window` at import time
+
+## Remaining issues / caveats
+- I did not capture fresh rendered screenshots from this environment, so the final confirmation for the transition cleanup still needs an in-browser visual pass through the send-message flow.
+- Home-state orb bridging still exists for non-flow home transitions; this pass only disabled that bridge while `glass-flow-active` is set.
+
+## Recommended next step
+1. Reopen AI mode and step through send-message from listening → disambiguation → compose → confirm → sending → sent to verify there is only one orb/container at each transition and no blurred legacy orb flash.
+
+## Task title
+Make disambiguation orb use the normal listening-stage orb
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the disambiguation-only orb shrink path from [src/flows/message-send-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js) and [src/flows/flight-render.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js).
+- Disambiguation states in both send-message and book-flight flows now morph directly to the standard `listening` stage without a reduced custom geometry override.
+- Removed the disambiguation-only orb dim/scale CSS from [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css), so the orb in that step now uses the same visual treatment as the normal listening stage.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/message-send-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/flight-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed there are no remaining `DISAMBIGUATION_ORB_SCALE`, `disambiguationGeo`, or `recommendationDisambiguationGeo` helpers
+  - confirmed both flows now call `morphTo("listening", ...)` / `morphTo(shape, ...)` for disambiguation without a custom orb geometry
+  - confirmed there are no remaining `.disambiguation-surface.listening-orb` orb override rules
+
+## Remaining issues / caveats
+- This pass was source-verified only; I did not capture a fresh rendered screenshot of the disambiguation state from this environment.
+
+## Recommended next step
+1. Reopen the disambiguation step in AI mode and verify the orb below the pills now matches the normal listening-stage orb size and styling.
+
+## Task title
+Align AI-mode orb styling with bubble page and unify flow selected states
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the AI-page listening/magic orb markup in [ai.html](/Users/ariax/Documents/GitHub/GenUI/ai.html) so AI mode no longer uses the old `thinking-orb` structure and instead renders the same spherical chrome system used by the bubble page.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so listening, magic, disambiguation, and confirm-await orb states all use that shared bubble-style orb visual instead of the previous metaball/thinking CSS.
+- Fixed the magic-stage orb regression from the follow-up screenshot by:
+  - restoring inherited radius on the new orb visual wrapper
+  - making `magic` geometry match `listening` (`80x80`, `40px` radius) in [src/shapes.js](/Users/ariax/Documents/GitHub/GenUI/src/shapes.js) and [src/shapes.legacy.js](/Users/ariax/Documents/GitHub/GenUI/src/shapes.legacy.js)
+- Reworked AI flow selected-container styling in [src/flows/ui-primitives.js](/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js) and [src/styles/ai-glass.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css):
+  - send-message and book-flight flow containers now render the same `g-stage-selected-*` chrome used on bubble/index
+  - removed the old AI-only accent-orbit selection DOM/CSS
+  - this covers the selected states for disambiguation pills, compose chips, recommendation chips, selection rows, chip bars, action buttons, and flight recommendation cards generated through the shared flow primitives
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ai.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/flows/ui-primitives.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-glass.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shapes.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/shapes.legacy.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- Source verification:
+  - confirmed `SHAPES.listening.main` and `SHAPES.magic.main` now match exactly
+  - confirmed `ai.html` mounts `#siri-orb .ai-flow-orb-visual` and no longer mounts `.thinking-orb-visual`
+  - confirmed the AI-page selected containers now render shared `g-stage-selected-*` chrome from the flow primitives
+- Browser verification:
+  - loaded `ai.html` in Playwright
+  - confirmed the AI page boots without page errors
+  - confirmed the new orb markup exists and legacy `thinking-orb` nodes count is `0`
+- Existing repo smoke:
+  - `node test/smoke.mjs` still fails later in the index-page portion because a pre-existing debug sidebar toggle intercepts the timeline click; the failure was not in the AI boot path touched here
+
+## Remaining issues / caveats
+- I did not produce a rendered screenshot from this environment after the magic-stage fix, so the final visual confirmation still depends on opening the AI flow and checking the stage directly.
+- `src/shapes.legacy.js` previously lacked a `magic` shape entry; it now has one to stay aligned with the canonical module.
+
+## Recommended next step
+1. Open AI mode and step through both listening and magic states in send-message and book-flight flows to visually confirm the orb now matches in both states and that the selected-container chrome feels correct against the live motion.
+
+## Task title
 Switch Unity shell container to a sliced sprite using `container.png`
 
 ## Completion status
@@ -9976,6 +11461,103 @@ Remove the original bubble page and keep only bubble2 runtime
 ---
 
 ## Task title
+Eliminate duplicate shell during compose long-press and confirm-to-send transition
+
+## Completion status
+- Completed
+
+## Summary
+- Cleared the stale disambiguation-to-compose orb-preservation class after the compose entry animation settles, so long-press no longer inherits that inner shell state.
+- Kept the compose long-press hold window shell-stable by not mounting the chip stack until the menu actually opens.
+- Delayed the send-state inner orb reveal during the first part of confirm-to-send, so the outer `drop-main` morph no longer shows a second nested shell during the transition.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `src/styles/ai-decorative.css`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+- Live Playwright browser run on served `ai.html` in fullscreen stage mode:
+  - compose hold at `150ms`: `#c-rich [data-compose-field]` count = `1`, chip stack absent, no visible inner duplicate shell
+  - compose hold at `370ms`: chip stack present, compose field count still `1`, no second full-size inner shell
+  - confirm → send at `60ms`: `#c-rich [data-glass-body]` count = `0`, no nested inner shell visible
+  - confirm → send at `240ms`: orb visible as the only inner element
+
+## Remaining issues / caveats
+- Browser verification was performed headlessly in Playwright. I did not do an additional manual non-headless visual pass in this turn.
+- `context/task✅.md` remains stale and unrelated to the current AI-mode regression work.
+
+## Recommended next step
+1. Recheck the same two transitions interactively in your local browser:
+   - compose long-press before chips open
+   - confirm → `send` first transition frame
+
+---
+
+## Task title
+Remove duplicate send-transition shell and compose-hold inner shell in AI message flow
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the special confirm-to-sending orb-selection transition from the AI message flow render path so the send step no longer enables its extra one-off shell animation.
+- Changed the message-send `SENDING` state to use the listening-orb shape path instead of the magic shell path, so post-`send` visuals now resolve through the same bubble-orb setup used elsewhere in the flow.
+- Stopped mounting the compose chip stack during the long-press hold window. The stack now appears only once the chip menu actually opens, which removes the hidden inner shell layer that was still flashing inside the compose container.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- This pass only included source-level validation. I did not run a live browser visual check in this turn.
+- `context/task✅.md` remains stale and unrelated to the current AI-mode regression work.
+
+## Recommended next step
+1. In AI mode confirm step, say `send` and verify there is no duplicate card shell entering from the left.
+2. Verify the post-`send` waiting state now uses the same bubble-style orb instead of the magic/thinking shell.
+3. In compose step, long-press before the menu opens and verify no inner duplicate container appears during the hold window.
+
+---
+
+## Task title
+Remove compose long-press inner selected-style flash before chip menu opens
+
+## Completion status
+- Completed
+
+## Summary
+- Kept the compose field in its resting visual state during the long-press hold window.
+- Removed the pre-open selection state by clearing `flow.sel` as soon as compose hold starts, instead of waiting for the chip menu to open.
+- Stopped hiding the compose header during `composeMenuHolding`; the header now stays visible until the chip menu is actually open, which avoids the transient inner selected-style shell the user reported.
+
+## Files changed
+- `src/flows/message-send.js`
+- `src/flows/message-send-render.js`
+- `context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/flows/message-send.js`
+- `node --check src/flows/message-send-render.js`
+
+## Remaining issues / caveats
+- This pass only included source-level validation. I did not run a live browser visual check in this turn.
+- `context/task✅.md` is still stale and unrelated to the current AI-mode regression work.
+
+## Recommended next step
+1. In AI mode compose step, long-press on the compose field and verify the field stays visually unchanged during the hold window, then the chips appear without the shrinking inner selected-style flash.
+
+---
+
+## Task title
 Fix bubble2 pill text scaling up on hover-out collapse
 
 ## Completion status
@@ -10054,3 +11636,542 @@ Build standalone Unity prototype project for the GenUI morphing stage system
 1. Open `/Users/ariax/Documents/Github/GenUI-Unity` in the desktop Unity editor.
 2. Let Unity import scripts and assets, then open or let it auto-create `Assets/GenUIPrototype/Scenes/PrototypeStageSystem.unity`.
 3. Select `GenUIStageSystem`, author stages in the inspector, press Play, and verify transitions with `1..9`, arrows, `Enter`/`Space`, and `Esc`.
+
+## Task title
+Implement reactive listening-stage orb voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Used the `frontend-design` skill direction to keep the listening orb on the existing bubble-page chrome stack, then made the inner rim react more aggressively to live voice energy instead of adding a separate waveform UI.
+- Updated [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so the voice analyser now:
+  - computes a stronger weighted level from the mic spectrum
+  - drives orb-specific CSS variables (`--ai-voice-level`, `--ai-voice-presence`) on `#siri-orb`
+  - boosts the orb response curve so low-to-mid speech reads more clearly
+  - suppresses orb voice-reactivity on muted message-flow states (`disambiguation-surface`, `confirm-surface`, `flow-orb-muted`) so earlier fixes are preserved
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so active listening orb states now get:
+  - stronger cyan/lilac rim bloom on the existing selected-edge layers
+  - a brighter white inner-edge surge
+  - a rotating spectral edge band inside the orb rim
+  - larger scale / glow response under higher voice levels
+  - fast linear transitions so the rim reads as voice-reactive instead of slow ambient breathing
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- Live browser validation via real Google Chrome launched with remote debugging, then controlled through Playwright over CDP against served `ai.html`
+- Forced the listening orb into isolated render mode and compared calm vs high-energy states
+- Captured live screenshots:
+  - calm state: `/tmp/orb-voice-compare-0-v2.png`
+  - high-energy state: `/tmp/orb-voice-compare-0-9-v2.png`
+- Observed in the live render:
+  - high-energy state grows beyond the calm orb size
+  - the inner edge brightens and blooms more strongly at high voice levels
+  - the effect stays on the orb chrome itself rather than introducing a second container or separate waveform element
+
+## Remaining issues / caveats
+- The static screenshots show the voice-reactive state clearly brighter and larger than the calm orb, but the rotating edge-band component is easier to judge in motion than in a still frame.
+- `context/task.md` is still stale and did not drive this pass; the current user request was the effective source of truth.
+
+## Recommended next step
+1. Reopen AI mode and speak at low and high volume in the listening stage. The rim should now read as a deliberate cyan/lilac surge on the orb edge, with a noticeably stronger response on louder speech.
+
+## Task title
+Fix listening-stage orb voice visualization not reacting in command mode
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the actual command-listening logic bug in [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js):
+  - added a shared orb-eligibility helper so command-mode orb listening and muted flow states use the same gate
+  - armed `vizVisibleSince` for command-mode orb listening before the analyser output is fade-gated
+  - this prevents the command-listening analyser target from being multiplied by a permanent `0` fade value
+- Updated [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) so command visualization is allowed whenever the real listening stage is onscreen, not only when `aiAwake` or a flow is active
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome using a fake microphone/analyser harness:
+  - entered the actual listening stage via keyboard `L`
+  - confirmed `#drop-main` had `listening-orb`
+  - confirmed `#siri-orb` had `data-voice-reactive="1"`
+  - measured live CSS variable response:
+    - high injected mic energy: `--ai-voice-level = 1`
+    - reduced injected mic energy after settle: `--ai-voice-level = 0.4464`
+
+## Remaining issues / caveats
+- This validation used a fake analyser in the browser harness to drive stable synthetic mic energy. It verifies the real page wiring and state transitions, but not actual OS microphone permission behavior.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Reopen AI mode and test with your real microphone in the listening stage. The orb should now react immediately instead of staying visually static.
+
+## Task title
+Remove listening-stage orb voice visualization
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the orb-specific voice-visualization path from [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js):
+  - deleted orb-reactive helpers and the orb variable-writing path
+  - restored `startVoiceViz()` / `applyVoiceVisualization()` to affect only the compose dictation field
+  - stopped setting `data-voice-reactive`, `--ai-voice-level`, and `--ai-voice-presence` on `#siri-orb`
+- Removed the orb voice-reactive CSS treatment from [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css):
+  - deleted the extra rotating rim band
+  - deleted the cyan/lilac reactive glow path
+  - deleted the scale / edge-intensity overrides tied to `#siri-orb[data-voice-reactive="1"]`
+- Result: the listening stage now falls back to the normal bubble orb with no voice-reactive rim effect
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome using a fake loud analyser:
+  - entered the actual listening stage via keyboard `L`
+  - confirmed `document.body.dataset.currentShape === "listening"`
+  - confirmed `#siri-orb` had no `data-voice-reactive`
+  - confirmed computed CSS values for `--ai-voice-level` and `--ai-voice-presence` were empty
+
+## Remaining issues / caveats
+- This only removes the orb listening-stage voice visualization. The compose dictation field visualization remains intact.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Hard refresh the AI page if you still have the old orb effect cached in an open tab.
+
+## Task title
+Make listening-stage orb rim width react to voice without idle breathing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [src/ai/voice-engine.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js) so the listening orb writes a dedicated `--ai-listening-rim-level` CSS variable during the real listening stage instead of relying on the old idle animation path.
+- Kept the listening-stage visualization scoped to the orb rim only:
+  - `applyOrbVisualization()` now drives the rim level from analyser energy
+  - command/listening mode no longer clears the orb state immediately after applying it
+  - compose dictation field visualization remains separate
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css):
+  - disabled the listening orb’s idle sphere / rim breathing animations
+  - made the inner rim thickness and highlight intensity respond to `--ai-listening-rim-level`
+  - preserved the existing bubble-page orb look while changing only rim width under voice input
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/voice-engine.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome using a fake microphone / analyser harness:
+  - entered the actual listening stage via keyboard `L`
+  - confirmed `#drop-main` had `listening-orb`
+  - confirmed `#siri-orb` had `data-listening-rim-reactive="1"`
+  - confirmed the listening rim variable moved with input:
+    - high injected mic energy: `--ai-listening-rim-level = 1.0000`
+    - low injected mic energy after settle: `--ai-listening-rim-level = 0.1971`
+
+## Remaining issues / caveats
+- This validation used a synthetic analyser feed, so it verifies the real listening-stage wiring and CSS behavior but not OS-level microphone permission handling.
+- `context/task.md` remains stale and did not drive this pass; the direct user request was treated as the active source of truth.
+
+## Recommended next step
+1. Reopen AI mode listening and test with your real microphone. The orb should stay visually still at idle and only thicken the inner rim when voice energy comes in.
+
+## Task title
+Reduce listening-stage rim visibility at zero volume
+
+## Completion status
+- Completed
+
+## Summary
+- Tuned the listening-stage rim baseline in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so silence collapses to a near-hairline instead of leaving a clearly visible idle rim.
+- Reduced the zero-level inset spread, blur, and white highlight values for:
+  - `.g-stage-selected-accent-rim`
+  - `.g-stage-selected-highlight`
+- Kept the same voice-driven widening path, so louder input still expands to the full thicker rim.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome using the same fake listening analyser harness:
+  - entered the actual listening stage via keyboard `L`
+  - sampled silence and loud input on the real page
+  - confirmed `--ai-listening-rim-level = 0.0000` at silence
+  - confirmed the silent shadow stack dropped to a minimal hairline:
+    - rim highlight: `rgba(255, 255, 255, 0.14) 0px 0px 1px -1px inset`
+  - confirmed loud input still reaches the full widened state:
+    - `--ai-listening-rim-level = 1.0000`
+
+## Remaining issues / caveats
+- This pass validated the live page with synthetic analyser input, not a real microphone capture.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Check the listening orb at real silence in AI mode. If you want it even more minimal, the remaining tuning is isolated to the listening-rim shadow values in `ai-decorative.css`.
+
+## Task title
+Restore colored orb rim in confirm step
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm-step orb in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css).
+- Root cause: confirm still carries the `listening-orb` class, so after the listening-rim tuning it was inheriting the zero-volume listening baseline, which made the rim read almost black.
+- Added a confirm-specific override so `#drop-main.confirm-surface #siri-orb` uses a static colored blue/lilac accent rim and normal highlight instead of the ultra-thin listening-at-zero treatment.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - forced the confirm-state class stack on the real page: `confirm-surface compose-surface compose-await-orb listening-orb`
+  - forced `--ai-listening-rim-level: 0`
+  - confirmed computed confirm rim shadow resolved to the colored accent rim instead of the thin listening baseline:
+    - blue/lilac rim shadows at `13px / 14px / -7px`
+    - highlight restored to `rgba(255, 255, 255, 0.8) 0px 0px 6px 1px inset`
+
+## Remaining issues / caveats
+- This validation targeted the real CSS state directly rather than stepping through the full confirm interaction flow.
+- `context/task.md` remains stale and did not drive this pass.
+
+## Recommended next step
+1. Reopen the confirm step in AI mode and verify the orb reads like the bubble-page orb again, with a visible colored rim instead of a black edge.
+
+## Task title
+Remove black first-frame orb flash when entering confirm from a fired chip
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the confirm-entry orb handoff in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css).
+- Root cause: the disambiguation state explicitly drove the orb selection layers to `opacity: 0`, and the listening rim path still had a short `box-shadow` transition. On the first confirm frame, the orb could briefly render with the dark sphere before the colored confirm rim fully came back.
+- Added a confirm-specific first-frame override so the orb selection stack is immediately visible in confirm:
+  - forced `opacity: 1` for the selection, rim, highlight, sharp pass, highlight mask, and sphere edge layer
+  - forced `transition: none !important` on those layers so the confirm rim does not interpolate from the listening baseline
+- Result: after firing a chip into confirm, the orb shows the colored blue/lilac rim immediately instead of flashing black for the first few milliseconds.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - forced the live orb through a disambiguation → confirm class handoff on the real page
+  - sampled the first frame after switching to `confirm-surface`
+  - confirmed immediate first-frame values:
+    - `selectionOpacity = 1`
+    - `rimOpacity = 1`
+    - `hiOpacity = 1`
+    - full confirm rim shadow already present on that first frame
+  - confirmed the immediate rim shadow matched the final blue/lilac confirm rim, not an intermediate dark / thin state
+
+## Remaining issues / caveats
+- This validation targeted the exact CSS handoff path directly rather than replaying the full message-send interaction sequence.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Reopen the chip-fire → confirm path in AI mode and verify the orb starts with the colored rim immediately, with no black flash on entry.
+
+## Task title
+Restore colored rim on first await-orb frame before confirm
+
+## Completion status
+- Completed
+
+## Summary
+- Fixed the pre-confirm await-orb styling in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css).
+- Root cause: the earlier confirm-only override still left the shared `compose-await-orb.listening-orb` state on the listening-at-zero rim path. That meant the orb could appear dark before the confirm-specific styling took over.
+- Moved the static colored rim treatment up to the entire `compose-await-orb.listening-orb` path:
+  - forced the selection / rim / highlight stack visible immediately
+  - disabled transitions on those layers
+  - applied the same static blue/lilac rim and highlight shadows used by confirm
+- Result: the orb now has the colored rim from the moment it appears in the await-orb phase, so there is no black first frame before confirm.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - forced the real page into `compose-surface compose-await-orb listening-orb`
+  - sampled the first await-orb frame
+  - forced the next frame into `confirm-surface compose-surface compose-await-orb listening-orb`
+  - confirmed both frames already had:
+    - `rimOpacity = 1`
+    - `hiOpacity = 1`
+    - full blue/lilac rim shadow
+    - restored white highlight shadow
+
+## Remaining issues / caveats
+- This validation still targets the exact live CSS states directly rather than replaying the full user interaction sequence through the UI.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Reopen the chip-fire → confirm path and verify the orb has the colored rim immediately on first appearance, before any later confirm settling.
+
+## Task title
+Add wake audio for idle/home to listening transition
+
+## Completion status
+- Completed
+
+## Summary
+- Added a dedicated wake/listening earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+- The new `wake-listening` cue is a short upward glassy bloom designed for the agent-awakening transition, distinct from the existing `hover`, `chip`, `button`, and `sent` earcons.
+- Wired it into [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) inside `armAiWakeListening()` so it only plays when AI mode actually transitions from idle/home into the listening orb:
+  - home context circle → listening
+  - sleep → listening
+- It does not run for unrelated internal listening reuse inside active flows.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered `armAiWakeListening({ source: 'keyboard-l' })` from home
+  - confirmed resulting stage state was listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+  - instrumented `AudioContext.prototype` and confirmed the wake transition created audio nodes:
+    - `oscCount = 2`
+    - `gainCount = 3`
+
+## Remaining issues / caveats
+- This validates the wake path and generated audio graph, but not subjective loudness / taste on real speakers.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the idle/home → listening wake in the browser and tune the wake earcon envelope if you want it softer, brighter, or more Apple-like.
+
+## Task title
+Retune wake earcon to be brighter and more magical
+
+## Completion status
+- Completed
+
+## Summary
+- Retuned the `wake-listening` earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+- Shifted the cue away from a grounded warm bloom and toward a lighter, more magical character:
+  - reduced the low-body feel
+  - raised the lead pitch contour
+  - added a brighter shimmer layer
+  - added a small high sparkle accent
+  - tightened the airy transient so it feels lighter and less heavy
+- The wake logic in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) was left unchanged.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered `armAiWakeListening({ source: 'keyboard-l' })` from home
+  - confirmed the wake path still transitions to listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+  - instrumented `AudioContext.prototype` and confirmed the retuned earcon still builds an audio graph on wake:
+    - `oscCount = 3`
+    - `gainCount = 4`
+
+## Remaining issues / caveats
+- This confirms the wake earcon fires and uses the new brighter synth graph, but subjective tone still needs real-speaker evaluation.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition on speakers/headphones and decide whether the new cue should go even further toward sparkle or stay closer to the current lighter magic tone.
+
+## Task title
+Use awake.mp3 for the wake listening cue
+
+## Completion status
+- Completed
+
+## Summary
+- Replaced the synthesized `wake-listening` earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js) with buffered playback of [src/assets/awake.mp3](/Users/ariax/Documents/GitHub/GenUI/src/assets/awake.mp3).
+- Added a dedicated decoded buffer cache for `awake.mp3`, parallel to the existing click asset-loading pattern.
+- The wake trigger logic in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) was left unchanged; it still calls `playSimEarcon("wake-listening")` on idle/home → listening.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered the idle/home → listening wake twice
+  - instrumented `AudioContext.prototype.createBufferSource`
+  - confirmed buffered audio playback occurred on wake:
+    - `bufferSourceCount = 2`
+  - confirmed the UI still landed in listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+
+## Remaining issues / caveats
+- The first wake call depends on async asset fetch/decode timing; after the asset is cached in memory, subsequent wakes play immediately.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition in the browser and judge the timing/volume of `awake.mp3`; if needed, the next tuning step is gain or preloading rather than synth design.
+
+## Task title
+Remove idle/home to listening wake audio
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the wake audio from the idle/home → listening transition.
+- Deleted the `playSimEarcon("wake-listening")` call from [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js), so `armAiWakeListening()` no longer plays any sound when waking into the listening orb.
+- Removed the now-unused `awake.mp3` loading/playback path from [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- The `src/assets/awake.mp3` file still exists in the repo, but it is no longer referenced by the app.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition and confirm it is now silent. If needed later, a new wake cue can be reintroduced without the old asset path.
+
+## Task title
+Add a bubbly airy wake sound for idle/home to listening
+
+## Completion status
+- Completed
+
+## Summary
+- Restored wake audio on the idle/home → listening transition in [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js) by re-adding `playSimEarcon("wake-listening")` inside `armAiWakeListening()`.
+- Replaced the removed asset-based wake sound with a new synthesized `wake-listening` earcon in [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+- The new cue is designed as:
+  - a rounded rising bubble tone
+  - a brighter second pop note
+  - a soft airy whoosh tail built from filtered noise
+- Result: the wake feels more bubble-rise / woosh / air rather than a hard click or flat chime.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - triggered `armAiWakeListening({ source: 'keyboard-l' })` from home
+  - confirmed the UI still lands in listening:
+    - `shape = "listening"`
+    - `dropClasses = "drop home-glow listening-orb"`
+  - instrumented `AudioContext.prototype` and confirmed the new synth graph fired:
+    - `oscCount = 2`
+    - `gainCount = 3`
+    - `bufferSourceCount = 1` for the airy noise tail
+
+## Remaining issues / caveats
+- This verifies the wake path and audio graph, but the exact feel still needs real-speaker judgement.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition on speakers/headphones and decide whether the bubbly rise should be softer, shorter, or more exaggerated.
+
+## Task title
+Remove the bubbly wake sound from idle/home to listening
+
+## Completion status
+- Completed
+
+## Summary
+- Removed the current bubbly wake sound from the idle/home → listening transition.
+- Deleted the `playSimEarcon("wake-listening")` trigger from [src/ai/ai-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js), so waking into listening is silent again.
+- Removed the now-unused synthetic `wake-listening` earcon branch from [src/sim-panel.js](/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js).
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/sim-panel.js`
+- `node --check /Users/ariax/Documents/GitHub/GenUI/src/ai/ai-bindings.js`
+
+## Remaining issues / caveats
+- Other earcons such as `hover`, `chip`, `button`, `sent`, and the flow-specific reveal sounds remain unchanged.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Trigger the wake transition and confirm it is silent again. If you want a different wake cue later, it can be reintroduced independently of the removed bubbly version.
+
+## Task title
+Increase thinking-stage breathing frequency
+
+## Completion status
+- Completed
+
+## Summary
+- Increased the thinking-stage orb breathing frequency in [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css).
+- Changed `#siri-orb .thinking-orb-sphere` from `thinking-orb-breathe 3.9s` to `thinking-orb-breathe 1.5s`, so the magic/thinking orb now pulses faster without changing the orbit layers or the stage transition timing.
+- Follow-up correction: the visible AI thinking stage was not actually using the `thinking-orb` stack. The live page uses the `ai-flow-orb` stack under `magic-glow` and the temporary `orb-thinking-bridge` class.
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so the active thinking-path animations now also run at `1.5s`:
+  - `#drop-main.magic-glow #siri-orb .ai-flow-orb-sphere`
+  - `#drop-main.magic-glow #siri-orb .g-stage-selected-accent-rim`
+  - `#drop-main.magic-glow #siri-orb .g-stage-selected-highlight`
+  - the same three selectors for `#drop-main.orb-thinking-bridge`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Browser validation against served `ai.html` with Playwright + Google Chrome:
+  - manual magic button path:
+    - `currentShape = "magic"`
+    - `classes = "drop orb-thinking-bridge"`
+    - `aiFlowSphereAnimation = 1.5s ... ai-flow-orb-breathe-scale`
+    - `rimAnimation = 1.5s ... ai-flow-orb-breathe-rim`
+    - `hiAnimation = 1.5s ... ai-flow-orb-breathe-highlight`
+  - AI send-message flow thinking state:
+    - `shape = "magic"`
+    - `classes = "drop home-glow home-blur magic-glow"`
+    - `richState = "1"` during the active flow
+    - `aiFlowSphereAnimation = 1.5s ... ai-flow-orb-breathe-scale`
+    - `rimAnimation = 1.5s ... ai-flow-orb-breathe-rim`
+
+## Remaining issues / caveats
+- The earlier `shared.css` change alone did not affect the visible AI thinking stage because that stage was using the `ai-flow-orb` stack instead of the `thinking-orb` stack.
+- The active planner file in this repo appears to be `context/task✅.md`; `context/task.md` is not present.
+
+## Recommended next step
+1. Open the thinking stage and confirm the faster pulse feels right. If needed, the next tuning step is the `1.5s` duration in `ai-decorative.css` for the active thinking path.

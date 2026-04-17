@@ -387,7 +387,13 @@ const voice = initVoiceEngine({
   getGlassUi: () => messageFlow?.flow,
   getGlassState: () => messageFlow?.GS,
   shouldKeepCommandListening: () => true,
-  shouldShowCommandViz: () => aiAwake || messageFlow?.isActive?.() || flightFlow?.isActive?.(),
+  shouldShowCommandViz: () => (
+    aiAwake ||
+    morph.getCurrentShape() === "listening" ||
+    document.getElementById("drop-main")?.classList.contains("listening-orb") ||
+    messageFlow?.isActive?.() ||
+    flightFlow?.isActive?.()
+  ),
   onTranscriptUpdate: (text, isFinal) => {
     if (messageFlow?.isActive()) return messageFlow.onTranscriptUpdate(text, isFinal);
     const transcript = String(text || "");
@@ -432,7 +438,7 @@ const voice = initVoiceEngine({
     if (morph.getCurrentShape() === "listening") updateActive("listening");
   },
 });
-const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, voice, input, addChatBubble, hideTypingBubble, returnToHomeContext });
+const flightFlow = createFlightBookingFlow({ SHAPES, C, morph, shell, voice, input, addChatBubble, hideTypingBubble, returnToHomeContext, playEarcon: playSimEarcon });
 const messageFlow = createMessageSendFlow({ SHAPES, C, morph, shell, voice, input, setSimVoice, setSimInputState, addSimLog, playEarcon: playSimEarcon, clamp, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, updateActive, returnToHomeContext });
 coffeeFlow = createCoffeeOrderFlow({ SHAPES, C, morph, shell, voice, input, returnToHomeContext });
 const demo = initDemoControls({ document, SHAPES, SCENARIO_SHAPES, createScenario, selectedScenario, previewScenario, morph, shell, voice, renderShapeForStageId, updateActive, getCurrentShape: morph.getCurrentShape, getPreFlowShape: () => preFlowShape, setPreFlowShape: (value) => { preFlowShape = value; }, messageFlow, startGlassFlow: () => messageFlow.start() });
@@ -497,8 +503,10 @@ input?.addEventListener("input", (e) => {
 });
 let composeMenuPointerActive = false;
 let composeMenuPointerId = null;
+let composeMenuPointerTargetEl = null;
 let flightRecommendationPointerActive = false;
 let flightRecommendationPointerId = null;
+let flightRecommendationPointerTargetEl = null;
 const isComposeMenuPointerTarget = (target) => {
   const leftSidebar = document.getElementById("left-sidebar");
   const simPanel = document.getElementById("sim-panel");
@@ -557,13 +565,17 @@ document.addEventListener("keydown", (e) => {
     }
     if ((!focusedInMainInput || composeMenuActive) && (e.key === "ArrowUp" || e.key === "F" || e.key === "f")) {
       e.preventDefault();
+      const prevSel = messageFlow.flow.sel;
       messageFlow.flow.sel = composeMenuActive ? Math.max(-1, messageFlow.flow.sel - 1) : Math.max(0, messageFlow.flow.sel - 1);
+      if (messageFlow.flow.sel !== prevSel) playSimEarcon("hover");
       if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false);
       return;
     }
     if ((!focusedInMainInput || composeMenuActive) && (e.key === "ArrowDown" || e.key === "B" || e.key === "b")) {
       e.preventDefault();
+      const prevSel = messageFlow.flow.sel;
       messageFlow.flow.sel = Math.min(messageFlow.maxSel(), messageFlow.flow.sel + 1);
+      if (messageFlow.flow.sel !== prevSel) playSimEarcon("hover");
       if (!messageFlow.updateSelectionUiOnly()) messageFlow.render(false);
       return;
     }
@@ -599,9 +611,13 @@ document.addEventListener("pointerdown", (e) => {
   if (!messageFlow.startComposeMenuHold({ pointerOriginY: e.clientY })) return;
   composeMenuPointerActive = true;
   composeMenuPointerId = e.pointerId;
+  composeMenuPointerTargetEl = e.target instanceof Element ? e.target : null;
+  if (composeMenuPointerTargetEl?.setPointerCapture) {
+    try { composeMenuPointerTargetEl.setPointerCapture(e.pointerId); } catch {}
+  }
   if (document.activeElement === input) input?.blur();
   e.preventDefault();
-});
+}, true);
 document.addEventListener("pointerdown", (e) => {
   if (e.button !== 0) return;
   if (!flightFlow.isActive()) return;
@@ -609,35 +625,57 @@ document.addEventListener("pointerdown", (e) => {
   if (!flightFlow.startRecommendationHold?.({ pointerOriginY: e.clientY })) return;
   flightRecommendationPointerActive = true;
   flightRecommendationPointerId = e.pointerId;
+  flightRecommendationPointerTargetEl = e.target instanceof Element ? e.target : null;
+  if (flightRecommendationPointerTargetEl?.setPointerCapture) {
+    try { flightRecommendationPointerTargetEl.setPointerCapture(e.pointerId); } catch {}
+  }
   if (document.activeElement === input) input?.blur();
   e.preventDefault();
-});
+}, true);
 document.addEventListener("pointermove", (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
   if (messageFlow.updateComposeMenuPointerGesture(e.clientY)) e.preventDefault();
-});
+}, true);
+document.addEventListener("pointermove", (e) => {
+  if (!messageFlow.isActive() || messageFlow.flow.state !== messageFlow.GS.DISAMBIGUATE) return;
+  const pill = e.target?.closest?.("[data-g-contact]");
+  if (!pill) return;
+  const idx = parseInt(pill.getAttribute("data-g-contact"), 10);
+  if (!Number.isFinite(idx) || idx === messageFlow.flow.sel) return;
+  messageFlow.flow.sel = idx;
+  messageFlow.updateSelectionUiOnly();
+  playSimEarcon("hover");
+}, true);
 document.addEventListener("pointermove", (e) => {
   if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
   if (flightFlow.updateRecommendationPointerGesture?.(e.clientY)) e.preventDefault();
-});
+}, true);
 const releaseComposeMenuPointer = (e) => {
   if (!composeMenuPointerActive || e.pointerId !== composeMenuPointerId) return;
+  if (composeMenuPointerTargetEl?.releasePointerCapture) {
+    try { composeMenuPointerTargetEl.releasePointerCapture(e.pointerId); } catch {}
+  }
   composeMenuPointerActive = false;
   composeMenuPointerId = null;
+  composeMenuPointerTargetEl = null;
   messageFlow.endComposeMenuHold({ commitSelection: true });
   e.preventDefault();
 };
-document.addEventListener("pointerup", releaseComposeMenuPointer);
-document.addEventListener("pointercancel", releaseComposeMenuPointer);
+document.addEventListener("pointerup", releaseComposeMenuPointer, true);
+document.addEventListener("pointercancel", releaseComposeMenuPointer, true);
 const releaseFlightRecommendationPointer = (e) => {
   if (!flightRecommendationPointerActive || e.pointerId !== flightRecommendationPointerId) return;
+  if (flightRecommendationPointerTargetEl?.releasePointerCapture) {
+    try { flightRecommendationPointerTargetEl.releasePointerCapture(e.pointerId); } catch {}
+  }
   flightRecommendationPointerActive = false;
   flightRecommendationPointerId = null;
+  flightRecommendationPointerTargetEl = null;
   flightFlow.endRecommendationHold?.({ commitSelection: false });
   e.preventDefault();
 };
-document.addEventListener("pointerup", releaseFlightRecommendationPointer);
-document.addEventListener("pointercancel", releaseFlightRecommendationPointer);
+document.addEventListener("pointerup", releaseFlightRecommendationPointer, true);
+document.addEventListener("pointercancel", releaseFlightRecommendationPointer, true);
 document.querySelectorAll(".bz-inp, .sp-inp, .sb-input, .sb-textarea, .typo-color").forEach((el) => {
   el.addEventListener("keydown", (e) => e.stopImmediatePropagation());
   el.addEventListener("keypress", (e) => e.stopImmediatePropagation());

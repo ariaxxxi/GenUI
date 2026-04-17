@@ -39,7 +39,8 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     const inAiIdleState = state.currentShape === 'idle' && document.getElementById('drop-main')?.classList.contains('ai-mode');
     const homeLikeShape = state.currentShape === 'circle' || state.currentShape === 'listening';
     const thinkingLikeTarget = shape === 'magic' || shape === 'ai' || shape === 'idle';
-    if (homeLikeShape && thinkingLikeTarget) {
+    const inGlassFlow = document.body?.classList.contains('glass-flow-active') === true;
+    if (!inGlassFlow && homeLikeShape && thinkingLikeTarget) {
       return void bridges.bridgeHomeToThinking(shape, contentData, customGeo, stageId);
     }
     if ((state.currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {

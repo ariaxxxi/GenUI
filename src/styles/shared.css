@@ -45,11 +45,12 @@
   inset: 0;
   z-index: 1;
   border-radius: inherit;
+  isolation: isolate;
   overflow: hidden;
   pointer-events: none;
   opacity: 0;
   transition:
-    opacity 180ms var(--motion-ease),
+    opacity 420ms var(--motion-ease),
     --g-stage-selected-rgb 320ms var(--motion-ease),
     --g-stage-selected-secondary-rgb 320ms var(--motion-ease),
     --g-stage-h var(--anim-h, 450ms var(--motion-ease));
@@ -59,11 +60,16 @@
   opacity: 1;
 }
 
+body.glass-flow-active #prototype-stage-selection {
+  opacity: 0 !important;
+}
+
 /* Bottom-right white highlight — must NOT be inside a masked ancestor */
 .g-stage-selected-sharp-pass {
   position: absolute;
   bottom: 0;
   right: 0;
+  z-index: 4;
   width: calc(112px + var(--g-stage-h, 56px) * 1.0);
   height: calc(39px + var(--g-stage-h, 56px) * 0.5);
   pointer-events: none;
@@ -81,13 +87,17 @@
   background-position: bottom right;
   mix-blend-mode: screen;
   filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
-  transition: filter 450ms var(--motion-ease);
+  opacity: 0;
+  transition:
+    opacity 700ms var(--motion-ease),
+    filter 450ms var(--motion-ease);
 }
 
 /* Colored inner rim from accent colors */
 .g-stage-selected-accent-rim {
   position: absolute;
   inset: 0;
+  z-index: 2;
   border-radius: inherit;
   pointer-events: none;
   box-shadow:
@@ -101,25 +111,34 @@
       color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
     inset 0 0 14px -5px
       rgba(255, 255, 255, 0.03);
-  opacity: 0.96;
+  opacity: 0;
+  transition:
+    opacity 420ms var(--motion-ease),
+    box-shadow 420ms var(--motion-ease);
 }
 
 /* Crisp white inner edge ring */
 .g-stage-selected-highlight {
   position: absolute;
   inset: 0;
+  z-index: 1;
   border-radius: inherit;
   pointer-events: none;
   mix-blend-mode: screen;
   box-shadow:
     inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  opacity: 0;
+  transition:
+    opacity 420ms var(--motion-ease),
+    box-shadow 420ms var(--motion-ease);
 }
 
 /* Top-left white highlight — clipped to rounded rect */
 .g-stage-selected-highlight-mask {
   position: absolute;
   inset: 0;
+  z-index: 3;
   overflow: hidden;
   border-radius: inherit;
   pointer-events: none;
@@ -137,7 +156,27 @@
   background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
   mix-blend-mode: screen;
   filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
-  transition: filter 450ms var(--motion-ease);
+  opacity: 0;
+  transition:
+    opacity 700ms var(--motion-ease),
+    filter 450ms var(--motion-ease);
+}
+
+#drop-main.prototype-stage-selected #prototype-stage-selection .g-stage-selected-accent-rim,
+.g-stage-selected-host:is(.selected, .focused) > .g-selection-chrome .g-stage-selected-accent-rim {
+  opacity: 0.96;
+}
+
+#drop-main.prototype-stage-selected #prototype-stage-selection .g-stage-selected-highlight,
+.g-stage-selected-host:is(.selected, .focused) > .g-selection-chrome .g-stage-selected-highlight {
+  opacity: 1;
+}
+
+#drop-main.prototype-stage-selected #prototype-stage-selection .g-stage-selected-sharp-highlight,
+.g-stage-selected-host:is(.selected, .focused) > .g-selection-chrome .g-stage-selected-sharp-highlight,
+#drop-main.prototype-stage-selected #prototype-stage-selection .g-stage-selected-highlight-mask-image,
+.g-stage-selected-host:is(.selected, .focused) > .g-selection-chrome .g-stage-selected-highlight-mask-image {
+  opacity: 1;
 }
 
 @keyframes thinking-orb-breathe {
@@ -231,7 +270,7 @@
   overflow: hidden;
   filter: blur(1px) saturate(1.16);
   opacity: var(--thinking-entry-progress);
-  animation: thinking-orb-breathe 3.9s ease-in-out infinite;
+  animation: thinking-orb-breathe 1.5s ease-in-out infinite;
   box-shadow:
     inset 0 0 16px rgba(255, 255, 255, 0.16),
     inset 0 -16px 24px rgba(46, 40, 138, 0.28),
@@ -303,6 +342,7 @@
   mix-blend-mode: screen;
   opacity: calc(0.8 * var(--thinking-entry-progress));
 }
+
 
 #siri-orb .thinking-orb-layer-grain {
   background-image:

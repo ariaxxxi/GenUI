@@ -1,5 +1,45 @@
 // import { initHandTracking } from './hand-tracking.js';
 
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let _audioCtx = null;
+let _clickBuffer = null;
+let _clickBufferLoading = false;
+
+function getAudioCtx() {
+  if (!_audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) _audioCtx = new AC();
+  }
+  return _audioCtx;
+}
+
+async function loadClickBuffer() {
+  if (_clickBuffer || _clickBufferLoading) return;
+  _clickBufferLoading = true;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const res = await fetch('src/assets/click.mp3');
+    const arrayBuffer = await res.arrayBuffer();
+    _clickBuffer = await ctx.decodeAudioData(arrayBuffer);
+  } catch (e) {}
+}
+
+function playBubbleHoverSound() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  loadClickBuffer();
+  if (!_clickBuffer) return;
+  const src = ctx.createBufferSource();
+  src.buffer = _clickBuffer;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.8, ctx.currentTime);
+  src.connect(gain);
+  gain.connect(ctx.destination);
+  src.start();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const BUBBLE_BASE_SIZE = 110;
 const BUBBLE_MIN_SIZE = 60;
 const BUBBLE_MAX_SIZE = 110;
@@ -602,6 +642,7 @@ function render() {
   let scene = computeScene();
   const hoverChanged = state.hoveredBubble !== scene.hoveredId || state.hoveredChildBubble !== scene.hoveredChildId;
   if (hoverChanged) {
+    if (scene.hoveredId != null && scene.hoveredId !== state.hoveredBubble) playBubbleHoverSound();
     state.hoveredBubble = scene.hoveredId;
     state.hoveredChildBubble = scene.hoveredChildId;
     scene = computeScene();

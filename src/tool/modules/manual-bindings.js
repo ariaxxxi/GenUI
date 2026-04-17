@@ -61,6 +61,7 @@ export function initManualBindings({
   handleSend,
   manualShape,
   openCustom,
+  movePrototypeListSelection,
   flight,
   rebuildAnim,
   initStarfield,
@@ -155,6 +156,16 @@ export function initManualBindings({
   document.addEventListener('keydown', (e) => {
     if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
     if (flight.handleKeyDown(e)) return;
+    if (selectedScenario()?.shape === 'list' && e.key === 'ArrowUp') {
+      e.preventDefault();
+      movePrototypeListSelection?.(-1);
+      return;
+    }
+    if (selectedScenario()?.shape === 'list' && e.key === 'ArrowDown') {
+      e.preventDefault();
+      movePrototypeListSelection?.(1);
+      return;
+    }
     if (e.key === '1') manualShape('circle');
     if (e.key === '2') manualShape('dot');
     if (e.key === '3') manualShape('pill');

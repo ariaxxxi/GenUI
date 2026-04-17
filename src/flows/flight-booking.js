@@ -306,14 +306,16 @@ export function createFlightBookingFlow(ctx) {
     if (flow.recommendationExitTimer) return;
     if (current.type === "payment" || (current.type === "recommendation" && flow.recommendationMode === "alternatives")) {
       const recommendationCount = current.type === "recommendation" ? api.recommendationOptionsForUi().length : (current.options || []).length;
-      flow.focused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
+      const nextFocused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
+      if (nextFocused !== flow.focused) { flow.focused = nextFocused; if (typeof ctx.playEarcon === "function") ctx.playEarcon("hover"); }
       document.querySelectorAll("[data-flight-opt]").forEach((el, idx) => el.classList.toggle("selected", idx === flow.focused));
       return;
     }
     if (current.type === "recommendation") {
       if (!flow.recommendationMenuOpen) return;
       const recommendationCount = api.recommendationOptionsForUi().length;
-      flow.focused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
+      const nextFocused = Math.max(0, Math.min(recommendationCount - 1, flow.focused + dir));
+      if (nextFocused !== flow.focused) { flow.focused = nextFocused; if (typeof ctx.playEarcon === "function") ctx.playEarcon("hover"); }
       render.updateRecommendationSelectionUi?.(flow.focused);
       return;
     }
