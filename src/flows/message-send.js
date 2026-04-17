@@ -810,6 +810,9 @@ export function createMessageSendFlow(ctx) {
       flow.showCheck = false;
       flow.msg = "";
     }
+    if (fromDictation && flow.state === GS.COMPOSE && hadText === willHaveText && willHaveText) {
+      if (render.updateComposeFieldTextOnly?.(text, { magicPending: !!flow.composeChipMagicPending })) return;
+    }
     render.render(hadText !== willHaveText);
   }
 

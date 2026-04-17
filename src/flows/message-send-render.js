@@ -204,7 +204,7 @@ export function createMessageSendRender({
     const dropMain = document.getElementById("drop-main");
     if (!dropMain) return;
     const showComposeAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
-    const showListeningOrb = flow.active && (shape === "listening" || showComposeAwaitOrb);
+    const showListeningOrb = flow.active && ((shape === "listening" && flow.state !== GS.DISAMBIGUATE) || showComposeAwaitOrb);
     const showHomeGlow = flow.active && shape === "magic";
     dropMain.classList.toggle("compose-await-orb", showComposeAwaitOrb);
     dropMain.classList.toggle("listening-orb", showListeningOrb);
@@ -304,6 +304,36 @@ export function createMessageSendRender({
       field.scrollHeight || 0,
     ));
     if (height > 0) field.style.setProperty("--g-stage-h", `${height}px`);
+    return true;
+  }
+
+  function updateComposeFieldTextOnly(text, options = {}) {
+    const flow = getFlow();
+    if (!flow.active || flow.state !== GS.COMPOSE) return false;
+    const field = C.rich.querySelector("[data-compose-field]");
+    const textNode = field?.querySelector("[data-compose-field-text]");
+    if (!field || !textNode) return false;
+    const value = String(text || "");
+    const magicPending = options?.magicPending === true;
+    textNode.textContent = value;
+    textNode.classList.toggle("g-compose-text-pending", magicPending);
+    field.classList.toggle("active", !!value.trim());
+    field.classList.toggle("has-text", !!value.trim());
+    field.classList.toggle("g-compose-field-magic-pending", magicPending);
+    syncComposeFieldSelectionMetrics();
+
+    const shape = glassStateShape(flow.state);
+    const geo = composeGeo();
+    const currentGeo = getCurrentMainGeometry() || {};
+    if (
+      Math.abs(geo.main.w - (Number(currentGeo.w) || 0)) > 1
+      || Math.abs(geo.main.h - (Number(currentGeo.h) || 0)) > 1
+      || Math.abs(geo.main.ty - (Number(currentGeo.ty) || 0)) > 1
+    ) {
+      morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
+    }
+    syncDropMainOrbClasses(shape);
+    applyAiCelestialChrome(document);
     return true;
   }
 
@@ -472,7 +502,7 @@ export function createMessageSendRender({
     const token = renderToken;
     const shape = glassStateShape(flow.state);
     const showComposeAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
-    const shouldShowListeningOrb = flow.active && (shape === "listening" || showComposeAwaitOrb);
+    const shouldShowListeningOrb = flow.active && ((shape === "listening" && flow.state !== GS.DISAMBIGUATE) || showComposeAwaitOrb);
     const shouldShowHomeGlow = flow.active && shape === "magic";
     const screenSpec = buildScreenSpec();
     const dropMain = document.getElementById("drop-main");
@@ -699,5 +729,6 @@ export function createMessageSendRender({
       }
       return chips.length > 0;
     },
+    updateComposeFieldTextOnly,
   };
 }

@@ -67,16 +67,6 @@
   opacity: 1;
   transform: scale(1);
 }
-#drop-main.listening-orb:not(.compose-await-orb):not(.confirm-surface):not(.magic-glow) #siri-orb,
-#drop-main.listening-orb:not(.compose-await-orb):not(.confirm-surface):not(.magic-glow) #siri-orb.visible {
-  inset: auto;
-  top: 50%;
-  left: 50%;
-  width: var(--g-stage-h, 80px);
-  height: var(--g-stage-h, 80px);
-  margin-top: calc(var(--g-stage-h, 80px) * -0.5);
-  margin-left: calc(var(--g-stage-h, 80px) * -0.5);
-}
 .ai-flow-orb-visual {
   position: absolute;
   inset: 0;
@@ -176,10 +166,20 @@
 }
 #drop-main.listening-orb #siri-orb .ai-flow-orb-sphere {
   animation: none;
+  box-shadow: none;
+}
+#drop-main.listening-orb #siri-orb .ai-flow-orb-sphere::before,
+#drop-main.listening-orb #siri-orb .ai-flow-orb-sphere::after {
+  opacity: 0;
 }
 #drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
 #drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
   animation: none;
+}
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-refraction,
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--top-left,
+#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
+  opacity: 0;
 }
 #drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
   box-shadow:
@@ -201,29 +201,20 @@
     inset 0 1px 0 rgba(255, 255, 255, calc(0.03 + var(--ai-listening-rim-level) * 0.21));
   transition: box-shadow 48ms linear;
 }
-#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
-#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
   animation: none;
 }
-#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection,
-#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-accent-rim,
-#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-highlight,
-#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-sharp-pass,
-#drop-main.compose-await-orb.listening-orb #siri-orb .g-stage-selected-highlight-mask,
-#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-sphere::before,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection,
-#drop-main.confirm-surface #siri-orb .g-stage-selected-accent-rim,
-#drop-main.confirm-surface #siri-orb .g-stage-selected-highlight,
-#drop-main.confirm-surface #siri-orb .g-stage-selected-sharp-pass,
-#drop-main.confirm-surface #siri-orb .g-stage-selected-highlight-mask,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere::before {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-accent-rim,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-highlight,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-sharp-pass,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-highlight-mask,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere::before {
   opacity: 1;
   transition: none !important;
 }
-#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
   box-shadow:
     inset 13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
     inset -13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
@@ -231,11 +222,21 @@
     inset 0 -9px 11px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
     inset 0 0 14px -5px rgba(255, 255, 255, 0.03);
 }
-#drop-main.compose-await-orb.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight,
-#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
   box-shadow:
     inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere::before,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere::after {
+  box-shadow: none;
+  opacity: 0;
+}
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-refraction,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--top-left,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
+  opacity: 0;
 }
 @keyframes sleep-listening-orb-in {
   0% {
@@ -399,7 +400,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main {
 body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::after {
   box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
-#drop-main:not(.listening-orb):not(.magic-glow) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
+#drop-main:not(.listening-orb):not(.magic-glow):not(.disambiguation-surface):not(.confirm-surface) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 .ai-flow-orb-disambiguation-icon {
   position: absolute;
   inset: 0;
@@ -420,9 +421,29 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
 #drop-main.disambiguation-surface {
   overflow: visible !important;
 }
+#drop-main.disambiguation-surface #home-glow-layer {
+  opacity: 0 !important;
+  box-shadow: none !important;
+}
+#drop-main.disambiguation-surface #siri-orb,
+#drop-main.disambiguation-surface #siri-orb.visible {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: inherit;
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  pointer-events: none;
+}
 #drop-main.disambiguation-surface .ai-flow-orb-disambiguation-icon {
   opacity: 1;
   transform: scale(1);
+}
+#drop-main.disambiguation-surface #siri-orb .ai-flow-orb-sphere {
+  animation: none;
 }
 #drop-main.disambiguation-surface #siri-orb .ai-flow-orb-selection,
 #drop-main.disambiguation-surface #siri-orb .g-stage-selected-accent-rim,
@@ -477,8 +498,8 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   border-radius: var(--g-compose-await-orb-radius);
   pointer-events: none;
 }
-#drop-main.compose-await-orb.listening-orb #siri-orb,
-#drop-main.compose-await-orb.listening-orb #siri-orb.visible {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb.visible {
   inset: auto;
   left: 50%;
   top: calc(100% + 16px);
@@ -494,9 +515,44 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   filter: none !important;
   pointer-events: none;
 }
-#drop-main.compose-await-orb.listening-orb #siri-orb::before,
-#drop-main.compose-await-orb.listening-orb #siri-orb::after {
+#drop-main.confirm-surface #siri-orb,
+#drop-main.confirm-surface #siri-orb.visible {
+  inset: auto;
+  left: 50%;
+  top: calc(100% + 16px);
+  width: var(--g-compose-await-orb-size);
+  height: var(--g-compose-await-orb-size);
+  border-radius: var(--g-compose-await-orb-radius);
+  --g-stage-h: var(--g-compose-await-orb-size);
+  opacity: 1 !important;
+  transform: translateX(-50%) scale(1) !important;
+  pointer-events: none;
+}
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb::before,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb::after,
+#drop-main.confirm-surface #siri-orb::before,
+#drop-main.confirm-surface #siri-orb::after {
   content: none;
+}
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere {
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.02);
+  opacity: 1;
+  animation: ai-flow-orb-breathe-scale 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere::before {
+  opacity: 1;
+}
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-sphere::after {
+  opacity: 1;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.25);
+}
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection {
+  opacity: 1;
+  transition: none !important;
+}
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-sharp-pass,
+#drop-main.confirm-surface #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight-mask {
+  opacity: 1;
 }
 #drop-main.compose-await-orb #siri-orb canvas {
   border-radius: inherit;
