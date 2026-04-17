@@ -1,6 +1,149 @@
 # Handoff
 
 ## Task title
+Add accent rim toggle to Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to add a `Rim enabled` toggle.
+- Added `state.rimEnabled` and wired it into every shell instance via `data-rim-enabled`.
+- Added a CSS guard so disabling the rim forces the accent rim layer fully hidden:
+  - `.test-shell[data-rim-enabled="false"] .test-shell-accent-rim { opacity: 0 !important; }`
+- This works for both the single preview and the list preview.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The rim toggle only hides the accent rim overlay. It does not affect the white highlight PNG layers or the inner glow.
+
+## Recommended next step
+1. If needed, add a grouped "layer visibility" section so mask, rim, highlights, and inner glow can all be isolated consistently.
+
+## Task title
+Restore prototype-strength highlight visibility in Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the white highlight image layers now render at full active opacity instead of the previously reduced values.
+- Changed:
+  - top-left highlight active opacity from `0.34` to `1`
+  - bottom-right highlight active opacity from `0.3` to `1`
+- This brings the highlight read much closer to prototype mode, where the PNG highlight layers are not dimmed down this way.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The tool still allows highlight scale tuning, so visual parity can still vary if the current scale differs from prototype geometry.
+
+## Recommended next step
+1. If the highlights are still off after this, compare the current highlight scale and offsets against the exact prototype chip geometry next.
+
+## Task title
+Fade Celestial tool accent rim out on deactivation
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) so the prototype-style accent rim now follows the shell active state.
+- Changed the rim default to `opacity: 0`.
+- Added an active-state rule so the rim shows only while the shell is active:
+  - `.test-shell[data-active="true"] .test-shell-accent-rim { opacity: 0.96; }`
+- Result: deactivation now fades the color rim out along with the other active-only layers.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The rim still uses the current tool timing of `420ms` for opacity/box-shadow transitions.
+
+## Recommended next step
+1. If needed, expose a rim toggle in the panel so the overlay can be isolated independently.
+
+## Task title
+Add prototype accent rim and flush side panels in Celestial tool
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the outer left/right page gutters so the side panels sit flush to the viewport edges.
+- Added a new dedicated accent rim overlay layer above the inner glow and below the white highlight layers for every shell instance.
+- Mirrored the prototype selected-style rim structure from [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css):
+  - left inner glow uses the first accent color
+  - right inner glow uses the second accent color
+  - top and bottom mix both accents
+  - faint white inner haze remains
+- In the tool, the rim accent inputs are sourced from:
+  - `Top-left core` -> `--g-stage-selected-rgb`
+  - `Bottom-right core` -> `--g-stage-selected-secondary-rgb`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The rim is scaled using the tool's `--unit` size proxy rather than fixed prototype pixel values, so it remains geometry-aware across different shell sizes.
+
+## Recommended next step
+1. If needed, expose a rim toggle so the new overlay can be isolated the same way as the refraction mask.
+
+## Task title
+Subdue Celestial tool title and move it to preview panel
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-tool.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html) to remove the large title and description from the left panel.
+- Added a new subtle preview-panel title centered above the stage:
+  - text: `Celestial`
+  - all caps
+  - thin weight
+  - small size
+  - dim, low-contrast color
+- Kept the title intentionally quiet so it reads as a subtle label rather than a dominant header.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-tool.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The left panel still reserves its existing geometry-control layout space; this pass only removed the visual copy block.
+
+## Recommended next step
+1. If needed, tighten the top spacing in the left panel now that the copy block is gone.
+
+## Task title
 Add refraction mask toggle to Celestial tool
 
 ## Completion status

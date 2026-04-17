@@ -56,10 +56,10 @@
     }
 
     main {
-      width: min(1480px, calc(100vw - 40px));
+      width: 100%;
       min-height: 100vh;
-      margin: 0 auto;
-      padding: 28px 0 36px;
+      margin: 0;
+      padding: 0 0 24px;
       display: grid;
       align-items: stretch;
     }
@@ -68,7 +68,7 @@
       display: grid;
       grid-template-columns: minmax(250px, 320px) minmax(520px, 1fr) minmax(320px, 400px);
       gap: 20px;
-      min-height: calc(100vh - 64px);
+      min-height: 100vh;
     }
 
     .hero-copy,
@@ -91,23 +91,6 @@
       margin-top: 6px;
       display: grid;
       gap: 16px;
-    }
-
-    h1 {
-      margin: 0;
-      font-family: "Avenir Next", "Segoe UI", sans-serif;
-      font-size: clamp(22px, 2vw, 30px);
-      line-height: 1.02;
-      font-weight: 500;
-      letter-spacing: -0.02em;
-    }
-
-    .hero-copy p {
-      margin: 0;
-      max-width: 20rem;
-      color: rgba(197, 205, 225, 0.66);
-      font-size: 13px;
-      line-height: 1.55;
     }
 
     .control-panel {
@@ -220,8 +203,22 @@
     .preview-panel {
       padding: 22px;
       display: grid;
-      grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-rows: auto minmax(0, 1fr) auto;
       gap: 18px;
+    }
+
+    .preview-title {
+      justify-self: center;
+      margin: 0;
+      color: rgba(214, 219, 232, 0.42);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 0.34em;
+      line-height: 1;
+      text-transform: uppercase;
+      user-select: none;
+      pointer-events: none;
     }
 
     .preview-stage {
@@ -355,13 +352,42 @@
       opacity: 1;
     }
 
+    .test-shell-accent-rim {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 2;
+      box-shadow:
+        inset calc(var(--unit, 1px) * 13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
+        inset calc(var(--unit, 1px) * -13) 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
+        inset 0 calc(var(--unit, 1px) * 9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
+        inset 0 calc(var(--unit, 1px) * -9) calc(var(--unit, 1px) * 11) calc(var(--unit, 1px) * -7)
+          color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
+        inset 0 0 calc(var(--unit, 1px) * 14) calc(var(--unit, 1px) * -5)
+          rgba(255, 255, 255, 0.03);
+      opacity: 0;
+      transition: box-shadow 420ms var(--motion-ease), opacity 420ms var(--motion-ease);
+    }
+
+    .test-shell[data-active="true"] .test-shell-accent-rim {
+      opacity: 0.96;
+    }
+
+    .test-shell[data-rim-enabled="false"] .test-shell-accent-rim {
+      opacity: 0 !important;
+    }
+
     .test-shell-top-left-highlight-mask {
       position: absolute;
       inset: 0;
       overflow: hidden;
       border-radius: inherit;
       pointer-events: none;
-      z-index: 2;
+      z-index: 3;
     }
 
     .test-shell-top-left-highlight {
@@ -391,7 +417,7 @@
       width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
       height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
       pointer-events: none;
-      z-index: 3;
+      z-index: 4;
     }
 
     .test-shell-bottom-right-highlight {
@@ -415,12 +441,12 @@
     }
 
     .test-shell[data-active="true"] .test-shell-top-left-highlight {
-      opacity: 0.34;
+      opacity: 1;
       transform: translate(var(--highlight-top-end-x, 0px), var(--highlight-top-end-y, 0px));
     }
 
     .test-shell[data-active="true"] .test-shell-bottom-right-highlight {
-      opacity: 0.3;
+      opacity: 1;
       transform: translate(var(--highlight-bottom-end-x, 0px), var(--highlight-bottom-end-y, 0px));
     }
 
@@ -672,6 +698,7 @@
     @media (max-width: 1220px) {
       .workspace {
         grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+        gap: 16px;
       }
 
       .hero-copy {
@@ -691,6 +718,7 @@
     @media (max-width: 980px) {
       main {
         min-height: auto;
+        padding-bottom: 18px;
       }
 
       .workspace {
@@ -720,8 +748,8 @@
 
     @media (max-width: 640px) {
       main {
-        width: min(calc(100vw - 20px), 1200px);
-        padding-top: 18px;
+        width: 100%;
+        padding-top: 0;
       }
 
       .control-grid {
@@ -740,8 +768,6 @@
   <main>
     <section class="workspace">
       <article class="hero-copy">
-        <h1>Celestial Visual</h1>
-        <p>Geometry-aware shell preview with live position, blur, and color tuning.</p>
         <div class="hero-geometry">
           <div class="control-grid">
             <div class="control">
@@ -793,6 +819,7 @@
       </article>
 
       <section class="preview-panel">
+        <h1 class="preview-title">Celestial</h1>
         <div class="preview-stage" id="previewStage" data-view-mode="single" tabindex="0">
           <article class="test-shell test-shell--single" id="testShell" data-active="true" style="--shell-width: 420px; --shell-height: 260px; --shell-radius: 32px;">
             <div class="test-shell-content">
@@ -801,6 +828,7 @@
                 <div class="test-shell-blob test-shell-blob--bottom-right"></div>
               </div>
               <div class="test-shell-inner-glow" aria-hidden="true"></div>
+              <div class="test-shell-accent-rim" aria-hidden="true"></div>
               <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
                 <div class="test-shell-top-left-highlight"></div>
               </div>
@@ -818,6 +846,7 @@
                   <div class="test-shell-blob test-shell-blob--bottom-right"></div>
                 </div>
                 <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-accent-rim" aria-hidden="true"></div>
                 <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
                   <div class="test-shell-top-left-highlight"></div>
                 </div>
@@ -834,6 +863,7 @@
                   <div class="test-shell-blob test-shell-blob--bottom-right"></div>
                 </div>
                 <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-accent-rim" aria-hidden="true"></div>
                 <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
                   <div class="test-shell-top-left-highlight"></div>
                 </div>
@@ -850,6 +880,7 @@
                   <div class="test-shell-blob test-shell-blob--bottom-right"></div>
                 </div>
                 <div class="test-shell-inner-glow" aria-hidden="true"></div>
+                <div class="test-shell-accent-rim" aria-hidden="true"></div>
                 <div class="test-shell-top-left-highlight-mask" aria-hidden="true">
                   <div class="test-shell-top-left-highlight"></div>
                 </div>
@@ -962,6 +993,11 @@
         </div>
 
         <div class="control-grid">
+          <label class="toggle" for="rimEnabledToggle">
+            <input id="rimEnabledToggle" type="checkbox" checked>
+            <span>Rim enabled</span>
+          </label>
+
           <div class="control">
             <div class="control-header">
               <label for="innerGlowBlurRange">Inner glow blur</label>
@@ -1002,6 +1038,7 @@
       highlightScale: 100,
       innerGlowBlur: 2,
       maskEnabled: true,
+      rimEnabled: true,
       previewMode: "single",
     };
 
@@ -1032,6 +1069,7 @@
     const blobBottomXRange = document.getElementById("blobBottomXRange");
     const highlightScaleRange = document.getElementById("highlightScaleRange");
     const innerGlowBlurRange = document.getElementById("innerGlowBlurRange");
+    const rimEnabledToggle = document.getElementById("rimEnabledToggle");
     const widthValue = document.getElementById("widthValue");
     const heightValue = document.getElementById("heightValue");
     const radiusValue = document.getElementById("radiusValue");
@@ -1267,8 +1305,11 @@
       targetShell.style.setProperty("--blob-top-edge", state.blobTopEdge);
       targetShell.style.setProperty("--blob-bottom-core", state.blobBottomCore);
       targetShell.style.setProperty("--blob-bottom-edge", state.blobBottomEdge);
+      targetShell.style.setProperty("--g-stage-selected-rgb", state.blobTopCore);
+      targetShell.style.setProperty("--g-stage-selected-secondary-rgb", state.blobBottomCore);
       targetShell.style.setProperty("--inner-glow-blur", `${(height * state.innerGlowBlur) / 56}px`);
       targetShell.style.setProperty("--blob-blur", `${state.blobBlur}`);
+      targetShell.dataset.rimEnabled = String(state.rimEnabled);
 
       const unit = Math.max(0.65, Math.min(width, height) / 320);
       targetShell.style.setProperty("--unit", `${unit}px`);
@@ -1326,6 +1367,7 @@
       }
       directionSelect.disabled = state.previewMode === "list";
       maskEnabledToggle.checked = state.maskEnabled;
+      rimEnabledToggle.checked = state.rimEnabled;
       previewStage.dataset.viewMode = state.previewMode;
     }
 
@@ -1367,6 +1409,7 @@
       if (typeof preset.highlightScale === "number") state.highlightScale = preset.highlightScale;
       if (typeof preset.innerGlowBlur === "number") state.innerGlowBlur = preset.innerGlowBlur;
       if (typeof preset.maskEnabled === "boolean") state.maskEnabled = preset.maskEnabled;
+      if (typeof preset.rimEnabled === "boolean") state.rimEnabled = preset.rimEnabled;
       state.previewMode = preset.previewMode === "list" ? "list" : "single";
       if (state.previewMode === "list") {
         resetListState();
@@ -1468,6 +1511,11 @@
 
     innerGlowBlurRange.addEventListener("input", () => {
       state.innerGlowBlur = Number(innerGlowBlurRange.value);
+      render();
+    });
+
+    rimEnabledToggle.addEventListener("change", () => {
+      state.rimEnabled = rimEnabledToggle.checked;
       render();
     });
 
