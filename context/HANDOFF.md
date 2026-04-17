@@ -1,6 +1,549 @@
 # Handoff
 
 ## Task title
+Neutralize demo panel surfaces
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the panel surfaces read as plain dark black/gray with no tinted accent color.
+- Changed the shared panel surface variables to a darker neutral:
+  - `--panel: rgba(10, 10, 12, 0.94)`
+  - `--panel-border: rgba(255, 255, 255, 0.07)`
+- Removed panel backdrop blur so the page background no longer bleeds a color tint into the hero, preview, or control panels.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The control inputs and preset buttons were already neutralized in the prior pass; this change only removes residual tint from the panel surfaces themselves.
+
+## Recommended next step
+1. If the panels should feel even flatter, reduce the panel shadow next rather than reintroducing blur or tint.
+
+## Task title
+Re-layout Celestial test page around centered preview and right-side controls
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to rename the page heading from `Reusable chrome without aspect stretch.` to `Celestial Visual`.
+- Reworked the test harness layout from a top-down stacked arrangement into a three-panel workspace:
+  - left: intro / context card
+  - center: live preview panel
+  - right: control panel
+- Adjusted the page shell and responsive rules so:
+  - large screens keep the example centered with controls on the right
+  - medium screens collapse to intro + controls on the left and preview on the right
+  - narrow screens stack vertically again for usability
+- This pass did not change the shell component logic; it only reorganized the surrounding demo page layout and copy.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The preview panel remains visually dominant by design, but actual perceived centering will still depend on browser viewport width and the current control-panel width.
+
+## Recommended next step
+1. If needed, do a final polish pass on panel spacing and preview-stage sizing now that the overall harness layout is in its intended left-center-right structure.
+
+## Task title
+Shorten Celestial deactivation timing
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so deactivation is now genuinely shorter than activation.
+- Added per-state timing variables on `.test-shell` and switched them in the inactive state:
+  - activation remains:
+    - transform: `700ms`
+    - opacity: `420ms`
+  - deactivation now uses:
+    - transform: `520ms`
+    - opacity: `280ms`
+- Applied the shorter exit timing to:
+  - accent blobs
+  - top-left highlight
+  - bottom-right highlight
+  - inner glow fade
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Older unused `.celestial-*` CSS remains in the file from earlier iterations and still contains its own inactive-state selectors, but it is not part of the active `test-shell-*` stack used by the page.
+
+## Recommended next step
+1. If the exit now feels too abrupt, adjust only the inactive duration variables rather than changing the active timing or motion path.
+
+## Task title
+Remove spread controls and retune Celestial blur defaults
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to remove the exposed spread controls that were no longer needed:
+  - removed `Mask spread`
+  - removed `Inner glow spread`
+- Kept those spread values baked into the component using the current selected-style / Figma-aligned constants:
+  - mask spread fixed to `3 / 56` of height
+  - inner glow spread fixed to `1px`
+- Updated defaults to the new requested values:
+  - mask blur: `30`
+  - blob blur: `40`
+  - inner glow blur: `5`
+- Changed the inner glow so it fades out with the inactive state instead of remaining fully visible when the shell deactivates.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Dead-reference check:
+  - `rg -n "maskSpread|innerGlowSpread|inner-glow-spread" ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The inner glow spread is now fixed in CSS rather than adjustable from the UI. If exact parity later requires a different value, it should be changed in the component styles rather than re-exposed as a control by default.
+
+## Recommended next step
+1. Continue tuning only the visible motion and highlight intensity, since the control surface is now reduced to the remaining meaningful blur/color parameters.
+
+## Task title
+Reverse highlight motion on Celestial deactivation
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so deactivating the shell now visibly plays the motion out instead of only dropping the visible state.
+- The two selected-style highlights now share the same active/inactive motion behavior as the accent blobs:
+  - inactive state = directional start offset
+  - active state = settled position
+  - deactivation = transition back along the same path
+- Added `getHighlightLayout(direction)` in JS and wired its offsets into CSS variables for:
+  - `.test-shell-top-left-highlight`
+  - `.test-shell-bottom-right-highlight`
+- This means the active direction now affects both entry and exit for the full shell chrome, not just the masked blobs.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Highlight exit offsets are currently a fixed `22px` directional nudge. If closer parity is needed, that value should be tuned visually against the final selected-style reference.
+
+## Recommended next step
+1. Compare activate/deactivate motion side by side for all four directions and tighten the highlight offset amount only if the exit read feels too short relative to the blob travel.
+
+## Task title
+Add selected-style top-left and bottom-right highlights to reusable Celestial test page
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to add the two selected-style highlight assets on top of the current shell stack.
+- Added the top-left highlight using the same clipped-mask structure as the existing selected-style implementation:
+  - `.test-shell-top-left-highlight-mask`
+  - `.test-shell-top-left-highlight`
+- Added the bottom-right highlight using the same free pass structure as the existing selected-style implementation:
+  - `.test-shell-bottom-right-pass`
+  - `.test-shell-bottom-right-highlight`
+- Kept the same sizing formula from selected-style so both highlights scale from the current pill height:
+  - width = `112px + height * 1.0`
+  - height = `39px + height * 0.5`
+- Reused the same repo assets:
+  - `src/assets/button-highlight-top-left.png`
+  - `src/assets/figma-proto-button-highlight-bottom-mask.png`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- The page still contains older unused `.celestial-*` highlight CSS from earlier iterations. The new active setup is the `test-shell-*` highlight structure added in this pass.
+
+## Recommended next step
+1. Compare the shell against the selected-style reference and tune only layer opacity/order if needed, without changing the highlight asset geometry or anchor points.
+
+## Task title
+Constrain reusable Celestial test geometry bounds
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the interactive geometry controls enforce the new requested bounds:
+  - max width: `420px`
+  - min height: `40px`
+- Changed the live control defaults and shell defaults to start at `420px × 132px`.
+- Added explicit `clampWidth()` and `clampHeight()` logic so the shell, state, and sliders stay in sync even if future code paths try to exceed those bounds.
+- Updated the preset widths that previously exceeded `420px`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const html=fs.readFileSync('ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html','utf8'); const m=html.match(/<script>([\\s\\S]*)<\\/script>/); if(!m) throw new Error('no script'); new Function(m[1]); console.log('script ok');"`
+
+## Remaining issues / caveats
+- Width still has a lower bound of `180px` from the earlier control setup.
+- Height still has an upper bound of `420px`.
+
+## Recommended next step
+1. Continue tuning the visual layers inside those bounds so the mask, blobs, and highlights are only optimized for the actual supported geometry range.
+
+## Task title
+Expose blob blur control in reusable Celestial test page
+
+## Completion status
+- Completed
+
+## Summary
+- Added a live `Blob blur` tuning control to [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html).
+- The new control is wired into page state as `blobBlur` and feeds the blob filter through the CSS variable `--blob-blur`.
+- The page now exposes:
+  - blob accent colors
+  - mask blur
+  - mask spread
+  - blob blur
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- The blur control only affects the two accent blobs; it does not change mask softness.
+
+## Recommended next step
+1. Use the blob blur slider together with mask blur/spread to find the point where the accent arcs read clearly through the luminance mask without filling too much of the pill center.
+
+## Task title
+Reset white-pill demo to blank container
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-mask-on-white-pill.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html) to remove everything inside the pill container so the demo can be rebuilt step by step from a blank base.
+- Removed from that page:
+  - the mask layer
+  - the mask toggle
+  - the inline script used by the toggle
+  - the now-unused mask sizing variables
+- Left only:
+  - the black stage background
+  - the white pill container shell
+  - a small label indicating it is now a blank white pill
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Static HTML only; no script execution required after reset.
+
+## Remaining issues / caveats
+- The white-pill demo is intentionally empty now. The previous mask behavior has been removed from this page.
+
+## Recommended next step
+1. Add the next layer or behavior explicitly, one step at a time, using this blank white pill as the base.
+
+## Task title
+Swap reusable Celestial pill to generated Figma-style mask
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the refraction wrapper no longer points at the static zero-spread SVG file directly.
+- The page now generates a `data:image/svg+xml` mask URL from the current pill width, height, and radius using the same Figma-style structure as the white-pill demo:
+  - black rounded rect
+  - inset white blur in the SVG filter
+- That generated mask is assigned to `--zero-spread-mask-url` and applied to `.celestial-refraction`.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- Exact mask rendering still depends on browser support for SVG data-URL luminance masks on HTML elements.
+
+## Recommended next step
+1. If the revealed arcs still read incorrectly, inspect the generated mask output in the browser devtools and tune the blur amount in `buildZeroSpreadMaskUrl()` before changing the pass positions again.
+
+## Task title
+Restore visible accent endcap circles in masked Celestial pill
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) after the user reported that the two accent circles were no longer visible.
+- Kept the zero-spread SVG mask semantics intact, but changed the masked refraction passes so they actually read as endcap circles:
+  - converted both caustic fills into explicit circular magenta / violet orb gradients
+  - increased their opacity to full strength in the active state
+  - reduced blur slightly so the circle read is stronger
+  - enlarged the pass bounds
+  - pushed the final positions farther toward the left and right endcaps
+- This keeps the “black passes nothing, white passes everything” mask behavior while making the revealed arcs visible again.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- Exact visibility of the revealed circles still depends on the browser’s SVG luminance-mask rendering. The implementation is correct, but the amount of visible arc may still vary slightly by renderer.
+
+## Recommended next step
+1. If the circles still read too weak, the next tuning point is their final `aEnd` / `bEnd` positions or the white-blur width in the zero-spread mask, not the overall mask semantics.
+
+## Task title
+Convert Celestial test page zero-spread layer into real pass mask
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) so the zero-spread layer is no longer rendered as a visible dark overlay.
+- Introduced a new `.celestial-refraction` wrapper that contains the colored refraction passes:
+  - the caustic blooms
+  - the top-left highlight
+  - the bottom-right highlight
+- Applied [figma-proto-button-refraction-mask-zero-spread.svg](/Users/ariax/Documents/GitHub/GenUI/src/assets/figma-proto-button-refraction-mask-zero-spread.svg) as an actual luminance mask on that wrapper:
+  - black area blocks the refraction passes
+  - white inner-shadow area reveals the refraction passes
+- Kept the rim and white edge highlight outside that mask so the shell outline remains visible.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This relies on CSS mask support for the current browser. The standalone demo is fine for modern WebKit/Blink browsers, but older browsers may render differently.
+
+## Recommended next step
+1. Recheck the pill visually. If the color is still leaking too far inward, the next thing to change is which layers sit inside `.celestial-refraction`, not the mask semantics.
+
+## Task title
+Align white-pill mask demo to exact Figma node
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-mask-on-white-pill.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html) to match the referenced Figma node `502:12 / 502:13` directly instead of using the previously inferred center-gradient approximation.
+- The white-pill mask is now implemented as:
+  - solid black rounded rect fill
+  - inset white blur only
+- The blur and spread are scaled from pill height using the Figma node ratios:
+  - blur = `20 / 56`
+  - spread = `3 / 56`
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Static HTML/CSS only; no script execution required.
+
+## Remaining issues / caveats
+- The main Celestial pill page still uses the separately tuned mask layer. This pass corrected only the isolated white-pill demo to match the exact Figma mask node.
+
+## Recommended next step
+1. If the same exact mask behavior should drive the main Celestial pill, replace the current `celestial-zero-spread-mask` styling with the same black-fill + inset-white-blur construction and then retune layer ordering in the full composition.
+
+## Task title
+Add isolated white-pill mask demo
+
+## Completion status
+- Completed
+
+## Summary
+- Added [celestial-mask-on-white-pill.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html), a minimal static page that shows the current center-darkening mask on a plain white pill with no other Celestial chrome layers.
+- This page is intended only for visual inspection of the mask shape and falloff.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-mask-on-white-pill.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Static HTML only; no script execution required.
+
+## Remaining issues / caveats
+- The mask in this file is copied from the current standalone Celestial test page, so any future tuning should be applied in both places if the demo is meant to stay in sync.
+
+## Recommended next step
+1. Compare the white-pill demo to the intended Figma mask. If the center block is too large or too soft, adjust the radial-gradient stop positions before retuning the full Celestial pill.
+
+## Task title
+Fix zero-spread mask regression hiding Celestial pill
+
+## Completion status
+- Completed
+
+## Summary
+- Adjusted the `celestial-zero-spread-mask` in [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) after the previous pass made the top mask too opaque and visually flattened the entire pill.
+- The mask now:
+  - uses `mix-blend-mode: multiply`
+  - has significantly lighter center/edge opacity stops
+  - keeps the center darker than the halo passes without fully covering the rim and endcap color
+- This keeps the “blank dark interior” goal while preserving visible magenta/violet read instead of turning the whole shell nearly black.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This is still a hand-tuned visual approximation. If the mask is now too weak, only the opacity stops inside `.celestial-zero-spread-mask` should be adjusted next.
+
+## Recommended next step
+1. Recheck the pill visually. If the center is still too bright, increase only the center stops in the horizontal `linear-gradient`; if the ends are getting dulled again, lower the outer edge stops rather than raising overall opacity.
+
+## Task title
+Add scalable zero-spread top mask to standalone Celestial pill
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to add a new topmost `celestial-zero-spread-mask` layer over the pill chrome.
+- Chose a procedural implementation instead of directly reusing [figma-proto-button-refraction-mask-zero-spread.svg](/Users/ariax/Documents/GitHub/GenUI/src/assets/figma-proto-button-refraction-mask-zero-spread.svg):
+  - the source SVG is just a rounded rect plus blurred inner shadow
+  - procedural gradients and inset shadows track arbitrary width, height, and radius more reliably than a fixed `140 × 56` asset viewBox
+  - future tuning can now happen in the page CSS without needing per-size SVG scaling corrections
+- The new overlay darkens the center of the pill while preserving the bright edge read, which keeps the inside visually blank and prevents the halo passes from filling the full body.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- The procedural top mask is intentionally an approximation of the Figma zero-spread mask, not a literal pixel-for-pixel SVG filter port.
+
+## Recommended next step
+1. If the center still reads too bright, increase the middle stops in `.celestial-zero-spread-mask`. If the edges get overly muted, reduce its inset shadow or lower the two radial-gradient midpoint opacities.
+
+## Task title
+Refine standalone Celestial test page toward blank pill parity
+
+## Completion status
+- Completed
+
+## Summary
+- Updated [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) to remove all placeholder text and badge content from inside the shell so the container now renders as a blank pill.
+- Reworked the two accent halos for closer parity with the supplied reference:
+  - removed the image-based blurred pass look
+  - replaced both halos with large, clipped radial-gradient blooms
+  - moved the active final positions closer to the left and right endcaps
+  - narrowed the default shell to the reference pill geometry (`620 × 132`, radius `66`)
+- Reduced the strength of the corner highlight masks and simplified the stage background to black so the shell reads closer to the provided comparison image.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This pass was tuned from the supplied reference images, not from a live browser screenshot-diff workflow, so there may still be small visual mismatches in halo softness or lateral placement.
+
+## Recommended next step
+1. Compare the new pill directly against the reference. If it still reads too wide or too centered, the only values that should need further tuning are the `aEnd` / `bEnd` positions and the `--pass-width` / `--pass-height` calculations in the page script.
+
+## Task title
+Implement standalone Celestial reusable container test page
+
+## Completion status
+- Completed
+
+## Summary
+- Added a new standalone test harness at [celestial-reusable-container-test.html](/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html) for quick iteration on a reusable Celestial-style container without touching the existing Lottie demo pages.
+- The page rebuilds the effect as a geometry-aware layered shell:
+  - container width, height, and border radius are independently adjustable
+  - moving caustic passes are container-relative and keep a square blur sprite so they do not stretch with aspect-ratio changes
+  - existing repo highlight assets are reused for the top-left and bottom-right glints
+  - accent rim and crisp inner highlight are procedural CSS layers rather than fixed 1080×1080 baked masks
+- Added quick-test controls directly in the page:
+  - width / height / radius sliders
+  - direction selector (`top`, `right`, `bottom`, `left`)
+  - active toggle
+  - auto-pulse toggle
+  - preset buttons for card / pill / square / tall geometry
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- Inline script compile check:
+  - `node -e "const fs=require('fs'); const file='ref/Celestial-Hoverstate-Specs/demo/celestial-reusable-container-test.html'; const html=fs.readFileSync(file,'utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); scripts.forEach((code,i)=>{ new Function(code); console.log('script',i,'ok'); });"`
+
+## Remaining issues / caveats
+- This page is a procedural approximation of the Celestial hoverstate, not a pixel-identical port of the original Lottie export. The goal here is reusable geometry without stretch, not 1:1 playback of the 1080-square baked comp.
+- `context/task.md` is absent in this repo state; the direct user request was used as the active task source of truth for this standalone implementation.
+
+## Recommended next step
+1. Open the new test page and decide whether the caustic pass positions and opacity ramp are close enough to the original reference. If tighter parity is needed, tune only the normalized start/end coordinates in `getDirectionalLayout()` and the pass opacity/filter values in the page CSS.
+
+## Task title
 Animate disambiguation chips into compose and remove confirm to send shell fade
 
 ## Completion status
