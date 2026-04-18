@@ -350,6 +350,18 @@ export function createMessageSendRender({
     return syncDirectionalSelection(nodes, nextIndex, selectionMotionTimers, { durationMs: 700 });
   }
 
+  function clearComposeChipSelection(chips) {
+    const nodes = Array.from(chips || []);
+    if (!nodes.length) return false;
+    clearDirectionalSelectionTimers(selectionMotionTimers);
+    nodes.forEach((chip) => {
+      chip.classList.remove("selected", "deselecting");
+      const chrome = chip.querySelector(".g-selection-chrome");
+      if (chrome) chrome.dataset.stageDirection = "bottom";
+    });
+    return true;
+  }
+
   function layoutDisambiguationContacts(contacts) {
     return { items: layoutDisambiguationPillItems(contacts, getFlow().sel) };
   }
@@ -733,7 +745,8 @@ export function createMessageSendRender({
       chips.forEach((chip, idx) => {
         chip.classList.toggle("is-visible", idx < visibleCount);
       });
-      syncDirectionalSelection(chips, flow.sel, selectionMotionTimers, { durationMs: 700 });
+      if (flow.sel < 0) clearComposeChipSelection(chips);
+      else syncDirectionalSelection(chips, flow.sel, selectionMotionTimers, { durationMs: 700 });
       applyAiCelestialChrome(document);
       const nextStackRect = stack.getBoundingClientRect();
       const deltaY = previousStackRect.top - nextStackRect.top;

@@ -1,6 +1,60 @@
 # Handoff
 
 ## Task title
+Apply celestial directional motion between bubble-page child bubbles
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) to use the shared directional selected-state helper for child-bubble hover transitions, instead of hard-setting the selected state every render.
+- Added a bubble-page wrapper that tracks the active child-menu parent and hovered child id, clears stale child selection state when the menu closes or switches parents, and only invokes directional motion when the hovered child actually changes.
+- Kept the child bubble’s local `is-highlighted` styling alive during the shared `.deselecting` phase so the outgoing celestial effect can finish instead of collapsing immediately.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- `rg -n "syncChildDirectionalSelectionUi|clearChildDirectionalSelection|syncDirectionalSelection\\(|deselecting" src/bubble2-page.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task✅.md`, `src/flows/message-send-render.js`, and `src/flows/message-send.js` already had unrelated local changes and were left untouched.
+
+## Recommended next step
+1. Open the bubble page and hover across child bubbles in the same menu to verify the celestial highlight now exits toward the old item and enters from the new item with directional motion.
+
+## Task title
+Fix bubble page child-bubble celestial selected highlight
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/bubble2-page.js](/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js) so hovered child-bubble hosts now toggle the shared `.selected` state on their `.g-stage-selected-host` surface.
+- Before this change, child bubbles only toggled a local `.is-highlighted` class, so the shared celestial chrome stayed at its default `opacity: 0` and none of the selected rim/highlight animation could appear.
+- The existing accent-color path remains intact, so the selected effect now uses the same action/icon accent color already being assigned per child action.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/bubble2-page.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/bubble2-page.js`
+- `git diff --check`
+- `rg -n "classList\\.toggle\\('selected', isHighlighted\\)" src/bubble2-page.js`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task✅.md`, `src/flows/message-send-render.js`, and `src/flows/message-send.js` already had unrelated local changes and were left untouched.
+
+## Recommended next step
+1. Open the bubble page and verify hovered child bubbles now show the celestial selected rim/highlight using each action’s accent color.
+
+## Task title
 Reduce confirm orb highlight images further to 0.5x
 
 ## Completion status

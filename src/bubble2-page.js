@@ -1,5 +1,9 @@
 // import { initHandTracking } from './hand-tracking.js';
-import { applySelectedChromePreset } from './shared/celestial-selection-chrome.js';
+import {
+  applySelectedChromePreset,
+  clearDirectionalSelectionTimers,
+  syncDirectionalSelection,
+} from './shared/celestial-selection-chrome.js';
 import { celestialSelectedPresetForRenderShape } from './shared/celestial-selected-presets.js';
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
@@ -305,6 +309,9 @@ const state = {
 
 let previousHoveredId = null;
 let previousHoveredChildId = null;
+let syncedChildSelectionParentId = null;
+let syncedChildSelectionId = null;
+const childSelectionMotionTimers = new Map();
 
 const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
@@ -357,6 +364,61 @@ function buildScene() {
   fragment.appendChild(refs.orb);
   refs.panLayer.appendChild(fragment);
   refs.panLayer.appendChild(childFragment);
+}
+
+function getChildSelectionSurfaces(parentId) {
+  const parentBubble = BUBBLES_CONFIG.find((bubble) => bubble.id === parentId);
+  if (!parentBubble?.childActions?.length) return [];
+  return parentBubble.childActions
+    .map((action) => refs.childNodes.get(getChildBubbleKey(parentId, action.id))?.surface || null)
+    .filter(Boolean);
+}
+
+function clearChildDirectionalSelection(nodes) {
+  const items = Array.from(nodes || []);
+  clearDirectionalSelectionTimers(childSelectionMotionTimers);
+  items.forEach((node) => {
+    node.classList.remove('selected', 'deselecting');
+    const chrome = node.querySelector('.g-selection-chrome');
+    if (chrome) chrome.dataset.stageDirection = 'bottom';
+  });
+}
+
+function syncChildDirectionalSelectionUi(parentId, hoveredChildId) {
+  const resolvedParentId = Number.isFinite(Number(parentId)) ? Number(parentId) : null;
+  const resolvedChildId = hoveredChildId || null;
+  const parentChanged = syncedChildSelectionParentId !== resolvedParentId;
+  const selectionChanged = syncedChildSelectionId !== resolvedChildId;
+
+  if (!parentChanged && !selectionChanged) return false;
+
+  if (syncedChildSelectionParentId != null && parentChanged) {
+    clearChildDirectionalSelection(getChildSelectionSurfaces(syncedChildSelectionParentId));
+  }
+
+  const nodes = resolvedParentId != null ? getChildSelectionSurfaces(resolvedParentId) : [];
+  if (!nodes.length || !resolvedChildId) {
+    clearChildDirectionalSelection(nodes);
+    syncedChildSelectionParentId = resolvedParentId;
+    syncedChildSelectionId = resolvedChildId;
+    return false;
+  }
+
+  const parentBubble = BUBBLES_CONFIG.find((bubble) => bubble.id === resolvedParentId);
+  const nextIndex = parentBubble?.childActions?.findIndex(
+    (action) => getChildBubbleKey(resolvedParentId, action.id) === resolvedChildId,
+  ) ?? -1;
+  if (nextIndex < 0) {
+    clearChildDirectionalSelection(nodes);
+    syncedChildSelectionParentId = resolvedParentId;
+    syncedChildSelectionId = resolvedChildId;
+    return false;
+  }
+
+  syncDirectionalSelection(nodes, nextIndex, childSelectionMotionTimers, { durationMs: 700 });
+  syncedChildSelectionParentId = resolvedParentId;
+  syncedChildSelectionId = resolvedChildId;
+  return true;
 }
 
 function createBubbleNode(bubble, index) {
@@ -650,6 +712,8 @@ function render() {
   refs.panLayer.style.transform =
     `translate(-50%, -50%) translate3d(${format(scene.panOffset.x)}px, ${format(scene.panOffset.y)}px, 0)`;
 
+  syncChildDirectionalSelectionUi(state.childMenuParentId, scene.hoveredChildId);
+
   for (const bubble of scene.bubbles) {
     const node = refs.bubbleNodes.get(bubble.id);
     if (!node) continue;
@@ -771,7 +835,8 @@ function render() {
 
     const chromeEl = node.surface.querySelector('.bubble2-child-selection');
     if (!chromeEl) continue;
-    node.surface.classList.toggle('is-highlighted', isHighlighted && !node.action.img);
+    const isDeselecting = node.surface.classList.contains('deselecting');
+    node.surface.classList.toggle('is-highlighted', (isHighlighted || isDeselecting) && !node.action.img);
     node.surface.style.setProperty('--g-stage-selected-rgb', getChildActionAccent(node.action));
     node.surface.style.setProperty('--g-stage-selected-secondary-rgb', 'rgb(0 0 0)');
     node.surface.style.setProperty('--g-stage-h', `${height}px`);
