@@ -4,6 +4,7 @@
   --bubble2-frame-border: rgba(255, 255, 255, 0.1);
   --bubble2-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
   --bubble2-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease: var(--bubble2-ease);
   --bubble2-pill-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --bubble2-orb-accent-a: rgb(114 154 241);
   --bubble2-orb-accent-b: rgb(197 160 240);
@@ -686,6 +687,7 @@ body.bubble2-page {
   z-index: 11;
   isolation: isolate;
   overflow: hidden;
+  opacity: 1;
 }
 
 /* Color glow accent rim — same fixed-px values as color glow system */

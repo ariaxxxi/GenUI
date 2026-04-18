@@ -1,4 +1,6 @@
 // import { initHandTracking } from './hand-tracking.js';
+import { applySelectedChromePreset } from './shared/celestial-selection-chrome.js';
+import { celestialSelectedPresetForRenderShape } from './shared/celestial-selected-presets.js';
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
 let _audioCtx = null;
@@ -45,6 +47,9 @@ const BUBBLE_MIN_SIZE = 60;
 const BUBBLE_MAX_SIZE = 110;
 const MAX_DIST = 260;
 const MAX_PAN = 75;
+const CANVAS_SIZE = 420;
+const CANVAS_CENTER_X = CANVAS_SIZE / 2;
+const CANVAS_CENTER_Y = CANVAS_SIZE / 2;
 const PAN_MARGIN_PX = 24;
 const CANVAS_HALF_SIZE = 210;
 const DEFAULT_BUBBLE_GAP = 8;
@@ -67,6 +72,8 @@ const ORB_IDLE_DURATION_MS = 1000;
 const ORB_PRESSED_DURATION_MS = 450;
 const ORB_CENTER_X = 210;
 const ORB_CENTER_Y = 356;
+const CENTER_PROBE_BASE_X = CANVAS_CENTER_X - ORB_CENTER_X;
+const CENTER_PROBE_BASE_Y = CANVAS_CENTER_Y - ORB_CENTER_Y;
 const FALLBACK_ICON = 'src/assets/fallback-icon.png';
 const PILL_TEXT_LEFT_PADDING = 16;
 const PILL_TEXT_RIGHT_PADDING = 64;
@@ -97,6 +104,18 @@ const FIGMA_ASSETS = {
   note:    'src/assets/figma-note.png',
 };
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
+const CELESTIAL_CHIP_PRESET = celestialSelectedPresetForRenderShape('chip');
+const CELESTIAL_CIRCLE_PRESET = celestialSelectedPresetForRenderShape('circle');
+
+function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
+  const cls = [extraClass, 'g-selection-chrome'].filter(Boolean).join(' ');
+  return `<div class="${cls}" data-stage-direction="${direction}" aria-hidden="true"><div class="g-stage-selected-refraction"><div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div><div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div></div><div class="g-stage-selected-sharp-pass"><div class="g-stage-selected-sharp-highlight"></div></div><div class="g-stage-selected-accent-rim"></div><div class="g-stage-selected-highlight"></div><div class="g-stage-selected-highlight-mask"><div class="g-stage-selected-highlight-mask-image"></div></div></div>`;
+}
+
+function applyBubbleCelestialChrome(chromeEl, hostEl, preset, colorOverrides = {}) {
+  if (!chromeEl || !hostEl || !preset) return;
+  applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides);
+}
 
 const BUBBLES_CONFIG = [
   {
@@ -263,11 +282,9 @@ const state = {
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
-  mousePos: {
+  dragOffset: {
     x: 0,
     y: 0,
-    nx: 0,
-    ny: 0,
     active: false,
   },
   dragStart: {
@@ -442,20 +459,11 @@ function createChildNode(parentBubble, action) {
   root.dataset.parentBubbleId = String(parentBubble.id);
 
   const surface = document.createElement('div');
-  surface.className = 'bubble2-surface bubble2-child-surface';
+  surface.className = 'bubble2-surface bubble2-child-surface g-stage-selected-host';
   if (action.img) surface.classList.add('is-image-only');
   if (isChipAction(action)) surface.classList.add('is-chip');
   surface.innerHTML = `
-    <div class="bubble2-child-selection" aria-hidden="true">
-      <div class="bubble2-child-selection-sharp-pass">
-        <div class="bubble2-child-selection-sharp-highlight"></div>
-      </div>
-      <div class="bubble2-child-selection-accent-rim"></div>
-      <div class="bubble2-child-selection-highlight"></div>
-      <div class="bubble2-child-selection-highlight-mask">
-        <div class="bubble2-child-selection-highlight-mask-image"></div>
-      </div>
-    </div>
+    ${renderCelestialSelectionChrome('bottom', 'bubble2-child-selection')}
   `;
 
   let content;
@@ -490,21 +498,11 @@ function createOrbNode() {
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
 
   const visual = document.createElement('div');
-  visual.className = 'bubble2-orb-visual';
+  visual.className = 'bubble2-orb-visual g-stage-selected-host selected';
 
   visual.innerHTML = `
-    <div class="bubble2-orb-sphere" aria-hidden="true">
-      <div class="bubble2-orb-selection" aria-hidden="true">
-        <div class="bubble2-orb-selection-accent-rim"></div>
-        <div class="bubble2-orb-selection-highlight"></div>
-        <div class="bubble2-orb-selection-sharp-pass">
-          <div class="bubble2-orb-selection-sharp-highlight"></div>
-        </div>
-        <div class="bubble2-orb-selection-highlight-mask">
-          <div class="bubble2-orb-selection-highlight-mask-image"></div>
-        </div>
-      </div>
-    </div>
+    <div class="bubble2-orb-sphere" aria-hidden="true"></div>
+    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection')}
   `;
   button.appendChild(visual);
 
@@ -512,7 +510,7 @@ function createOrbNode() {
 }
 
 function bindEvents() {
-  window.addEventListener('pointerdown', handlePointerDown);
+  refs.shell?.addEventListener('pointerdown', handlePointerDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
@@ -544,15 +542,13 @@ function handlePointerDown(event) {
   state.hoveredChildBubble = null;
   state.childMenuParentId = null;
   state.childMenuPointerLock = null;
-  state.mousePos = {
+  state.dragOffset = {
     x: 0,
     y: 0,
-    nx: 0,
-    ny: 0,
     active: true,
   };
-  if (refs.orb?.setPointerCapture && event.pointerId != null) {
-    try { refs.orb.setPointerCapture(event.pointerId); } catch (_) {}
+  if (refs.shell?.setPointerCapture && event.pointerId != null) {
+    try { refs.shell.setPointerCapture(event.pointerId); } catch (_) {}
   }
   scheduleMotionPhaseRender(state.openMotionUntil);
   scheduleRender();
@@ -566,18 +562,15 @@ function handlePointerMove(event) {
   const scaleY = rect.height / 420;
   const containerX = (event.clientX - rect.left) / scaleX;
   const containerY = (event.clientY - rect.top) / scaleY;
+  const dragOffsetX = containerX - state.dragStart.x;
+  const dragOffsetY = containerY - state.dragStart.y;
 
-  const nx = clamp((containerX - state.dragStart.x) / ORB_CENTER_X, -1, 1);
-  const ny = clamp((containerY - state.dragStart.y) / ORB_CENTER_X, -1, 1);
-
-  state.mousePos = {
-    x: containerX - ORB_CENTER_X,
-    y: containerY - ORB_CENTER_Y,
-    nx,
-    ny,
+  state.dragOffset = {
+    x: dragOffsetX,
+    y: dragOffsetY,
     active: true,
   };
-  state.pointerMovedSincePress = true;
+  state.pointerMovedSincePress = state.pointerMovedSincePress || dragOffsetX !== 0 || dragOffsetY !== 0;
 
   scheduleRender();
 }
@@ -586,9 +579,9 @@ function handlePointerRelease(event) {
   if (!state.isPressed) return;
   const now = performance.now();
 
-  if (refs.orb?.releasePointerCapture && event.pointerId != null) {
+  if (refs.shell?.releasePointerCapture && event.pointerId != null) {
     try {
-      refs.orb.releasePointerCapture(event.pointerId);
+      refs.shell.releasePointerCapture(event.pointerId);
     } catch {
       // Ignore capture release errors.
     }
@@ -597,11 +590,9 @@ function handlePointerRelease(event) {
   state.isPressed = false;
   state.openMotionUntil = 0;
   state.closeMotionUntil = now + CLOSE_PHASE_LATCH_MS;
-  state.mousePos = {
+  state.dragOffset = {
     x: 0,
     y: 0,
-    nx: 0,
-    ny: 0,
     active: false,
   };
   state.dragStart = {
@@ -763,7 +754,6 @@ function render() {
     const fadeDuration = child ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
     const staggerDelay = child ? child.actionIndex * CHILD_STAGGER_STEP_MS : 0;
     const isHighlighted = scene.hoveredChildId === childId;
-
     node.root.style.zIndex = String(child ? 65 + child.actionIndex : 20);
     node.root.style.width = `${format(width)}px`;
     node.root.style.height = `${format(height)}px`;
@@ -779,10 +769,21 @@ function render() {
       `${child ? APPEAR_MOVE_DURATION_MS : DISAPPEAR_MOVE_DURATION_MS}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms, ${fadeDuration}ms`;
     node.root.style.transitionTimingFunction = `${transformEase}, ease-out, ease-out, ease-out, ease-out`;
 
+    const chromeEl = node.surface.querySelector('.bubble2-child-selection');
+    if (!chromeEl) continue;
     node.surface.classList.toggle('is-highlighted', isHighlighted && !node.action.img);
     node.surface.style.setProperty('--g-stage-selected-rgb', getChildActionAccent(node.action));
     node.surface.style.setProperty('--g-stage-selected-secondary-rgb', 'rgb(0 0 0)');
     node.surface.style.setProperty('--g-stage-h', `${height}px`);
+    applyBubbleCelestialChrome(
+      chromeEl,
+      node.surface,
+      CELESTIAL_CHIP_PRESET,
+      {
+        blobTopCore: getChildActionAccent(node.action),
+        blobBottomCore: getChildActionAccent(node.action),
+      },
+    );
     node.content.style.width = `${format(width)}px`;
     node.content.style.height = `${format(height)}px`;
     node.content.style.transform = isChip ? 'scale(1)' : (node.action.img ? 'scale(1)' : 'scale(0.88)');
@@ -796,267 +797,258 @@ function render() {
   if (refs.orbVisual) {
     refs.orbVisual.style.transitionDuration = `${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms`;
     refs.orbVisual.style.transform = `translate3d(0, 0, 0) scale(${scene.orb.targetScale.toFixed(4)})`;
+    refs.orbVisual.style.setProperty('--g-stage-h', `${ORB_BASE_SIZE}px`);
+    applyBubbleCelestialChrome(
+      refs.orbVisual.querySelector('.bubble2-orb-selection'),
+      refs.orbVisual,
+      CELESTIAL_CIRCLE_PRESET,
+      {
+        blobTopCore: 'rgb(114 154 241)',
+        blobBottomCore: 'rgb(197 160 240)',
+      },
+    );
   }
 }
 
 function computeScene() {
-  const pointerBasis = state.childMenuParentId != null && state.childMenuPointerLock
-    ? state.childMenuPointerLock
-    : state.mousePos;
-  const nx = pointerBasis.active ? pointerBasis.nx : 0;
-  const ny = pointerBasis.active ? pointerBasis.ny : 0;
+  const desiredPan = state.isPressed && state.dragOffset.active
+    ? { x: state.dragOffset.x, y: state.dragOffset.y }
+    : { x: 0, y: 0 };
+  const hoverEnabled = state.isPressed && state.pointerMovedSincePress;
 
-  const targetPanX = -nx * MAX_PAN;
-  const targetPanY = -ny * MAX_PAN;
-  const clusterMouseX = pointerBasis.x - targetPanX;
-  const clusterMouseY = pointerBasis.y - targetPanY;
+  function buildSceneState(centerProbe) {
+    let processedBubbles = BUBBLES_CONFIG.map((bubble) => {
+      let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
+      let dx = 0;
+      let dy = 0;
+      let visualSize = BUBBLE_MIN_SIZE;
 
-  let processedBubbles = BUBBLES_CONFIG.map((bubble) => {
-    let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
-    let dx = 0;
-    let dy = 0;
-    let visualSize = BUBBLE_MIN_SIZE;
+      if (state.isPressed) {
+        const dist = Math.hypot(bubble.x - centerProbe.x, bubble.y - centerProbe.y);
+        const factor = Math.max(0, 1 - dist / MAX_DIST);
+        const smoothFactor = smoothstep(factor);
+        visualSize = BUBBLE_MIN_SIZE + ((BUBBLE_MAX_SIZE - BUBBLE_MIN_SIZE) * smoothFactor);
+        depthScale = visualSize / bubble.baseSize;
+
+        if (factor > 0) {
+          const angle = Math.atan2(bubble.y - centerProbe.y, bubble.x - centerProbe.x);
+          const push = smoothFactor * 12;
+          dx = Math.cos(angle) * push;
+          dy = Math.sin(angle) * push;
+        }
+      }
+
+      bubble.targetX = state.isPressed ? bubble.x + dx : 0;
+      bubble.targetY = state.isPressed ? bubble.y + dy : 0;
+      bubble.baseVisualSize = visualSize;
+      bubble.currentDepthScale = depthScale;
+      bubble.width = bubble.baseSize;
+      bubble.height = bubble.baseSize;
+      bubble.radius = visualSize / 2;
+      bubble.targetScale = state.isPressed ? depthScale : 0.2;
+      return bubble;
+    });
 
     if (state.isPressed) {
-      const dist = Math.hypot(bubble.x - clusterMouseX, bubble.y - clusterMouseY);
-      const factor = Math.max(0, 1 - dist / MAX_DIST);
-      const smoothFactor = smoothstep(factor);
-      visualSize = BUBBLE_MIN_SIZE + ((BUBBLE_MAX_SIZE - BUBBLE_MIN_SIZE) * smoothFactor);
-      depthScale = visualSize / bubble.baseSize;
+      resolveBubbleFieldLayout(processedBubbles);
+    }
 
-      if (factor > 0) {
-        const angle = Math.atan2(bubble.y - clusterMouseY, bubble.x - clusterMouseX);
-        const push = smoothFactor * 12;
-        dx = Math.cos(angle) * push;
-        dy = Math.sin(angle) * push;
+    const childMenuParent = state.isPressed && state.childMenuParentId != null
+      ? processedBubbles.find((bubble) => bubble.id === state.childMenuParentId)
+      : null;
+    let childNodes = childMenuParent
+      ? buildChildBubbleLayout(childMenuParent, state.hoveredChildBubble)
+      : [];
+    let childZone = childMenuParent && childNodes.length
+      ? getChildZone(childMenuParent, childNodes)
+      : null;
+
+    const hoverState = hoverEnabled
+      ? getHoverState(centerProbe, processedBubbles, childNodes, childZone)
+      : { bubbleId: null, childId: null };
+    let bestHit = hoverState.bubbleId;
+    let hoveredChildId = hoverState.childId;
+
+    const hoveredPill = processedBubbles.find((bubble) => bubble.id === bestHit && bubble.isPill);
+    if (hoveredPill && state.isPressed) {
+      if (state.lockedExpandedPillId !== hoveredPill.id) {
+        state.lockedExpandedPillId = hoveredPill.id;
+        state.lockedExpandedPillScale = hoveredPill.targetScale;
       }
+    } else {
+      state.lockedExpandedPillId = null;
+      state.lockedExpandedPillScale = null;
     }
 
-    return {
-      ...bubble,
-      targetX: state.isPressed ? bubble.x + dx : 0,
-      targetY: state.isPressed ? bubble.y + dy : 0,
-      baseVisualSize: visualSize,
-      currentDepthScale: depthScale,
-      width: bubble.baseSize,
-      height: bubble.baseSize,
-      radius: visualSize / 2,
-      targetScale: state.isPressed ? depthScale : 0.2,
-    };
-  });
-
-  if (state.isPressed) {
-    resolveBubbleFieldLayout(processedBubbles);
-  }
-
-  const childMenuParent = state.isPressed && state.childMenuParentId != null
-    ? processedBubbles.find((bubble) => bubble.id === state.childMenuParentId)
-    : null;
-  let childNodes = childMenuParent
-    ? buildChildBubbleLayout(childMenuParent, state.hoveredChildBubble)
-    : [];
-  let childZone = childMenuParent && childNodes.length
-    ? getChildZone(childMenuParent, childNodes)
-    : null;
-
-  const hoverState = state.isPressed && state.mousePos.active
-    ? getHoverState(
-      { x: clusterMouseX, y: clusterMouseY },
-      processedBubbles,
-      childNodes,
-      childZone,
-    )
-    : { bubbleId: null, childId: null };
-  let bestHit = hoverState.bubbleId;
-  let hoveredChildId = hoverState.childId;
-
-  const hoveredPill = processedBubbles.find((bubble) => bubble.id === bestHit && bubble.isPill);
-  if (hoveredPill && state.isPressed) {
-    if (state.lockedExpandedPillId !== hoveredPill.id) {
-      state.lockedExpandedPillId = hoveredPill.id;
-      state.lockedExpandedPillScale = hoveredPill.targetScale;
-    }
-  } else {
-    state.lockedExpandedPillId = null;
-    state.lockedExpandedPillScale = null;
-  }
-
-  processedBubbles = processedBubbles.map((bubble) => {
-    const isHovered = bestHit === bubble.id;
-    let finalTargetScale = bubble.targetScale;
-    if (
-      isHovered &&
-      bubble.isPill &&
-      state.lockedExpandedPillId === bubble.id &&
-      state.lockedExpandedPillScale != null
-    ) {
-      finalTargetScale = state.lockedExpandedPillScale;
-    }
-    const expandedExtraSourceWidth = bubble.isPill
-      ? bubble.expandedExtraWidth / Math.max(finalTargetScale || 1, 0.0001)
-      : 0;
-    const isExpanded = state.isPressed && isHovered && bubble.isPill && state.childMenuParentId !== bubble.id;
-    return {
-      ...bubble,
-      isExpanded,
-      expandedExtraSourceWidth,
-      targetWidth: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
-      width: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
-      height: bubble.baseSize,
-      radius: (bubble.baseSize * finalTargetScale) / 2,
-      targetScale: finalTargetScale,
-    };
-  });
-
-  childNodes = childNodes.map((child) => ({
-    ...child,
-    targetScale: hoveredChildId === child.id ? 1.08 : 1,
-  }));
-
-  const expandedPill = processedBubbles.find((bubble) => bubble.isExpanded);
-  if (expandedPill) {
-    for (const bubble of processedBubbles) {
-      if (bubble.id === expandedPill.id) continue;
-      const initialPush = getExpandedPillRepulsion(expandedPill, bubble, PILL_REPULSION_INFLUENCE);
-      if (initialPush) {
-        bubble.targetX += initialPush.x;
-        bubble.targetY += initialPush.y;
+    processedBubbles = processedBubbles.map((bubble) => {
+      const isHovered = bestHit === bubble.id;
+      let finalTargetScale = bubble.targetScale;
+      if (
+        isHovered &&
+        bubble.isPill &&
+        state.lockedExpandedPillId === bubble.id &&
+        state.lockedExpandedPillScale != null
+      ) {
+        finalTargetScale = state.lockedExpandedPillScale;
       }
-    }
+      const expandedExtraSourceWidth = bubble.isPill
+        ? bubble.expandedExtraWidth / Math.max(finalTargetScale || 1, 0.0001)
+        : 0;
+      const isExpanded = state.isPressed && isHovered && bubble.isPill && state.childMenuParentId !== bubble.id;
+      return {
+        ...bubble,
+        isExpanded,
+        expandedExtraSourceWidth,
+        targetWidth: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
+        width: isExpanded ? bubble.baseSize + expandedExtraSourceWidth : bubble.baseSize,
+        height: bubble.baseSize,
+        radius: (bubble.baseSize * finalTargetScale) / 2,
+        targetScale: finalTargetScale,
+      };
+    });
 
-    for (let iter = 0; iter < PILL_REPULSION_ITERATIONS; iter += 1) {
+    childNodes = childNodes.map((child) => ({
+      ...child,
+      targetScale: hoveredChildId === child.id ? 1.08 : 1,
+    }));
+
+    const expandedPill = processedBubbles.find((bubble) => bubble.isExpanded);
+    if (expandedPill) {
       for (const bubble of processedBubbles) {
         if (bubble.id === expandedPill.id) continue;
-        const pillPush = getExpandedPillRepulsion(expandedPill, bubble, 0);
-        if (pillPush) {
-          bubble.targetX += pillPush.x;
-          bubble.targetY += pillPush.y;
-        }
-      }
-
-      for (let i = 0; i < processedBubbles.length; i += 1) {
-        for (let j = i + 1; j < processedBubbles.length; j += 1) {
-          const bubbleA = processedBubbles[i];
-          const bubbleB = processedBubbles[j];
-          if (bubbleA.id === expandedPill.id || bubbleB.id === expandedPill.id) continue;
-          separateBubblePair(bubbleA, bubbleB);
-        }
-      }
-    }
-  }
-
-  if (childNodes.length && childMenuParent) {
-    const branchIds = new Set([childMenuParent.id, ...childNodes.map((node) => node.id)]);
-    for (const child of childNodes) {
-      for (const bubble of processedBubbles) {
-        if (branchIds.has(bubble.id)) continue;
-        const initialPush = getNodeRepulsion(child, bubble, 28, CHILD_LAYOUT_GAP);
+        const initialPush = getExpandedPillRepulsion(expandedPill, bubble, PILL_REPULSION_INFLUENCE);
         if (initialPush) {
           bubble.targetX += initialPush.x;
           bubble.targetY += initialPush.y;
         }
       }
-    }
 
-    for (let iter = 0; iter < 12; iter += 1) {
-      for (const child of childNodes) {
+      for (let iter = 0; iter < PILL_REPULSION_ITERATIONS; iter += 1) {
         for (const bubble of processedBubbles) {
-          if (branchIds.has(bubble.id)) continue;
-          const repel = getNodeRepulsion(child, bubble, 0, CHILD_LAYOUT_GAP);
-          if (repel) {
-            bubble.targetX += repel.x;
-            bubble.targetY += repel.y;
+          if (bubble.id === expandedPill.id) continue;
+          const pillPush = getExpandedPillRepulsion(expandedPill, bubble, 0);
+          if (pillPush) {
+            bubble.targetX += pillPush.x;
+            bubble.targetY += pillPush.y;
+          }
+        }
+
+        for (let i = 0; i < processedBubbles.length; i += 1) {
+          for (let j = i + 1; j < processedBubbles.length; j += 1) {
+            const bubbleA = processedBubbles[i];
+            const bubbleB = processedBubbles[j];
+            if (bubbleA.id === expandedPill.id || bubbleB.id === expandedPill.id) continue;
+            separateBubblePair(bubbleA, bubbleB);
           }
         }
       }
-      resolveBubbleFieldLayout(processedBubbles);
-    }
-  }
-
-  let panX = targetPanX;
-  let panY = targetPanY;
-  if (childMenuParent && childNodes.length) {
-    const branchBounds = getChildBranchBounds(childMenuParent, childNodes);
-    if (branchBounds.right + panX + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
-      panX = CANVAS_HALF_SIZE - branchBounds.right - PAN_MARGIN_PX;
-    } else if (branchBounds.left + panX - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
-      panX = -CANVAS_HALF_SIZE - branchBounds.left + PAN_MARGIN_PX;
     }
 
-    if (branchBounds.bottom + panY + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
-      panY = CANVAS_HALF_SIZE - branchBounds.bottom - PAN_MARGIN_PX;
-    } else if (branchBounds.top + panY - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
-      panY = -CANVAS_HALF_SIZE - branchBounds.top + PAN_MARGIN_PX;
-    }
-
-    if (state.mousePos.active) {
-      const correctedPoint = { x: state.mousePos.x - panX, y: state.mousePos.y - panY };
-      let correctedHover = getHoverState(
-        correctedPoint,
-        processedBubbles,
-        childNodes,
-        childZone,
-      );
-      if (!correctedHover.childId) {
-        const stickyChild = getNearestChildHover(correctedPoint, childNodes);
-        if (stickyChild) {
-          correctedHover = {
-            bubbleId: childMenuParent.id,
-            childId: stickyChild.id,
-          };
-        } else if (!correctedHover.bubbleId) {
-          correctedHover = {
-            bubbleId: childMenuParent.id,
-            childId: null,
-          };
+    if (childNodes.length && childMenuParent) {
+      const branchIds = new Set([childMenuParent.id, ...childNodes.map((node) => node.id)]);
+      for (const child of childNodes) {
+        for (const bubble of processedBubbles) {
+          if (branchIds.has(bubble.id)) continue;
+          const initialPush = getNodeRepulsion(child, bubble, 28, CHILD_LAYOUT_GAP);
+          if (initialPush) {
+            bubble.targetX += initialPush.x;
+            bubble.targetY += initialPush.y;
+          }
         }
       }
-      bestHit = correctedHover.bubbleId;
-      hoveredChildId = correctedHover.childId;
-      childNodes = childNodes.map((child) => ({
-        ...child,
-        targetScale: hoveredChildId === child.id ? 1.08 : 1,
-      }));
-    }
-  } else if (expandedPill) {
-    const pillHalfWidth = (expandedPill.baseSize * expandedPill.targetScale) / 2;
-    const pillHalfHeight = (expandedPill.baseSize * expandedPill.targetScale) / 2;
-    const left = expandedPill.targetX - pillHalfWidth;
-    const right = expandedPill.targetX + pillHalfWidth + expandedPill.expandedExtraWidth;
-    const top = expandedPill.targetY - pillHalfHeight;
-    const bottom = expandedPill.targetY + pillHalfHeight;
 
-    if (right + panX + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
-      panX = CANVAS_HALF_SIZE - right - PAN_MARGIN_PX;
-    } else if (left + panX - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
-      panX = -CANVAS_HALF_SIZE - left + PAN_MARGIN_PX;
+      for (let iter = 0; iter < 12; iter += 1) {
+        for (const child of childNodes) {
+          for (const bubble of processedBubbles) {
+            if (branchIds.has(bubble.id)) continue;
+            const repel = getNodeRepulsion(child, bubble, 0, CHILD_LAYOUT_GAP);
+            if (repel) {
+              bubble.targetX += repel.x;
+              bubble.targetY += repel.y;
+            }
+          }
+        }
+        resolveBubbleFieldLayout(processedBubbles);
+      }
     }
 
-    if (bottom + panY + PAN_MARGIN_PX > CANVAS_HALF_SIZE) {
-      panY = CANVAS_HALF_SIZE - bottom - PAN_MARGIN_PX;
-    } else if (top + panY - PAN_MARGIN_PX < -CANVAS_HALF_SIZE) {
-      panY = -CANVAS_HALF_SIZE - top + PAN_MARGIN_PX;
-    }
+    return {
+      bubbles: processedBubbles,
+      children: childNodes,
+      childZone,
+      hoveredId: bestHit,
+      hoveredChildId,
+    };
   }
 
-  previousHoveredId = bestHit;
-  previousHoveredChildId = hoveredChildId;
+  let panOffset = { ...desiredPan };
+  let sceneData = buildSceneState(getCenterProbeForPan(panOffset));
+
+  if (state.isPressed) {
+    for (let iteration = 0; iteration < 3; iteration += 1) {
+      const nextPanOffset = clampPanOffset(desiredPan, sceneData);
+      if (Math.abs(nextPanOffset.x - panOffset.x) < 0.01 && Math.abs(nextPanOffset.y - panOffset.y) < 0.01) {
+        panOffset = nextPanOffset;
+        break;
+      }
+      panOffset = nextPanOffset;
+      sceneData = buildSceneState(getCenterProbeForPan(panOffset));
+    }
+
+    sceneData = buildSceneState(getCenterProbeForPan(panOffset));
+    const finalPanOffset = clampPanOffset(desiredPan, sceneData);
+    if (Math.abs(finalPanOffset.x - panOffset.x) >= 0.01 || Math.abs(finalPanOffset.y - panOffset.y) >= 0.01) {
+      panOffset = finalPanOffset;
+      sceneData = buildSceneState(getCenterProbeForPan(panOffset));
+      panOffset = clampPanOffset(desiredPan, sceneData);
+    } else {
+      panOffset = finalPanOffset;
+    }
+  } else {
+    panOffset = { x: 0, y: 0 };
+  }
+
+  previousHoveredId = sceneData.hoveredId;
+  previousHoveredChildId = sceneData.hoveredChildId;
 
   return {
-    bubbles: processedBubbles,
-    children: childNodes,
-    childZone,
+    ...sceneData,
     orb: {
       id: 'orb',
       targetScale: state.isPressed ? 0.8 : 1,
     },
-    panOffset: {
-      x: panX,
-      y: panY,
-    },
-    hoveredId: bestHit,
-    hoveredChildId,
+    panOffset,
   };
+}
+
+function getCenterProbeForPan(panOffset) {
+  return {
+    x: CENTER_PROBE_BASE_X - panOffset.x,
+    y: CENTER_PROBE_BASE_Y - panOffset.y,
+  };
+}
+
+function clampPanOffset(desiredPan, sceneData) {
+  const childMenuParent = state.childMenuParentId != null
+    ? sceneData.bubbles.find((bubble) => bubble.id === state.childMenuParentId)
+    : null;
+
+  if (childMenuParent && sceneData.children.length) {
+    return clampBoundsIntoViewport(
+      { x: desiredPan.x, y: desiredPan.y },
+      getChildBranchBounds(childMenuParent, sceneData.children),
+    );
+  }
+
+  const expandedPill = sceneData.bubbles.find((bubble) => bubble.isExpanded);
+  if (expandedPill) {
+    return clampBoundsIntoViewport(
+      { x: desiredPan.x, y: desiredPan.y },
+      getBubbleBounds(expandedPill),
+    );
+  }
+
+  return { x: desiredPan.x, y: desiredPan.y };
 }
 
 function getExpandedPillRepulsion(pill, bubble, influencePadding) {
@@ -1389,7 +1381,7 @@ function syncChildMenuState(nextHoveredBubbleId) {
     if (!hasChildActions(nextHoveredBubbleId)) return;
 
     state.childMenuParentId = nextHoveredBubbleId;
-    state.childMenuPointerLock = { ...state.mousePos };
+    state.childMenuPointerLock = null;
     state.hoveredChildBubble = null;
     scheduleRender();
   }, CHILD_MENU_HOLD_MS);
@@ -1487,6 +1479,33 @@ function getNodeBounds(node) {
     top: node.targetY - halfHeight,
     bottom: node.targetY + halfHeight,
   };
+}
+
+function getBubbleBounds(bubble) {
+  return getNodeBounds(bubble);
+}
+
+function clampBoundsIntoViewport(panOffset, bounds) {
+  const viewportLeft = -ORB_CENTER_X;
+  const viewportRight = CANVAS_SIZE - ORB_CENTER_X;
+  const viewportTop = -ORB_CENTER_Y;
+  const viewportBottom = CANVAS_SIZE - ORB_CENTER_Y;
+  let panX = panOffset.x;
+  let panY = panOffset.y;
+
+  if (bounds.right + panX + PAN_MARGIN_PX > viewportRight) {
+    panX = viewportRight - bounds.right - PAN_MARGIN_PX;
+  } else if (bounds.left + panX - PAN_MARGIN_PX < viewportLeft) {
+    panX = viewportLeft - bounds.left + PAN_MARGIN_PX;
+  }
+
+  if (bounds.bottom + panY + PAN_MARGIN_PX > viewportBottom) {
+    panY = viewportBottom - bounds.bottom - PAN_MARGIN_PX;
+  } else if (bounds.top + panY - PAN_MARGIN_PX < viewportTop) {
+    panY = viewportTop - bounds.top + PAN_MARGIN_PX;
+  }
+
+  return { x: panX, y: panY };
 }
 
 function getNodeGap(nodeA, nodeB) {
