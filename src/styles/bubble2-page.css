@@ -417,8 +417,8 @@ body.bubble2-page {
   bottom: 0;
   right: 0;
   z-index: 4;
-  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
-  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
+  width: 96px;
+  height: 96px;
   pointer-events: none;
 }
 
@@ -426,16 +426,18 @@ body.bubble2-page {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
-  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
+  width: 96px;
+  height: 96px;
   background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
-  background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
+  background-size: 100% 100%;
   background-position: bottom right;
   mix-blend-mode: screen;
   filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
+  transform: translate(48px, 48px);
   opacity: 0;
   transition:
+    transform 700ms var(--bubble2-ease),
     opacity 700ms var(--bubble2-ease),
     filter 450ms var(--bubble2-ease);
 }
@@ -454,16 +456,18 @@ body.bubble2-page {
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(112px + var(--g-stage-h, 56px) * 1.0);
-  height: calc(39px + var(--g-stage-h, 56px) * 0.5);
+  width: 84px;
+  height: 84px;
   background-image: url('../assets/button-highlight-top-left.png');
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: calc(112px + var(--g-stage-h, 56px) * 1.0) calc(39px + var(--g-stage-h, 56px) * 0.5);
+  background-size: 100% 100%;
   mix-blend-mode: screen;
   filter: blur(calc((var(--g-stage-h, 56px) - 56px) * 0.0328));
+  transform: translate(-32px, -32px);
   opacity: 0;
   transition:
+    transform 700ms var(--bubble2-ease),
     opacity 700ms var(--bubble2-ease),
     filter 450ms var(--bubble2-ease);
 }
@@ -727,8 +731,8 @@ body.bubble2-page {
   bottom: 0;
   right: 0;
   z-index: 4;
-  width: calc(112px + 80px * 1.0);
-  height: calc(39px + 80px * 0.5);
+  width: 96px;
+  height: 96px;
   pointer-events: none;
 }
 
@@ -736,16 +740,18 @@ body.bubble2-page {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: calc(112px + 80px * 1.0);
-  height: calc(39px + 80px * 0.5);
+  width: 96px;
+  height: 96px;
   background-image: url('../assets/figma-proto-button-highlight-bottom-mask.png');
   background-repeat: no-repeat;
-  background-size: calc(112px + 80px * 1.0) calc(39px + 80px * 0.5);
+  background-size: 100% 100%;
   background-position: bottom right;
   mix-blend-mode: screen;
   filter: blur(calc((80px - 56px) * 0.0328));
+  transform: translate(48px, 48px);
   opacity: 1;
   transition:
+    transform 700ms var(--bubble2-ease),
     opacity 700ms var(--bubble2-ease),
     filter 450ms var(--bubble2-ease);
 }
@@ -764,16 +770,18 @@ body.bubble2-page {
   position: absolute;
   top: 0;
   left: 0;
-  width: calc(112px + 80px * 1.0);
-  height: calc(39px + 80px * 0.5);
+  width: 84px;
+  height: 84px;
   background-image: url('../assets/button-highlight-top-left.png');
   background-repeat: no-repeat;
   background-position: left top;
-  background-size: calc(112px + 80px * 1.0) calc(39px + 80px * 0.5);
+  background-size: 100% 100%;
   mix-blend-mode: screen;
   filter: blur(calc((80px - 56px) * 0.0328));
+  transform: translate(-32px, -32px);
   opacity: 1;
   transition:
+    transform 700ms var(--bubble2-ease),
     opacity 700ms var(--bubble2-ease),
     filter 450ms var(--bubble2-ease);
 }
