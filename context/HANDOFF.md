@@ -1,6 +1,87 @@
 # Handoff
 
 ## Task title
+Restore list item +/- control in stage Components panel
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/shared/sidebar-render.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-render.js) so `list` stages now render an `items` counter row inside the Stage tab’s Components panel.
+- The restored list counter uses the same `stage-comp-row` / `stage-comp-btn` / `stage-comp-count` styling path as the existing image `+/-` control, instead of the older standalone list-count row.
+- Kept the old standalone `stage-list-count-row` hidden so the control now appears only in the Components panel, as requested.
+- Wired the new delegated `items` `+/-` buttons in both [src/tool/modules/manual-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js) and [src/ai/editor-bindings.js](/Users/ariax/Documents/GitHub/GenUI/src/ai/editor-bindings.js) so the shared sidebar renderer works in both editors.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/sidebar-render.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/tool/modules/manual-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/src/ai/editor-bindings.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/sidebar-render.js`
+- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/ai/editor-bindings.js`
+- `git diff --check`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. In prototype mode, select a `list` stage and verify the `items` `+/-` row appears under Stage → Components and changes the list item count with the same visual treatment as image `+/-`.
+
+## Task title
+Fix prototype list stage exiting through pill before target shape
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/shared/morph-bridges.js](/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js) so `bridgeFromListToTarget(...)` no longer forces a `pill` morph before non-pill target shapes.
+- Before this change, leaving the prototype `list` stage for shapes like `card`, `card-s`, `image`, `dot`, or `custom` always ran `list -> pill -> target`, which caused the visible detour you reported.
+- The list-specific special cases for `listening`, `idle`, `ai`, `magic`, and the real `pill` target remain unchanged. Only the incorrect fallback path was removed.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/shared/morph-bridges.js`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `node --check src/shared/morph-bridges.js`
+- `git diff --check`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+
+## Recommended next step
+1. In prototype mode, switch from a `list` stage to `dot`, `card`, `card-s`, `image`, and `custom` to verify the morph now goes directly to the requested shape without a visible pill intermediate.
+
+## Task title
+Keep subtle listening-orb rim color at zero volume
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Tuned the listening-orb baseline rim and inner-highlight values in [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so `--ai-listening-rim-level: 0` still renders a faint colored orb edge instead of reading as pure black.
+- This change only adjusts existing box-shadow color/intensity values on the shared `ai-flow-orb` listening selectors. I did not change listening logic, voice-reactivity logic, orb state logic, or any stage routing.
+- Because the prototype page now shares the same celestial orb system, this baseline listening-orb improvement applies there too.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `git diff --check`
+- `rg -n "listening-orb #siri-orb \\.ai-flow-orb-selection \\.g-stage-selected-accent-rim|listening-orb #siri-orb \\.ai-flow-orb-selection \\.g-stage-selected-highlight" src/styles/ai-decorative.css`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- The adjustment is intentionally subtle; if you want a stronger idle rim at silence, the same two listening-orb shadow blocks are the next place to push further.
+
+## Recommended next step
+1. Open `ai.html` or `index.html`, enter listening mode, stay silent, and verify the orb now keeps a faint colored rim instead of collapsing to near-black.
+
+## Task title
 Unify prototype thinking and listening orb with AI-mode celestial orb
 
 ## Completion status

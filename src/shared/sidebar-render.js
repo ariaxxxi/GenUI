@@ -73,6 +73,7 @@ export function createSidebarRender(ctx, refs) {
     if (!stage) return;
     const list = document.createElement('div');
     list.className = 'stage-comp-list';
+    const renderShape = String(stage?.renderShape || '');
     const counts = ctx.stageComponentCounts(stage);
     ctx.STAGE_COMPONENT_TYPES.forEach((type) => {
       const row = document.createElement('div');
@@ -87,6 +88,17 @@ export function createSidebarRender(ctx, refs) {
       }
       list.appendChild(row);
     });
+    if (renderShape === 'list') {
+      const listItemCount = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(ctx.selectedScenario(), stage.id).length : 0;
+      const row = document.createElement('div');
+      row.className = 'stage-comp-row';
+      row.innerHTML = `<span class="stage-comp-label">items</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="remove">-</button><span class="stage-comp-count">${listItemCount}</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="add">+</button>`;
+      const removeBtn = row.querySelector('[data-stage-list-count-action="remove"]');
+      const addBtn = row.querySelector('[data-stage-list-count-action="add"]');
+      if (removeBtn) removeBtn.disabled = listItemCount <= 1;
+      if (addBtn) addBtn.disabled = listItemCount >= 8;
+      list.appendChild(row);
+    }
     ctx.UI.stageComponentControls.appendChild(list);
   }
 
@@ -119,7 +131,7 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
-    if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.toggle('hidden', renderShape !== 'list');
+    if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.add('hidden');
     if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.toggle('hidden', renderShape !== 'list');
     const listItemCount = renderShape === 'list' && ctx.stageListItemsForShape
       ? ctx.stageListItemsForShape(scenario, scenario?.shape).length

@@ -210,6 +210,23 @@ export function initEditorBindings({
     });
   });
   UI.stageComponentControls?.addEventListener("click", (e) => {
+    const listCountButton = e.target.closest("[data-stage-list-count-action]");
+    if (listCountButton) {
+      const scenario = selectedScenario();
+      if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== "list") return;
+      const action = String(listCountButton.dataset.stageListCountAction || "");
+      if (action === "remove") {
+        commitListItems((items) => items.length > 1 ? items.slice(0, -1) : items);
+        return;
+      }
+      if (action === "add") {
+        commitListItems((items) => {
+          if (items.length >= 8) return items;
+          return [...items, createDefaultListItem(`List item ${items.length + 1}`)];
+        });
+      }
+      return;
+    }
     const button = e.target.closest("[data-stage-comp-action][data-stage-comp-type]");
     const type = String(button?.dataset?.stageCompType || "");
     const action = String(button?.dataset?.stageCompAction || "");
