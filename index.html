@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="src/styles/shared.css"/>
 <link rel="stylesheet" href="src/styles/ai-glass.css"/>
+<link rel="stylesheet" href="src/styles/ai-decorative.css"/>
 <link rel="stylesheet" href="src/styles/editor-layout.css"/>
 <link rel="stylesheet" href="src/styles/editor-sidebar.css"/>
 <link rel="stylesheet" href="src/styles/editor-decorative.css"/>
@@ -157,19 +158,28 @@
           <img id="c-media" alt=""/>
           <div id="c-rich"></div>
           <div id="siri-orb">
-            <div class="thinking-orb-visual" aria-hidden="true">
-              <div class="thinking-orb-halo thinking-orb-halo-cloud"></div>
-              <div class="thinking-orb-halo thinking-orb-halo-ring"></div>
-              <div class="thinking-orb-sphere">
-                <div class="thinking-orb-layer thinking-orb-layer-base"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-wash"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-toplight"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-bottomlobe"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-rim"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-grain"></div>
+            <div class="ai-flow-orb-visual" aria-hidden="true">
+              <div class="ai-flow-orb-sphere">
+                <div class="ai-flow-orb-selection g-selection-chrome" data-stage-direction="bottom">
+                  <div class="g-stage-selected-refraction">
+                    <div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div>
+                    <div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div>
+                  </div>
+                  <div class="g-stage-selected-sharp-pass">
+                    <div class="g-stage-selected-sharp-highlight"></div>
+                  </div>
+                  <div class="g-stage-selected-accent-rim"></div>
+                  <div class="g-stage-selected-highlight-mask">
+                    <div class="g-stage-selected-highlight-mask-image"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="ai-flow-orb-disambiguation-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 3C7.03 3 3 6.58 3 11c0 2.3 1.1 4.38 2.87 5.88L5 21l4.67-2.08C10.4 19.3 11.19 19.4 12 19.4c4.97 0 9-3.58 9-8.4S16.97 3 12 3z" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
             </div>
-            <canvas id="siri-canvas"></canvas>
           </div>
         </div>
         <div class="drop" id="drop-left"></div>

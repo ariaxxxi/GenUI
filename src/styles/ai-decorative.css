@@ -53,6 +53,10 @@
   --ai-listening-rim-level: 0;
   --g-stage-selected-rgb: rgb(114 154 241);
   --g-stage-selected-secondary-rgb: rgb(197 160 240);
+  --g-stage-selected-blob-top-core: rgb(114 154 241);
+  --g-stage-selected-blob-top-edge: rgb(138 114 235);
+  --g-stage-selected-blob-bottom-core: rgb(197 160 240);
+  --g-stage-selected-blob-bottom-edge: rgb(87 47 255);
   opacity: 0;
   transform: scale(0.2);
   transform-origin: 50% 50%;

@@ -1,6 +1,64 @@
 # Handoff
 
 ## Task title
+Unify prototype thinking and listening orb with AI-mode celestial orb
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [index.html](/Users/ariax/Documents/GitHub/GenUI/index.html) so the prototype page now renders the same `ai-flow-orb` markup used by `ai.html` instead of the old `thinking-orb` + `canvas` structure.
+- Added [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) to the prototype page so thinking (`magic-glow`) and listening (`listening-orb`) states resolve through the same shared celestial orb styles as AI mode.
+- Removed the prototype-only orb styling blocks from [src/styles/editor-layout.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-layout.css) and [src/styles/editor-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-decorative.css).
+- Removed the now-unused `thinking-orb-*` style system from [src/styles/shared.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css), since no page now renders that older orb markup.
+- I did not change prototype stage logic, state logic, or class toggling; the change is limited to markup/style unification so the prototype page uses the same celestial visual system as AI mode.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/index.html`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-layout.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/editor-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/shared.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `git diff --check`
+- `rg -n "thinking-orb-|siri-canvas" index.html src/styles/editor-layout.css src/styles/editor-decorative.css src/styles/shared.css`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) already had local changes from the previous orb-value alignment work and was intentionally reused rather than altered again here.
+- `context/task✅.md`, `src/flows/message-send-render.js`, and `src/flows/message-send.js` already had unrelated local changes and were left untouched.
+
+## Recommended next step
+1. Open `index.html` and verify the prototype page’s thinking and listening stages now look the same as `ai.html`, with no fallback to the older canvas/metaball orb.
+
+## Task title
+Match AI thinking and listening orb celestial values to bubble page orb
+
+## Completion status
+- Completed
+
+## Summary of what was done
+- Updated [src/styles/ai-decorative.css](/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css) so `#siri-orb` now declares the full bubble-page orb blob color set, not just the two rim accent vars.
+- This keeps AI thinking and listening on the same existing orb logic and markup, but makes their shared celestial chrome resolve through the same runtime color inputs as the bubble page orb.
+- I did not change state logic, stage logic, animation routing, or listening-reactivity behavior. The shared list/circle preset already matched bubble page values for mask blur, blob blur, blob positions, highlight offsets, highlight scale, and inner glow blur, so only the missing explicit blob color values needed to be aligned.
+
+## Files changed
+- `/Users/ariax/Documents/GitHub/GenUI/src/styles/ai-decorative.css`
+- `/Users/ariax/Documents/GitHub/GenUI/context/HANDOFF.md`
+
+## Validation performed
+- `git diff --check`
+- `rg -n "g-stage-selected-blob-top-core|g-stage-selected-blob-top-edge|g-stage-selected-blob-bottom-core|g-stage-selected-blob-bottom-edge" src/styles/ai-decorative.css`
+
+## Remaining issues / caveats
+- I did not run a browser-side visual pass in this turn.
+- `context/task✅.md`, `src/flows/message-send-render.js`, and `src/flows/message-send.js` already had unrelated local changes and were left untouched.
+
+## Recommended next step
+1. Open `ai.html` and verify both thinking (`magic-glow`) and listening orb states now read with the same celestial blob coloration as the bubble page orb.
+
+## Task title
 Apply celestial directional motion between bubble-page child bubbles
 
 ## Completion status
