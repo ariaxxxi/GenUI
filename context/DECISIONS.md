@@ -1,77 +1,156 @@
-# DECISIONS.md
-> Key architectural and product decisions, with rationale. Add entries when a non-obvious choice is made.
+# Decisions
 
----
+## Current Architectural Decisions
 
-## Two-Page Split (index.html + ai.html)
-**Decision:** Separate manual editing and AI interaction into two distinct HTML files instead of one toggled app.
+### Browser-native implementation
 
-**Why:** The two modes have fundamentally different interaction models — manual mode needs full scenario CRUD with typography controls, AI mode needs a tight linear flow optimized for demo. Sharing one page created UI complexity and mode-bleeding bugs. Separate files = clear separation of concerns, each page optimized for its task.
+The project stays as plain HTML, CSS, and ES modules. There is no bundler, framework, or compile step.
 
-**Trade-off:** Some rendering and shape logic is duplicated across both files. Mitigated by `src/shapes.js`.
+Rationale:
 
----
+- Keeps prototype iteration fast.
+- Makes generated UI behavior easy to inspect in the browser.
+- Avoids framework structure while the interaction model is still changing.
 
-## No Framework (Vanilla JS Only)
-**Decision:** No React, Vue, Svelte, or any component framework. Vanilla HTML/CSS/JS throughout.
+Implication:
 
-**Why:** This is a design prototyping tool — the output needs to be portable, inspectable, and free of build step complexity. Designers or non-engineers may need to open and modify the HTML directly. A bundler would add friction.
+- New modules must be imported directly from page entrypoints.
+- Shared code must remain browser-compatible ES modules.
 
-**Trade-off:** Some repetitive DOM manipulation code. Acceptable given the project scope.
+### Separate pages share core systems
 
----
+Prototype editor, AI mode, and bubble demo remain separate pages, but they share reusable rendering and visual primitives.
 
-## Shapes Extracted to `src/shapes.js`
-**Decision:** All shape/stage definitions live in one canonical ES module rather than being inlined per-page.
+Rationale:
 
-**Why:** Both pages need identical shape math. Before extraction, edits to shape params had to be made twice and would often drift. Single source of truth prevents that.
+- The pages have different control surfaces.
+- The morph/celestial systems should not diverge visually.
 
-**When introduced:** Commit `87dca3d` — `refractor-to-2-pages` branch.
+Implication:
 
-**Note:** `src/shapes.legacy.js` is a non-module copy for `file://` loading. Keep in sync manually if shapes change.
+- Put reusable visual behavior in `src/shared/` and shared CSS.
+- Page coordinators decide when to use shared behavior, not how it is implemented.
 
----
+### Stage and scenario data are map-driven
 
-## Per-Scenario Stage Independence
-**Decision:** Each scenario gets its own full copy of all stage configs. Editing Stage X in Scenario A does not affect Scenario B.
+Stage definitions and scenario content use normalized maps keyed by shape/stage instead of hardcoded per-screen branches.
 
-**Why:** Early version used shared stage objects. Designers found that tweaking one scenario's card layout would silently break another scenario's layout. Fully isolated copies fix this, at the cost of more localStorage space.
+Rationale:
 
----
+- New stages, list items, icons, images, and selected states should be data changes where possible.
+- Prototype and AI mode need to render the same conceptual content in different control contexts.
 
-## Glasses Frame = Visual Stroke, Not Clip
-**Decision:** The 420×420 glasses frame border is a CSS box-shadow/outline, not a clip-path or overflow:hidden.
+Implication:
 
-**Why:** Clipping creates visual artefacts on animated shape transitions (border-radius animations get clipped mid-frame). Visual-only stroke lets animations run cleanly. This means content must self-constrain — the frame will not hide overflow.
+- Extend `src/shapes.js` and `src/shared/scenario-data.js` first when adding data fields.
+- Do not add one-off DOM branches for content that belongs in the scenario model.
 
-**Implication:** Any new shape or content added to ai.html in glasses mode MUST be verified to fit within 420px. See `BUILD_RULES.md`.
+### Shared morph pipeline
 
----
+The morph visual state machine is split into layout, bridge, and render modules.
 
-## Fallback UI Required
-**Decision:** ai.html must render a deterministic fallback UI (`localFlightFallback()`) when the AI provider is unavailable or returns an error.
+Rationale:
 
-**Why:** This is a demo/design tool. A blank screen during a live demo is unacceptable. Fallback lets the flow be walked through without any backend connection.
+- Geometry calculation, transition paths, and DOM writes are different concerns.
+- The same morph behavior is needed by prototype and AI mode.
 
-**Implication:** Any new flight flow step must have a corresponding fallback branch.
+Implication:
 
----
+- `src/shared/morph-layout.js` should own measurements and geometry.
+- `src/shared/morph-bridges.js` should own intermediate transition rules.
+- `src/shared/morph-render.js` should own DOM/CSS updates.
+- `src/shared/morph.js` should remain the coordinator.
 
-## AI Provider Abstraction in server.mjs
-**Decision:** All AI calls go through `server.mjs` as a proxy, not directly from the browser.
+### One celestial visual system
 
-**Why:** Keeps API keys out of the browser. Allows provider-specific logic (Gemini retry, Anthropic version header) in one place. Clients just POST to `/api/ai` or `/api/gemini`.
+Thinking/listening orbs, selected stage chrome, AI selected rows/options, and bubble hover highlights should use the shared celestial visual values and helpers.
 
----
+Rationale:
 
-## Flight Demo as Primary AI Use Case
-**Decision:** The flight booking flow is the canonical AI demo baked into ai.html.
+- Page-specific orb overrides caused visual drift.
+- Recent user direction explicitly requires AI mode and prototype mode to share the same celestial visual.
 
-**Why:** It covers the full shape progression (circle → dot → pill → card → card-form → card-list → magic → confirm), demonstrates multi-turn AI conversation, and is concrete enough to evaluate UX quality. A scenario designers can relate to and demo to stakeholders.
+Implication:
 
----
+- Prefer `src/shared/celestial-selection-chrome.js`, `src/shared/celestial-selected-presets.js`, `src/styles/shared.css`, and `src/styles/ai-decorative.css`.
+- Remove or avoid page-local overrides that recreate orb/chrome behavior.
+- Keep listening/thinking logic intact when only visual values need to change.
 
-## Typography Constraints (12–96px, #hex only)
-**Decision:** Typography sizes clamped to 12–96px range; colors validated as 6-digit hex only.
+### List stage bottom orb is part of stage data
 
-**Why:** (Inferred) Prevents degenerate layouts from out-of-range inputs. Enforced in `normalizeTypography()` in `src/shapes.js`.
+The list stage can show a bottom listening orb controlled by the stage data field `listListeningOrb`.
+
+Rationale:
+
+- The list-stage orb must be configurable from the Stage Components tab.
+- Icon behavior should use the same component data path as other stage icons.
+
+Implication:
+
+- Keep bottom orb toggles and icon settings in the stage editor path.
+- Do not implement list orb visibility as unrelated page state.
+
+### AI flows own their own state machines
+
+Message sending, flight booking, and coffee ordering live in `src/flows/` and expose coordinator-friendly APIs.
+
+Rationale:
+
+- Flow state should be testable and replaceable without modifying the AI shell.
+- Future LLM/STT integrations should plug into flow boundaries.
+
+Implication:
+
+- Keep flow-specific rendering and state transitions inside each flow module.
+- Route commands through `src/ai/input-actions.js` or a narrow flow API rather than directly manipulating flow internals.
+
+### Server proxies provider APIs
+
+Browser code calls local API routes, not provider APIs directly.
+
+Rationale:
+
+- API keys and provider-specific request formats belong on the server side.
+- The UI should be able to switch provider behavior without changing page modules.
+
+Implication:
+
+- Use `POST /api/ai-route` for provider-routed AI requests.
+- Use `POST /api/gemini` for Gemini JSON extraction behavior.
+- Use `POST /api/tts` for Gemini TTS.
+
+### Voice uses browser SpeechRecognition and analyser APIs
+
+The voice engine uses browser-native recognition and microphone analysis.
+
+Rationale:
+
+- This keeps voice interaction lightweight for the prototype.
+- The analyser drives listening orb rim reactivity.
+
+Implication:
+
+- AI voice behavior depends on browser support and microphone permission.
+- Always provide typed/click fallback paths for critical interactions.
+
+### Durable backup mirrors localStorage
+
+Some state is persisted through both localStorage and IndexedDB durable records.
+
+Rationale:
+
+- localStorage is convenient for the prototype.
+- IndexedDB records provide a recovery-friendly persistence layer.
+
+Implication:
+
+- Keep storage reads/writes centralized in `src/app-state.js`.
+- Do not add new storage keys without documenting them in architecture/status.
+
+## Corrections From Older Docs
+
+- The prototype entrypoint is `src/tool/index-app.js`, not `src/index-app.js`.
+- The AI entrypoint is `src/ai-app.js`, which imports `src/ai/ai-bindings.js`.
+- The provider route is `POST /api/ai-route`, not `POST /api/ai`.
+- The server currently maps `/bubble` to `bubble2.html`, but the repo contains `bubble.html`.
+- `context/task.md` is expected by `AGENTS.md`, but the current repo has `context/task✅.md` instead.

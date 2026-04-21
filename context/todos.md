@@ -1,49 +1,51 @@
-# TODOS.md
-> Backlog of likely next work. Update as tasks are completed or discovered.
-
----
+# Todos
 
 ## High Priority
 
-- [ ] **Verify glasses frame overflow** — run flight flow end-to-end in glasses mode and confirm no shape overflows 420×420px; check `card-form` (h:400) and `card-list` (h:360) specifically
-- [ ] **Merge `refractor-to-2-pages` → `main`** — smoke test must pass cleanly first
-- [ ] **Add localStorage error boundary** — wrap reads/writes in try-catch; show user-visible warning on quota or parse error; prevents silent data loss
+- Reconcile current uncommitted source changes with the latest user-facing behavior before adding more interaction code.
+- Fix the `/bubble` server route mismatch by serving `bubble.html` or adding the expected `bubble2.html`.
+- Update `test/smoke.mjs` for delayed stage single-click behavior introduced by inline double-click rename handling.
+- Restore the expected `context/task.md` workflow file or update `AGENTS.md` to use the current `context/task✅.md` file.
+- Add a smoke check for prototype list-stage controls, including list item +/- controls and bottom orb toggle/icon settings.
 
----
+## Visual / Interaction Regression Coverage
 
-## Medium Priority
+- Add a regression check for AI vs prototype thinking/listening orb parity.
+- Add a regression check for listening mode at volume `0` so the orb keeps a subtle rim instead of pure black.
+- Add a bubble page smoke test for child-bubble hover highlight and directional celestial motion.
+- Add coverage for stage-button double-click inline rename.
+- Add coverage for scenario-button double-click inline rename.
+- Add coverage for list-to-stage transitions so list exits do not incorrectly pass through pill unless intended.
 
-- [ ] **Add smoke test for `index.html`** — cover scenario create, duplicate, delete, shape change, typography edit; currently only `ai.html` is tested
-- [ ] **Document AI trigger phrases** — add comments or a section in `context/` listing what user text maps to each flight flow step; critical for new developers
-- [ ] **Decide fate of `ref/FluidUI.html`** — 6,426-line stale reference; options: delete, keep in `ref/` with clear warning header, or archive outside repo
+## Product / UX Follow-Up
 
----
+- Verify all Stage Components controls are visible only when relevant and use consistent image +/- styling.
+- Document intended default keyboard behavior for prototype and AI surfaces.
+- Make voice unsupported / microphone-denied states explicit in the UI.
+- Define whether `celestial-tool.html` is still a supported tuning surface or should be removed.
 
-## Cleanup / Debt / Polish
+## Technical Cleanup
 
-- [ ] Confirm `src/shapes.legacy.js` is in sync with `src/shapes.js` — easy to drift since it's a manual copy
-- [ ] Audit `ai.html` for any leftover console.log or debug code before main merge
-- [ ] Check if `test/smoke.js` (CJS copy) is still needed or can be deleted in favor of `test/smoke.mjs`
-- [ ] Review `server.mjs` route `/api/ai` vs `/api/gemini` — clarify to devs which endpoint is preferred and when
+- Audit `src/shapes.legacy.js` against canonical `src/shapes.js` and remove or document the legacy copy.
+- Remove dead or disabled old orb code after confirming the shared celestial system covers all current states.
+- Centralize any remaining page-specific orb overrides into shared celestial presets.
+- Align API naming in docs and code around `/api/ai-route`.
+- Add package scripts for smoke/regression checks so agents do not need to remember raw commands.
+- Consider a storage recovery/export UI for localStorage + IndexedDB data.
 
----
+## Backlog
 
-## Backlog / Future Ideas
+- Add automated tests for `src/shared/scenario-data.js` normalization.
+- Add automated tests for flow state machines in `src/flows/`.
+- Add a small visual fixture page for celestial presets.
+- Add a route/page inventory test so server aliases cannot drift from existing HTML files.
+- Document `.env` variables used by AI and TTS providers.
 
-- [ ] Multi-provider smoke test — run test against all three AI providers (OpenAI, Anthropic, Gemini)
-- [ ] Export scenario as JSON
-- [ ] Import scenario from JSON (restore backup or share between browsers)
-- [ ] Drag-to-reorder scenarios in `index.html` sidebar
-- [ ] Stage library UI improvements — currently stage editing UX is basic
+## Recently Completed / Landed Direction
 
----
-
-## Done (Recent)
-- [x] Extracted `src/shapes.js` from monolithic HTML
-- [x] Smoke test added (Playwright, self-hosting)
-- [x] Two-page split: `index.html` (manual) + `ai.html` (AI)
-- [x] Flight booking flow fully wired to AI backend
-- [x] Fallback UI (`localFlightFallback`) renders when no AI provider configured
-- [x] Per-scenario stage isolation — changing one scenario no longer mutates others
-- [x] Server port alignment — default 5173, env-configurable, fallback 5174
-- [x] `FluidUI.html` moved to `ref/` (no longer at repo root)
+- Core morph rendering was split into shared layout, bridge, and render modules.
+- Prototype sidebar logic was split into refs, render, actions, and bindings.
+- AI flows were separated from the AI page coordinator.
+- Celestial selected chrome was moved toward one shared visual system.
+- List stage gained bottom orb configuration and list item count controls in the editor path.
+- Stage and scenario inline rename behavior is being handled through double-click editing rather than separate rename-only controls.

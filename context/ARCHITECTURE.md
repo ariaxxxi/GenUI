@@ -1,173 +1,249 @@
-# ARCHITECTURE.md
-> Describes the current system design. Read this before touching any rendering or data code.
+# Architecture
 
-## Product Summary
-GenUI is a generative UI prototyping tool for designers. It lets designers create interactive UI scenarios and preview how a generative/AI-driven UI would transition between shapes and states.
+## Purpose
 
-Two distinct surfaces:
-- **Manual editor** (`index.html`) — designer creates and edits scenarios by hand
-- **AI interaction** (`ai.html`) — live flight booking chatbot demo powered by Gemini (with deterministic fallback)
+This repository is a browser-native GenUI prototype. It contains:
 
----
+- A manual prototype/editor page for composing stages and scenarios.
+- An AI interaction page that drives the same visual system through voice, typed input, and flow state machines.
+- A bubble cluster demo that reuses the shared celestial selection visual.
+- A small Node HTTP server for static files and AI/TTS/phrase proxy APIs.
 
-## Two-Page Split
+There is no build step, bundler, or frontend framework. Pages load ES modules directly from `src/`.
 
-| Page | Mode key | Role |
-|---|---|---|
-| `index.html` | `manual` | Designer manually edits scenarios; no AI calls |
-| `ai.html` | `ai` | Alice chat assistant; AI drives shape transitions |
+## Entrypoints
 
-Both pages set `data-page-mode` attribute to lock themselves and prevent cross-mode localStorage writes. They share the same schema and shape/stage model.
+| Page | Route / file | Main module | Role |
+| --- | --- | --- | --- |
+| Prototype editor | `/`, `/prototype`, `index.html` | `src/tool/index-app.js` | Manual scenario/stage editor and preview canvas. |
+| AI mode | `/ai`, `ai.html` | `src/ai-app.js` -> `src/ai/ai-bindings.js` | Voice/text-driven AI shell and flow demos. |
+| Bubble demo | `bubble.html` | `src/bubble2-page.js` | App bubble cluster with celestial hover/selection. |
+| Celestial tool | `celestial-tool.html` | inline/page-specific scripts | Auxiliary visual tuning page. |
 
----
+## Runtime Model
 
-## Shape System (`src/shapes.js`)
-Single canonical ES module — do not hardcode shape params in HTML files.
+- `package.json` uses `"type": "module"`.
+- `npm run dev` and `npm start` both run `node server.mjs`.
+- The server serves static files and API routes from the same process.
+- Browser state is persisted through `localStorage`; selected durable records are mirrored into IndexedDB.
+- AI provider calls are proxied through server APIs so browser code does not call provider SDKs directly.
 
-**Supported shapes:** `idle`, `dot`, `list`, `pill`, `card`, `card-s`, `image`, `ai`, `circle`, `magic`, `split`, `card-form`, `card-list`
+## Core Data Model
 
-Each shape definition has `main`, `left`, `right` variants:
-```js
-{ w, h, br, tx, ty, op }  // width, height, borderRadius, x-transform, y-transform, opacity
-```
+### Canonical Shapes
 
-Key exports: `SHAPES`, `defaultTypographyForShape()`, `normalizeTypography()`, `normalizeStage()`, `normalizeIcon()`, `normalizeImagesByShape()`, `configureShapeHelpers()`
+`src/shapes.js` defines the canonical shape and component model:
 
-Stage components toggled per-scenario per-shape: `icon`, `primary`, `secondary`, `detail`, `image`, `intent-header`
+- Shapes: `idle`, `circle`, `listening`, `magic`, `dot`, `list`, `pill`, `split`, `card`, `card-s`, `image`, `ai`, `card-form`, `card-list`.
+- Default editor shapes: `idle`, `dot`, `list`, `pill`, `card`, `card-s`, `image`.
+- Components: `icon`, `primary`, `secondary`, `detail`, `image`, `intent-header`.
 
-Prototype `list` is a first-class stage/render shape. It reuses the AI disambiguation pill renderer and motion path:
-- main stage geometry is a reduced listening orb (`50x50`)
-- the three pills mount in `#list-pills`, outside the orb shell, so they can fan out without clipping
-- pill labels come from stage text fields:
-  - `primary` → pill 1
-  - `secondary` → pill 2
-  - `detail` → pill 3
-- stage icon is reused across all pills:
-  - image icon → avatar image
-  - emoji icon → pill media glyph
+`normalizeStage()` is the main stage normalizer. It returns stable stage fields such as:
 
-`src/shapes.legacy.js` — copy for `file://` loading (no ES module support); keep in sync manually.
+- `id`, `name`, `preset`, `renderShape`
+- sizing and layout overrides
+- `listListeningOrb`
+- `selected`
+- `accentColor`, `secondaryAccentColor`
+- normalized component settings
 
----
+### Scenario Content
 
-## Data Models
+`src/shared/scenario-data.js` owns the built-in scenarios and converts editor data into renderable content. Scenario content is map-based so each shape/stage can be configured without hardcoding new UI branches:
 
-### Scenario
-```js
-{
-  id: string,
-  name: string,
-  shape: ShapeName,
-  triggers: string[],          // AI trigger phrases
-  icon: { kind: 'emoji'|'image'|'none', value: string },
-  text: { primary, secondary, detail },
-  typography: {
-    icon: { size, color },
-    primary: { size, color },
-    secondary: { size, color },
-    detail: { size, color }
-  },
-  images: { [shape]: string[] },           // per-shape image galleries
-  stageOverrides: { [shape]: StageConfig } // legacy doc field; current per-scenario stage settings live in content maps
-}
-```
+- `iconByShape`
+- `textByShape`
+- `listItemsByShape`
+- `imagesByShape`
+- `typographyByShape`
+- `sizeByShape`
+- `stageRenderShapeById`
+- `hiddenStageIds`
+- `selectedByShape`
+- `accentColorByShape`
+- `secondaryAccentColorByShape`
+- selected celestial blob and mask maps
+- `listChipIconsByShape`
+- `canvas`
 
-Current scenario-local stage state is layered on top of the shared stage library through `content` maps:
-- `textByShape[shape]` → `{ primary, secondary, detail, intentHeader }`
-- `typographyByShape[shape]` → `{ icon, primary, secondary, detail, intentHeader }`
-- `selectedByShape[shape]`
-- `accentColorByShape[shape]`
-- `secondaryAccentColorByShape[shape]`
-- `sizeByShape[shape]`
-- `stageRenderShapeById[stageId]` → scenario-local `card` / `card-s` render override
-- `hiddenStageIds[]` → scenario-local stage deletion/hiding
+The default scenarios include Weather Snapshot, Incoming Message, QR Access Pass, Card-S Promo, and Image Hero.
 
-### Stage (built-in presets, then copied per-scenario)
-```js
-{
-  id, name,
-  preset: boolean,
-  renderShape: ShapeName,
-  cornerRadius: 0–120,
-  widthOverride: null | 40–1400,
-  heightOverride: null | 40–1400,
-  iconTextGap: null | 0–80,
-  iconLeftPadding: null | 0–120,
-  phoneBgBlur: boolean,
-  components: ['icon','primary','secondary','detail','image']
-}
-```
+### Storage Keys
 
-**Scenario-stage settings are fully independent** — changing one scenario's stage must never affect another. Built-in stage definitions stay in the shared stage library, while scenario-local render shape, visibility, selection shell, accent colors, and intent-header text are stored in the scenario `content` maps.
+`src/app-state.js` defines browser persistence:
 
----
+- `genui.scenarios.v1`
+- `genui.scenarios-revision.v1`
+- `genui.stages.v1`
+- `genui.settings.v1`
+- `genui.mode.v1`
+- `genui.ai-stage.v1`
+- `genui.ai-voice-enabled.v1`
+- `genui.disable-text-input.v1`
 
-## LocalStorage Keys
-```
-STORAGE_KEYS.scenarios   → scenario array
-STORAGE_KEYS.stages      → stage definitions
-STORAGE_KEYS.settings    → canvas settings (frame mode, etc.)
-STORAGE_KEYS.mode        → 'manual' | 'ai'
-STORAGE_KEYS.aiStage     → override stage selected in AI mode
-```
+Durable storage uses IndexedDB database `genui-durable.v1`, store `records`.
 
-No error boundary for full or corrupted localStorage — silent failure is a known gap.
+## Rendering Pipeline
 
----
+1. Page entrypoint initializes app state, scenario data, sidebar/editor controls, and morph rendering.
+2. `src/shared/scenario-data.js` resolves the selected scenario/stage into render content.
+3. `src/shared/morph.js` composes the morph system from layout, bridge, and render modules.
+4. `src/shared/morph-layout.js` computes target geometry and content positioning.
+5. `src/shared/morph-bridges.js` handles intermediate transition paths.
+6. `src/shared/morph-render.js` writes DOM/CSS variables for the canvas, list pills, media, intent header, and selected chrome.
+7. CSS in `src/styles/` provides the visual system.
 
-## Server (`server.mjs`)
-Node.js native HTTP, no frameworks, 367 lines.
+## Shared Morph System
 
-**Routes:**
-- `POST /api/ai` — Main AI proxy. Body: `{userText, systemPrompt, provider, model, maxTokens}`
-- `POST /api/gemini` — Gemini-specific with 3-attempt retry backoff [0, 200, 800]ms
-- `GET /` or `/prototype` → `index.html`
-- `GET /ai` → `ai.html`
-- Everything else → static file from repo root
+`initMorph()` in `src/shared/morph.js` is the shared visual state machine for prototype and AI mode. It tracks:
 
-**Provider support:**
-| Provider | Default model | Env vars |
-|---|---|---|
-| `gemini` (default) | `gemini-2.0-flash` | `AI_API_KEY` or `GEMINI_API_KEY` |
-| `openai` | `gpt-4.1-mini` | `AI_API_KEY`, optionally `AI_ENDPOINT` |
-| `anthropic` | `claude-sonnet-4-20250514` | `AI_API_KEY`, optionally `ANTHROPIC_VERSION` |
+- current shape
+- last geometry
+- bridge timers
+- list timers
+- render content state
+- media state
+- selection direction
 
-`safePath()` prevents directory traversal. CORS enabled for API routes. Fallback port 5174 if 5173 is in use.
+Important behavior:
 
----
+- `morphTo()` is the primary transition API.
+- Some paths use bridge shapes, including list bridges, split bridges, and thinking/home transitions.
+- AI and prototype pages share the same morph renderer, but their entrypoint coordinators decide which stage or flow state to request.
 
-## Frame Modes
-- **Glasses**: 420×420px — UI must stay fully inside, no crop. Border is visual-only (CSS box-shadow), not a clip mask. Content must self-constrain.
-- **Phone**: 390×838px — scrollable content area, actual `overflow:hidden` clip. Optional blurred background image.
+## Sidebar / Editor System
 
-See `BUILD_RULES.md` for hard constraints on glasses overflow.
+The prototype editor is coordinated by `src/tool/index-app.js`.
 
----
+Editor modules:
 
-## AI Interaction Flow (ai.html — Flight Demo)
-```
-Destination → Dates → Passengers → Thinking (magic) → Choose flight → Confirm → Payment → Booked
-```
+- `src/shared/sidebar.js`: composes sidebar refs, actions, render, and bindings.
+- `src/shared/sidebar-render.js`: renders scenario buttons, stage buttons, Stage Components controls, and content editors.
+- `src/shared/sidebar-actions.js`: mutates scenarios/stages and persists changes.
+- `src/shared/sidebar-bindings.js`: wires clicks, tabs, collapsibles, file checks, and preview interactions.
+- `src/tool/modules/*`: manual demo controls, animation controls, stage capture, settings, and prototype bindings.
 
-State tracked in `flightUi` object: `{active, stepIndex, data, editReturnStepIndex, focused}`
+The editor owns the stage library and scenario library, then passes normalized data into the shared render pipeline.
 
-AI response format: `{reply, action: "next|update|select|stay|back", data: {}}`
+## Celestial Visual System
 
-Fallback: `localFlightFallback()` renders deterministic flight UI when AI unavailable. Required — blank screen on live demo is unacceptable.
+The selected/orb visual system is shared instead of duplicated:
 
----
+- `src/shared/celestial-selected-presets.js`: preset values for selected celestial chrome.
+- `src/shared/celestial-selection-chrome.js`: computes CSS variables, masks, directional offsets, and applies chrome to targets.
+- `src/styles/shared.css`: shared selected chrome variables and animations.
+- `src/styles/ai-decorative.css`: AI/prototype celestial orb, listening/thinking visuals, and decorative page effects.
 
-## Coding Conventions
-- **No frameworks** — vanilla JS, HTML, CSS only
-- **ES modules** everywhere (`type: "module"` in package.json)
-- **No bundler** — files served as-is from `server.mjs`
-- Typography sizes: 12–96px (hard clamped), colors: `#rrggbb` hex only
-- Shape/stage math goes in `src/shapes.js` — never inline in HTML files
-- `ref/FluidUI.html` is stale reference — never import from or modify it
+Known consumers:
 
----
+- Prototype selected stage chrome.
+- AI mode thinking/listening orb.
+- AI contact rows, compose fields, and flight options.
+- Bubble page child hover/selection chrome.
+
+Directional selection motion is provided by `syncDirectionalSelection()`.
+
+## AI Mode
+
+`src/ai-app.js` only imports `src/ai/ai-bindings.js`, which is the AI mode coordinator.
+
+AI mode composes:
+
+- shared app state, morph, sidebar, and animation controls
+- `src/ai/ai-shell.js` for home/sleep/AI visual shell behavior
+- `src/ai/voice-engine.js` for SpeechRecognition and microphone analyser input
+- `src/ai/input-actions.js` for command routing
+- `src/ai/editor-bindings.js` for AI-page editor controls
+- `src/ai/tts-player.js` for Gemini TTS playback
+- flow modules in `src/flows/`
+
+The passive command listener starts through `voice.voiceEngine.start("command")`.
+
+### AI Flows
+
+`src/flows/` contains independent, data-driven flow modules:
+
+- `message-send.js`: send-message flow with states `IDLE`, `THINKING`, `DISAMBIGUATE`, `COMPOSE`, `CONFIRM`, `SENDING`, `SENT`.
+- `flight-booking.js`: destination/date/recommendation/payment/confirmation flow.
+- `coffee-order.js`: slot-based order flow using the shared flow engine.
+- `flow-engine.js`: reusable flow state helper.
+- `flow-definitions.js`: data definitions for send-message and coffee flows.
+- `ui-primitives.js`: reusable flow HTML helpers.
+
+Flow modules should own their state and expose narrow init/action APIs to the AI coordinator.
+
+## Bubble Page
+
+The bubble page is implemented by:
+
+- `bubble.html`
+- `src/bubble2-page.js`
+- `src/styles/bubble2-page.css`
+
+It renders a draggable/interactive app cluster and applies the same celestial selection chrome to child bubbles. It also uses directional hover motion and click audio.
+
+Important current mismatch: `server.mjs` routes `/bubble` and `/bubble2` to `bubble2.html`, but the repo contains `bubble.html`. Fix the route or add the expected file before relying on server aliases.
+
+## Server/API
+
+`server.mjs` is a native Node HTTP server.
+
+Static routes:
+
+- `/` and `/prototype` -> `index.html`
+- `/ai` -> `ai.html`
+- `/bubble` and `/bubble2` currently attempt `bubble2.html`
+
+API routes:
+
+- `POST /api/ai-route`: provider abstraction for Gemini/OpenAI/Anthropic-style chat completion routing.
+- `POST /api/gemini`: Gemini JSON extraction endpoint with retry/backoff.
+- `POST /api/tts`: Gemini TTS endpoint with in-memory cache.
+- `GET /api/phrases`: load phrase config.
+- `POST /api/phrases`: save phrase config.
+
+Server safeguards:
+
+- static path safety through `safePath()`
+- CORS for `/api/*`
+- request body max size of 256 KB
+- `.env` loading
+- default port `5173`, with fallback to `5174` if the default is in use and the port was not explicitly configured
+
+## Styles
+
+Primary style files:
+
+- `src/styles/shared.css`: global variables, shared canvas/stage primitives, selected chrome.
+- `src/styles/ai-decorative.css`: shared celestial orb and decorative effects.
+- `src/styles/ai-glass.css`: glass UI primitives.
+- `src/styles/ai-layout.css`, `ai-frame.css`, `ai-drop.css`, `ai-stage.css`, `ai-sidebar.css`: AI page layout.
+- `src/styles/editor-layout.css`, `editor-sidebar.css`, `editor-decorative.css`: prototype editor.
+- `src/styles/message-flow.css`, `flight-flow.css`: flow-specific presentation.
+- `src/styles/bubble2-page.css`: bubble demo.
+
+When changing the orb/selected visual, prefer the shared celestial files and shared CSS variables over page-specific overrides.
 
 ## Testing
-- `test/smoke.mjs` — Playwright E2E; validates `ai.html` loads, chip exists, shape animates on click
-- Can self-host `server.mjs` on a free port or target `SMOKE_BASE_URL` env var
-- No smoke test for `index.html` yet (known gap)
+
+Current automated coverage is minimal:
+
+- `test/smoke.mjs` uses Playwright.
+- It can self-host the server or use `SMOKE_BASE_URL`.
+- It checks basic AI page interaction and prototype stage switching.
+
+Known testing gaps:
+
+- No visual regression coverage for celestial orb states.
+- No bubble page smoke test.
+- No dedicated flow tests for message, flight, or coffee.
+- Current smoke timing may be stale because recent stage-button single-click behavior is delayed to distinguish double-click rename.
+
+## Future-Agent Rules
+
+- Read `src/shapes.js`, `src/shared/scenario-data.js`, and the relevant page coordinator before changing data behavior.
+- Keep UI content data-driven through stage/scenario maps.
+- Reuse the shared celestial visual system; do not fork new orb styles per page.
+- Do not silently change storage keys; add migrations or compatibility code.
+- Keep server API route names aligned with client calls and docs.
+- Be careful with existing uncommitted source changes; do not revert work you did not make.
