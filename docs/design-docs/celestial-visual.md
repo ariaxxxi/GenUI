@@ -21,10 +21,12 @@ Production implementation:
 
 - `src/shared/celestial-selected-presets.js`
 - `src/shared/celestial-selection-chrome.js`
-- `src/styles/shared.css`
-- `src/styles/ai-decorative.css`
+- `src/styles/shared.css` for shared selected chrome and orb-core styling.
+- `src/styles/ai-decorative.css` for AI/prototype state behavior only.
 
 Important: in `celestial-tool.html`, the production-compatible stack is the `test-shell-*` stack. The `.celestial-*` caustic classes in that file are experimental/unused and are not the system rule.
+
+Global rule: Celestial visual-core changes are product-wide. Update shared presets, shared chrome JS, and `src/styles/shared.css` so GenUI Tool, AI Mode, Bubble Home, and Celestial Visual Tool inherit the change automatically. Do not add product-specific Celestial overrides unless the user explicitly asks for that exception.
 
 ## Mental Model
 
@@ -64,6 +66,19 @@ Reusable selected hosts should use:
 ```
 
 Prototype stage selection uses `#prototype-stage-selection` as the chrome root instead of `.g-selection-chrome`, but the internal layer names are the same.
+
+Orb hosts use the same internal layer stack plus shared orb-core classes:
+
+```html
+<div class="g-celestial-orb-visual g-stage-selected-host selected">
+  <div class="g-celestial-orb-sphere" aria-hidden="true"></div>
+  <div class="g-celestial-orb-selection g-selection-chrome" data-stage-direction="bottom" aria-hidden="true">
+    ...
+  </div>
+</div>
+```
+
+AI/prototype orb DOM should be created from `ensureSharedAiOrb()` in `src/shared/celestial-selection-chrome.js`. Do not duplicate orb markup per page.
 
 ## Layer Rules
 
@@ -291,7 +306,8 @@ Production preset source:
 
 | Preset | Used for | Blob colors | Mask blur | Blob blur | Blob end positions | Highlight scale | Inner glow blur |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `list` | list, chip-like, dot, circle, AI orb default | top core `#8fb2ef`, top edge `#8a72eb`, bottom core `#a8bbf0`, bottom edge `#572fff` | `30` | `37` | top `-26%, -36%`, bottom `45%, 38%` | `100` | `8` |
+| `list` | list, chip-like, dot, circle | top core `#8fb2ef`, top edge `#8a72eb`, bottom core `#a8bbf0`, bottom edge `#572fff` | `30` | `37` | top `-26%, -36%`, bottom `45%, 38%` | `100` | `8` |
+| `orb` | thinking/listening orb and Bubble Home orb | top core `#729af1`, top edge `#8a72eb`, bottom core `#c5a0f0`, bottom edge `#572fff` | `30` | `37` | top `-26%, -36%`, bottom `45%, 38%` | `100` | `8` |
 | `pill` | pill-like selected rows/fields | top core `#4f78ee`, top edge `#5d35ee`, bottom core `#8ea7f2`, bottom edge `#572fff` | `24.5` | `52` | top `-30%, -36%`, bottom `62%, 38%` | `157` | `5` |
 | `card` | card, card-s, image, card-form, card-list | top core `#6386ef`, top edge `#a086ef`, bottom core `#5973ef`, bottom edge `#43367a` | `10.5` | `80` | top `-27%, -55%`, bottom `27%, 58%` | `100` | `2` |
 | `chip` | fallback | top core `#8fb2ef`, top edge `#8a72eb`, bottom core `#a8bbf0`, bottom edge `#572fff` | `30` | `37` | top `-26%, -36%`, bottom `45%, 38%` | `100` | `8` |
@@ -299,6 +315,7 @@ Production preset source:
 Preset routing:
 
 - `pill` -> `pill`
+- `orb`, `listening`, `magic`, `ai` -> `orb`
 - `chip`, `list`, `dot`, `circle` -> `list`
 - `card`, `card-s`, `image`, `card-form`, `card-list` -> `card`
 - unknown -> `chip`
@@ -308,20 +325,12 @@ Preset routing:
 The AI orb uses the same `.g-stage-selected-*` layer stack inside:
 
 - `#siri-orb`
-- `.ai-flow-orb-visual`
-- `.ai-flow-orb-sphere`
-- `.ai-flow-orb-selection`
+- `.g-celestial-orb-visual`
+- `.g-celestial-orb-sphere`
+- `.g-celestial-orb-selection`
+- `.g-celestial-orb-disambiguation-icon`
 
-Default orb colors:
-
-```css
---g-stage-selected-rgb: rgb(114 154 241);
---g-stage-selected-secondary-rgb: rgb(197 160 240);
---g-stage-selected-blob-top-core: rgb(114 154 241);
---g-stage-selected-blob-top-edge: rgb(138 114 235);
---g-stage-selected-blob-bottom-core: rgb(197 160 240);
---g-stage-selected-blob-bottom-edge: rgb(87 47 255);
-```
+Default orb colors come from the shared `orb` preset, not from page-level CSS overrides.
 
 Thinking mode:
 
@@ -343,6 +352,7 @@ Listening mode:
 Rule:
 
 - Do not invent prototype-specific listening/thinking overrides. Prototype and AI mode should share this orb layer stack and only differ by state classes and geometry.
+- Do not invent Bubble Home orb or child-highlight overrides. Bubble should consume the same shared preset/chrome/style path.
 
 ## Required Setup For New Consumers
 
@@ -357,6 +367,7 @@ Rule:
 ## Do Not
 
 - Do not fork separate orb CSS for prototype, AI, and bubble pages.
+- Do not add product-specific Celestial visual overrides unless the user explicitly requests them.
 - Do not put the bottom-right sharp highlight inside the masked refraction layer.
 - Do not replace the four blob colors with only two accent colors unless routed through the preset/color override logic.
 - Do not remove the zero-spread mask unless the visual is intentionally no longer Celestial.

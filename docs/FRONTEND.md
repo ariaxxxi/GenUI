@@ -1,15 +1,15 @@
-# GenUI Build Rules
+# Frontend
 
-## Purpose And Precedence
+This file is the high-level frontend implementation contract for GenUI. Detailed visual rules live under `docs/design-docs/`.
 
-This file is the normative build contract for the GenUI prototype. It applies to:
+## Scope
 
 - Prototype editor: `index.html`
 - AI mode: `ai.html`
 - Bubble demo: `bubble.html`
 - Shared visual systems in `src/shared/` and `src/styles/`
 
-If this file conflicts with implementation, either update this file first with an explicit decision or change the implementation to match it. `README.md` is informational; this file is the build rule source.
+If this file conflicts with implementation, either update this file first with an explicit decision or change implementation to match it.
 
 ## Project-Wide Rules
 
@@ -21,21 +21,23 @@ If this file conflicts with implementation, either update this file first with a
 
 ## Celestial Visual Rules
 
-The Celestial visual is the shared selected/highlight/orb treatment. Its detailed reference is `context/Celestial-Visual.md`.
+The Celestial visual is the shared selected/highlight/orb treatment. Its detailed reference is `docs/design-docs/celestial-visual.md`.
 
 Source files:
 
 - `celestial-tool.html` for visual reference and tuning.
 - `src/shared/celestial-selected-presets.js` for production preset values.
 - `src/shared/celestial-selection-chrome.js` for geometry, mask, color, and direction setup.
-- `src/styles/shared.css` for selected chrome layers and directional animation.
-- `src/styles/ai-decorative.css` for AI/prototype orb state behavior.
+- `src/styles/shared.css` for selected chrome layers, orb-core styling, and directional animation.
+- `src/styles/ai-decorative.css` for AI/prototype state behavior only.
 
 ### Celestial Ownership
 
 - Prototype selected stage, AI thinking/listening orb, AI selected rows/options, and bubble child highlights must share the same Celestial layer stack.
-- Do not create page-specific duplicate orb systems.
+- Any Celestial visual-core update must be global across GenUI Tool, AI Mode, Bubble Home, and Celestial Visual Tool.
+- Do not create page-specific duplicate orb systems or product-specific Celestial layer styling.
 - Do not override listening/thinking visuals locally when a shared preset/class/variable can express the change.
+- Product-specific Celestial overrides are disallowed unless the user explicitly asks for a one-off exception.
 - The production-compatible stack in `celestial-tool.html` is the `test-shell-*` stack. Do not copy the unused `.celestial-caustic-*` experiment as the system rule.
 
 ### Celestial Layer Stack
@@ -81,6 +83,7 @@ Use `celestialSelectedPresetForRenderShape()` for preset routing.
 | Render shape | Preset |
 | --- | --- |
 | `pill` | `pill` |
+| `orb`, `listening`, `magic`, `ai` | `orb` |
 | `chip`, `list`, `dot`, `circle` | `list` |
 | `card`, `card-s`, `image`, `card-form`, `card-list` | `card` |
 | unknown | `chip` |
@@ -90,6 +93,7 @@ Preset values that must remain aligned with `src/shared/celestial-selected-prese
 | Preset | Colors | Mask blur | Blob blur | Blob positions | Highlight scale | Inner glow blur |
 | --- | --- | --- | --- | --- | --- | --- |
 | `list` / `chip` | `#8fb2ef`, `#8a72eb`, `#a8bbf0`, `#572fff` | `30` | `37` | top `-26%, -36%`, bottom `45%, 38%` | `100` | `8` |
+| `orb` | `#729af1`, `#8a72eb`, `#c5a0f0`, `#572fff` | `30` | `37` | top `-26%, -36%`, bottom `45%, 38%` | `100` | `8` |
 | `pill` | `#4f78ee`, `#5d35ee`, `#8ea7f2`, `#572fff` | `24.5` | `52` | top `-30%, -36%`, bottom `62%, 38%` | `157` | `5` |
 | `card` | `#6386ef`, `#a086ef`, `#5973ef`, `#43367a` | `10.5` | `80` | top `-27%, -55%`, bottom `27%, 58%` | `100` | `2` |
 
@@ -126,7 +130,10 @@ Layer timing:
 
 ### AI Orb Rules
 
+- Detailed orb ownership and reuse rules live in `docs/design-docs/ai-orb.md`.
 - AI thinking and listening must use the same `.g-stage-selected-*` layer stack as Celestial selected chrome.
+- Orb core classes live in `src/styles/shared.css` as `.g-celestial-orb-*`, and shared orb DOM is created from `ensureSharedAiOrb()` in `src/shared/celestial-selection-chrome.js`.
+- When a task asks to add a listening/thinking orb anywhere in the project, use the shared orb source of truth by default. Do not create a page-local orb variant unless the user explicitly asks for one.
 - Thinking keeps the full layer stack visible and breathes at `4.2s`; bridge/thinking acceleration uses `1.5s`.
 - Listening hides refraction blobs but keeps rim and inner glow visible.
 - Listening uses `--ai-listening-rim-level` from microphone analyser state.

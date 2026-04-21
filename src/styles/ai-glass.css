@@ -46,37 +46,6 @@
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
 .g-card-list { padding: 0px; }
-.g-stage-selected-host {
-  position: relative;
-  isolation: isolate;
-  --g-stage-selected-rgb: rgb(144 172 255);
-  --g-stage-selected-secondary-rgb: rgb(151 97 255);
-}
-.g-selection-chrome {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: inherit;
-  isolation: isolate;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0;
-  transition:
-    opacity 420ms var(--motion-ease),
-    --g-stage-selected-rgb 320ms var(--motion-ease),
-    --g-stage-selected-secondary-rgb 320ms var(--motion-ease);
-}
-
-.g-stage-selected-host:is(.selected, .focused) > .g-selection-chrome {
-  opacity: 1;
-}
-.g-stage-selected-host.deselecting > .g-selection-chrome {
-  opacity: 1;
-}
-.g-stage-selected-host > :not(.g-selection-chrome) {
-  position: relative;
-  z-index: 2;
-}
 .g-contact-row {
   --g-stage-h: 72px;
   display: flex;

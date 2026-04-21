@@ -72,7 +72,8 @@ Rationale:
 
 Implication:
 
-- Prefer `src/shared/celestial-selection-chrome.js`, `src/shared/celestial-selected-presets.js`, `src/styles/shared.css`, and `src/styles/ai-decorative.css`.
+- Prefer `src/shared/celestial-selection-chrome.js`, `src/shared/celestial-selected-presets.js`, and `src/styles/shared.css`.
+- Use `src/styles/ai-decorative.css` only for AI/prototype state behavior, not Celestial core values.
 - Remove or avoid page-local overrides that recreate orb/chrome behavior.
 - Keep listening/thinking logic intact when only visual values need to change.
 
@@ -147,10 +148,42 @@ Implication:
 - Keep storage reads/writes centralized in `src/app-state.js`.
 - Do not add new storage keys without documenting them in architecture/status.
 
+### Harness-style docs structure
+
+The repository uses a short `AGENTS.md`, a root `ARCHITECTURE.md`, and progressive-disclosure documentation under `docs/`.
+
+Rationale:
+
+- The repository memory should be discoverable without chat history.
+- `AGENTS.md` should be a map and role contract, not the full project manual.
+- High-level uppercase docs provide stable instruction entry points.
+- Detailed docs live in subfolders so agents can choose only the context they need.
+
+Implication:
+
+- Active work lives in `docs/exec-plans/active/current.md`.
+- Execution results live in `docs/exec-plans/completed/handoff.md`.
+- Celestial visual rules live in `docs/design-docs/celestial-visual.md`.
+- Context freshness is checked from `docs/QUALITY_SCORE.md`.
+
+### Celestial visual core is global
+
+Celestial selected/highlight/orb visuals must be changed through shared presets, shared chrome JS, and `src/styles/shared.css`.
+
+Rationale:
+
+- GenUI Tool, AI Mode, Bubble Home, and Celestial Visual Tool should inherit visual-core updates automatically.
+- Product-by-product orb overrides caused visual drift and repeated fixes.
+
+Implication:
+
+- Do not add product-specific Celestial CSS or value overrides unless the user explicitly requests a one-off exception.
+- Page-specific files may control state and layout, but not redefine Celestial layer values, mask math, orb core styling, or directional motion.
+
 ## Corrections From Older Docs
 
 - The prototype entrypoint is `src/tool/index-app.js`, not `src/index-app.js`.
 - The AI entrypoint is `src/ai-app.js`, which imports `src/ai/ai-bindings.js`.
 - The provider route is `POST /api/ai-route`, not `POST /api/ai`.
-- The server currently maps `/bubble` to `bubble2.html`, but the repo contains `bubble.html`.
-- `context/task.md` is expected by `AGENTS.md`, but the current repo has `context/task✅.md` instead.
+- `/bubble` and `/bubble2` serve the existing `bubble.html`.
+- The active task slot is `docs/exec-plans/active/current.md`.

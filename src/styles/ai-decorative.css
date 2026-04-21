@@ -5,45 +5,6 @@
 .star { position: absolute; border-radius: 50%; pointer-events: none; animation: star-pulse var(--sd,4s) var(--motion-ease) infinite; animation-delay: var(--sdl,0s); }
 @keyframes star-pulse { 0%,100%{opacity:var(--op,.05)} 50%{opacity:calc(var(--op,.05)*3)} }
 
-/* ── Loading ── */
-/* ── Bubble orb ── */
-@keyframes ai-flow-orb-breathe-scale {
-  0%, 100% { transform: scale(1) translate3d(0, 0, 0); }
-  45% { transform: scale(1.06) translate3d(0, 0, 0); }
-}
-
-@keyframes ai-flow-orb-breathe-rim {
-  0%, 100% {
-    box-shadow:
-      inset 13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
-      inset -13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
-      inset 0 9px 11px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
-      inset 0 -9px 11px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
-      inset 0 0 14px -5px rgba(255, 255, 255, 0.03);
-  }
-  45% {
-    box-shadow:
-      inset 16px 0 20px -5px color-mix(in srgb, var(--g-stage-selected-rgb) 90%, white 10%),
-      inset -16px 0 20px -5px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 92%, white 8%),
-      inset 0 12px 18px -5px color-mix(in srgb, var(--g-stage-selected-rgb) 64%, var(--g-stage-selected-secondary-rgb)),
-      inset 0 -12px 18px -5px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 68%, var(--g-stage-selected-rgb)),
-      inset 0 0 22px -3px rgba(255, 255, 255, 0.10);
-  }
-}
-
-@keyframes ai-flow-orb-breathe-highlight {
-  0%, 100% {
-    box-shadow:
-      inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  }
-  45% {
-    box-shadow:
-      inset 0 0 10px 2px rgba(255, 255, 255, 0.95),
-      inset 0 1px 0 rgba(255, 255, 255, 0.30);
-  }
-}
-
 #siri-orb {
   position: absolute;
   inset: 0;
@@ -51,12 +12,6 @@
   border-radius: inherit;
   --g-stage-h: 80px;
   --ai-listening-rim-level: 0;
-  --g-stage-selected-rgb: rgb(114 154 241);
-  --g-stage-selected-secondary-rgb: rgb(197 160 240);
-  --g-stage-selected-blob-top-core: rgb(114 154 241);
-  --g-stage-selected-blob-top-edge: rgb(138 114 235);
-  --g-stage-selected-blob-bottom-core: rgb(197 160 240);
-  --g-stage-selected-blob-bottom-edge: rgb(87 47 255);
   opacity: 0;
   transform: scale(0.2);
   transform-origin: 50% 50%;
@@ -71,121 +26,36 @@
   opacity: 1;
   transform: scale(1);
 }
-.ai-flow-orb-visual {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  isolation: isolate;
-  transform-origin: center;
-  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.40));
-  transition: transform 500ms var(--motion-ease), filter 400ms ease;
-}
-.ai-flow-orb-sphere,
-.ai-flow-orb-selection {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-}
-.ai-flow-orb-sphere {
-  overflow: hidden;
-  background: transparent;
-  box-shadow: 0 0 40px rgba(255, 255, 255, 0.02);
-  transform-origin: center;
-  animation: ai-flow-orb-breathe-scale 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-.ai-flow-orb-sphere::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    170deg,
-    rgba(255, 255, 255, 0.75) 0%,
-    rgba(180, 180, 180, 0.2) 50%,
-    rgba(133, 133, 133, 0.1) 97%,
-    rgba(133, 133, 133, 0.1) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-}
-.ai-flow-orb-sphere::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  border-radius: inherit;
-  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.25);
-}
-.ai-flow-orb-selection {
-  z-index: 11;
-  overflow: hidden;
-  opacity: 1;
-}
-.ai-flow-orb-selection .g-stage-selected-accent-rim {
-  opacity: 0.96;
-  animation: ai-flow-orb-breathe-rim 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-.ai-flow-orb-selection .g-stage-selected-highlight {
-  opacity: 1;
-  animation: ai-flow-orb-breathe-highlight 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-.ai-flow-orb-selection .g-stage-selected-refraction {
-  opacity: 1;
-}
-.ai-flow-orb-selection .g-stage-selected-sharp-highlight,
-.ai-flow-orb-selection .g-stage-selected-highlight-mask-image,
-.ai-flow-orb-selection .g-stage-selected-blob--top-left,
-.ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
-  opacity: 1;
-}
-.ai-flow-orb-selection .g-stage-selected-sharp-highlight {
-  transform: translate(var(--g-stage-selected-highlight-bottom-end-x), var(--g-stage-selected-highlight-bottom-end-y));
-}
-.ai-flow-orb-selection .g-stage-selected-highlight-mask-image {
-  transform: translate(var(--g-stage-selected-highlight-top-end-x), var(--g-stage-selected-highlight-top-end-y));
-}
-.ai-flow-orb-selection .g-stage-selected-blob--top-left {
-  transform: translate(var(--g-stage-selected-blob-top-end-x), var(--g-stage-selected-blob-top-end-y));
-}
-.ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
-  transform: translate(var(--g-stage-selected-blob-bottom-end-x), var(--g-stage-selected-blob-bottom-end-y));
-}
-#drop-main.magic-glow #siri-orb .ai-flow-orb-sphere,
-#drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-sphere {
+#drop-main.magic-glow #siri-orb .g-celestial-orb-sphere,
+#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-sphere {
   animation-duration: 1.5s;
 }
-#drop-main.magic-glow #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
-#drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+#drop-main.magic-glow #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
+#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
   animation-duration: 1.5s;
 }
-#drop-main.magic-glow #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight,
-#drop-main.orb-thinking-bridge #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.magic-glow #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight,
+#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   animation-duration: 1.5s;
 }
-#drop-main.listening-orb #siri-orb .ai-flow-orb-sphere {
+#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere {
   animation: none;
   box-shadow: none;
 }
-#drop-main.listening-orb #siri-orb .ai-flow-orb-sphere::before,
-#drop-main.listening-orb #siri-orb .ai-flow-orb-sphere::after {
+#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere::before,
+#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere::after {
   opacity: 0;
 }
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   animation: none;
 }
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-refraction,
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--top-left,
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-refraction,
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--top-left,
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--bottom-right {
   opacity: 0;
 }
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
   box-shadow:
     inset calc(5px + var(--ai-listening-rim-level) * 14px) 0 calc(4px + var(--ai-listening-rim-level) * 26px) calc(-9px + var(--ai-listening-rim-level) * 4px)
       color-mix(in srgb, var(--g-stage-selected-rgb) calc(28% + var(--ai-listening-rim-level) * 50%), white calc(6% + var(--ai-listening-rim-level) * 16%)),
@@ -197,28 +67,28 @@
       color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(20% + var(--ai-listening-rim-level) * 36%), var(--g-stage-selected-rgb)),
     inset 0 0 calc(4px + var(--ai-listening-rim-level) * 28px) calc(-7px + var(--ai-listening-rim-level) * 3px)
       rgba(255, 255, 255, calc(0.02 + var(--ai-listening-rim-level) * 0.09));
-  transition: box-shadow 48ms linear;
+  transition: box-shadow 96ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   box-shadow:
     inset 0 0 calc(1px + var(--ai-listening-rim-level) * 9px) calc(-1px + var(--ai-listening-rim-level) * 2px) rgba(255, 255, 255, calc(0.22 + var(--ai-listening-rim-level) * 0.58)),
     inset 0 1px 0 rgba(255, 255, 255, calc(0.06 + var(--ai-listening-rim-level) * 0.18));
-  transition: box-shadow 48ms linear;
+  transition: box-shadow 96ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim,
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   animation: none;
 }
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection,
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-accent-rim,
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-highlight,
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-sharp-pass,
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-stage-selected-highlight-mask,
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere::before {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-sphere::before {
   opacity: 1;
   transition: none !important;
 }
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-accent-rim {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
   box-shadow:
     inset 13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
     inset -13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
@@ -226,20 +96,20 @@
     inset 0 -9px 11px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
     inset 0 0 14px -5px rgba(255, 255, 255, 0.03);
 }
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-highlight {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   box-shadow:
     inset 0 0 6px 1px rgba(255, 255, 255, 0.8),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere,
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere::before,
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-sphere::after {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-sphere,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-sphere::before,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-sphere::after {
   box-shadow: none;
   opacity: 0;
 }
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-refraction,
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--top-left,
-#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .ai-flow-orb-selection .g-stage-selected-blob--bottom-right {
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-refraction,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--top-left,
+#drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--bottom-right {
   opacity: 0;
 }
 @keyframes sleep-listening-orb-in {
@@ -329,7 +199,7 @@ body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
   background: transparent !important;
   overflow: visible;
 }
-#drop-main.magic-glow #siri-orb .ai-flow-orb-visual {
+#drop-main.magic-glow #siri-orb .g-celestial-orb-visual {
   transform: scale(1);
 }
 #drop-main.listening-orb:not(.compose-surface):not(.sending-orb-fade-in) {
@@ -356,14 +226,14 @@ body.home-to-listening #drop-main.listening-orb #siri-orb.visible {
 #drop-main.flow-orb-muted #siri-orb.visible {
   filter: none !important;
 }
-#drop-main.flow-orb-muted #siri-orb .ai-flow-orb-visual {
+#drop-main.flow-orb-muted #siri-orb .g-celestial-orb-visual {
   filter: none;
 }
-#drop-main.flow-orb-muted #siri-orb .ai-flow-orb-sphere {
+#drop-main.flow-orb-muted #siri-orb .g-celestial-orb-sphere {
   animation: none;
 }
-#drop-main.flow-orb-muted #siri-orb .ai-flow-orb-sphere::before,
-#drop-main.flow-orb-muted #siri-orb .ai-flow-orb-sphere::after,
+#drop-main.flow-orb-muted #siri-orb .g-celestial-orb-sphere::before,
+#drop-main.flow-orb-muted #siri-orb .g-celestial-orb-sphere::after,
 #drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-sharp-pass,
 #drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-highlight,
 #drop-main.flow-orb-muted #prototype-stage-selection .g-stage-selected-highlight-mask,
@@ -415,7 +285,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
 #drop-main:not(.listening-orb):not(.magic-glow):not(.disambiguation-surface):not(.confirm-surface) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
-.ai-flow-orb-disambiguation-icon {
+.g-celestial-orb-disambiguation-icon {
   position: absolute;
   inset: 0;
   display: flex;
@@ -426,7 +296,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   transform: scale(0.6);
   transition: opacity 300ms var(--motion-ease), transform 300ms var(--motion-ease);
 }
-.ai-flow-orb-disambiguation-icon svg {
+.g-celestial-orb-disambiguation-icon svg {
   width: 48%;
   height: 48%;
   filter: drop-shadow(0 1px 6px rgba(0,0,0,0.4));
@@ -452,14 +322,14 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   filter: none !important;
   pointer-events: none;
 }
-#drop-main.disambiguation-surface .ai-flow-orb-disambiguation-icon {
+#drop-main.disambiguation-surface .g-celestial-orb-disambiguation-icon {
   opacity: 1;
   transform: scale(1);
 }
-#drop-main.disambiguation-surface #siri-orb .ai-flow-orb-sphere {
+#drop-main.disambiguation-surface #siri-orb .g-celestial-orb-sphere {
   animation: none;
 }
-#drop-main.disambiguation-surface #siri-orb .ai-flow-orb-selection,
+#drop-main.disambiguation-surface #siri-orb .g-celestial-orb-selection,
 #drop-main.disambiguation-surface #siri-orb .g-stage-selected-accent-rim,
 #drop-main.disambiguation-surface #siri-orb .g-stage-selected-highlight,
 #drop-main.disambiguation-surface #siri-orb .g-stage-selected-sharp-pass,
@@ -468,7 +338,7 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   transition: opacity 250ms var(--motion-ease);
   animation: none !important;
 }
-#drop-main.disambiguation-surface #siri-orb .ai-flow-orb-sphere::before {
+#drop-main.disambiguation-surface #siri-orb .g-celestial-orb-sphere::before {
   opacity: 0;
   transition: opacity 250ms var(--motion-ease);
 }

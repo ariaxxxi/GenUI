@@ -1,6 +1,7 @@
 import { layoutDisambiguationPillItems, renderDisambiguationPills } from '../flows/ui-primitives.js';
 import { SHAPES, normalizeTypography, normalizeStageImages } from '../shapes.js';
 import { celestialSelectedPresetForRenderShape } from './celestial-selected-presets.js';
+import { applySelectedChromePreset, hexToCssColor } from './celestial-selection-chrome.js';
 import { clamp } from '../utils.js';
 
 export function createMorphRender(ctx) {
@@ -325,21 +326,6 @@ export function createMorphRender(ctx) {
     return !!callbacks.stageListListeningOrbForShape?.(scenario, shape);
   }
 
-  function hexToCssColor(value, fallback = 'rgb(144 172 255)') {
-    const raw = String(value || '').trim();
-    const full = raw.match(/^#([0-9a-f]{6})$/i);
-    if (full) {
-      const hex = full[1];
-      return `rgb(${parseInt(hex.slice(0, 2), 16)} ${parseInt(hex.slice(2, 4), 16)} ${parseInt(hex.slice(4, 6), 16)})`;
-    }
-    const short = raw.match(/^#([0-9a-f]{3})$/i);
-    if (short) {
-      const hex = short[1];
-      return `rgb(${parseInt(hex[0] + hex[0], 16)} ${parseInt(hex[1] + hex[1], 16)} ${parseInt(hex[2] + hex[2], 16)})`;
-    }
-    return fallback;
-  }
-
   function inferPrototypeSelectionDirection(fromGeo, toGeo) {
     if (!fromGeo || !toGeo) return 'bottom';
     const fromX = Number(fromGeo.tx) || 0;
@@ -377,120 +363,6 @@ export function createMorphRender(ctx) {
       state.prototypeSelectionMotionFrame = null;
       selectionOverlay.dataset.motionPhase = 'active';
     });
-  }
-
-  function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
-    const blur = Math.max(0, (height * blurBase) / 56);
-    const stdDeviation = blur / 2;
-    const spread = Math.max(0, (height * 3) / 56);
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 ${width} ${height}" fill="none">
-        <g filter="url(#f)">
-          <rect width="${width}" height="${height}" rx="${radius}" fill="black"/>
-        </g>
-        <defs>
-          <filter id="f" x="0" y="0" width="${width}" height="${height}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-            <feFlood flood-opacity="0" result="BackgroundImageFix"/>
-            <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
-            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-            <feOffset/>
-            <feMorphology in="hardAlpha" operator="dilate" radius="${spread}" result="spreadAlpha"/>
-            <feGaussianBlur in="spreadAlpha" stdDeviation="${stdDeviation}" result="blurredSpread"/>
-            <feComposite in="blurredSpread" in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" result="innerShadowAlpha"/>
-            <feColorMatrix in="innerShadowAlpha" type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0" result="innerShadowColor"/>
-            <feBlend mode="normal" in="innerShadowColor" in2="shape" result="effect1_innerShadow"/>
-          </filter>
-        </defs>
-      </svg>
-    `.replace(/\s+/g, ' ').trim();
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }
-
-  function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null, runtimeOverrides = {}) {
-    if (!chromeEl || !hostEl || !preset) return;
-    const rect = geometryOverride ? null : hostEl.getBoundingClientRect();
-    const width = Math.max(
-      1,
-      Math.round(
-        Number(geometryOverride?.width)
-        || Number.parseFloat(hostEl.style.width)
-        || rect?.width
-        || hostEl.offsetWidth
-        || 1,
-      ),
-    );
-    const height = Math.max(
-      1,
-      Math.round(
-        Number(geometryOverride?.height)
-        || Number.parseFloat(hostEl.style.height)
-        || rect?.height
-        || hostEl.offsetHeight
-        || 1,
-      ),
-    );
-    const computed = getComputedStyle(hostEl);
-    const radius = Math.max(
-      0,
-      Number(geometryOverride?.radius)
-      || Number.parseFloat(hostEl.style.borderRadius)
-      || Number.parseFloat(computed.borderRadius)
-      || Math.min(width, height) / 2,
-    );
-    const blobTopCore = hexToCssColor(colorOverrides.blobTopCore, hexToCssColor(preset.blobTopCore, 'rgb(144 172 255)'));
-    const blobTopEdge = hexToCssColor(colorOverrides.blobTopEdge, hexToCssColor(preset.blobTopEdge, blobTopCore));
-    const blobBottomCore = hexToCssColor(colorOverrides.blobBottomCore, hexToCssColor(preset.blobBottomCore, blobTopCore));
-    const blobBottomEdge = hexToCssColor(colorOverrides.blobBottomEdge, hexToCssColor(preset.blobBottomEdge, blobBottomCore));
-    const maskBlur = Number.isFinite(Number(runtimeOverrides.maskBlur))
-      ? Number(runtimeOverrides.maskBlur)
-      : preset.maskBlur;
-    const rimPrimary = blobTopCore;
-    const rimSecondary = blobBottomCore;
-    const unit = Math.max(0.65, Math.min(width, height) / 320);
-    const highlightScale = preset.highlightScale / 100;
-    const topHighlightWidth = Math.round(84 * highlightScale);
-    const topHighlightHeight = Math.round(84 * highlightScale);
-    const bottomHighlightWidth = Math.round(96 * highlightScale);
-    const bottomHighlightHeight = Math.round(96 * highlightScale);
-    const topHighlightAnchorX = 10 - (topHighlightWidth / 2) + preset.highlightTopX;
-    const topHighlightAnchorY = 10 - (topHighlightHeight / 2) + preset.highlightTopY;
-    const bottomHighlightAnchorX = (bottomHighlightWidth / 2) + preset.highlightBottomX;
-    const bottomHighlightAnchorY = (bottomHighlightHeight / 2) + preset.highlightBottomY;
-    const blobSize = Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)));
-    const blobBlurPx = unit * preset.blobBlur;
-    const innerGlowBlurPx = (height * preset.innerGlowBlur) / 56;
-
-    hostEl.style.setProperty('--g-stage-selected-rgb', rimPrimary);
-    hostEl.style.setProperty('--g-stage-selected-secondary-rgb', rimSecondary);
-    hostEl.style.setProperty('--g-stage-selected-blob-top-core', blobTopCore);
-    hostEl.style.setProperty('--g-stage-selected-blob-top-edge', blobTopEdge);
-    hostEl.style.setProperty('--g-stage-selected-blob-bottom-core', blobBottomCore);
-    hostEl.style.setProperty('--g-stage-selected-blob-bottom-edge', blobBottomEdge);
-
-    chromeEl.style.setProperty('--g-stage-h', `${height}px`);
-    chromeEl.style.setProperty('--g-stage-selected-unit', `${unit}px`);
-    chromeEl.style.setProperty('--g-stage-selected-mask-url', buildZeroSpreadMaskUrl(width, height, radius, maskBlur));
-    chromeEl.style.setProperty('--g-stage-selected-rgb', rimPrimary);
-    chromeEl.style.setProperty('--g-stage-selected-secondary-rgb', rimSecondary);
-    chromeEl.style.setProperty('--g-stage-selected-blob-top-core', blobTopCore);
-    chromeEl.style.setProperty('--g-stage-selected-blob-top-edge', blobTopEdge);
-    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-core', blobBottomCore);
-    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-edge', blobBottomEdge);
-    chromeEl.style.setProperty('--g-stage-selected-blob-size', `${blobSize}px`);
-    chromeEl.style.setProperty('--g-stage-selected-blob-blur', `${blobBlurPx.toFixed(2)}px`);
-    chromeEl.style.setProperty('--g-stage-selected-blob-top-x', `${preset.blobTopX}%`);
-    chromeEl.style.setProperty('--g-stage-selected-blob-top-y', `${preset.blobTopY}%`);
-    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-x', `${preset.blobBottomX}%`);
-    chromeEl.style.setProperty('--g-stage-selected-blob-bottom-y', `${preset.blobBottomY}%`);
-    chromeEl.style.setProperty('--g-stage-selected-inner-glow-blur', `${innerGlowBlurPx.toFixed(2)}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-top-end-x', `${topHighlightAnchorX}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-top-end-y', `${topHighlightAnchorY}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-end-x', `${bottomHighlightAnchorX}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-end-y', `${bottomHighlightAnchorY}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-top-width', `${topHighlightWidth}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-top-height', `${topHighlightHeight}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-width', `${bottomHighlightWidth}px`);
-    chromeEl.style.setProperty('--g-stage-selected-highlight-bottom-height', `${bottomHighlightHeight}px`);
   }
 
   function applyPrototypeListSelectedChromePresets(entries = []) {

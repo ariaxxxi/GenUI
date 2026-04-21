@@ -12,7 +12,8 @@ npm run start
 
 Open:
 - `http://localhost:5173/` (prototype page)
-- `http://localhost:5173/ai.html` (AI page)
+- `http://localhost:5173/ai` (AI page)
+- `http://localhost:5173/bubble` (bubble demo)
 
 ## Current Workflow
 
@@ -31,4 +32,5 @@ Open:
 - Each page is mode-locked using `data-page-mode` (`manual` for `index.html`, `ai` for `ai.html`) to avoid cross-mode editing conflicts.
 - AI page currently uses a frontend Gauss adapter stub (placeholder for real API integration) and falls back to manual matching on AI errors.
 - The Node server remains available for local hosting and future provider integrations.
-- Build and design guardrails are defined in `BUILD_RULES.md` and are the required source of truth for future UI/flow changes.
+- Agent context starts in `AGENTS.md`, `ARCHITECTURE.md`, and `docs/PLANS.md`.
+- Build and design guardrails are defined in `docs/FRONTEND.md` and `docs/DESIGN.md`.

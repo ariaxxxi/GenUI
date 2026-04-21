@@ -3,8 +3,8 @@
 ## High Priority
 
 - Reconcile current uncommitted source changes with the latest user-facing behavior before adding more interaction code.
+- Fix `test/smoke.mjs` AI chip click so `.ai-legacy-debug` cannot intercept the target before smoke reaches later checks.
 - Update `test/smoke.mjs` for delayed stage single-click behavior introduced by inline double-click rename handling.
-- Restore the expected `context/task.md` workflow file or update `AGENTS.md` to use the current `context/task✅.md` file.
 - Add a smoke check for prototype list-stage controls, including list item +/- controls and bottom orb toggle/icon settings.
 
 ## Visual / Interaction Regression Coverage
@@ -26,8 +26,6 @@
 ## Technical Cleanup
 
 - Audit `src/shapes.legacy.js` against canonical `src/shapes.js` and remove or document the legacy copy.
-- Remove dead or disabled old orb code after confirming the shared celestial system covers all current states.
-- Centralize any remaining page-specific orb overrides into shared celestial presets.
 - Align API naming in docs and code around `/api/ai-route`.
 - Add package scripts for smoke/regression checks so agents do not need to remember raw commands.
 - Consider a storage recovery/export UI for localStorage + IndexedDB data.
@@ -39,6 +37,7 @@
 - Add a small visual fixture page for celestial presets.
 - Add a route/page inventory test so server aliases cannot drift from existing HTML files.
 - Document `.env` variables used by AI and TTS providers.
+- Add a small automated docs freshness check based on `docs/QUALITY_SCORE.md`.
 
 ## Recently Completed / Landed Direction
 
@@ -49,3 +48,4 @@
 - List stage gained bottom orb configuration and list item count controls in the editor path.
 - Stage and scenario inline rename behavior is being handled through double-click editing rather than separate rename-only controls.
 - `/bubble` and `/bubble2` server aliases now serve the existing `bubble.html`.
+- Repository docs now use the article-style `docs/` harness with high-level uppercase guides and progressive-disclosure subfolders.

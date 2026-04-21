@@ -1,118 +1,59 @@
-
-
 # AGENTS.md
 
-This repository uses a role-based agent workflow with a shared markdown context system.
+This file is the stable entry point for agents. Keep it short. Repository knowledge lives in `ARCHITECTURE.md` and `docs/` so agents can progressively disclose only the context they need.
 
-The project must be understandable and resumable without chat history.
-The source of truth is the repository, especially the files in `context/`.
+## First Reads
 
----
+1. `ARCHITECTURE.md` for the system map and code ownership.
+2. `docs/PLANS.md` for active/completed execution plans and planning rules.
+3. The specific high-level doc for the task:
+   - `docs/DESIGN.md` for visual/design-system work.
+   - `docs/FRONTEND.md` for UI, flow, and browser implementation rules.
+   - `docs/PRODUCT_SENSE.md` for product intent.
+   - `docs/QUALITY_SCORE.md` for validation and freshness checks.
+   - `docs/RELIABILITY.md` for runtime/API/fallback behavior.
+   - `docs/SECURITY.md` for keys, server boundaries, and safe file handling.
 
-## Purpose
+## Roles
 
-Enable multiple agents to work on the same project with clean separation of responsibilities.
+- **Planner**: writes the active implementation packet in `docs/exec-plans/active/current.md`.
+- **Coder**: executes that active plan, validates the work, and records the result in `docs/exec-plans/completed/handoff.md`.
 
-There are two active roles:
+Do not mix roles unless the user explicitly overrides this file.
 
-- **Planner**
-- **Implementer**
+## Human Prompt Contract
 
-The active role is assigned by the user prompt, for example:
+Humans usually only need to provide:
 
-- "You are planner, do ..."
-- "You are implementer, do ..."
+```text
+Role: planner or coder
+Goal: one clear outcome
+```
 
-An agent must perform only the work of its assigned role.
-Do not mix roles.
-Do not do the other role's job unless the user explicitly overrides this document.
+Agents must infer the rest from repository docs whenever possible. Do not require humans to repeat scope, constraints, or validation if the relevant product spec and harness docs already define them.
 
----
+If the goal mentions one product surface, keep the other three product surfaces unchanged unless the user explicitly asks for cross-product integration.
 
-## Core principles
+Product specs:
 
-1. **Repository memory over chat memory**
-   - Do not rely on prior conversation.
-   - Recover project state from the repo files.
+- `docs/product-specs/genui-tool.md`
+- `docs/product-specs/ai-mode.md`
+- `docs/product-specs/celestial-visual-tool.md`
+- `docs/product-specs/bubble-home.md`
 
-2. **Strict role separation**
-   - Planner plans.
-   - Implementer executes.
-   - Planner does not implement.
-   - Implementer does not re-plan the project.
+## Core Rules
 
-3. **Minimal file reading**
-   - Read only the files required for your role.
-   - Do not scan the entire repository unless the current task requires it.
+- Do not rely on prior chat when repository docs can answer the question.
+- Do not revert unrelated dirty worktree changes.
+- Keep `AGENTS.md` as a map, not a manual.
+- Put detailed rules and durable knowledge in `docs/`.
+- Infer the relevant product spec from the user goal and preserve unrelated products by default.
+- Update docs when implementation changes architecture, routes, APIs, storage keys, visual contracts, product behavior, reliability, security, or known tech debt.
+- Use `docs/design-docs/celestial-visual.md` as the detailed Celestial visual source.
 
-4. **Explicit handoff**
-   - Planner hands off through `context/task.md`.
-   - Implementer hands off through `context/handoff.md`.
+## Planner Contract
 
-5. **Durable decisions**
-   - Do not silently reverse or ignore recorded decisions in `context/decisions.md`.
-
-6. **Small, auditable updates**
-   - Keep context files structured, concise, and agent-friendly.
-   - Prefer clear headings and bullet points over long prose.
-
----
-
-## Context files
-
-The project context lives in `context/`:
-
-- `architecture.md` — stable system structure, modules, data flow, technical constraints
-- `decisions.md` — important decisions, rationale, tradeoffs, and non-reversible choices
-- `project_status.md` — current project state, progress, active risks, what's working / broken
-- `task.md` — planner-authored active execution brief for implementers
-- `handoff.md` — implementer-authored execution result and next-entry notes
-- `todos.md` — backlog and future work not yet promoted into the active task
-
----
-
-## Role: Planner
-
-### Mission
-Translate the user's request into a clear implementation-ready task packet.
-
-Your job is to update `context/task.md` with a complete, current, implementation-ready task.
-
-### You may read
-- `AGENTS.md`
-- `context/project_status.md`
-- `context/architecture.md`
-- `context/decisions.md`
-- `context/todos.md`
-- `context/handoff.md` (latest relevant section if needed)
-
-Read only what is needed to plan the task correctly.
-Do not inspect unrelated files.
-Do not scan the entire repo unless absolutely necessary to define the task.
-
-### You must produce
-Update `context/task.md`.
-
-The output must be clear enough that an implementer can execute it without needing prior chat context.
-
-### You must not
-- Write production code
-- Modify implementation files unless I explicitly ask for planning artifacts in-code
-- Perform the implementer’s work
-- Leave vague instructions like “improve this” or “clean this up”
-
-### Your responsibilities
-- Clarify the goal
-- Define scope
-- Name relevant files / areas to inspect
-- State constraints and non-goals
-- Provide step-by-step implementation instructions
-- Define acceptance criteria
-- Note validation expectations
-- Make the task executable without needing prior chat context
-
-### Required format for `context/task.md`
-Your `context/task.md` must contain these sections:
+Planner may read the repository docs needed to produce a complete plan. Planner must write `docs/exec-plans/active/current.md` with:
 
 - Title
 - Status
@@ -126,229 +67,28 @@ Your `context/task.md` must contain these sections:
 - Acceptance criteria
 - Validation checklist
 - Risks / notes
-- Open questions (only if blocked or something is genuinely missing)
+- Open questions only when genuinely blocked
 
-### Frontend tasks: visual and interaction must be explicit
+For UI work, include exact visual values, interaction behavior, default highlights, keyboard outcomes, and animation timing.
 
-For any task that touches UI, the planner must specify visual and interaction details completely. “Make it look like the spec” is not sufficient.
+## Coder Contract
 
-**Visual — every component must have:**
-- Exact CSS values: dimensions, border-radius, padding, font-size, color (rgba), background, box-shadow
-- Selected vs unselected state for every interactive element (chips, list rows, buttons) — background, border, text color, transform/scale
-- Animation spec: property, start value, end value, duration, easing. Use `max-height`/`opacity`/`margin` for collapse/expand, not `display:none`
-- Layout diagram (ASCII or description) for every state with a distinct layout
-- Display constraints noted explicitly (e.g. min font size floor, canvas bounds)
+Coder must:
 
-**Interaction — every navigable state must have:**
-- A table of input → outcome: keyboard keys, voice shortcuts, gestures
-- Which element is highlighted by default on state entry
-- What Space, Esc, Enter, and ArrowUp/Down do in that state
+- Follow `docs/exec-plans/active/current.md`.
+- Use `ARCHITECTURE.md` and relevant `docs/*.md` files as constraints.
+- Keep changes within scope.
+- Validate work against acceptance criteria.
+- Update `docs/exec-plans/completed/handoff.md`.
+- Update any affected high-level docs, detailed docs, references, or tech-debt entries.
 
-If a visual reference file exists (`.jsx`, Figma, screenshot), extract exact values from it — do not defer to “see the reference.”
+Coder must not:
 
-### Scalability: consider future feature additions
+- Redefine the active plan without cause.
+- Expand scope silently.
+- Ignore durable decisions in `docs/references/decisions.md`.
+- Leave docs stale after changing project truth.
 
-Before finalizing any task, ask: *”What is likely to be added next, and does this design make it easy?”*
+## Success Condition
 
-**Required checks:**
-
-- **Data-driven**: UI content (contacts, flows, options) must come from data objects. Adding a new entry should require only a data change, not a code change.
-- **Clean seams for future integrations**: If anything will later be replaced (simulated input → real STT, stub → LLM, mock send → real API), define stub functions with explicit signatures now. Callers must not need to change when the implementation is swapped.
-- **Extensible state machines**: New states must be addable by extending an enum and adding a case — not by nesting conditionals into existing states.
-- **No hardcoded specificity** that blocks generalization: if a flow works for one item, it must work for any item via the data layer.
-
-Document each seam in task.md: function name, signature, current stub behavior, and a comment describing what plugs in later.
-
-### Writing standard
-Write concise, structured, agent-friendly markdown.
-Be specific and operational.
-Prefer bullets and numbered steps over long prose.
-State concrete actions, not abstract intentions.
-
-Bad:
-- “Polish the UI”
-- “Improve the animation”
-- “Make the experience smoother”
-
-Good:
-- “Adjust vertical spacing between list items to be uniform at all states”
-- “Preserve current copy and section order”
-- “Implement drag from board card into chat input drop zone with visible hover feedback”
-- “Do not modify unrelated components or redesign typography”
-
-### Scope control
-Keep the task narrow enough to execute reliably.
-If the requested work is large, split it into phases and define only the current executable phase in `context/task.md`.
-
-### Context discipline
-Use repo evidence and my request.
-Do not invent product strategy or technical assumptions without support.
-If something is inferred, label it clearly.
-If sources conflict, note the conflict in the task instead of guessing silently.
-
-### Task replacement rule
-Do not append vague notes to stale task content.
-Overwrite or clearly replace outdated content in `context/task.md` so the file represents the current active task cleanly.
-
-### Final instruction
-Produce a `context/task.md` that a separate implementer agent can follow directly, with minimal interpretation and no need to read prior conversation.
-
-
----
-
-## Role: Implementer
-
-### Mission
-Execute the current task in `context/task.md` faithfully and efficiently.
-
-### Implementer may read
-- `AGENTS.md`
-- `context/task.md`
-- `context/architecture.md`
-- `context/decisions.md`
-- `context/project_status.md` if needed
-- only the source files relevant to the task
-
-### Implementer must produce
-- The requested implementation changes
-- An update to `context/handoff.md`
-- Updates to `context/architecture.md`, `context/decisions.md`, `context/project_status.md`, and/or `context/todos.md` when the implementation changes the project truth those files describe
-
-### Implementer must not
-- Redefine the task without cause
-- Expand scope beyond `context/task.md`
-- Replace planning with a new plan
-- Ignore constraints, non-goals, or recorded decisions
-- Leave context files stale when implementation changes architecture, durable decisions, current status, or backlog
-- Introduce unrelated refactors unless required for the task and clearly documented
-
-### Implementer responsibilities
-- Follow `context/task.md`
-- Use `architecture.md` and `decisions.md` as constraints
-- Keep changes within scope
-- Validate work against acceptance criteria
-- Record what happened in `context/handoff.md`
-- Update shared context files when needed:
-  - `context/architecture.md` when modules, data flow, routes, storage, APIs, or system structure change
-  - `context/decisions.md` when a durable implementation decision is made or reversed
-  - `context/project_status.md` when working/broken state, known risks, run instructions, or validation status change
-  - `context/todos.md` when work completes, new follow-up work is discovered, or backlog priority changes
-- If blocked, stop broadening scope and document the blocker clearly
-
-### Implementer output standard for `context/handoff.md`
-`context/handoff.md` must contain:
-- Task title
-- Completion status
-- Summary of what was done
-- Files changed
-- Validation performed
-- Remaining issues / caveats
-- Recommended next step
-- If blocked, exact blocker and what is needed next
-
----
-
-## File authority and ownership
-
-### Planner-owned
-- `context/task.md`
-
-### Implementer-owned
-- `context/handoff.md`
-
-### Shared but controlled
-- `context/project_status.md` — update only to reflect current state changes
-- `context/todos.md` — backlog items only
-- `context/decisions.md` — update only when a decision has actually been made
-- `context/architecture.md` — update only when the system structure or technical truth has changed
-
-Do not use `handoff.md` as a backlog.
-Do not use `todos.md` as the active task contract.
-Do not use `task.md` as an execution log.
-
----
-
-## Precedence / source of truth
-
-When resolving ambiguity, use this order:
-
-1. Current user request
-2. `AGENTS.md`
-3. `context/task.md` (for execution details)
-4. `context/decisions.md`
-5. `context/architecture.md`
-6. `context/project_status.md`
-7. `context/handoff.md`
-8. `context/todos.md`
-
-If sources conflict, do not guess silently.
-Follow the highest-precedence source and note the conflict in the relevant context file.
-
----
-
-## Required behavior on entry
-
-When starting work:
-
-### If assigned as Planner
-1. Read only the planner-relevant context files.
-2. Synthesize the user's request into a clear execution packet.
-3. Write/update `context/task.md`.
-4. Do not implement.
-
-### If assigned as Implementer
-1. Read only the implementer-relevant context files.
-2. Execute the task defined in `context/task.md`.
-3. Write/update `context/handoff.md`.
-4. Do not re-plan unless blocked.
-
----
-
-## Scope control
-
-Agents must avoid scope drift.
-
-### Planner
-- Keep the task narrow enough to execute reliably.
-- Split large work into phases if needed.
-
-### Implementer
-- Execute only what the task asks for.
-- If a better broader direction is noticed, record it in `handoff.md` instead of silently expanding scope.
-
----
-
-## Blocker protocol
-
-If blocked:
-
-### Planner
-- Record open questions or missing inputs explicitly in `context/task.md`.
-
-### Implementer
-- Do not invent a new project direction.
-- Record in `context/handoff.md`:
-  - what blocked execution
-  - where it happened
-  - attempted resolution
-  - exact next action needed from planner or user
-
----
-
-## Quality bar
-
-All agent-written context should be:
-- concise
-- structured
-- specific
-- updateable
-- understandable by a new agent entering cold
-
-Avoid long narrative text.
-Prefer headings, bullets, and explicit checklists.
-
----
-
-## Success condition
-
-A new agent should be able to enter the repository, read the role-relevant markdown files, and continue work correctly without needing prior conversation.
+A new agent can read this file, then `ARCHITECTURE.md` and `docs/PLANS.md`, and continue correctly without prior conversation.

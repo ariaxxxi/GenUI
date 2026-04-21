@@ -35,6 +35,24 @@ const CELESTIAL_SELECTED_PRESETS = Object.freeze({
     highlightScale: 100,
     innerGlowBlur: 8,
   }),
+  orb: Object.freeze({
+    blobTopCore: '#729af1',
+    blobTopEdge: '#8a72eb',
+    blobBottomCore: '#c5a0f0',
+    blobBottomEdge: '#572fff',
+    maskBlur: 30,
+    blobBlur: 37,
+    blobTopX: -26,
+    blobTopY: -36,
+    blobBottomX: 45,
+    blobBottomY: 38,
+    highlightTopX: 0,
+    highlightTopY: 0,
+    highlightBottomX: 0,
+    highlightBottomY: 0,
+    highlightScale: 100,
+    innerGlowBlur: 8,
+  }),
   card: Object.freeze({
     blobTopCore: '#6386ef',
     blobTopEdge: '#a086ef',
@@ -85,6 +103,7 @@ function isCardLikeShape(renderShape = 'pill') {
 export function celestialSelectedPresetForRenderShape(renderShape = 'pill') {
   const shape = String(renderShape || 'pill');
   if (shape === 'pill') return CELESTIAL_SELECTED_PRESETS.pill;
+  if (shape === 'orb' || shape === 'listening' || shape === 'magic' || shape === 'ai') return CELESTIAL_SELECTED_PRESETS.orb;
   if (shape === 'chip' || shape === 'list' || shape === 'dot' || shape === 'circle') return CELESTIAL_SELECTED_PRESETS.list;
   if (isCardLikeShape(shape)) return CELESTIAL_SELECTED_PRESETS.card;
   return CELESTIAL_SELECTED_PRESETS.chip;

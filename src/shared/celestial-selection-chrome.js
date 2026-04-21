@@ -2,6 +2,30 @@ import { celestialSelectedPresetForRenderShape } from "./celestial-selected-pres
 
 const DEFAULT_DIRECTION = "bottom";
 const DEFAULT_DURATION_MS = 700;
+const SHARED_ORB_MARKUP = `
+  <div class="g-celestial-orb-visual" aria-hidden="true">
+    <div class="g-celestial-orb-sphere">
+      <div class="g-celestial-orb-selection g-selection-chrome" data-stage-direction="${DEFAULT_DIRECTION}">
+        <div class="g-stage-selected-refraction">
+          <div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div>
+          <div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div>
+        </div>
+        <div class="g-stage-selected-sharp-pass">
+          <div class="g-stage-selected-sharp-highlight"></div>
+        </div>
+        <div class="g-stage-selected-accent-rim"></div>
+        <div class="g-stage-selected-highlight-mask">
+          <div class="g-stage-selected-highlight-mask-image"></div>
+        </div>
+      </div>
+    </div>
+    <div class="g-celestial-orb-disambiguation-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3C7.03 3 3 6.58 3 11c0 2.3 1.1 4.38 2.87 5.88L5 21l4.67-2.08C10.4 19.3 11.19 19.4 12 19.4c4.97 0 9-3.58 9-8.4S16.97 3 12 3z" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+`;
 
 export function hexToCssColor(value, fallback = "rgb(144 172 255)") {
   const raw = String(value || "").trim();
@@ -20,9 +44,7 @@ export function hexToCssColor(value, fallback = "rgb(144 172 255)") {
 
 function readCssVar(el, name) {
   if (!el) return "";
-  const inlineValue = el.style?.getPropertyValue?.(name)?.trim?.() || "";
-  if (inlineValue) return inlineValue;
-  return getComputedStyle(el).getPropertyValue(name).trim();
+  return el.style?.getPropertyValue?.(name)?.trim?.() || "";
 }
 
 export function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
@@ -50,6 +72,14 @@ export function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
     </svg>
   `.replace(/\s+/g, " ").trim();
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+export function ensureSharedAiOrb(root = document) {
+  const scope = root?.querySelectorAll ? root : document;
+  scope.querySelectorAll("#siri-orb").forEach((orb) => {
+    if (orb.querySelector(":scope > .g-celestial-orb-visual")) return;
+    orb.innerHTML = SHARED_ORB_MARKUP;
+  });
 }
 
 export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null, runtimeOverrides = {}) {
@@ -144,8 +174,8 @@ function presetKeyForSelectionHost(hostEl) {
   if (hostEl.matches("#prototype-stage-selection, .g-contact-row, .g-compose-field, .g-flight-rec-option")) {
     return "pill";
   }
-  if (hostEl.matches("#siri-orb, .ai-flow-orb-sphere")) {
-    return "list";
+  if (hostEl.matches("#siri-orb, .g-celestial-orb-sphere, .g-celestial-orb-visual")) {
+    return "orb";
   }
   return "list";
 }
@@ -159,8 +189,8 @@ function hostChromePair(node) {
       presetKey: presetKeyForSelectionHost(node),
     };
   }
-  if (node.classList?.contains("ai-flow-orb-selection")) {
-    const hostEl = node.closest(".ai-flow-orb-sphere") || document.getElementById("siri-orb") || node;
+  if (node.classList?.contains("g-celestial-orb-selection")) {
+    const hostEl = node.closest(".g-celestial-orb-sphere") || document.getElementById("siri-orb") || node;
     return {
       chromeEl: node,
       hostEl,
@@ -201,10 +231,11 @@ function chromeColorOverrides(hostEl, chromeEl, preset) {
 }
 
 export function applyAiCelestialChrome(root = document) {
+  ensureSharedAiOrb(root);
   const scope = root?.querySelectorAll ? root : document;
   const selectors = [
     "#prototype-stage-selection",
-    "#siri-orb .ai-flow-orb-selection",
+    "#siri-orb .g-celestial-orb-selection",
     ".g-stage-selected-host",
   ];
   scope.querySelectorAll(selectors.join(", ")).forEach((node) => {
