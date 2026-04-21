@@ -576,6 +576,7 @@ export function createMessageSendRender({
         dropMain.style.removeProperty("--g-compose-await-orb-radius");
       }
     }
+    applyAiCelestialChrome(document);
     C.rich.classList.toggle("visible", flow.active);
     const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);

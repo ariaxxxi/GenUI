@@ -265,11 +265,11 @@
 @keyframes confirm-listening-orb-in {
   0% {
     opacity: 0;
-    transform: translate(-50%, 12px) scale(0.76);
+    transform: translate(-50%, 12px) scale(0.456);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(-50%, 0) scale(0.6);
   }
 }
 body.sleep-to-listening #drop-main.listening-orb #siri-orb,
@@ -534,12 +534,13 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::afte
   inset: auto;
   left: 50%;
   top: calc(100% + 16px);
-  width: var(--g-compose-await-orb-size);
-  height: var(--g-compose-await-orb-size);
-  border-radius: var(--g-compose-await-orb-radius);
-  --g-stage-h: var(--g-compose-await-orb-size);
+  width: 80px;
+  height: 80px;
+  border-radius: 40px;
+  --g-stage-h: 80px;
   opacity: 1;
-  transform: translateX(-50%) scale(1);
+  transform: translateX(-50%) scale(0.6);
+  transform-origin: 50% 0;
   background: transparent !important;
   animation: confirm-listening-orb-in 420ms var(--motion-ease) both;
   pointer-events: none;
