@@ -212,12 +212,14 @@ Execute the current task in `context/task.md` faithfully and efficiently.
 ### Implementer must produce
 - The requested implementation changes
 - An update to `context/handoff.md`
+- Updates to `context/architecture.md`, `context/decisions.md`, `context/project_status.md`, and/or `context/todos.md` when the implementation changes the project truth those files describe
 
 ### Implementer must not
 - Redefine the task without cause
 - Expand scope beyond `context/task.md`
 - Replace planning with a new plan
 - Ignore constraints, non-goals, or recorded decisions
+- Leave context files stale when implementation changes architecture, durable decisions, current status, or backlog
 - Introduce unrelated refactors unless required for the task and clearly documented
 
 ### Implementer responsibilities
@@ -226,6 +228,11 @@ Execute the current task in `context/task.md` faithfully and efficiently.
 - Keep changes within scope
 - Validate work against acceptance criteria
 - Record what happened in `context/handoff.md`
+- Update shared context files when needed:
+  - `context/architecture.md` when modules, data flow, routes, storage, APIs, or system structure change
+  - `context/decisions.md` when a durable implementation decision is made or reversed
+  - `context/project_status.md` when working/broken state, known risks, run instructions, or validation status change
+  - `context/todos.md` when work completes, new follow-up work is discovered, or backlog priority changes
 - If blocked, stop broadening scope and document the blocker clearly
 
 ### Implementer output standard for `context/handoff.md`

@@ -21,7 +21,7 @@ If this file conflicts with implementation, either update this file first with a
 
 ## Celestial Visual Rules
 
-The Celestial visual is the shared selected/highlight/orb treatment. Its detailed reference is `Celestial-Visual.md`.
+The Celestial visual is the shared selected/highlight/orb treatment. Its detailed reference is `context/Celestial-Visual.md`.
 
 Source files:
 
@@ -203,7 +203,7 @@ Layer timing:
 - Gemini JSON calls use `POST /api/gemini`.
 - TTS calls use `POST /api/tts`.
 - Phrase config uses `GET /api/phrases` and `POST /api/phrases`.
-- Fix route drift when discovered. Current known drift: `/bubble` and `/bubble2` map to `bubble2.html`, while the repo contains `bubble.html`.
+- Bubble aliases `/bubble` and `/bubble2` must serve the existing `bubble.html`.
 
 ## Known Mistakes To Avoid
 

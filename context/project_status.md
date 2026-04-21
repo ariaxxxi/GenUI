@@ -39,7 +39,6 @@ Do not revert these files unless the user explicitly requests it. Inspect them b
 
 ## Known Issues / Risks
 
-- `server.mjs` routes `/bubble` and `/bubble2` to `bubble2.html`, but the repo currently has `bubble.html`.
 - `test/smoke.mjs` waits only `100ms` after clicking a prototype stage; recent double-click rename behavior may delay single-click selection longer than that.
 - `AGENTS.md` expects `context/task.md`, but this repo currently has `context/task✅.md`.
 - Visual behavior has little automated coverage, especially celestial orb parity and bubble hover highlights.
@@ -54,7 +53,7 @@ Do not revert these files unless the user explicitly requests it. Inspect them b
 - Start server: `npm run dev`
 - Prototype editor: `http://localhost:5173/`
 - AI mode: `http://localhost:5173/ai`
-- Bubble demo: use `bubble.html` directly or fix the server route first.
+- Bubble demo: `http://localhost:5173/bubble`
 
 ## Validation
 

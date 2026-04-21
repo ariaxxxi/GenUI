@@ -474,8 +474,8 @@ function safePath(urlPath) {
       : (clean === '/ai'
         ? '/ai.html'
         : (clean === '/bubble'
-          ? '/bubble2.html'
-          : (clean === '/bubble2' ? '/bubble2.html' : clean))));
+          ? '/bubble.html'
+          : (clean === '/bubble2' ? '/bubble.html' : clean))));
   const rel = normalize(target)
     .replace(/^(\.\.(\/|\\|$))+/, '')
     .replace(/^[/\\]+/, '');
@@ -542,8 +542,8 @@ const server = createServer(async (req, res) => {
       : (spaPath === '/prototype'
         ? '/index.html'
         : (spaPath === '/bubble'
-          ? '/bubble2.html'
-          : (spaPath === '/bubble2' ? '/bubble2.html' : spaPath)));
+          ? '/bubble.html'
+          : (spaPath === '/bubble2' ? '/bubble.html' : spaPath)));
     const filePath = safePath(targetFile);
     if (filePath && existsSync(filePath)) {
       try {

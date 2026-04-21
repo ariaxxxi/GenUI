@@ -3,7 +3,6 @@
 ## High Priority
 
 - Reconcile current uncommitted source changes with the latest user-facing behavior before adding more interaction code.
-- Fix the `/bubble` server route mismatch by serving `bubble.html` or adding the expected `bubble2.html`.
 - Update `test/smoke.mjs` for delayed stage single-click behavior introduced by inline double-click rename handling.
 - Restore the expected `context/task.md` workflow file or update `AGENTS.md` to use the current `context/task✅.md` file.
 - Add a smoke check for prototype list-stage controls, including list item +/- controls and bottom orb toggle/icon settings.
@@ -49,3 +48,4 @@
 - Celestial selected chrome was moved toward one shared visual system.
 - List stage gained bottom orb configuration and list item count controls in the editor path.
 - Stage and scenario inline rename behavior is being handled through double-click editing rather than separate rename-only controls.
+- `/bubble` and `/bubble2` server aliases now serve the existing `bubble.html`.
