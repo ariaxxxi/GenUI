@@ -235,6 +235,16 @@ export function initEditorBindings({
     sidebar.commitStageChange(stage.id, (draft) => { const next = [...(draft.components || [])]; if (action === "add") next.push(type); else if (action === "remove") { const idx = next.lastIndexOf(type); if (idx >= 0) next.splice(idx, 1); } draft.components = next; return draft; });
   });
   UI.stageComponentControls?.addEventListener("change", (e) => {
+    const orbToggle = e.target.closest("[data-stage-list-orb-toggle]");
+    if (orbToggle) {
+      const stage = stageById(selectedScenario()?.shape);
+      if (!stage || stage.renderShape !== "list") return;
+      sidebar.commitStageChange(stage.id, (draft) => {
+        draft.listListeningOrb = orbToggle.checked;
+        return draft;
+      });
+      return;
+    }
     const checkbox = e.target.closest("[data-stage-comp-toggle]");
     const type = String(checkbox?.dataset?.stageCompToggle || "");
     const stage = stageById(selectedScenario()?.shape);

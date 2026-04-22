@@ -10,7 +10,7 @@ Main surfaces:
 
 - Prototype editor: `index.html`, coordinated by `src/tool/index-app.js`.
 - AI mode: `ai.html`, coordinated by `src/ai-app.js` and `src/ai/ai-bindings.js`.
-- Bubble demo: `bubble.html`, coordinated by `src/bubble2-page.js`.
+- Bubble demo: `bubble.html`, coordinated by `src/bubble-page.js`.
 - Celestial tuning tool: `celestial-tool.html`.
 
 ## Code Map
