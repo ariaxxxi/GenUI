@@ -334,13 +334,14 @@ export function createMorphLayout(ctx) {
   function scenarioToRenderContent(scenario) {
     const shape = scenario?.shape || 'pill';
     const stage = callbacks.stageById?.(shape);
+    const showListOrbIcon = stage?.renderShape === 'list' && stage?.listListeningOrb === true;
     const has = (component) => {
       if (!stage) return true;
       return (stage.components || []).includes(component);
     };
     const text = callbacks.stageTextForShape(scenario, shape);
     return {
-      icon: has('icon') ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
+      icon: (has('icon') || showListOrbIcon) ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
       listChipIcons: has('icon') ? callbacks.stageListChipIconsForShape?.(scenario, shape) : null,
       listItems: callbacks.stageListItemsForShape?.(scenario, shape) || [],
       primary: has('primary') ? text.primary : '',

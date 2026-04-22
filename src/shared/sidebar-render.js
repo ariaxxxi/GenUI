@@ -1,4 +1,6 @@
 export function createSidebarRender(ctx, refs) {
+  let scenarioClickTimer = null;
+
   function captureFocusedEditableState() {
     const active = document.activeElement;
     const isTextInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
@@ -42,7 +44,19 @@ export function createSidebarRender(ctx, refs) {
       button.dataset.scenarioId = item.id;
       const stage = ctx.stageById(item.shape);
       button.innerHTML = `<span class="scenario-item-name">${item.name}</span><span class="scenario-item-meta">${stage?.name || item.shape}</span>`;
-      button.addEventListener('click', () => refs.actions.selectScenario(item.id));
+      button.addEventListener('click', (event) => {
+        if (event.target.closest('.sb-inline-rename-input')) return;
+        if (scenarioClickTimer) clearTimeout(scenarioClickTimer);
+        scenarioClickTimer = setTimeout(() => {
+          scenarioClickTimer = null;
+          refs.actions.selectScenario(item.id);
+        }, 220);
+      });
+      button.addEventListener('dblclick', () => {
+        if (!scenarioClickTimer) return;
+        clearTimeout(scenarioClickTimer);
+        scenarioClickTimer = null;
+      });
       ctx.UI.scenarioList.appendChild(button);
     });
     if (ctx.UI.scenarioDuplicate) ctx.UI.scenarioDuplicate.disabled = !scenario;
@@ -98,6 +112,11 @@ export function createSidebarRender(ctx, refs) {
       if (removeBtn) removeBtn.disabled = listItemCount <= 1;
       if (addBtn) addBtn.disabled = listItemCount >= 8;
       list.appendChild(row);
+
+      const orbRow = document.createElement('div');
+      orbRow.className = 'stage-comp-row toggle';
+      orbRow.innerHTML = `<span class="stage-comp-label">bottom orb</span><input class="stage-comp-check" type="checkbox" data-stage-list-orb-toggle="1" ${stage?.listListeningOrb ? 'checked' : ''}/>`;
+      list.appendChild(orbRow);
     }
     ctx.UI.stageComponentControls.appendChild(list);
   }
@@ -132,7 +151,7 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
     if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.add('hidden');
-    if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.toggle('hidden', renderShape !== 'list');
+    if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.add('hidden');
     const listItemCount = renderShape === 'list' && ctx.stageListItemsForShape
       ? ctx.stageListItemsForShape(scenario, scenario?.shape).length
       : 0;
@@ -255,7 +274,8 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioDetailColor) ctx.UI.scenarioDetailColor.value = typography.detail.color;
     if (ctx.UI.scenarioIntentHeaderSize) ctx.UI.scenarioIntentHeaderSize.value = String(typography.intentHeader.size);
     if (ctx.UI.scenarioIntentHeaderColor) ctx.UI.scenarioIntentHeaderColor.value = typography.intentHeader.color;
-    if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !hasIcon);
+    const showListOrbIconEditor = renderShape === 'list' && !!stage?.listListeningOrb;
+    if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !(hasIcon || showListOrbIconEditor));
     if (ctx.UI.editorListItems) ctx.UI.editorListItems.classList.toggle('hidden', renderShape !== 'list');
     if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('primary'));
     if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('secondary'));

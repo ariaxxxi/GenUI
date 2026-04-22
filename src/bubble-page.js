@@ -109,7 +109,7 @@ const FIGMA_ASSETS = {
 };
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CELESTIAL_CHIP_PRESET = celestialSelectedPresetForRenderShape('chip');
-const CELESTIAL_CIRCLE_PRESET = celestialSelectedPresetForRenderShape('circle');
+const CELESTIAL_ORB_PRESET = celestialSelectedPresetForRenderShape('orb');
 
 function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
   const cls = [extraClass, 'g-selection-chrome'].filter(Boolean).join(' ');
@@ -209,9 +209,9 @@ const BUBBLES_CONFIG = [
     pillSubtitle: 'Book flight to Coachella',
     childLayout: 'chatgpt-chips',
     childActions: [
-      { id: 'ideas', kind: 'chip', label: '💡 Give me ideas', fontWeight: 400, layoutLeft: -136, layoutTop: -85, accent: '#f5d76e' },
-      { id: 'explain', kind: 'chip', label: '🔍 Explain this', fontWeight: 400, layoutLeft: -209, layoutTop: -36, accent: '#f4f4f4' },
-      { id: 'surprise', kind: 'chip', label: '🎲 Surprise me', fontWeight: 400, layoutLeft: -172, layoutTop: 13, accent: '#d7d7ff' },
+      { id: 'ideas', kind: 'chip', label: '💡 Give me ideas', fontWeight: 400, layoutLeft: -136, layoutTop: -85 },
+      { id: 'explain', kind: 'chip', label: '🔍 Explain this', fontWeight: 400, layoutLeft: -209, layoutTop: -36 },
+      { id: 'surprise', kind: 'chip', label: '🎲 Surprise me', fontWeight: 400, layoutLeft: -172, layoutTop: 13 },
     ],
   },
   {
@@ -224,9 +224,9 @@ const BUBBLES_CONFIG = [
     haloColor: '#A391FB',
     childLayout: 'gemini-chips',
     childActions: [
-      { id: 'plan', kind: 'chip', label: '🧩 Plan my day', fontWeight: 500, layoutLeft: -3, layoutTop: -81, accent: '#8ce56f' },
-      { id: 'summarize', kind: 'chip', label: '📄 Summarize this', fontWeight: 500, layoutLeft: 40, layoutTop: -32, accent: '#f4f4f4' },
-      { id: 'rewrite', kind: 'chip', label: '🔁 Rewrite this', fontWeight: 500, layoutLeft: 30, layoutTop: 17, accent: '#9dc5ff' },
+      { id: 'plan', kind: 'chip', label: '🧩 Plan my day', fontWeight: 500, layoutLeft: -3, layoutTop: -81 },
+      { id: 'summarize', kind: 'chip', label: '📄 Summarize this', fontWeight: 500, layoutLeft: 40, layoutTop: -32 },
+      { id: 'rewrite', kind: 'chip', label: '🔁 Rewrite this', fontWeight: 500, layoutLeft: 30, layoutTop: 17 },
     ],
   },
   {
@@ -560,11 +560,11 @@ function createOrbNode() {
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
 
   const visual = document.createElement('div');
-  visual.className = 'bubble2-orb-visual g-stage-selected-host selected';
+  visual.className = 'bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
 
   visual.innerHTML = `
-    <div class="bubble2-orb-sphere" aria-hidden="true"></div>
-    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection')}
+    <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
+    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
   `;
   button.appendChild(visual);
 
@@ -837,17 +837,11 @@ function render() {
     if (!chromeEl) continue;
     const isDeselecting = node.surface.classList.contains('deselecting');
     node.surface.classList.toggle('is-highlighted', (isHighlighted || isDeselecting) && !node.action.img);
-    node.surface.style.setProperty('--g-stage-selected-rgb', getChildActionAccent(node.action));
-    node.surface.style.setProperty('--g-stage-selected-secondary-rgb', 'rgb(0 0 0)');
     node.surface.style.setProperty('--g-stage-h', `${height}px`);
     applyBubbleCelestialChrome(
       chromeEl,
       node.surface,
       CELESTIAL_CHIP_PRESET,
-      {
-        blobTopCore: getChildActionAccent(node.action),
-        blobBottomCore: getChildActionAccent(node.action),
-      },
     );
     node.content.style.width = `${format(width)}px`;
     node.content.style.height = `${format(height)}px`;
@@ -866,11 +860,7 @@ function render() {
     applyBubbleCelestialChrome(
       refs.orbVisual.querySelector('.bubble2-orb-selection'),
       refs.orbVisual,
-      CELESTIAL_CIRCLE_PRESET,
-      {
-        blobTopCore: 'rgb(114 154 241)',
-        blobBottomCore: 'rgb(197 160 240)',
-      },
+      CELESTIAL_ORB_PRESET,
     );
   }
 }
@@ -1331,12 +1321,6 @@ function getChildActionForeground(color) {
     return '#ffffff';
   }
   return color;
-}
-
-function getChildActionAccent(action) {
-  if (!action) return 'rgb(144 172 255)';
-  if (action.accent) return action.accent;
-  return getChildActionForeground(action.fg || action.bg || 'rgb(144 172 255)');
 }
 
 function getChildActionIconMarkup(kind) {

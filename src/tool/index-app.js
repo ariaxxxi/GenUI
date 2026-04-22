@@ -10,6 +10,8 @@ import { initManualDemo } from './modules/manual-demo.js';
 import { initManualActions } from './modules/manual-actions.js';
 import { initManualBindings } from './modules/manual-bindings.js';
 import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction } from '../shared/stage-capture.js';
+import { applyAiCelestialChrome } from '../shared/celestial-selection-chrome.js';
+import { initVoiceEngine } from '../ai/voice-engine.js';
 
 const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
 const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
@@ -33,6 +35,8 @@ let flight = null;
 let actions = null;
 let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
+let prototypeOrbChromeSyncRaf = 0;
+let prototypeVoice = null;
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
@@ -228,9 +232,43 @@ function syncPrototypeIntentHeader(scenario) {
 
 function updateActive(shape) {
   document.querySelectorAll('.sb-shape-btn').forEach((b) => b.classList.toggle('active', b.dataset.shape === shape));
+  syncPrototypeOrbChrome();
+  syncPrototypeListeningOrb(shape);
+}
+
+function syncPrototypeOrbChrome() {
+  if (prototypeOrbChromeSyncRaf) cancelAnimationFrame(prototypeOrbChromeSyncRaf);
+  prototypeOrbChromeSyncRaf = requestAnimationFrame(() => {
+    prototypeOrbChromeSyncRaf = requestAnimationFrame(() => {
+      prototypeOrbChromeSyncRaf = 0;
+      applyAiCelestialChrome(document);
+    });
+  });
+}
+
+function syncPrototypeListeningOrb(shape) {
+  if (!prototypeVoice?.voiceEngine) return;
+  if (shape === 'listening') {
+    prototypeVoice.voiceEngine.start('command');
+    return;
+  }
+  prototypeVoice.voiceEngine.stop();
 }
 
 const anim = initAnimControls({ document, clamp });
+prototypeVoice = initVoiceEngine({
+  document,
+  input: null,
+  addSimLog: () => {},
+  getGlassUi: () => null,
+  getGlassState: () => null,
+  shouldKeepCommandListening: () => morphApi?.getCurrentShape?.() === 'listening',
+  shouldShowCommandViz: () => (
+    document.body?.dataset?.currentShape === 'listening' ||
+    document.getElementById('drop-main')?.classList.contains('listening-orb')
+  ),
+  onTranscriptUpdate: () => {},
+});
 stageLibrary = loadStageLibrary();
 scenarioLibrary = loadScenarioLibrary();
 selectedScenarioId = scenarioLibrary[0]?.id || '';
@@ -514,7 +552,7 @@ async function copyStagePng() {
 }
 
 async function exportStageSvg() {
-  const ok = await exportStageSvgFile({ root: document.getElementById('stage-wrap'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
+  const ok = await exportStageSvgFile({ root: document.getElementById('stage-wrap'), filenamePrefix: 'genui-tool-stage', documentRef: document });
   if (!ok) console.warn('[stage-capture] SVG export did not complete.');
 }
 

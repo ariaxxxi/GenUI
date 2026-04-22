@@ -77,6 +77,7 @@ export function initManualBindings({
   };
   const input = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
+  let stageShapeClickTimer = null;
 
   const commitPhoneFrameSize = (axis, rawValue) => {
     const parsed = parseInt(String(rawValue || '').trim(), 10);
@@ -356,18 +357,28 @@ export function initManualBindings({
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
   if (UI.scenarioIntentHeader) commitTextField('intentHeader', UI.scenarioIntentHeader);
-  UI.scenarioShapeRow.addEventListener('click', (e) => {
-    if (e.target.closest('.sb-inline-rename-input')) return;
-    const button = e.target.closest('[data-scenario-shape]');
-    if (!button) return;
-    const shape = String(button.dataset.scenarioShape || '');
+  const selectScenarioShape = (shape) => {
     if (!availableScenarioShapes().includes(shape)) return;
+    if (selectedScenario()?.shape === shape) return;
     commitScenarioChange((scenario) => {
       scenario.shape = shape;
       scenario.content.textByShape = normalizeStageTextByShape(scenario.content.textByShape, shape, scenario.content);
       scenario.content.typographyByShape = normalizeTypographyByShape(scenario.content.typographyByShape, shape);
       scenario.content.sizeByShape = normalizeStageSizeByShape(scenario.content.sizeByShape, shape, scenario.content);
     });
+  };
+
+  UI.scenarioShapeRow.addEventListener('click', (e) => {
+    if (e.target.closest('.sb-inline-rename-input')) return;
+    const button = e.target.closest('[data-scenario-shape]');
+    if (!button) return;
+    const shape = String(button.dataset.scenarioShape || '');
+    if (!availableScenarioShapes().includes(shape)) return;
+    if (stageShapeClickTimer) clearTimeout(stageShapeClickTimer);
+    stageShapeClickTimer = setTimeout(() => {
+      stageShapeClickTimer = null;
+      selectScenarioShape(shape);
+    }, 220);
   });
 
   function beginInlineRename(button, {
@@ -444,6 +455,10 @@ export function initManualBindings({
   });
 
   UI.scenarioShapeRow?.addEventListener('dblclick', (e) => {
+    if (stageShapeClickTimer) {
+      clearTimeout(stageShapeClickTimer);
+      stageShapeClickTimer = null;
+    }
     const button = e.target.closest('[data-scenario-shape]');
     if (!button) return;
     const stageId = String(button.dataset.scenarioShape || '');
@@ -618,6 +633,15 @@ export function initManualBindings({
     });
   });
   UI.stageComponentControls.addEventListener('change', (e) => {
+    const orbToggle = e.target.closest('[data-stage-list-orb-toggle]');
+    if (orbToggle) {
+      const stage = stageById(selectedScenario()?.shape);
+      if (!stage || stage.renderShape !== 'list') return;
+      commitStageChange(stage.id, (draft) => {
+        draft.listListeningOrb = orbToggle.checked;
+      });
+      return;
+    }
     const checkbox = e.target.closest('[data-stage-comp-toggle]');
     if (!checkbox) return;
     const type = String(checkbox.dataset.stageCompToggle || '');
