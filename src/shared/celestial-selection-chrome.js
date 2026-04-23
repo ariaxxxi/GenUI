@@ -1,4 +1,5 @@
 import { celestialSelectedPresetForRenderShape } from "./celestial-selected-presets.js";
+import { renderAiOrbCenterMarkup, syncAiOrbCenterIcon } from "./ai-orb-icon.js";
 
 const DEFAULT_DIRECTION = "bottom";
 const DEFAULT_DURATION_MS = 700;
@@ -14,11 +15,13 @@ const SHARED_ORB_MARKUP = `
           <div class="g-stage-selected-sharp-highlight"></div>
         </div>
         <div class="g-stage-selected-accent-rim"></div>
+        <div class="g-stage-selected-highlight"></div>
         <div class="g-stage-selected-highlight-mask">
           <div class="g-stage-selected-highlight-mask-image"></div>
         </div>
       </div>
     </div>
+    ${renderAiOrbCenterMarkup()}
     <div class="g-celestial-orb-disambiguation-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 3C7.03 3 3 6.58 3 11c0 2.3 1.1 4.38 2.87 5.88L5 21l4.67-2.08C10.4 19.3 11.19 19.4 12 19.4c4.97 0 9-3.58 9-8.4S16.97 3 12 3z" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -80,6 +83,7 @@ export function ensureSharedAiOrb(root = document) {
     if (orb.querySelector(":scope > .g-celestial-orb-visual")) return;
     orb.innerHTML = SHARED_ORB_MARKUP;
   });
+  syncAiOrbCenterIcon(scope, { animate: false });
 }
 
 export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null, runtimeOverrides = {}) {

@@ -5,6 +5,7 @@ import {
   syncDirectionalSelection,
 } from './shared/celestial-selection-chrome.js';
 import { celestialSelectedPresetForRenderShape } from './shared/celestial-selected-presets.js';
+import { bindAiOrbIconStorageSync, renderAiOrbCenterMarkup, syncAiOrbCenterIcon } from './shared/ai-orb-icon.js';
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
 let _audioCtx = null;
@@ -565,11 +566,15 @@ function createOrbNode() {
   visual.innerHTML = `
     <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
     ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
+    ${renderAiOrbCenterMarkup()}
   `;
   button.appendChild(visual);
+  syncAiOrbCenterIcon(button, { animate: false });
 
   return button;
 }
+
+bindAiOrbIconStorageSync(document, window);
 
 function bindEvents() {
   refs.shell?.addEventListener('pointerdown', handlePointerDown);

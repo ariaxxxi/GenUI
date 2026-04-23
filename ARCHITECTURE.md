@@ -68,6 +68,7 @@ Storage keys:
 - `genui.settings.v1`
 - `genui.mode.v1`
 - `genui.ai-stage.v1`
+- `genui.ai-orb-icon.v1`
 - `genui.ai-voice-enabled.v1`
 - `genui.disable-text-input.v1`
 

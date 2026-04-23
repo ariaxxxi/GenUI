@@ -18,10 +18,12 @@ import { prewarmAiSpeechCache, refreshAiVoice, setAiVoiceEnabled, isAiVoiceEnabl
 import { initPhrases } from "./phrases.js";
 import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction, isEditableTarget } from "../shared/stage-capture.js";
 import { applyAiCelestialChrome } from "../shared/celestial-selection-chrome.js";
+import { bindAiOrbIconStorageSync } from "../shared/ai-orb-icon.js";
 
 const DROPS = { main: document.getElementById("drop-main"), left: document.getElementById("drop-left"), right: document.getElementById("drop-right") };
 const C = { thumb: document.getElementById("c-thumb"), thumbLabel: document.getElementById("c-thumb-label"), thumbImg: document.getElementById("c-thumb-img"), prim: document.getElementById("c-primary"), sec: document.getElementById("c-secondary"), div: document.getElementById("c-divider"), det: document.getElementById("c-detail"), media: document.getElementById("c-media"), rich: document.getElementById("c-rich"), glassControlsLayer: document.getElementById("glass-controls-layer") };
 const UI = buildUiRefs(document);
+bindAiOrbIconStorageSync(document, window);
 const input = document.getElementById("sim-input");
 const detailMeasureEl = document.createElement("div");
 detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";

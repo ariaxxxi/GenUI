@@ -1,3 +1,5 @@
+import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon } from '../../shared/ai-orb-icon.js';
+
 export function initManualBindings({
   document,
   UI,
@@ -232,6 +234,22 @@ export function initManualBindings({
     renderAiStageOverrideUi();
     previewAiStageOverride();
   }));
+
+  const aiOrbIconButtons = Array.from(document.querySelectorAll('[data-ai-orb-icon]'));
+  const syncAiOrbIconButtons = () => {
+    const activeIcon = loadAiOrbIconId();
+    aiOrbIconButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.aiOrbIcon === activeIcon);
+      const option = AI_ORB_ICON_OPTIONS[button.dataset.aiOrbIcon];
+      if (option) button.setAttribute('aria-pressed', button.dataset.aiOrbIcon === activeIcon ? 'true' : 'false');
+    });
+  };
+  aiOrbIconButtons.forEach((button) => button.addEventListener('click', () => {
+    const iconId = persistAiOrbIconId(button.dataset.aiOrbIcon);
+    syncAiOrbCenterIcon(document, { animate: true, id: iconId });
+    syncAiOrbIconButtons();
+  }));
+  syncAiOrbIconButtons();
 
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));

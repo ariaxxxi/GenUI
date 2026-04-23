@@ -38,6 +38,7 @@ Shared source of truth:
 - `src/shared/celestial-selected-presets.js`
 - `src/shared/celestial-selection-chrome.js`
 - `src/styles/shared.css`
+- `src/shared/ai-orb-icon.js`
 - shared orb DOM is created from `ensureSharedAiOrb()` in `src/shared/celestial-selection-chrome.js`
 
 State-only behavior:
@@ -50,6 +51,23 @@ Rule:
 - `src/styles/ai-decorative.css` may control listening/thinking state behavior and transitions.
 - `src/ai/voice-engine.js` may control microphone analysis, reactive signal smoothing, and the runtime value written into the orb.
 - It must not redefine the orb's visual-core values, layer recipe, or create an independent orb design system.
+
+## Center Asset
+
+The shared AI orb includes a centered app/assistant image layer.
+
+Rules:
+
+- The image size is `36px x 36px`.
+- This image layer is part of the shared orb component and must appear in all products that use the AI orb, except the Celestial Visual Tool.
+- Default asset: `assets/Bixby.png`
+- Current switchable options live in `src/shared/ai-orb-icon.js`:
+  - `bixby`
+  - `gemini`
+  - `chatgpt`
+- The icon choice is persisted through `genui.ai-orb-icon.v1`.
+
+Do not hardcode different orb-center images per page. Add or change options through the shared orb icon module.
 
 ## Relationship To `voice-engine.js`
 
@@ -67,6 +85,7 @@ This means `voice-engine.js` controls how the listening orb responds over time, 
 Responsibility split:
 
 - visual core, layer stack, preset values, and shared orb component shape:
+  - `src/shared/ai-orb-icon.js`
   - `src/shared/celestial-selected-presets.js`
   - `src/shared/celestial-selection-chrome.js`
   - `src/styles/shared.css`

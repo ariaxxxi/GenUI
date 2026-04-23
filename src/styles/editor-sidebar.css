@@ -543,6 +543,58 @@
   color: rgba(255,255,255,1);
   background: rgba(255,255,255,0.08);
 }
+.prototype-ai-icon-row {
+  margin-top: 12px;
+  gap: 10px;
+}
+.prototype-ai-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.sb-ai-icon-btn {
+  min-height: 58px;
+  padding: 8px 6px;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  border-color: rgba(255,255,255,0.26);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
+    rgba(255,255,255,0.01);
+}
+.sb-ai-icon-btn:hover,
+.sb-ai-icon-btn:active {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04)),
+    rgba(255,255,255,0.02);
+}
+.sb-ai-icon-btn.active {
+  border-color: rgba(196, 214, 255, 0.9);
+  background:
+    linear-gradient(180deg, rgba(205, 223, 255, 0.18), rgba(151, 119, 255, 0.08)),
+    rgba(255,255,255,0.04);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08) inset,
+    0 8px 22px rgba(77, 112, 255, 0.14);
+}
+.sb-ai-icon-btn__thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background-image: var(--sb-ai-orb-icon);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.24),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.sb-ai-icon-btn__label {
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
 input[type=range] {
   -webkit-appearance: none; width: 100%; height: 2px;
   background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; cursor: pointer;
