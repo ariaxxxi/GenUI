@@ -75,24 +75,21 @@
     inset 0 1px 0 rgba(255, 255, 255, calc(0.06 + var(--ai-listening-rim-level) * 0.18));
   transition: box-shadow 96ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight-mask {
-  transform: scale(calc(1 + var(--ai-listening-rim-level) * 0.22));
-  transform-origin: 18% 18%;
+#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere {
+  transform: none;
   transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight-mask-image {
-  transform: translate(var(--g-stage-selected-highlight-top-end-x), var(--g-stage-selected-highlight-top-end-y));
+#drop-main.listening-orb #siri-orb .g-celestial-orb-center-shell {
+  transform: translateZ(0);
   transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-sharp-pass {
-  transform: scale(calc(1 + var(--ai-listening-rim-level) * 0.12));
-  transform-origin: 82% 82%;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-sharp-highlight {
-  transform: translate(var(--g-stage-selected-highlight-bottom-end-x), var(--g-stage-selected-highlight-bottom-end-y));
-  transform-origin: 82% 82%;
-  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+#drop-main.listening-orb #siri-orb .g-celestial-orb-center-image {
+  transform: none;
+  transition:
+    filter 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  filter:
+    drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18))
+    drop-shadow(0 0 calc(2px + var(--ai-listening-rim-level) * 10px) rgba(255, 255, 255, calc(0.04 + var(--ai-listening-rim-level) * 0.16)));
 }
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
 #drop-main.compose-await-orb.listening-orb:not(.confirm-surface) #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
