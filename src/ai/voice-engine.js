@@ -1,7 +1,7 @@
 export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz }) {
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
   const VIZ_FADE_IN_MS = 320;
-  const VIZ_NOISE_FLOOR = 0.045;
+  const VIZ_NOISE_FLOOR = 0.08;
   const VIZ_INPUT_ATTACK = 0.18;
   const VIZ_INPUT_RELEASE = 0.1;
   const VIZ_DISPLAY_ATTACK = 0.2;
@@ -149,7 +149,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       const avg = bins.reduce((sum, value) => sum + value, 0) / Math.max(bins.length, 1);
       const peak = bins.reduce((max, value) => Math.max(max, value), 0);
       const weighted = (avg * 0.62) + (peak * 0.38);
-      const raw = Math.pow(Math.min(weighted / 52, 1), 0.82);
+      const raw = Math.pow(Math.min(weighted / 72, 1), 0.92);
       const gated = raw <= VIZ_NOISE_FLOOR
         ? 0
         : Math.min((raw - VIZ_NOISE_FLOOR) / (1 - VIZ_NOISE_FLOOR), 1);
@@ -183,10 +183,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
-  function stopVoiceViz() {
+  function stopVoiceViz({ clearOrb = true } = {}) {
     if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
     vizVisibleSince = 0;
-    resetVizStyles({ clearDropMain: true });
+    resetVizStyles({ clearDropMain: true, clearOrb });
   }
 
   function clearVoiceVizStyles() {
@@ -296,8 +296,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       initVoiceAnalyser().then(startVoiceViz);
     } catch {}
   };
-  voiceEngine.stop = function() {
-    stopVoiceViz();
+  voiceEngine.stop = function(options = {}) {
+    const preserveOrbStyles = options?.preserveOrbStyles === true;
+    stopVoiceViz({ clearOrb: !preserveOrbStyles });
     voiceEngine.restartOnEnd = false;
     voiceEngine.mode = 'off';
     if (voiceEngine.recognition && voiceEngine.active) { try { voiceEngine.recognition.stop(); } catch {} }

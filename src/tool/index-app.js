@@ -254,7 +254,9 @@ function syncPrototypeListeningOrb(shape) {
     prototypeVoice.voiceEngine.start('command');
     return;
   }
-  prototypeVoice.voiceEngine.stop();
+  const dropMain = document.getElementById('drop-main');
+  const preservingThinkingBridge = shape === 'magic' || shape === 'ai' || dropMain?.classList.contains('orb-thinking-bridge');
+  prototypeVoice.voiceEngine.stop({ preserveOrbStyles: preservingThinkingBridge });
 }
 
 const anim = initAnimControls({ document, clamp });

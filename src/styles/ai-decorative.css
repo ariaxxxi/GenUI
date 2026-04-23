@@ -22,68 +22,167 @@
 }
 #drop-main.listening-orb #siri-orb.visible,
 #drop-main.listening-orb #siri-orb,
-#drop-main.magic-glow #siri-orb {
+#drop-main.orb-thinking-bridge #siri-orb,
+#drop-main.magic-glow #siri-orb,
+body[data-current-shape="listening"] #drop-main #siri-orb,
+body[data-current-shape="magic"] #drop-main #siri-orb {
   opacity: 1;
   transform: scale(1);
 }
+#siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
+  opacity: 0.96;
+  box-shadow:
+    inset 13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-rgb) 68%, white 14%),
+    inset -13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 70%, white 13%),
+    inset 0 9px 12px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 46%, var(--g-stage-selected-secondary-rgb)),
+    inset 0 -9px 12px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 48%, var(--g-stage-selected-rgb)),
+    inset 0 0 14px -5px rgba(255, 255, 255, 0.032);
+}
+#siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
+  opacity: 1;
+  box-shadow:
+    inset 0 0 5px 1px rgba(255, 255, 255, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
 #drop-main.magic-glow #siri-orb .g-celestial-orb-sphere,
 #drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-sphere {
-  animation-duration: 1.5s;
+  animation: ai-orb-thinking-breathe-scale 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 #drop-main.magic-glow #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
 #drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
-  animation-duration: 1.5s;
+  animation: ai-orb-thinking-breathe-rim 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 #drop-main.magic-glow #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight,
 #drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
-  animation-duration: 1.5s;
+  animation: ai-orb-thinking-breathe-highlight 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere {
+
+@keyframes ai-orb-thinking-breathe-scale {
+  0%, 100% { transform: scale(1) translate3d(0, 0, 0); }
+  50% { transform: scale(1.016) translate3d(0, 0, 0); }
+}
+
+@keyframes ai-orb-thinking-breathe-rim {
+  0%, 100% {
+    box-shadow:
+      inset 13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-rgb) 56%, white 10%),
+      inset -13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 58%, white 9%),
+      inset 0 9px 12px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 34%, var(--g-stage-selected-secondary-rgb)),
+      inset 0 -9px 12px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 36%, var(--g-stage-selected-rgb)),
+      inset 0 0 14px -5px rgba(255, 255, 255, 0.018);
+  }
+  50% {
+    box-shadow:
+      inset 16px 0 20px -5px color-mix(in srgb, var(--g-stage-selected-rgb) 70%, white 12%),
+      inset -16px 0 20px -5px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 72%, white 10%),
+      inset 0 11px 15px -6px color-mix(in srgb, var(--g-stage-selected-rgb) 48%, var(--g-stage-selected-secondary-rgb)),
+      inset 0 -11px 15px -6px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 50%, var(--g-stage-selected-rgb)),
+      inset 0 0 18px -4px rgba(255, 255, 255, 0.04);
+  }
+}
+
+@keyframes ai-orb-thinking-breathe-highlight {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 5px 1px rgba(255, 255, 255, 0.72),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 7px 1.5px rgba(255, 255, 255, 0.84),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+}
+
+@keyframes ai-orb-thinking-highlight-orbit-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#drop-main.magic-glow #siri-orb .g-stage-selected-highlight-mask,
+#drop-main.orb-thinking-bridge #siri-orb .g-stage-selected-highlight-mask,
+#drop-main.magic-glow #siri-orb .g-stage-selected-sharp-pass,
+#drop-main.orb-thinking-bridge #siri-orb .g-stage-selected-sharp-pass {
+  transform-origin: 50% 50%;
+  animation: ai-orb-thinking-highlight-orbit-spin 6.2s linear infinite;
+}
+
+#drop-main.magic-glow #siri-orb .g-stage-selected-sharp-pass,
+#drop-main.orb-thinking-bridge #siri-orb .g-stage-selected-sharp-pass {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  animation-delay: -3.1s;
+}
+
+#drop-main.magic-glow #siri-orb .g-stage-selected-highlight-mask-image,
+#drop-main.orb-thinking-bridge #siri-orb .g-stage-selected-highlight-mask-image {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translate3d(-34px, -34px, 0);
+  animation: none;
+  opacity: 1;
+}
+
+#drop-main.magic-glow #siri-orb .g-stage-selected-sharp-highlight,
+#drop-main.orb-thinking-bridge #siri-orb .g-stage-selected-sharp-highlight {
+  top: 50%;
+  left: 50%;
+  bottom: auto;
+  right: auto;
+  transform: translate(-50%, -50%) translate3d(-34px, -34px, 0);
+  animation: none;
+  opacity: 1;
+}
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-sphere {
   animation: none;
   box-shadow: none;
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere::before,
-#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere::after {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-sphere::before,
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-sphere::after {
   opacity: 0;
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   animation: none;
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-refraction,
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--top-left,
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--bottom-right {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-refraction,
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--top-left,
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-blob--bottom-right {
   opacity: 0;
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
   box-shadow:
-    inset calc(5px + var(--ai-listening-rim-level) * 14px) 0 calc(4px + var(--ai-listening-rim-level) * 26px) calc(-9px + var(--ai-listening-rim-level) * 4px)
-      color-mix(in srgb, var(--g-stage-selected-rgb) calc(28% + var(--ai-listening-rim-level) * 50%), white calc(6% + var(--ai-listening-rim-level) * 16%)),
-    inset calc(-5px - var(--ai-listening-rim-level) * 14px) 0 calc(4px + var(--ai-listening-rim-level) * 26px) calc(-9px + var(--ai-listening-rim-level) * 4px)
-      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(30% + var(--ai-listening-rim-level) * 50%), white calc(6% + var(--ai-listening-rim-level) * 14%)),
-    inset 0 calc(3px + var(--ai-listening-rim-level) * 9px) calc(3px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
-      color-mix(in srgb, var(--g-stage-selected-rgb) calc(18% + var(--ai-listening-rim-level) * 34%), var(--g-stage-selected-secondary-rgb)),
-    inset 0 calc(-3px - var(--ai-listening-rim-level) * 9px) calc(3px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
-      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(20% + var(--ai-listening-rim-level) * 36%), var(--g-stage-selected-rgb)),
-    inset 0 0 calc(4px + var(--ai-listening-rim-level) * 28px) calc(-7px + var(--ai-listening-rim-level) * 3px)
-      rgba(255, 255, 255, calc(0.02 + var(--ai-listening-rim-level) * 0.09));
+    inset calc(5px + var(--ai-listening-rim-level) * 9px) 0 calc(4px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
+      color-mix(in srgb, var(--g-stage-selected-rgb) calc(28% + var(--ai-listening-rim-level) * 34%), white calc(6% + var(--ai-listening-rim-level) * 12%)),
+    inset calc(-5px - var(--ai-listening-rim-level) * 9px) 0 calc(4px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(30% + var(--ai-listening-rim-level) * 34%), white calc(6% + var(--ai-listening-rim-level) * 10%)),
+    inset 0 calc(3px + var(--ai-listening-rim-level) * 6px) calc(3px + var(--ai-listening-rim-level) * 12px) calc(-9px + var(--ai-listening-rim-level) * 2px)
+      color-mix(in srgb, var(--g-stage-selected-rgb) calc(18% + var(--ai-listening-rim-level) * 24%), var(--g-stage-selected-secondary-rgb)),
+    inset 0 calc(-3px - var(--ai-listening-rim-level) * 6px) calc(3px + var(--ai-listening-rim-level) * 12px) calc(-9px + var(--ai-listening-rim-level) * 2px)
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(20% + var(--ai-listening-rim-level) * 26%), var(--g-stage-selected-rgb)),
+    inset 0 0 calc(4px + var(--ai-listening-rim-level) * 18px) calc(-7px + var(--ai-listening-rim-level) * 2px)
+      rgba(255, 255, 255, calc(0.02 + var(--ai-listening-rim-level) * 0.06));
   transition: box-shadow 96ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
   box-shadow:
     inset 0 0 calc(1px + var(--ai-listening-rim-level) * 9px) calc(-1px + var(--ai-listening-rim-level) * 2px) rgba(255, 255, 255, calc(0.22 + var(--ai-listening-rim-level) * 0.58)),
     inset 0 1px 0 rgba(255, 255, 255, calc(0.06 + var(--ai-listening-rim-level) * 0.18));
   transition: box-shadow 96ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-sphere {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-sphere {
   transform: none;
   transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-center-shell {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-center-shell {
   transform: translateZ(0);
   transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-#drop-main.listening-orb #siri-orb .g-celestial-orb-center-image {
+body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-center-image {
   transform: none;
   transition:
     filter 120ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -300,7 +399,8 @@ body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main {
 body[data-ai-home-state="context"][data-current-shape="circle"] #drop-main::after {
   box-shadow: inset 0 0 28px rgba(255,255,255,0.46) !important;
 }
-#drop-main:not(.listening-orb):not(.magic-glow):not(.disambiguation-surface):not(.confirm-surface) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
+body:not([data-current-shape="listening"]):not([data-current-shape="magic"])
+  #drop-main:not(.listening-orb):not(.magic-glow):not(.orb-thinking-bridge):not(.disambiguation-surface):not(.confirm-surface) #siri-orb { opacity: 0 !important; transform: scale(0.2) !important; }
 .g-celestial-orb-disambiguation-icon {
   position: absolute;
   inset: 0;
