@@ -174,6 +174,7 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
   const scope = root?.querySelectorAll ? root : document;
   const target = normalizeCenterContent(content);
   const animate = options.animate !== false;
+  const switchMotion = options.switchMotion || (target.kind === 'icon' ? 'swipe' : 'fade');
   const targetTheme = resolveOrbTheme(options.theme || (target.kind === 'icon' ? target.iconId : null));
   if (target.kind === 'icon') syncAiOrbSelectionTheme(scope, target.iconId);
 
@@ -194,12 +195,14 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
       applyCenterSlotContent(currentSlot, target);
       applyCenterSlotContent(nextSlot, target);
       center.dataset.aiOrbIcon = target.kind === 'icon' ? target.iconId : center.dataset.aiOrbIcon || loadAiOrbIconId();
+      visual?.removeAttribute?.('data-orb-switch-motion');
       visual?.classList?.remove('is-orb-icon-switching');
       shell?.classList?.remove('is-orb-icon-switching');
       return;
     }
     applyCenterSlotContent(nextSlot, target);
     if (target.kind === 'icon') center.dataset.aiOrbIcon = target.iconId;
+    visual.dataset.orbSwitchMotion = switchMotion;
     visual.classList.remove('is-orb-icon-switching');
     shell.classList.remove('is-orb-icon-switching');
     void visual.offsetWidth;
@@ -208,6 +211,7 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
     visual._orbIconSwitchTimer = setTimeout(() => {
       applyCenterSlotContent(currentSlot, target);
       applyCenterSlotContent(nextSlot, target);
+      visual.removeAttribute('data-orb-switch-motion');
       visual.classList.remove('is-orb-icon-switching');
       shell.classList.remove('is-orb-icon-switching');
       visual._orbIconSwitchTimer = null;

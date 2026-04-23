@@ -106,36 +106,108 @@ export function initManualBindings({
       label: 'doc-writing',
       emoji: '📝',
       theme: { blobTopCore: 'rgb(126 186 255)', blobTopEdge: 'rgb(92 132 255)', blobBottomCore: 'rgb(197 223 255)', blobBottomEdge: 'rgb(74 102 212)' },
+      phrases: [
+        'Outlining the big idea',
+        'Finding the cleaner headline',
+        'Tightening the messy sentence',
+        'Smoothing the intro paragraph',
+        'Pulling out the key point',
+        'Reshaping the closing line',
+        'Cutting the extra fluff',
+        'Making the structure clearer',
+        'Rewriting for warmer tone',
+        'Sharpening the summary',
+      ],
     },
     {
       id: 'budget',
       label: 'budget',
       emoji: '💸',
       theme: { blobTopCore: 'rgb(121 255 168)', blobTopEdge: 'rgb(78 214 127)', blobBottomCore: 'rgb(214 255 143)', blobBottomEdge: 'rgb(92 184 74)' },
+      phrases: [
+        'Checking the monthly burn',
+        'Looking for hidden subscriptions',
+        'Balancing bills against fun',
+        'Reworking the grocery cap',
+        'Setting aside travel money',
+        'Pressure-testing the weekend spend',
+        'Comparing fixed and flexible costs',
+        'Searching for the easy save',
+        'Trimming the impulse bucket',
+        'Finding room for a treat',
+      ],
     },
     {
       id: 'wine-pairing-expert',
       label: 'wine-pairing-expert',
       emoji: '🍷',
       theme: { blobTopCore: 'rgb(188 66 120)', blobTopEdge: 'rgb(118 28 88)', blobBottomCore: 'rgb(244 146 188)', blobBottomEdge: 'rgb(90 20 68)' },
+      phrases: [
+        'Matching acidity to the dish',
+        'Softening the tannin choice',
+        'Leaning into brighter fruit',
+        'Comparing light and bold pours',
+        'Balancing spice with sweetness',
+        'Picking the cleaner finish',
+        'Choosing a better dinner bottle',
+        'Checking the texture pairing',
+        'Finding the safer crowd pleaser',
+        'Saving the richer red for later',
+      ],
     },
     {
       id: 'trip-planner',
       label: 'trip-planner',
       emoji: '✈️',
       theme: { blobTopCore: 'rgb(115 204 255)', blobTopEdge: 'rgb(73 147 255)', blobBottomCore: 'rgb(209 241 255)', blobBottomEdge: 'rgb(74 110 224)' },
+      phrases: [
+        'Comparing the morning flights',
+        'Moving the hotel closer in',
+        'Checking the weather window',
+        'Protecting a slow afternoon',
+        'Making room for a detour',
+        'Finding the easier transfer',
+        'Reordering the day plan',
+        'Saving the sunset spot',
+        'Looking for the calmer route',
+        'Packing less for the same trip',
+      ],
     },
     {
       id: 'fitness-coach',
       label: 'fitness-coach',
       emoji: '🏃',
       theme: { blobTopCore: 'rgb(118 255 199)', blobTopEdge: 'rgb(72 210 165)', blobBottomCore: 'rgb(187 255 229)', blobBottomEdge: 'rgb(54 145 118)' },
+      phrases: [
+        'Adjusting the recovery day',
+        'Turning down the injury risk',
+        'Balancing effort with rest',
+        'Building a shorter workout',
+        'Checking the weekly consistency',
+        'Making the routine more realistic',
+        'Choosing a better warmup',
+        'Keeping the momentum gentle',
+        'Finding the sustainable pace',
+        'Protecting tomorrow’s energy',
+      ],
     },
     {
       id: 'meal-planner',
       label: 'meal-planner',
       emoji: '🍱',
       theme: { blobTopCore: 'rgb(255 182 108)', blobTopEdge: 'rgb(255 123 86)', blobBottomCore: 'rgb(255 227 146)', blobBottomEdge: 'rgb(210 108 56)' },
+      phrases: [
+        'Using up what is in the fridge',
+        'Balancing quick and cozy dinners',
+        'Planning leftovers on purpose',
+        'Pairing the sides more cleanly',
+        'Checking the protein spread',
+        'Making lunch easier tomorrow',
+        'Keeping prep time reasonable',
+        'Turning one base into two meals',
+        'Finding a lighter dinner option',
+        'Saving the easiest dish for late',
+      ],
     },
   ];
   const multiAgentRow = document.getElementById('prototype-multi-agent-row');
@@ -151,6 +223,7 @@ export function initManualBindings({
     currentText: '',
     currentCursor: null,
     verbIndex: 0,
+    skillPhraseIndexById: Object.create(null),
   };
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -243,20 +316,59 @@ export function initManualBindings({
     }
     return token === thinkingDebugState.streamToken;
   };
-  const runThinkingVerbLoop = async () => {
+  const runThinkingTextLoop = async ({ initialText = '', items = [], indexKey = null, holdMs = 2200, shouldContinue, nextText = null }) => {
     const token = ++thinkingDebugState.streamToken;
     setThinkingStreamVisible(true);
-    clearThinkingStream();
-    while (token === thinkingDebugState.streamToken && currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'thinking') {
-      const verb = THINKING_VERBS[thinkingDebugState.verbIndex % THINKING_VERBS.length];
-      thinkingDebugState.verbIndex += 1;
-      const typed = await typeThinkingText(verb, token);
+    removeThinkingCursor();
+    if (thinkingDebugState.currentText) {
+      const cleared = await deleteThinkingText(token);
+      if (!cleared) return;
+      if (!(await waitForStream(200, token))) return;
+    }
+    if (initialText) {
+      const initialTyped = await typeThinkingText(initialText, token);
+      if (!initialTyped) return;
+      if (!(await waitForStream(3000, token))) return;
+      const initialDeleted = await deleteThinkingText(token);
+      if (!initialDeleted) return;
+      if (!(await waitForStream(200, token))) return;
+    }
+    while (token === thinkingDebugState.streamToken && shouldContinue()) {
+      const text = typeof nextText === 'function'
+        ? nextText()
+        : items.length
+          ? items[((thinkingDebugState[indexKey] || 0) % items.length)]
+          : '';
+      if (!text) return;
+      if (indexKey) thinkingDebugState[indexKey] = (thinkingDebugState[indexKey] || 0) + 1;
+      const typed = await typeThinkingText(text, token);
       if (!typed) return;
-      if (!(await waitForStream(1800, token))) return;
+      if (!(await waitForStream(holdMs, token))) return;
       const deleted = await deleteThinkingText(token);
       if (!deleted) return;
       if (!(await waitForStream(200, token))) return;
     }
+  };
+  const runThinkingVerbLoop = async () => runThinkingTextLoop({
+    items: THINKING_VERBS,
+    indexKey: 'verbIndex',
+    shouldContinue: () => currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'thinking',
+  });
+  const runSkillPhraseLoop = async (skill) => {
+    if (!skill) return;
+    thinkingDebugState.skillPhraseIndexById[skill.id] = thinkingDebugState.skillPhraseIndexById[skill.id] || 0;
+    await runThinkingTextLoop({
+      initialText: `Using ${skill.label} skill`,
+      holdMs: 2500,
+      shouldContinue: () => currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
+      nextText: () => {
+        const phrases = skill.phrases || [];
+        if (!phrases.length) return '';
+        const nextIndex = thinkingDebugState.skillPhraseIndexById[skill.id] || 0;
+        thinkingDebugState.skillPhraseIndexById[skill.id] = nextIndex + 1;
+        return phrases[nextIndex % phrases.length];
+      },
+    });
   };
   const transitionThinkingText = async (text) => {
     const token = ++thinkingDebugState.streamToken;
@@ -291,7 +403,7 @@ export function initManualBindings({
       thinkingDebugState.activeSkillId = nextSkill.id;
       syncAiOrbSelectionTheme(document, nextSkill.theme);
       syncAiOrbCenterEmoji(document, { animate: animateOrb || reroll, emoji: nextSkill.emoji, theme: nextSkill.theme });
-      void transitionThinkingText(`Using ${nextSkill.label} skill`);
+      void runSkillPhraseLoop(nextSkill);
       return;
     }
     const nextAgent = reroll
