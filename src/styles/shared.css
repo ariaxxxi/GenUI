@@ -139,11 +139,11 @@
 @keyframes g-celestial-orb-breathe-rim {
   0%, 100% {
     box-shadow:
-      inset 13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 78%, white 22%),
-      inset -13px 0 14px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 80%, white 20%),
-      inset 0 9px 11px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 52%, var(--g-stage-selected-secondary-rgb)),
-      inset 0 -9px 11px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 56%, var(--g-stage-selected-rgb)),
-      inset 0 0 14px -5px rgba(255, 255, 255, 0.03);
+      inset 9px 0 9px -9px color-mix(in srgb, var(--g-stage-selected-rgb) 46%, white 8%),
+      inset -9px 0 9px -9px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 48%, white 7%),
+      inset 0 5px 7px -9px color-mix(in srgb, var(--g-stage-selected-rgb) 24%, var(--g-stage-selected-secondary-rgb)),
+      inset 0 -5px 7px -9px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 28%, var(--g-stage-selected-rgb)),
+      inset 0 0 8px -7px rgba(255, 255, 255, 0.006);
   }
   45% {
     box-shadow:
@@ -251,17 +251,17 @@
   }
   80% {
     box-shadow:
-      inset 0 10px 22px -1px rgba(74,135,255,0.62),
-      inset 0 -30px 56px -4px rgba(172,188,247,1),
-      inset 0 -22px 42px -2px rgba(255,255,255,0.98),
-      inset 0 -96px 136px -8px rgba(0,22,67,1);
+      inset 0 10px 22px -1px color-mix(in srgb, var(--g-orb-switch-glow-primary, rgb(74 135 255)) 82%, white 18%),
+      inset 0 -30px 56px -4px color-mix(in srgb, var(--g-orb-switch-glow-secondary, rgb(172 188 247)) 88%, white 12%),
+      inset 0 -22px 42px -2px color-mix(in srgb, white 86%, var(--g-orb-switch-glow-secondary, rgb(172 188 247)) 14%),
+      inset 0 -96px 136px -8px color-mix(in srgb, rgb(0 22 67) 72%, var(--g-orb-switch-glow-secondary, rgb(172 188 247)) 28%);
   }
   62% {
     box-shadow:
-      inset 0 8px 18px -1px rgba(74,135,255,0.48),
-      inset 0 -24px 46px -4px rgba(172,188,247,0.9),
-      inset 0 -18px 34px -2px rgba(255,255,255,0.84),
-      inset 0 -84px 116px -10px rgba(0,22,67,0.94);
+      inset 0 8px 18px -1px color-mix(in srgb, var(--g-orb-switch-glow-primary, rgb(74 135 255)) 68%, white 12%),
+      inset 0 -24px 46px -4px color-mix(in srgb, var(--g-orb-switch-glow-secondary, rgb(172 188 247)) 78%, white 10%),
+      inset 0 -18px 34px -2px color-mix(in srgb, white 78%, var(--g-orb-switch-glow-secondary, rgb(172 188 247)) 22%),
+      inset 0 -84px 116px -10px color-mix(in srgb, rgb(0 22 67) 76%, var(--g-orb-switch-glow-secondary, rgb(172 188 247)) 24%);
   }
   100% {
     box-shadow:
@@ -275,6 +275,8 @@
   border-radius: inherit;
   pointer-events: none;
   isolation: isolate;
+  --g-orb-switch-glow-primary: rgb(74 135 255);
+  --g-orb-switch-glow-secondary: rgb(172 188 247);
   transform-origin: center;
   filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.40));
   transition: transform 500ms var(--motion-ease), filter 400ms ease;
@@ -416,6 +418,30 @@
   object-position: center;
   transform: scale(1);
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18));
+  transition: opacity 180ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.g-celestial-orb-center-emoji {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
+  opacity: 0;
+  transform: scale(0.86);
+  transition: opacity 180ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.g-celestial-orb-center-slot[data-slot-kind="emoji"] .g-celestial-orb-center-image {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.g-celestial-orb-center-slot[data-slot-kind="emoji"] .g-celestial-orb-center-emoji {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .g-celestial-orb-visual.is-orb-icon-switching,

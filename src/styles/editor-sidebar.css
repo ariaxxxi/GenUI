@@ -552,6 +552,29 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+.prototype-thinking-state-row {
+  margin-top: 12px;
+  gap: 10px;
+}
+.prototype-thinking-state-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.prototype-thinking-state-btn {
+  min-height: 40px;
+  text-transform: lowercase;
+  letter-spacing: 0.01em;
+}
+.prototype-thinking-state-btn.active {
+  border-color: rgba(196, 214, 255, 0.9);
+  background:
+    linear-gradient(180deg, rgba(205, 223, 255, 0.14), rgba(151, 119, 255, 0.06)),
+    rgba(255,255,255,0.04);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08) inset,
+    0 8px 22px rgba(77, 112, 255, 0.12);
+}
 .sb-ai-icon-btn {
   min-height: 58px;
   padding: 8px 6px;
@@ -582,13 +605,19 @@
   width: 22px;
   height: 22px;
   border-radius: 8px;
-  background-image: var(--sb-ai-orb-icon);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
   box-shadow:
     0 4px 10px rgba(0,0,0,0.24),
     inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.sb-ai-icon-btn__thumb-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
 }
 .sb-ai-icon-btn__label {
   font-size: 11px;

@@ -281,6 +281,47 @@ body {
 }
 #drop-main.home-blur { filter: blur(2px); }
 #drop-main.home-glow #home-glow-layer { opacity: 1; }
+#prototype-thinking-stream {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  pointer-events: none;
+  z-index: 16;
+  white-space: nowrap;
+}
+#prototype-thinking-stream.hidden {
+  display: none;
+}
+#prototype-thinking-stream-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  line-height: 1.7;
+  font-weight: 500;
+  color: rgba(255,255,255,0.96);
+  letter-spacing: 0.01em;
+}
+#prototype-thinking-stream .pixel-cursor {
+  display: inline-grid;
+  grid-template-columns: repeat(4, 3px);
+  grid-template-rows: repeat(4, 3px);
+  gap: 1px;
+  vertical-align: middle;
+  margin-left: 3px;
+  margin-bottom: 1px;
+  flex-shrink: 0;
+}
+#prototype-thinking-stream .pixel-cursor span {
+  display: block;
+  width: 3px;
+  height: 3px;
+  background: rgba(255,255,255,0.96);
+}
 #c-primary {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-weight: 600;

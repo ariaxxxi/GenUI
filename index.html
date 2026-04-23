@@ -158,6 +158,9 @@
           <img id="c-media" alt=""/>
           <div id="c-rich"></div>
           <div id="siri-orb"></div>
+          <div id="prototype-thinking-stream" class="hidden" aria-hidden="true">
+            <span id="prototype-thinking-stream-text"></span>
+          </div>
         </div>
         <div class="drop" id="drop-left"></div>
         <div class="drop" id="drop-right"></div>
@@ -328,21 +331,29 @@
           <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
           <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Thinking</button>
         </div>
-        <div class="sb-row tight prototype-ai-icon-row">
-          <span class="sb-lbl">Orb app</span>
-          <div class="prototype-ai-icon-grid" role="group" aria-label="AI orb app">
+        <div id="prototype-multi-agent-row" class="sb-row tight prototype-ai-icon-row hidden">
+          <span class="sb-lbl">Multi Agent</span>
+          <div class="prototype-ai-icon-grid" role="group" aria-label="Multi Agent">
             <button class="sb-shape-btn sb-ai-icon-btn" data-ai-orb-icon="bixby" type="button">
-              <span class="sb-ai-icon-btn__thumb" style="--sb-ai-orb-icon:url('assets/Bixby.png')"></span>
+              <span class="sb-ai-icon-btn__thumb"><img class="sb-ai-icon-btn__thumb-image" src="assets/Bixby.png" alt="Bixby"/></span>
               <span class="sb-ai-icon-btn__label">Bixby</span>
             </button>
             <button class="sb-shape-btn sb-ai-icon-btn" data-ai-orb-icon="gemini" type="button">
-              <span class="sb-ai-icon-btn__thumb" style="--sb-ai-orb-icon:url('src/assets/figma-gemini.png')"></span>
+              <span class="sb-ai-icon-btn__thumb"><img class="sb-ai-icon-btn__thumb-image" src="src/assets/figma-gemini.png" alt="Gemini"/></span>
               <span class="sb-ai-icon-btn__label">Gemini</span>
             </button>
             <button class="sb-shape-btn sb-ai-icon-btn" data-ai-orb-icon="chatgpt" type="button">
-              <span class="sb-ai-icon-btn__thumb" style="--sb-ai-orb-icon:url('src/assets/figma-chatgpt.png')"></span>
+              <span class="sb-ai-icon-btn__thumb"><img class="sb-ai-icon-btn__thumb-image" src="src/assets/figma-chatgpt.png" alt="ChatGPT"/></span>
               <span class="sb-ai-icon-btn__label">ChatGPT</span>
             </button>
+          </div>
+        </div>
+        <div id="prototype-thinking-state-row" class="sb-row tight prototype-thinking-state-row hidden">
+          <span class="sb-lbl">Thinking State</span>
+          <div class="prototype-thinking-state-grid" role="group" aria-label="Thinking state">
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="thinking" type="button">thinking</button>
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="skill" type="button">skill</button>
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="agent" type="button">agent</button>
           </div>
         </div>
       </div>

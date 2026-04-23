@@ -1,4 +1,4 @@
-import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon } from '../../shared/ai-orb-icon.js';
+import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterEmoji, syncAiOrbCenterIcon, syncAiOrbSelectionTheme } from '../../shared/ai-orb-icon.js';
 
 export function initManualBindings({
   document,
@@ -80,6 +80,241 @@ export function initManualBindings({
   const input = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
   let stageShapeClickTimer = null;
+  const THINKING_VERBS = [
+    'Waffling',
+    'Spiraling',
+    'Levitating',
+    'Hallucinating',
+    'Overthinking',
+    'Reticulating',
+    'Triangulating',
+    'Meandering',
+    'Philosophizing',
+    'Untangling',
+    'Daydreaming',
+    'Cogitating',
+    'Extrapolating',
+    'Ruminating',
+    'Vibing',
+    'Catastrophizing',
+    'Manifesting',
+    'Yapping',
+  ];
+  const PROTOTYPE_SKILLS = [
+    {
+      id: 'doc-writing',
+      label: 'doc-writing',
+      emoji: '📝',
+      theme: { blobTopCore: 'rgb(126 186 255)', blobTopEdge: 'rgb(92 132 255)', blobBottomCore: 'rgb(197 223 255)', blobBottomEdge: 'rgb(74 102 212)' },
+    },
+    {
+      id: 'budget',
+      label: 'budget',
+      emoji: '💸',
+      theme: { blobTopCore: 'rgb(121 255 168)', blobTopEdge: 'rgb(78 214 127)', blobBottomCore: 'rgb(214 255 143)', blobBottomEdge: 'rgb(92 184 74)' },
+    },
+    {
+      id: 'wine-pairing-expert',
+      label: 'wine-pairing-expert',
+      emoji: '🍷',
+      theme: { blobTopCore: 'rgb(188 66 120)', blobTopEdge: 'rgb(118 28 88)', blobBottomCore: 'rgb(244 146 188)', blobBottomEdge: 'rgb(90 20 68)' },
+    },
+    {
+      id: 'trip-planner',
+      label: 'trip-planner',
+      emoji: '✈️',
+      theme: { blobTopCore: 'rgb(115 204 255)', blobTopEdge: 'rgb(73 147 255)', blobBottomCore: 'rgb(209 241 255)', blobBottomEdge: 'rgb(74 110 224)' },
+    },
+    {
+      id: 'fitness-coach',
+      label: 'fitness-coach',
+      emoji: '🏃',
+      theme: { blobTopCore: 'rgb(118 255 199)', blobTopEdge: 'rgb(72 210 165)', blobBottomCore: 'rgb(187 255 229)', blobBottomEdge: 'rgb(54 145 118)' },
+    },
+    {
+      id: 'meal-planner',
+      label: 'meal-planner',
+      emoji: '🍱',
+      theme: { blobTopCore: 'rgb(255 182 108)', blobTopEdge: 'rgb(255 123 86)', blobBottomCore: 'rgb(255 227 146)', blobBottomEdge: 'rgb(210 108 56)' },
+    },
+  ];
+  const multiAgentRow = document.getElementById('prototype-multi-agent-row');
+  const thinkingStateRow = document.getElementById('prototype-thinking-state-row');
+  const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
+  const thinkingStream = document.getElementById('prototype-thinking-stream');
+  const thinkingStreamText = document.getElementById('prototype-thinking-stream-text');
+  const dropMain = document.getElementById('drop-main');
+  const thinkingDebugState = {
+    mode: 'thinking',
+    activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
+    streamToken: 0,
+    currentText: '',
+    currentCursor: null,
+    verbIndex: 0,
+  };
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const currentPrototypeShape = () => String(document.body?.dataset?.currentShape || '').trim().toLowerCase();
+  const getSkillById = (id) => PROTOTYPE_SKILLS.find((item) => item.id === id) || PROTOTYPE_SKILLS[0];
+  const pickDifferentEntry = (items, currentId) => {
+    const pool = items.filter((item) => item.id !== currentId);
+    const source = pool.length ? pool : items;
+    return source[Math.floor(Math.random() * source.length)] || items[0] || null;
+  };
+  const createPixelCursor = () => {
+    const px = document.createElement('span');
+    px.className = 'pixel-cursor';
+    for (let i = 0; i < 16; i += 1) {
+      const dot = document.createElement('span');
+      px.appendChild(dot);
+    }
+    return px;
+  };
+  const removeThinkingCursor = () => {
+    if (!thinkingDebugState.currentCursor) return;
+    thinkingDebugState.currentCursor.remove();
+    thinkingDebugState.currentCursor = null;
+  };
+  const setThinkingStreamVisible = (visible) => {
+    if (!thinkingStream) return;
+    thinkingStream.classList.toggle('hidden', !visible);
+  };
+  const clearThinkingStream = () => {
+    removeThinkingCursor();
+    thinkingDebugState.currentText = '';
+    if (thinkingStreamText) thinkingStreamText.textContent = '';
+  };
+  const stopThinkingStream = () => {
+    thinkingDebugState.streamToken += 1;
+    clearThinkingStream();
+    setThinkingStreamVisible(false);
+  };
+  const waitForStream = async (ms, token) => {
+    await sleep(ms);
+    return token === thinkingDebugState.streamToken;
+  };
+  const tokenizeThinkingText = (text) => {
+    const tokens = [];
+    let idx = 0;
+    while (idx < text.length) {
+      const len = Math.random() < 0.4 ? 1 : Math.random() < 0.6 ? 2 : Math.random() < 0.7 ? 3 : 4;
+      tokens.push(text.slice(idx, idx + len));
+      idx += len;
+    }
+    return tokens;
+  };
+  const typeThinkingText = async (text, token) => {
+    if (!thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
+    removeThinkingCursor();
+    const px = createPixelCursor();
+    thinkingStream.appendChild(px);
+    thinkingDebugState.currentCursor = px;
+    let settled = '';
+    const tokens = tokenizeThinkingText(text);
+    for (const tokenText of tokens) {
+      const cycles = 2 + Math.floor(Math.random() * 3);
+      for (let cycle = 0; cycle < cycles; cycle += 1) {
+        if (token !== thinkingDebugState.streamToken) {
+          removeThinkingCursor();
+          return false;
+        }
+        Array.from(px.children).forEach((dot) => {
+          dot.style.opacity = Math.random() < 0.5 ? '1' : '0.08';
+        });
+        await sleep(21);
+      }
+      settled += tokenText;
+      thinkingDebugState.currentText = settled;
+      thinkingStreamText.textContent = settled;
+      await sleep(6);
+    }
+    removeThinkingCursor();
+    return token === thinkingDebugState.streamToken;
+  };
+  const deleteThinkingText = async (token) => {
+    if (!thinkingStreamText) return false;
+    let settled = thinkingDebugState.currentText;
+    while (settled.length > 0) {
+      if (token !== thinkingDebugState.streamToken) return false;
+      settled = settled.slice(0, -1);
+      thinkingDebugState.currentText = settled;
+      thinkingStreamText.textContent = settled;
+      await sleep(21 + (Math.random() * 14));
+    }
+    return token === thinkingDebugState.streamToken;
+  };
+  const runThinkingVerbLoop = async () => {
+    const token = ++thinkingDebugState.streamToken;
+    setThinkingStreamVisible(true);
+    clearThinkingStream();
+    while (token === thinkingDebugState.streamToken && currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'thinking') {
+      const verb = THINKING_VERBS[thinkingDebugState.verbIndex % THINKING_VERBS.length];
+      thinkingDebugState.verbIndex += 1;
+      const typed = await typeThinkingText(verb, token);
+      if (!typed) return;
+      if (!(await waitForStream(1800, token))) return;
+      const deleted = await deleteThinkingText(token);
+      if (!deleted) return;
+      if (!(await waitForStream(200, token))) return;
+    }
+  };
+  const transitionThinkingText = async (text) => {
+    const token = ++thinkingDebugState.streamToken;
+    setThinkingStreamVisible(true);
+    removeThinkingCursor();
+    if (thinkingDebugState.currentText) {
+      const deleted = await deleteThinkingText(token);
+      if (!deleted) return;
+      if (!(await waitForStream(200, token))) return;
+    }
+    await typeThinkingText(text, token);
+  };
+  const syncThinkingStateButtons = () => {
+    thinkingStateButtons.forEach((button) => {
+      button.classList.toggle('active', button.dataset.thinkingState === thinkingDebugState.mode);
+    });
+  };
+  const syncThinkingOrbState = ({ animateOrb = false, reroll = false } = {}) => {
+    if (currentPrototypeShape() !== 'magic') return;
+    const activeAgentId = loadAiOrbIconId();
+    syncThinkingStateButtons();
+    if (thinkingDebugState.mode === 'thinking') {
+      syncAiOrbCenterIcon(document, { animate: animateOrb, id: activeAgentId });
+      void runThinkingVerbLoop();
+      return;
+    }
+    if (thinkingDebugState.mode === 'skill') {
+      const nextSkill = reroll
+        ? pickDifferentEntry(PROTOTYPE_SKILLS, thinkingDebugState.activeSkillId)
+        : getSkillById(thinkingDebugState.activeSkillId);
+      if (!nextSkill) return;
+      thinkingDebugState.activeSkillId = nextSkill.id;
+      syncAiOrbSelectionTheme(document, nextSkill.theme);
+      syncAiOrbCenterEmoji(document, { animate: animateOrb || reroll, emoji: nextSkill.emoji, theme: nextSkill.theme });
+      void transitionThinkingText(`Using ${nextSkill.label} skill`);
+      return;
+    }
+    const nextAgent = reroll
+      ? pickDifferentEntry(Object.values(AI_ORB_ICON_OPTIONS), activeAgentId)
+      : AI_ORB_ICON_OPTIONS[activeAgentId];
+    if (!nextAgent) return;
+    persistAiOrbIconId(nextAgent.id);
+    syncAiOrbCenterIcon(document, { animate: true, id: nextAgent.id });
+    syncAiOrbIconButtons();
+    void transitionThinkingText(`Switching to ${nextAgent.label}`);
+  };
+  const syncPrototypeAiDebugPanels = () => {
+    const shape = currentPrototypeShape();
+    multiAgentRow?.classList.toggle('hidden', shape !== 'listening');
+    thinkingStateRow?.classList.toggle('hidden', shape !== 'magic');
+    if (shape !== 'magic') {
+      stopThinkingStream();
+      syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
+      syncThinkingStateButtons();
+      return;
+    }
+    syncThinkingOrbState({ animateOrb: false, reroll: false });
+  };
 
   const commitPhoneFrameSize = (axis, rawValue) => {
     const parsed = parseInt(String(rawValue || '').trim(), 10);
@@ -248,8 +483,40 @@ export function initManualBindings({
     const iconId = persistAiOrbIconId(button.dataset.aiOrbIcon);
     syncAiOrbCenterIcon(document, { animate: true, id: iconId });
     syncAiOrbIconButtons();
+    if (currentPrototypeShape() === 'magic') {
+      if (thinkingDebugState.mode === 'thinking') {
+        syncThinkingOrbState({ animateOrb: false, reroll: false });
+      } else if (thinkingDebugState.mode === 'agent') {
+        void transitionThinkingText(`Switching to ${AI_ORB_ICON_OPTIONS[iconId].label}`);
+      }
+    }
   }));
   syncAiOrbIconButtons();
+
+  thinkingStateButtons.forEach((button) => button.addEventListener('click', () => {
+    const nextMode = String(button.dataset.thinkingState || '').trim().toLowerCase();
+    if (!nextMode) return;
+    if (nextMode === 'thinking') {
+      thinkingDebugState.mode = 'thinking';
+      syncThinkingOrbState({ animateOrb: true, reroll: false });
+      return;
+    }
+    if (nextMode === 'skill') {
+      thinkingDebugState.mode = 'skill';
+      syncThinkingOrbState({ animateOrb: true, reroll: true });
+      return;
+    }
+    if (nextMode === 'agent') {
+      thinkingDebugState.mode = 'agent';
+      syncThinkingOrbState({ animateOrb: true, reroll: true });
+    }
+  }));
+
+  new MutationObserver(syncPrototypeAiDebugPanels).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-current-shape'],
+  });
+  syncPrototypeAiDebugPanels();
 
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));

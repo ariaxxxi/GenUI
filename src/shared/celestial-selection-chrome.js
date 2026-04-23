@@ -1,5 +1,5 @@
 import { celestialSelectedPresetForRenderShape } from "./celestial-selected-presets.js";
-import { renderAiOrbCenterMarkup, syncAiOrbCenterIcon } from "./ai-orb-icon.js";
+import { renderAiOrbCenterMarkup, syncAiOrbCenterIcon, syncAiOrbSelectionTheme } from "./ai-orb-icon.js";
 
 const DEFAULT_DIRECTION = "bottom";
 const DEFAULT_DURATION_MS = 700;
@@ -84,6 +84,7 @@ export function ensureSharedAiOrb(root = document) {
     orb.innerHTML = SHARED_ORB_MARKUP;
   });
   syncAiOrbCenterIcon(scope, { animate: false });
+  syncAiOrbSelectionTheme(scope);
 }
 
 export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null, runtimeOverrides = {}) {
@@ -258,6 +259,7 @@ export function applyAiCelestialChrome(root = document) {
       pair.chromeEl.dataset.stageDirection = DEFAULT_DIRECTION;
     }
   });
+  syncAiOrbSelectionTheme(scope);
 }
 
 function setChromeDirection(node, direction = DEFAULT_DIRECTION) {
