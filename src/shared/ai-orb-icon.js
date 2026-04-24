@@ -49,17 +49,36 @@ function normalizeAiOrbIconId(id) {
     : DEFAULT_AI_ORB_ICON_ID;
 }
 
-function applyCenterImage(img, option) {
-  if (!img || !option) return;
-  img.src = option.src;
-  img.alt = `${option.label} orb icon`;
-  img.dataset.iconId = option.id;
+function applyCenterImage(img, content) {
+  if (!img || !content) return;
+  const resolved = content.kind === 'image'
+    ? {
+        src: String(content.src || '').trim() || getAiOrbIconOption(loadAiOrbIconId()).src,
+        alt: String(content.alt || '').trim(),
+        iconId: '',
+      }
+    : {
+        src: content.src,
+        alt: content.alt,
+        iconId: content.id,
+      };
+  img.src = resolved.src;
+  img.alt = resolved.alt;
+  img.dataset.iconId = resolved.iconId;
+  img.dataset.imageSrc = resolved.src;
 }
 
 function normalizeCenterContent(content = {}) {
   if (content?.kind === 'emoji') {
     const emoji = String(content.emoji || '').trim() || DEFAULT_EMOJI;
     return { kind: 'emoji', emoji };
+  }
+  if (content?.kind === 'image') {
+    return {
+      kind: 'image',
+      src: String(content.src || '').trim() || getAiOrbIconOption(loadAiOrbIconId()).src,
+      alt: String(content.alt || '').trim(),
+    };
   }
   const iconId = normalizeAiOrbIconId(content.iconId || content.id || loadAiOrbIcon());
   return { kind: 'icon', iconId };
@@ -80,11 +99,22 @@ function applyCenterSlotContent(slot, content) {
     applyCenterEmoji(emojiEl, normalized.emoji);
     if (img) {
       img.dataset.iconId = '';
+      img.dataset.imageSrc = '';
       img.alt = '';
     }
     return;
   }
-  applyCenterImage(img, getAiOrbIconOption(normalized.iconId));
+  if (normalized.kind === 'image') {
+    applyCenterImage(img, normalized);
+  } else {
+    const option = getAiOrbIconOption(normalized.iconId);
+    applyCenterImage(img, {
+      kind: 'icon',
+      src: option.src,
+      alt: `${option.label} orb icon`,
+      id: option.id,
+    });
+  }
   applyCenterEmoji(emojiEl, '');
 }
 
@@ -97,6 +127,13 @@ function currentContentForCenter(center) {
     });
   }
   const current = center?.querySelector?.('.g-celestial-orb-center-slot--current .g-celestial-orb-center-image');
+  if (currentSlot?.dataset?.slotKind === 'image') {
+    return normalizeCenterContent({
+      kind: 'image',
+      src: current?.dataset?.imageSrc || current?.src || getAiOrbIconOption(loadAiOrbIconId()).src,
+      alt: current?.alt || '',
+    });
+  }
   return normalizeCenterContent({
     kind: 'icon',
     iconId: current?.dataset?.iconId || loadAiOrbIcon(),
@@ -107,6 +144,7 @@ function centerContentMatches(a, b) {
   if (!a || !b) return false;
   if (a.kind !== b.kind) return false;
   if (a.kind === 'emoji') return a.emoji === b.emoji;
+  if (a.kind === 'image') return a.src === b.src && a.alt === b.alt;
   return a.iconId === b.iconId;
 }
 
@@ -201,7 +239,8 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
   const animate = options.animate !== false;
   const switchMotion = options.switchMotion || (target.kind === 'icon' ? 'swipe' : 'fade');
   const targetTheme = resolveOrbTheme(options.theme || (target.kind === 'icon' ? target.iconId : null));
-  if (target.kind === 'icon') syncAiOrbSelectionTheme(scope, target.iconId);
+  if (targetTheme) syncAiOrbSelectionTheme(scope, targetTheme);
+  else if (target.kind === 'icon') syncAiOrbSelectionTheme(scope, target.iconId);
 
   scope.querySelectorAll('.g-celestial-orb-center').forEach((center) => {
     const currentContent = currentContentForCenter(center);
@@ -257,6 +296,14 @@ export function syncAiOrbCenterIcon(root = document, options = {}) {
   syncAiOrbCenterContent(root, {
     kind: 'icon',
     iconId: targetId,
+  }, options);
+}
+
+export function syncAiOrbCenterImage(root = document, options = {}) {
+  syncAiOrbCenterContent(root, {
+    kind: 'image',
+    src: options.src,
+    alt: options.alt,
   }, options);
 }
 
