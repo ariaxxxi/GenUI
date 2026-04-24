@@ -105,9 +105,10 @@ const CHILD_DIMMED_OPACITY = 0.22;
 const CHILD_LAYOUT_GAP = 10;
 const CHILD_SIBLING_GAP = 14;
 const HOVER_LEASH_PX = 15;
-const SWAP_DURATION_MS = 720;
+const SWAP_DURATION_MS = 980;
 const SWAP_SIBLING_DURATION_MS = 300;
 const SWAP_HIGHLIGHT_FREEZE_MS = 120;
+const SWAP_PROMOTED_SHELL_ALPHA_DELAY_MS = 200;
 const SWAP_ORB_BLOOM_OVERSHOOT_MS = 150;
 const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
@@ -350,6 +351,10 @@ function haloColorForTheme(theme) {
   return theme?.blobTopCore || theme?.blobBottomCore || null;
 }
 
+function fieldHaloColorForAgent(id, theme) {
+  return id === 'bixby' ? '#ffffff' : haloColorForTheme(theme);
+}
+
 function createAgentOrbContent(id) {
   const option = getAiOrbIconOption(id);
   return {
@@ -361,8 +366,9 @@ function createAgentOrbContent(id) {
     alt: `${option.label} orb icon`,
     fill: false,
     imageScale: 0.72,
+    fieldImageScale: 0.96,
     theme: option.theme,
-    haloColor: haloColorForTheme(option.theme),
+    haloColor: fieldHaloColorForAgent(option.id, option.theme),
     orbPromotionEnabled: false,
     childActions: [],
   };
@@ -380,9 +386,10 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     img: homeOrbContent.img,
     alt: homeOrbContent.alt || '',
     fill: false,
-    imageScale: 0.72,
+    imageScale: homeOrbContent.fieldImageScale ?? 0.96,
     theme: homeOrbContent.theme || null,
-    haloColor: haloColorForTheme(homeOrbContent.theme),
+    haloColor: homeOrbContent.haloColor || haloColorForTheme(homeOrbContent.theme),
+    hoverShadowMode: 'tight',
     orbPromotionEnabled: true,
     childActions: [],
   };
@@ -418,6 +425,7 @@ function createBaseSlotContent(slot) {
     childLayout: slot.childLayout || null,
     haloColor: slot.haloColor || haloColorForTheme(bubbleSlotThemeForId(slot.id)),
     theme: bubbleSlotThemeForId(slot.id),
+    hoverShadowMode: 'default',
     orbPromotionEnabled: !NON_PROMOTABLE_BUBBLE_IDS.has(slot.id),
   };
 }
@@ -1108,12 +1116,19 @@ function render() {
       ? String(bubbleOpacity)
       : (isSwapActive ? '0' : '0');
     if (node.shadowEl) {
+      const isTightHoverShadow = bubble.hoverShadowMode === 'tight';
       const accentShadow = (!bubble.isPill && isHovered && bubble.haloColor)
-        ? `0 0 20px 8px ${bubble.haloColor}`
+        ? (isTightHoverShadow
+          ? `0 0 16px 4px ${bubble.haloColor}`
+          : `0 0 20px 8px ${bubble.haloColor}`)
         : '';
       node.shadowEl.style.boxShadow = [
         accentShadow,
-        isHovered ? '0 0 50px 40px rgba(0, 0, 0, 1)' : '0 15px 35px -5px rgba(0, 0, 0, 0.3)'
+        isHovered
+          ? (isTightHoverShadow
+            ? '0 0 28px 12px rgba(0, 0, 0, 0.52)'
+            : '0 0 50px 40px rgba(0, 0, 0, 1)')
+          : '0 15px 35px -5px rgba(0, 0, 0, 0.3)'
       ].filter(Boolean).join(', ');
     }
     node.root.style.transform =
@@ -1499,12 +1514,14 @@ function syncSwapLayer(now) {
 
   const promotedNode = refs.swapLayer.querySelector('.bubble2-swap-promoted');
   const demotedNode = refs.swapLayer.querySelector('.bubble2-swap-demoted');
+  const promotedSphere = promotedNode?.querySelector('.g-celestial-orb-sphere');
+  const promotedSelection = promotedNode?.querySelector('.bubble2-orb-selection');
   const progress = clamp((now - transition.startedAt) / transition.durationMs, 0, 1);
-  const travel = easeOutQuart(progress);
+  const travel = easeInOutCubic(progress);
   const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
   const lift = Math.sin(Math.min(progress, 1) * Math.PI) * -8;
   const promotedBubble = transition.releaseBubbles.find((bubble) => bubble.id === transition.selectedBubbleId);
-  if (!promotedBubble || !promotedNode || !demotedNode) return;
+  if (!promotedBubble || !promotedNode || !demotedNode || !promotedSphere || !promotedSelection) return;
 
   const orbCanvasDestinationX = -transition.panOffset.x;
   const orbCanvasDestinationY = -transition.panOffset.y;
@@ -1519,7 +1536,19 @@ function syncSwapLayer(now) {
     now - transition.startedAt,
     clamp((promotedBubble.sourceDiameter / ORB_BASE_SIZE) * 0.82, 0.52, 0.9),
   );
-  const promotedIconSize = interpolate(promotedBubble.sourceDiameter, ORB_CENTER_IMAGE_SIZE, easeOutQuart(clamp(progress / 0.55, 0, 1)));
+  const promotedShellAlpha = easeOutQuart(
+    clamp(
+      (now - transition.startedAt - SWAP_PROMOTED_SHELL_ALPHA_DELAY_MS) /
+      Math.max(1, transition.durationMs - SWAP_PROMOTED_SHELL_ALPHA_DELAY_MS),
+      0,
+      1,
+    ),
+  );
+  const promotedIconSize = interpolate(
+    promotedBubble.sourceDiameter,
+    ORB_CENTER_IMAGE_SIZE,
+    easeInOutCubic(clamp(progress / 0.72, 0, 1)),
+  );
   const demotedIconSize = interpolate(ORB_CENTER_IMAGE_SIZE, promotedBubble.sourceDiameter, demotedProgress);
   const demotedShellOpacity = 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / 220, 0, 1));
 
@@ -1533,6 +1562,8 @@ function syncSwapLayer(now) {
   promotedNode.style.setProperty('--swap-shell-scale', shellScale.toFixed(4));
   promotedNode.style.setProperty('--swap-icon-size', `${format(promotedIconSize)}px`);
   promotedNode.style.setProperty('--swap-rim-drift', `${format(Math.sin(Math.min(progress, 1) * Math.PI) * 2)}px`);
+  promotedSphere.style.opacity = promotedShellAlpha.toFixed(4);
+  promotedSelection.style.opacity = promotedShellAlpha.toFixed(4);
 
   demotedNode.style.setProperty('--swap-center-x', `${format(demotedCenterX)}px`);
   demotedNode.style.setProperty('--swap-center-y', `${format(demotedCenterY)}px`);
