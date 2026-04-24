@@ -226,38 +226,60 @@
   100% { transform: scale3d(1, 1, 1); }
 }
 
-@keyframes g-celestial-orb-icon-switch-current {
+@keyframes g-celestial-orb-icon-switch-current-position {
   0% {
     opacity: 1;
-    transform: scale(1) translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(var(--g-orb-switch-current-end-x, -26px), 0, 0);
+  }
+}
+
+@keyframes g-celestial-orb-icon-switch-next-position {
+  0% {
+    opacity: 1;
+    transform: translate3d(var(--g-orb-switch-next-start-x, 34px), 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes g-celestial-orb-icon-switch-current-visual {
+  0% {
+    opacity: 1;
+    transform: scale(1);
     filter: blur(0px);
   }
-  24% {
-    opacity: 0.72;
-    transform: scale(0.975) translate3d(-12px, 0, 0);
-    filter: blur(1px);
+  32% {
+    opacity: 0.28;
+    transform: scale(0.76);
+    filter: blur(1.8px);
   }
   100% {
     opacity: 0;
-    transform: scale(0.9) translate3d(-26px, 0, 0);
+    transform: scale(0.6);
     filter: blur(6px);
   }
 }
 
-@keyframes g-celestial-orb-icon-switch-next {
+@keyframes g-celestial-orb-icon-switch-next-visual {
   0% {
     opacity: 0;
-    transform: scale(0.78) translate3d(34px, 0, 0);
+    transform: scale(0.6);
     filter: blur(8px);
   }
-  62% {
-    opacity: 0.96;
-    transform: scale(1.045) translate3d(-2px, 0, 0);
-    filter: blur(0.9px);
+  58% {
+    opacity: 0.88;
+    transform: scale(0.94);
+    filter: blur(1.2px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translate3d(0, 0, 0);
+    transform: scale(1);
     filter: blur(0px);
   }
 }
@@ -348,6 +370,18 @@
   transform-origin: center;
   filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.40));
   transition: transform 500ms var(--motion-ease), filter 400ms ease;
+}
+
+.g-celestial-orb-visual,
+.bubble2-orb-visual {
+  --g-orb-switch-current-end-x: -20px;
+  --g-orb-switch-next-start-x: 26px;
+}
+
+.g-celestial-orb-visual[data-orb-switch-direction="right"],
+.bubble2-orb-visual[data-orb-switch-direction="right"] {
+  --g-orb-switch-current-end-x: 20px;
+  --g-orb-switch-next-start-x: -26px;
 }
 
 .g-celestial-orb-sphere,
@@ -514,12 +548,12 @@
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"],
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] {
-  animation: g-celestial-orb-icon-switch-bubble-scale 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: g-celestial-orb-icon-switch-bubble-scale 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
 }
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-shell,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-shell {
-  animation: g-celestial-orb-icon-switch-shell-scale 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: g-celestial-orb-icon-switch-shell-scale 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
 }
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="fade"],
@@ -545,12 +579,26 @@
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current {
-  animation: g-celestial-orb-icon-switch-current 620ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: g-celestial-orb-icon-switch-current-position 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
 }
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next {
-  animation: g-celestial-orb-icon-switch-next 920ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: g-celestial-orb-icon-switch-next-position 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
+}
+
+.g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="icon"] > .g-celestial-orb-center-image,
+.bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="icon"] > .g-celestial-orb-center-image,
+.g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji,
+.bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji {
+  animation: g-celestial-orb-icon-switch-current-visual 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
+}
+
+.g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="icon"] > .g-celestial-orb-center-image,
+.bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="icon"] > .g-celestial-orb-center-image,
+.g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji,
+.bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji {
+  animation: g-celestial-orb-icon-switch-next-visual 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
 }
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="fade"] .g-celestial-orb-center-slot--current,

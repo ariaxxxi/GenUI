@@ -37,8 +37,10 @@ export const AI_ORB_ICON_OPTIONS = Object.freeze({
 });
 
 const DEFAULT_AI_ORB_ICON_ID = 'bixby';
-const ICON_SWITCH_DURATION_MS = 720;
+const SWIPE_SWITCH_DURATION_MS = 650;
+const FADE_SWITCH_DURATION_MS = 720;
 const DEFAULT_EMOJI = '✨';
+const DEFAULT_SWITCH_DIRECTION = 'left';
 
 function normalizeAiOrbIconId(id) {
   const raw = String(id || '').trim().toLowerCase();
@@ -134,6 +136,29 @@ export function getAiOrbIconOption(id) {
   return AI_ORB_ICON_OPTIONS[normalizeAiOrbIconId(id)];
 }
 
+function normalizeSwitchDirection(direction) {
+  const raw = String(direction || '').trim().toLowerCase();
+  return raw === 'right' ? 'right' : DEFAULT_SWITCH_DIRECTION;
+}
+
+function iconSequence() {
+  return Object.keys(AI_ORB_ICON_OPTIONS);
+}
+
+function deriveIconSwitchDirection(fromId, toId) {
+  const currentId = normalizeAiOrbIconId(fromId);
+  const targetId = normalizeAiOrbIconId(toId);
+  if (currentId === targetId) return DEFAULT_SWITCH_DIRECTION;
+  const sequence = iconSequence();
+  const currentIndex = sequence.indexOf(currentId);
+  const targetIndex = sequence.indexOf(targetId);
+  if (currentIndex === -1 || targetIndex === -1) return DEFAULT_SWITCH_DIRECTION;
+  const length = sequence.length;
+  const forwardDistance = (targetIndex - currentIndex + length) % length;
+  const backwardDistance = (currentIndex - targetIndex + length) % length;
+  return forwardDistance <= backwardDistance ? 'right' : 'left';
+}
+
 export function loadAiOrbIconId() {
   return normalizeAiOrbIconId(loadAiOrbIcon());
 }
@@ -184,6 +209,10 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
     const nextSlot = center.querySelector('.g-celestial-orb-center-slot--next');
     const visual = center.closest('.g-celestial-orb-visual, .bubble2-orb-visual');
     const shell = center.querySelector('.g-celestial-orb-center-shell');
+    const switchDirection = switchMotion === 'swipe' && target.kind === 'icon'
+      ? normalizeSwitchDirection(options.switchDirection || deriveIconSwitchDirection(currentContent?.iconId, target.iconId))
+      : '';
+    const switchDurationMs = switchMotion === 'swipe' ? SWIPE_SWITCH_DURATION_MS : FADE_SWITCH_DURATION_MS;
     const currentTimer = visual?._orbIconSwitchTimer;
     if (currentTimer) {
       clearTimeout(currentTimer);
@@ -196,6 +225,7 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
       applyCenterSlotContent(nextSlot, target);
       center.dataset.aiOrbIcon = target.kind === 'icon' ? target.iconId : center.dataset.aiOrbIcon || loadAiOrbIconId();
       visual?.removeAttribute?.('data-orb-switch-motion');
+      visual?.removeAttribute?.('data-orb-switch-direction');
       visual?.classList?.remove('is-orb-icon-switching');
       shell?.classList?.remove('is-orb-icon-switching');
       return;
@@ -203,6 +233,8 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
     applyCenterSlotContent(nextSlot, target);
     if (target.kind === 'icon') center.dataset.aiOrbIcon = target.iconId;
     visual.dataset.orbSwitchMotion = switchMotion;
+    if (switchDirection) visual.dataset.orbSwitchDirection = switchDirection;
+    else visual.removeAttribute('data-orb-switch-direction');
     visual.classList.remove('is-orb-icon-switching');
     shell.classList.remove('is-orb-icon-switching');
     void visual.offsetWidth;
@@ -212,10 +244,11 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
       applyCenterSlotContent(currentSlot, target);
       applyCenterSlotContent(nextSlot, target);
       visual.removeAttribute('data-orb-switch-motion');
+      visual.removeAttribute('data-orb-switch-direction');
       visual.classList.remove('is-orb-icon-switching');
       shell.classList.remove('is-orb-icon-switching');
       visual._orbIconSwitchTimer = null;
-    }, ICON_SWITCH_DURATION_MS);
+    }, switchDurationMs);
   });
 }
 

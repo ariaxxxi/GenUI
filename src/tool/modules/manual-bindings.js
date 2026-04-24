@@ -228,7 +228,14 @@ export function initManualBindings({
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const currentPrototypeShape = () => String(document.body?.dataset?.currentShape || '').trim().toLowerCase();
+  const aiAgentSequence = Object.keys(AI_ORB_ICON_OPTIONS);
   const getSkillById = (id) => PROTOTYPE_SKILLS.find((item) => item.id === id) || PROTOTYPE_SKILLS[0];
+  const getAgentIndex = (id) => Math.max(0, aiAgentSequence.indexOf(String(id || '').trim().toLowerCase()));
+  const cycleAgentId = (currentId, step) => {
+    const length = aiAgentSequence.length;
+    const currentIndex = getAgentIndex(currentId);
+    return aiAgentSequence[(currentIndex + step + length) % length] || aiAgentSequence[0];
+  };
   const pickDifferentEntry = (items, currentId) => {
     const pool = items.filter((item) => item.id !== currentId);
     const source = pool.length ? pool : items;
@@ -280,8 +287,6 @@ export function initManualBindings({
     if (!thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
     removeThinkingCursor();
     const px = createPixelCursor();
-    thinkingStream.appendChild(px);
-    thinkingDebugState.currentCursor = px;
     let settled = '';
     const tokens = tokenizeThinkingText(text);
     for (const tokenText of tokens) {
@@ -299,6 +304,8 @@ export function initManualBindings({
       settled += tokenText;
       thinkingDebugState.currentText = settled;
       thinkingStreamText.textContent = settled;
+      thinkingStreamText.appendChild(px);
+      thinkingDebugState.currentCursor = px;
       await sleep(6);
     }
     removeThinkingCursor();
@@ -414,6 +421,24 @@ export function initManualBindings({
     syncAiOrbCenterIcon(document, { animate: true, id: nextAgent.id });
     syncAiOrbIconButtons();
     void transitionThinkingText(`Switching to ${nextAgent.label}`);
+  };
+  const switchAgentByStep = (step) => {
+    const shape = currentPrototypeShape();
+    if (shape !== 'listening' && shape !== 'magic') return false;
+    if (shape === 'magic' && thinkingDebugState.mode === 'skill') return false;
+    const currentId = loadAiOrbIconId();
+    const nextId = cycleAgentId(currentId, step);
+    if (!nextId || nextId === currentId) return false;
+    const switchDirection = step > 0 ? 'right' : 'left';
+    persistAiOrbIconId(nextId);
+    syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection });
+    syncAiOrbIconButtons();
+    if (shape === 'magic') {
+      if (thinkingDebugState.mode === 'agent') {
+        void transitionThinkingText(`Switching to ${AI_ORB_ICON_OPTIONS[nextId].label}`);
+      }
+    }
+    return true;
   };
   const syncPrototypeAiDebugPanels = () => {
     const shape = currentPrototypeShape();
@@ -536,6 +561,14 @@ export function initManualBindings({
       movePrototypeListSelection?.(1);
       return;
     }
+    if (e.key === 'ArrowRight' && switchAgentByStep(1)) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === 'ArrowLeft' && switchAgentByStep(-1)) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === '1') manualShape('circle');
     if (e.key === '2') manualShape('dot');
     if (e.key === '3') manualShape('pill');
@@ -592,13 +625,19 @@ export function initManualBindings({
     });
   };
   aiOrbIconButtons.forEach((button) => button.addEventListener('click', () => {
+    const currentId = loadAiOrbIconId();
     const iconId = persistAiOrbIconId(button.dataset.aiOrbIcon);
-    syncAiOrbCenterIcon(document, { animate: true, id: iconId });
+    const currentIndex = getAgentIndex(currentId);
+    const nextIndex = getAgentIndex(iconId);
+    const switchDirection = nextIndex === currentIndex
+      ? 'left'
+      : ((nextIndex - currentIndex + aiAgentSequence.length) % aiAgentSequence.length) <= ((currentIndex - nextIndex + aiAgentSequence.length) % aiAgentSequence.length)
+        ? 'right'
+        : 'left';
+    syncAiOrbCenterIcon(document, { animate: true, id: iconId, switchDirection });
     syncAiOrbIconButtons();
     if (currentPrototypeShape() === 'magic') {
-      if (thinkingDebugState.mode === 'thinking') {
-        syncThinkingOrbState({ animateOrb: false, reroll: false });
-      } else if (thinkingDebugState.mode === 'agent') {
+      if (thinkingDebugState.mode === 'agent') {
         void transitionThinkingText(`Switching to ${AI_ORB_ICON_OPTIONS[iconId].label}`);
       }
     }
