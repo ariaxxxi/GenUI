@@ -5,7 +5,7 @@ import {
   syncDirectionalSelection,
 } from './shared/celestial-selection-chrome.js';
 import { celestialSelectedPresetForRenderShape } from './shared/celestial-selected-presets.js';
-import { bindAiOrbIconStorageSync, renderAiOrbCenterMarkup, syncAiOrbCenterIcon } from './shared/ai-orb-icon.js';
+import { bindAiOrbIconStorageSync, getAiOrbIconOption, renderAiOrbCenterMarkup, syncAiOrbCenterIcon } from './shared/ai-orb-icon.js';
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
 let _audioCtx = null;
@@ -108,6 +108,8 @@ const FIGMA_ASSETS = {
   weather: 'src/assets/figma-weather.png',
   note:    'src/assets/figma-note.png',
 };
+const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt']);
+const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CELESTIAL_CHIP_PRESET = celestialSelectedPresetForRenderShape('chip');
 const CELESTIAL_ORB_PRESET = celestialSelectedPresetForRenderShape('orb');
@@ -120,6 +122,10 @@ function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
 function applyBubbleCelestialChrome(chromeEl, hostEl, preset, colorOverrides = {}) {
   if (!chromeEl || !hostEl || !preset) return;
   applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides);
+}
+
+function currentBubbleHomeOrbTheme() {
+  return getAiOrbIconOption(state.orbAgentId)?.theme || {};
 }
 
 const BUBBLES_CONFIG = [
@@ -305,6 +311,7 @@ const state = {
   childMenuPointerLock: null,
   openMotionUntil: 0,
   closeMotionUntil: 0,
+  orbAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
   renderQueued: false,
 };
 
@@ -569,7 +576,7 @@ function createOrbNode() {
     ${renderAiOrbCenterMarkup()}
   `;
   button.appendChild(visual);
-  syncAiOrbCenterIcon(button, { animate: false });
+  syncAiOrbCenterIcon(button, { animate: false, id: state.orbAgentId });
 
   return button;
 }
@@ -578,9 +585,38 @@ bindAiOrbIconStorageSync(document, window);
 
 function bindEvents() {
   refs.shell?.addEventListener('pointerdown', handlePointerDown);
+  window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
+}
+
+function handleKeyDown(event) {
+  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    cycleBubbleHomeAgent(1);
+    return;
+  }
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    cycleBubbleHomeAgent(-1);
+  }
+}
+
+function cycleBubbleHomeAgent(step) {
+  if (!refs.orb || !step) return;
+  const currentIndex = BUBBLE_HOME_AGENT_SEQUENCE.indexOf(state.orbAgentId);
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+  const nextIndex = (safeCurrentIndex + step + BUBBLE_HOME_AGENT_SEQUENCE.length) % BUBBLE_HOME_AGENT_SEQUENCE.length;
+  const nextId = BUBBLE_HOME_AGENT_SEQUENCE[nextIndex];
+  if (nextId === state.orbAgentId) return;
+  state.orbAgentId = nextId;
+  syncAiOrbCenterIcon(refs.orb, {
+    animate: true,
+    id: nextId,
+    switchDirection: step > 0 ? 'right' : 'left',
+  });
 }
 
 function handlePointerDown(event) {
@@ -866,6 +902,7 @@ function render() {
       refs.orbVisual.querySelector('.bubble2-orb-selection'),
       refs.orbVisual,
       CELESTIAL_ORB_PRESET,
+      currentBubbleHomeOrbTheme(),
     );
   }
 }

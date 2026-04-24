@@ -445,9 +445,11 @@ body.bubble2-page {
   height: 80px;
   margin-left: -40px;
   margin-top: -40px;
+  padding: 0;
   border: 0;
   border-radius: 999px;
   background: transparent;
+  appearance: none;
   cursor: pointer;
   transition: transform 1000ms var(--bubble2-ease);
 }
