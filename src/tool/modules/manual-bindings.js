@@ -478,11 +478,11 @@ export function initManualBindings({
     indexKey: 'verbIndex',
     shouldContinue: () => currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'thinking',
   });
-  const runSkillPhraseLoop = async (skill) => {
+  const runSkillPhraseLoop = async (skill, { transitionText = '' } = {}) => {
     if (!skill) return;
     thinkingDebugState.skillPhraseIndexById[skill.id] = thinkingDebugState.skillPhraseIndexById[skill.id] || 0;
     await runThinkingTextLoop({
-      initialText: '',
+      initialText: transitionText,
       holdMs: 2200,
       shouldContinue: () => currentPrototypeShape() === 'skill-pill' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
       nextText: () => {
@@ -586,7 +586,9 @@ export function initManualBindings({
       if (reroll && shape === 'skill-pill' && !forceRemorph) {
         playSkillChipSquash();
       }
-      void runSkillPhraseLoop(nextSkill);
+      void runSkillPhraseLoop(nextSkill, {
+        transitionText: (reroll && shape === 'skill-pill' && !forceRemorph) ? `Switching to ${nextSkill.label}` : '',
+      });
       return;
     }
     const nextAgentId = explicitAgentId || (
