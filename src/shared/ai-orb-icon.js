@@ -6,10 +6,10 @@ export const AI_ORB_ICON_OPTIONS = Object.freeze({
     label: 'Bixby',
     src: 'assets/Bixby.png',
     theme: Object.freeze({
-      blobTopCore: 'rgb(83 236 185)',
-      blobTopEdge: 'rgb(73 154 255)',
-      blobBottomCore: 'rgb(134 211 255)',
-      blobBottomEdge: 'rgb(46 102 255)',
+      blobTopCore: 'rgb(80 140 255)',
+      blobTopEdge: 'rgb(110 60 230)',
+      blobBottomCore: 'rgb(160 100 255)',
+      blobBottomEdge: 'rgb(60 30 200)',
     }),
   }),
   gemini: Object.freeze({
