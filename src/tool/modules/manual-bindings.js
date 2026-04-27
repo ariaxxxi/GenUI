@@ -1,4 +1,4 @@
-import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterEmoji, syncAiOrbCenterIcon, syncAiOrbSelectionTheme } from '../../shared/ai-orb-icon.js';
+import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon } from '../../shared/ai-orb-icon.js';
 
 export function initManualBindings({
   document,
@@ -58,6 +58,7 @@ export function initManualBindings({
   applyResponseModeUi,
   previewScenarioInstant,
   previewScenario,
+  morphTo,
   hideRich,
   hideIntentHeader,
   handleSend,
@@ -67,6 +68,9 @@ export function initManualBindings({
   flight,
   rebuildAnim,
   initStarfield,
+  setPrototypeSelectionOverride,
+  setPrototypeAiDebugState,
+  getPrototypeAiDebugState,
 }) {
   const isEditableTarget = (target) => {
     const el = target instanceof Element ? target : null;
@@ -103,7 +107,7 @@ export function initManualBindings({
   const PROTOTYPE_SKILLS = [
     {
       id: 'doc-writing',
-      label: 'doc-writing',
+      label: 'Writing Agent',
       emoji: '📝',
       theme: { blobTopCore: 'rgb(126 186 255)', blobTopEdge: 'rgb(92 132 255)', blobBottomCore: 'rgb(197 223 255)', blobBottomEdge: 'rgb(74 102 212)' },
       phrases: [
@@ -121,7 +125,7 @@ export function initManualBindings({
     },
     {
       id: 'budget',
-      label: 'budget',
+      label: 'Budget Agent',
       emoji: '💸',
       theme: { blobTopCore: 'rgb(121 255 168)', blobTopEdge: 'rgb(78 214 127)', blobBottomCore: 'rgb(214 255 143)', blobBottomEdge: 'rgb(92 184 74)' },
       phrases: [
@@ -139,7 +143,7 @@ export function initManualBindings({
     },
     {
       id: 'wine-pairing-expert',
-      label: 'wine-pairing-expert',
+      label: 'Wine Agent',
       emoji: '🍷',
       theme: { blobTopCore: 'rgb(188 66 120)', blobTopEdge: 'rgb(118 28 88)', blobBottomCore: 'rgb(244 146 188)', blobBottomEdge: 'rgb(90 20 68)' },
       phrases: [
@@ -157,7 +161,7 @@ export function initManualBindings({
     },
     {
       id: 'trip-planner',
-      label: 'trip-planner',
+      label: 'Travel Agent',
       emoji: '✈️',
       theme: { blobTopCore: 'rgb(115 204 255)', blobTopEdge: 'rgb(73 147 255)', blobBottomCore: 'rgb(209 241 255)', blobBottomEdge: 'rgb(74 110 224)' },
       phrases: [
@@ -175,7 +179,7 @@ export function initManualBindings({
     },
     {
       id: 'fitness-coach',
-      label: 'fitness-coach',
+      label: 'Fitness Agent',
       emoji: '🏃',
       theme: { blobTopCore: 'rgb(118 255 199)', blobTopEdge: 'rgb(72 210 165)', blobBottomCore: 'rgb(187 255 229)', blobBottomEdge: 'rgb(54 145 118)' },
       phrases: [
@@ -193,7 +197,7 @@ export function initManualBindings({
     },
     {
       id: 'meal-planner',
-      label: 'meal-planner',
+      label: 'Meal Agent',
       emoji: '🍱',
       theme: { blobTopCore: 'rgb(255 182 108)', blobTopEdge: 'rgb(255 123 86)', blobBottomCore: 'rgb(255 227 146)', blobBottomEdge: 'rgb(210 108 56)' },
       phrases: [
@@ -215,10 +219,13 @@ export function initManualBindings({
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
   const thinkingStream = document.getElementById('prototype-thinking-stream');
   const thinkingStreamText = document.getElementById('prototype-thinking-stream-text');
-  const dropMain = document.getElementById('drop-main');
+  const DEBUG_FAMILY_SHAPES = new Set(['magic', 'skill-pill', 'agent-circle']);
   const thinkingDebugState = {
     mode: 'thinking',
+    familyActive: getPrototypeAiDebugState?.()?.active === true,
     activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
+    pendingAgentVisualSync: null,
+    pendingAgentTransitionText: '',
     streamToken: 0,
     currentText: '',
     currentCursor: null,
@@ -228,9 +235,81 @@ export function initManualBindings({
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const currentPrototypeShape = () => String(document.body?.dataset?.currentShape || '').trim().toLowerCase();
+  const isDebugFamilyShape = (shape = currentPrototypeShape()) => DEBUG_FAMILY_SHAPES.has(String(shape || '').trim().toLowerCase());
+  const agentDebugTypography = {
+    icon: { size: 40, color: '#ffffff' },
+    primary: { size: 28, color: '#ffffff' },
+    secondary: { size: 24, color: '#d4d4d4' },
+    detail: { size: 24, color: '#a3a3a3' },
+    intentHeader: { size: 18, color: '#a0a0a0' },
+  };
+  const skillChipTypography = {
+    icon: { size: 28, color: '#ffffff' },
+    primary: { size: 20, color: '#ffffff' },
+    secondary: { size: 20, color: '#d4d4d4' },
+    detail: { size: 20, color: '#a3a3a3' },
+    intentHeader: { size: 18, color: '#a0a0a0' },
+  };
+  const skillChipMeasureCanvas = document.createElement('canvas');
+  const skillChipMeasureContext = skillChipMeasureCanvas.getContext('2d');
   const aiAgentSequence = Object.keys(AI_ORB_ICON_OPTIONS);
   const getSkillById = (id) => PROTOTYPE_SKILLS.find((item) => item.id === id) || PROTOTYPE_SKILLS[0];
+  const getSkillRenderContent = (skill) => ({
+    icon: createIcon('emoji', skill?.emoji || '✨'),
+    primary: skill?.label || 'Skill Agent',
+    secondary: '',
+    detail: '',
+    typography: skillChipTypography,
+  });
+  const getAgentRenderContent = (agentId = loadAiOrbIconId()) => {
+    const option = AI_ORB_ICON_OPTIONS[agentId] || AI_ORB_ICON_OPTIONS[loadAiOrbIconId()];
+    return {
+      icon: createIcon('image', option?.src || ''),
+      primary: '',
+      secondary: '',
+      detail: '',
+      typography: agentDebugTypography,
+    };
+  };
+  const measureSkillChipLabelWidth = (label) => {
+    const text = String(label || '').trim();
+    if (!text) return 0;
+    if (skillChipMeasureContext) {
+      skillChipMeasureContext.font = "600 20px 'DM Sans', sans-serif";
+      return Math.ceil(skillChipMeasureContext.measureText(text).width);
+    }
+    return text.length * 12;
+  };
+  const getSkillChipGeometry = (skill) => {
+    const labelWidth = measureSkillChipLabelWidth(skill?.label || 'Skill Agent');
+    const chipHeight = 68;
+    const leftPad = 18;
+    const iconSize = 36;
+    const iconGap = 10;
+    const rightPad = 22;
+    const minWidth = 164;
+    const maxWidth = 320;
+    const width = clamp(leftPad + iconSize + iconGap + labelWidth + rightPad, minWidth, maxWidth);
+    const radius = Math.round(chipHeight / 2);
+    const chipCenterY = -20;
+    return {
+      main: { w: width, h: chipHeight, br: `${radius}px`, tx: -(width / 2), ty: chipCenterY - (chipHeight / 2), op: 1 },
+      left: { w: 100, h: 100, br: '50px', tx: -(width / 2), ty: chipCenterY - 50, op: 0 },
+      right: { w: 100, h: 100, br: '50px', tx: (width / 2) - 100, ty: chipCenterY - 50, op: 0 },
+    };
+  };
   const getAgentIndex = (id) => Math.max(0, aiAgentSequence.indexOf(String(id || '').trim().toLowerCase()));
+  const getAgentSwitchDirection = (fromId, toId) => {
+    const currentId = String(fromId || '').trim().toLowerCase();
+    const nextId = String(toId || '').trim().toLowerCase();
+    if (!nextId || currentId === nextId) return 'left';
+    const length = aiAgentSequence.length;
+    const currentIndex = getAgentIndex(currentId);
+    const nextIndex = getAgentIndex(nextId);
+    const forwardDistance = (nextIndex - currentIndex + length) % length;
+    const backwardDistance = (currentIndex - nextIndex + length) % length;
+    return forwardDistance <= backwardDistance ? 'right' : 'left';
+  };
   const cycleAgentId = (currentId, step) => {
     const length = aiAgentSequence.length;
     const currentIndex = getAgentIndex(currentId);
@@ -263,6 +342,44 @@ export function initManualBindings({
     removeThinkingCursor();
     thinkingDebugState.currentText = '';
     if (thinkingStreamText) thinkingStreamText.textContent = '';
+  };
+  const syncPrototypeDebugState = () => {
+    setPrototypeAiDebugState?.({
+      active: thinkingDebugState.familyActive,
+      mode: thinkingDebugState.mode,
+    });
+  };
+  const setThinkingFamilyActive = (active) => {
+    thinkingDebugState.familyActive = !!active;
+    syncPrototypeDebugState();
+  };
+  const playSkillChipSquash = () => {
+    const main = document.getElementById('drop-main');
+    if (!main) return;
+    if (main._prototypeSkillChipSquashAnim) {
+      main._prototypeSkillChipSquashAnim.cancel();
+      main._prototypeSkillChipSquashAnim = null;
+    }
+    main.style.transformOrigin = '50% 50%';
+    main.style.scale = '1 1';
+    const anim = main.animate([
+      { scale: '1 1', offset: 0 },
+      { scale: '0.965 1', offset: 0.3 },
+      { scale: '1.012 1', offset: 0.68 },
+      { scale: '1 1', offset: 1 },
+    ], {
+      duration: 1180,
+      easing: 'cubic-bezier(0.28, 0.08, 0.18, 1)',
+      fill: 'none',
+    });
+    main._prototypeSkillChipSquashAnim = anim;
+    const clear = () => {
+      if (main._prototypeSkillChipSquashAnim !== anim) return;
+      main._prototypeSkillChipSquashAnim = null;
+      main.style.scale = '1 1';
+    };
+    anim.onfinish = clear;
+    anim.oncancel = clear;
   };
   const stopThinkingStream = () => {
     thinkingDebugState.streamToken += 1;
@@ -365,9 +482,9 @@ export function initManualBindings({
     if (!skill) return;
     thinkingDebugState.skillPhraseIndexById[skill.id] = thinkingDebugState.skillPhraseIndexById[skill.id] || 0;
     await runThinkingTextLoop({
-      initialText: `Using ${skill.label} skill`,
-      holdMs: 2500,
-      shouldContinue: () => currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
+      initialText: '',
+      holdMs: 2200,
+      shouldContinue: () => currentPrototypeShape() === 'skill-pill' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
       nextText: () => {
         const phrases = skill.phrases || [];
         if (!phrases.length) return '';
@@ -378,6 +495,8 @@ export function initManualBindings({
     });
   };
   const transitionThinkingText = async (text) => {
+    const value = String(text || '').trim();
+    if (!value) return;
     const token = ++thinkingDebugState.streamToken;
     setThinkingStreamVisible(true);
     removeThinkingCursor();
@@ -386,19 +505,70 @@ export function initManualBindings({
       if (!deleted) return;
       if (!(await waitForStream(200, token))) return;
     }
-    await typeThinkingText(text, token);
+    await typeThinkingText(value, token);
   };
   const syncThinkingStateButtons = () => {
     thinkingStateButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.thinkingState === thinkingDebugState.mode);
     });
   };
-  const syncThinkingOrbState = ({ animateOrb = false, reroll = false } = {}) => {
-    if (currentPrototypeShape() !== 'magic') return;
+  const setSkillSelectionOverride = (skill) => {
+    setPrototypeSelectionOverride?.(skill ? {
+      enabled: true,
+      renderShape: 'pill',
+      theme: skill.theme,
+    } : null);
+  };
+  const queuePendingAgentVisualSync = (agentId, switchDirection) => {
+    thinkingDebugState.pendingAgentVisualSync = agentId ? { agentId, switchDirection } : null;
+  };
+  const queuePendingAgentTransitionText = (text = '') => {
+    thinkingDebugState.pendingAgentTransitionText = String(text || '').trim();
+  };
+  const flushPendingAgentVisualSync = () => {
+    const pending = thinkingDebugState.pendingAgentVisualSync;
+    if (!pending?.agentId) return false;
+    thinkingDebugState.pendingAgentVisualSync = null;
+    syncAiOrbCenterIcon(document, {
+      animate: true,
+      id: pending.agentId,
+      switchDirection: pending.switchDirection,
+      switchMotion: 'swipe',
+    });
+    return true;
+  };
+  const flushPendingAgentTransitionText = () => {
+    const text = String(thinkingDebugState.pendingAgentTransitionText || '').trim();
+    thinkingDebugState.pendingAgentTransitionText = '';
+    if (!text) return false;
+    void transitionThinkingText(text);
+    return true;
+  };
+  const syncAgentOrbVisual = (agentId, { animate = false, switchDirection = '' } = {}) => {
+    const run = () => syncAiOrbCenterIcon(document, {
+      animate,
+      id: agentId,
+      switchDirection,
+      switchMotion: 'swipe',
+    });
+    if (!animate) {
+      run();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  };
+  const renderPrototypeDebugMode = ({ reroll = false, explicitAgentId = null, forceRemorph = false } = {}) => {
+    const shape = currentPrototypeShape();
     const activeAgentId = loadAiOrbIconId();
     syncThinkingStateButtons();
     if (thinkingDebugState.mode === 'thinking') {
-      syncAiOrbCenterIcon(document, { animate: animateOrb, id: activeAgentId });
+      setThinkingFamilyActive(true);
+      setSkillSelectionOverride(null);
+      if (shape !== 'magic' || forceRemorph) {
+        manualShape('magic');
+        return;
+      }
+      syncAiOrbCenterIcon(document, { animate: false, id: activeAgentId });
       void runThinkingVerbLoop();
       return;
     }
@@ -408,49 +578,108 @@ export function initManualBindings({
         : getSkillById(thinkingDebugState.activeSkillId);
       if (!nextSkill) return;
       thinkingDebugState.activeSkillId = nextSkill.id;
-      syncAiOrbSelectionTheme(document, nextSkill.theme);
-      syncAiOrbCenterEmoji(document, { animate: animateOrb || reroll, emoji: nextSkill.emoji, theme: nextSkill.theme });
+      setThinkingFamilyActive(true);
+      setSkillSelectionOverride(nextSkill);
+      if (shape !== 'skill-pill' || reroll || forceRemorph) {
+        morphTo('skill-pill', getSkillRenderContent(nextSkill), getSkillChipGeometry(nextSkill));
+      }
+      if (reroll && shape === 'skill-pill' && !forceRemorph) {
+        playSkillChipSquash();
+      }
       void runSkillPhraseLoop(nextSkill);
       return;
     }
-    const nextAgent = reroll
-      ? pickDifferentEntry(Object.values(AI_ORB_ICON_OPTIONS), activeAgentId)
-      : AI_ORB_ICON_OPTIONS[activeAgentId];
+    const nextAgentId = explicitAgentId || (
+      reroll
+        ? pickDifferentEntry(Object.values(AI_ORB_ICON_OPTIONS), activeAgentId)?.id
+        : activeAgentId
+    );
+    const nextAgent = AI_ORB_ICON_OPTIONS[nextAgentId];
     if (!nextAgent) return;
+    const switchDirection = getAgentSwitchDirection(activeAgentId, nextAgent.id);
+    const switchingAgent = nextAgent.id !== activeAgentId;
+    const transitionLabel = switchingAgent ? `Switching to ${nextAgent.label}` : '';
     persistAiOrbIconId(nextAgent.id);
-    syncAiOrbCenterIcon(document, { animate: true, id: nextAgent.id });
+    setThinkingFamilyActive(true);
+    stopThinkingStream();
+    setSkillSelectionOverride(null);
+    if (shape !== 'agent-circle' || forceRemorph) {
+      queuePendingAgentVisualSync(switchingAgent ? nextAgent.id : null, switchDirection);
+      queuePendingAgentTransitionText(transitionLabel);
+      morphTo('agent-circle', getAgentRenderContent(nextAgent.id));
+    } else {
+      queuePendingAgentVisualSync(null, '');
+      queuePendingAgentTransitionText('');
+      syncAiOrbCenterIcon(document, {
+        animate: switchingAgent,
+        id: nextAgent.id,
+        switchDirection,
+        switchMotion: 'swipe',
+      });
+      if (transitionLabel) void transitionThinkingText(transitionLabel);
+    }
     syncAiOrbIconButtons();
-    void transitionThinkingText(`Switching to ${nextAgent.label}`);
   };
   const switchAgentByStep = (step) => {
     const shape = currentPrototypeShape();
-    if (shape !== 'listening' && shape !== 'magic') return false;
-    if (shape === 'magic' && thinkingDebugState.mode === 'skill') return false;
+    if (shape !== 'listening' && shape !== 'agent-circle') return false;
     const currentId = loadAiOrbIconId();
     const nextId = cycleAgentId(currentId, step);
     if (!nextId || nextId === currentId) return false;
+    if (shape === 'agent-circle') {
+      thinkingDebugState.mode = 'agent';
+      renderPrototypeDebugMode({ explicitAgentId: nextId });
+      return true;
+    }
     const switchDirection = step > 0 ? 'right' : 'left';
     persistAiOrbIconId(nextId);
     syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection });
     syncAiOrbIconButtons();
-    if (shape === 'magic') {
-      if (thinkingDebugState.mode === 'agent') {
-        void transitionThinkingText(`Switching to ${AI_ORB_ICON_OPTIONS[nextId].label}`);
-      }
-    }
     return true;
   };
   const syncPrototypeAiDebugPanels = () => {
     const shape = currentPrototypeShape();
-    multiAgentRow?.classList.toggle('hidden', shape !== 'listening');
-    thinkingStateRow?.classList.toggle('hidden', shape !== 'magic');
-    if (shape !== 'magic') {
-      stopThinkingStream();
+    const inDebugFamily = isDebugFamilyShape(shape);
+    setThinkingFamilyActive(inDebugFamily);
+    multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'agent-circle' && thinkingDebugState.mode === 'agent'));
+    thinkingStateRow?.classList.toggle('hidden', !inDebugFamily);
+    if (shape === 'magic') {
+      setSkillSelectionOverride(null);
+      if (thinkingDebugState.mode !== 'thinking') {
+        renderPrototypeDebugMode({ forceRemorph: true });
+        return;
+      }
       syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
+      void runThinkingVerbLoop();
+      return;
+    }
+    if (shape === 'skill-pill') {
+      const activeSkill = getSkillById(thinkingDebugState.activeSkillId);
+      setSkillSelectionOverride(activeSkill);
+      syncThinkingStateButtons();
+      void runSkillPhraseLoop(activeSkill);
+      return;
+    }
+    if (shape === 'agent-circle') {
+      setSkillSelectionOverride(null);
+      const flushedVisual = flushPendingAgentVisualSync();
+      const flushedText = flushPendingAgentTransitionText();
+      if (!flushedVisual) {
+        syncAgentOrbVisual(loadAiOrbIconId(), { animate: false });
+      }
+      if (!flushedText) {
+        if (thinkingDebugState.currentText) setThinkingStreamVisible(true);
+        else stopThinkingStream();
+      }
       syncThinkingStateButtons();
       return;
     }
-    syncThinkingOrbState({ animateOrb: false, reroll: false });
+    if (!inDebugFamily) {
+      setSkillSelectionOverride(null);
+      stopThinkingStream();
+      syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
+      syncThinkingStateButtons();
+    }
   };
 
   const commitPhoneFrameSize = (axis, rawValue) => {
@@ -626,7 +855,14 @@ export function initManualBindings({
   };
   aiOrbIconButtons.forEach((button) => button.addEventListener('click', () => {
     const currentId = loadAiOrbIconId();
-    const iconId = persistAiOrbIconId(button.dataset.aiOrbIcon);
+    const iconId = String(button.dataset.aiOrbIcon || '').trim().toLowerCase();
+    if (!iconId) return;
+    if (currentPrototypeShape() === 'agent-circle') {
+      thinkingDebugState.mode = 'agent';
+      renderPrototypeDebugMode({ explicitAgentId: iconId });
+      return;
+    }
+    persistAiOrbIconId(iconId);
     const currentIndex = getAgentIndex(currentId);
     const nextIndex = getAgentIndex(iconId);
     const switchDirection = nextIndex === currentIndex
@@ -636,11 +872,6 @@ export function initManualBindings({
         : 'left';
     syncAiOrbCenterIcon(document, { animate: true, id: iconId, switchDirection });
     syncAiOrbIconButtons();
-    if (currentPrototypeShape() === 'magic') {
-      if (thinkingDebugState.mode === 'agent') {
-        void transitionThinkingText(`Switching to ${AI_ORB_ICON_OPTIONS[iconId].label}`);
-      }
-    }
   }));
   syncAiOrbIconButtons();
 
@@ -649,17 +880,17 @@ export function initManualBindings({
     if (!nextMode) return;
     if (nextMode === 'thinking') {
       thinkingDebugState.mode = 'thinking';
-      syncThinkingOrbState({ animateOrb: true, reroll: false });
+      renderPrototypeDebugMode();
       return;
     }
     if (nextMode === 'skill') {
       thinkingDebugState.mode = 'skill';
-      syncThinkingOrbState({ animateOrb: true, reroll: true });
+      renderPrototypeDebugMode({ reroll: true });
       return;
     }
     if (nextMode === 'agent') {
       thinkingDebugState.mode = 'agent';
-      syncThinkingOrbState({ animateOrb: true, reroll: true });
+      renderPrototypeDebugMode({ reroll: true });
     }
   }));
 

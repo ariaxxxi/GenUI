@@ -39,6 +39,8 @@ let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
 let prototypeOrbChromeSyncRaf = 0;
 let prototypeVoice = null;
+let prototypeSelectionOverride = null;
+const prototypeAiDebugState = { active: false, mode: 'thinking' };
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
@@ -232,8 +234,18 @@ function syncPrototypeIntentHeader(scenario) {
   trackPrototypeIntentHeader();
 }
 
+function syncManualShapeButtonStates(shape = document.body?.dataset?.currentShape || '') {
+  const actualShape = String(shape || '').trim();
+  const displayShape = prototypeAiDebugState.active && ['magic', 'skill-pill', 'agent-circle'].includes(actualShape)
+    ? 'magic'
+    : actualShape;
+  document.querySelectorAll('.sb-shape-btn').forEach((button) => {
+    button.classList.toggle('active', button.dataset.shape === displayShape);
+  });
+}
+
 function updateActive(shape) {
-  document.querySelectorAll('.sb-shape-btn').forEach((b) => b.classList.toggle('active', b.dataset.shape === shape));
+  syncManualShapeButtonStates(shape);
   syncPrototypeOrbChrome();
   syncPrototypeListeningOrb(shape);
 }
@@ -381,6 +393,7 @@ morphApi = initMorph({
     stageSelectedBlobTopEdgeColorForShape,
     stageSelectedBlobBottomCoreColorForShape,
     stageSelectedBlobBottomEdgeColorForShape,
+    getPrototypeSelectionOverride: () => prototypeSelectionOverride,
     createIcon,
     getAnimDuration: anim.getAnimDuration,
     getEasingFns: anim.getEasingFns,
@@ -618,6 +631,7 @@ initManualBindings({
   applyResponseModeUi,
   previewScenarioInstant,
   previewScenario,
+  morphTo: morphApi.morphTo,
   hideRich: morphApi.hideRich,
   hideIntentHeader,
   handleSend: actions.handleSend,
@@ -627,6 +641,16 @@ initManualBindings({
   flight,
   rebuildAnim: anim.rebuildAnim,
   initStarfield: anim.initStarfield,
+  setPrototypeSelectionOverride: (value) => {
+    prototypeSelectionOverride = value ? { ...value } : null;
+    syncPrototypeOrbChrome();
+  },
+  setPrototypeAiDebugState: (value = {}) => {
+    prototypeAiDebugState.active = value.active === true;
+    prototypeAiDebugState.mode = value.mode || prototypeAiDebugState.mode || 'thinking';
+    syncManualShapeButtonStates();
+  },
+  getPrototypeAiDebugState: () => ({ ...prototypeAiDebugState }),
 });
 
 document.addEventListener('keydown', (event) => {

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/exec-plans/active/current.md",
+                "file": "README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "current"
+              "title": "README"
             }
           }
         ]
@@ -185,6 +185,9 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
+    "README.md",
+    "docs/exec-plans/completed/handoff.md",
+    "docs/exec-plans/active/current.md",
     "docs/PLANS.md",
     "src/shared/ai-orb-icon.js",
     "assets/Bixby.png",
@@ -213,9 +216,7 @@
     "docs/design-docs/core-beliefs.md",
     "docs/design-docs/celestial-visual.md",
     "docs/exec-plans/project-status.md",
-    "docs/exec-plans/completed/handoff.md",
     "docs/exec-plans/tech-debt-tracker.md",
-    "docs/exec-plans/active/current.md",
     "docs/generated/db-schema.md",
     "docs/FRONTEND.md",
     "docs/DESIGN.md",

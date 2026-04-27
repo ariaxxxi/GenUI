@@ -47,6 +47,11 @@ API routes:
 
 Core shapes include `idle`, `circle`, `listening`, `magic`, `dot`, `list`, `pill`, `split`, `card`, `card-s`, `image`, `ai`, `card-form`, and `card-list`.
 
+Internal prototype-only render shapes also exist in the shared morph system:
+
+- `skill-pill`: pill geometry/content used for the prototype thinking skill state
+- `agent-circle`: non-orb circle geometry/content used for the prototype agent state
+
 `src/shared/scenario-data.js` maps scenarios into renderable content through per-shape maps:
 
 - text, typography, icons, images, list items
