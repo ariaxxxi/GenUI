@@ -83,7 +83,10 @@ export function ensureSharedAiOrb(root = document) {
     if (orb.querySelector(":scope > .g-celestial-orb-visual")) return;
     orb.innerHTML = SHARED_ORB_MARKUP;
   });
-  syncAiOrbCenterIcon(scope, { animate: false });
+  const isSwitching = scope.querySelector?.("#siri-orb .g-celestial-orb-visual.is-orb-icon-switching");
+  if (!isSwitching) {
+    syncAiOrbCenterIcon(scope, { animate: false });
+  }
   syncAiOrbSelectionTheme(scope);
 }
 

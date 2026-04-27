@@ -622,13 +622,21 @@ export function initManualBindings({
   };
   const switchAgentByStep = (step) => {
     const shape = currentPrototypeShape();
-    if (shape !== 'listening' && shape !== 'agent-circle') return false;
+    if (shape !== 'listening' && shape !== 'agent-circle' && shape !== 'magic') return false;
+    if (shape === 'magic' && thinkingDebugState.mode !== 'thinking') return false;
     const currentId = loadAiOrbIconId();
     const nextId = cycleAgentId(currentId, step);
     if (!nextId || nextId === currentId) return false;
     if (shape === 'agent-circle') {
       thinkingDebugState.mode = 'agent';
       renderPrototypeDebugMode({ explicitAgentId: nextId });
+      return true;
+    }
+    if (shape === 'magic') {
+      const switchDirection = step > 0 ? 'right' : 'left';
+      persistAiOrbIconId(nextId);
+      syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection, switchMotion: 'swipe' });
+      syncAiOrbIconButtons();
       return true;
     }
     const switchDirection = step > 0 ? 'right' : 'left';
