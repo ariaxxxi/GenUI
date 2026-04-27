@@ -412,10 +412,19 @@ export function createMorphRender(ctx) {
     if (!main) return;
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
     const stage = stageId ? callbacks.stageById?.(stageId) : null;
-    const selected = stageId
+    const selectionOverride = callbacks.getPrototypeSelectionOverride?.() || null;
+    const selected = selectionOverride?.enabled
+      ? true
+      : stageId
       ? (callbacks.stageSelectedForShape?.(activeScenario, stageId) ?? !!stage?.selected)
       : false;
-    const renderShape = String(stage?.renderShape || callbacks.renderShapeForStageId?.(stageId) || stageId || 'pill');
+    const renderShape = String(
+      selectionOverride?.renderShape
+      || stage?.renderShape
+      || callbacks.renderShapeForStageId?.(stageId)
+      || stageId
+      || 'pill'
+    );
     const preset = celestialSelectedPresetForRenderShape(renderShape);
     main.classList.toggle('prototype-stage-selected', selected);
     if (selectionOverlay) {
@@ -437,11 +446,11 @@ export function createMorphRender(ctx) {
       playPrototypeSelectionMotion(selectionOverlay, false);
       return;
     }
-    const blobTopCore = callbacks.stageSelectedBlobTopCoreColorForShape?.(activeScenario, stageId) || preset.blobTopCore;
-    const blobTopEdge = callbacks.stageSelectedBlobTopEdgeColorForShape?.(activeScenario, stageId) || preset.blobTopEdge;
-    const blobBottomCore = callbacks.stageSelectedBlobBottomCoreColorForShape?.(activeScenario, stageId) || preset.blobBottomCore;
-    const blobBottomEdge = callbacks.stageSelectedBlobBottomEdgeColorForShape?.(activeScenario, stageId) || preset.blobBottomEdge;
-    const maskBlur = callbacks.stageSelectedMaskBlurForShape?.(activeScenario, stageId) ?? preset.maskBlur;
+    const blobTopCore = selectionOverride?.theme?.blobTopCore || callbacks.stageSelectedBlobTopCoreColorForShape?.(activeScenario, stageId) || preset.blobTopCore;
+    const blobTopEdge = selectionOverride?.theme?.blobTopEdge || callbacks.stageSelectedBlobTopEdgeColorForShape?.(activeScenario, stageId) || preset.blobTopEdge;
+    const blobBottomCore = selectionOverride?.theme?.blobBottomCore || callbacks.stageSelectedBlobBottomCoreColorForShape?.(activeScenario, stageId) || preset.blobBottomCore;
+    const blobBottomEdge = selectionOverride?.theme?.blobBottomEdge || callbacks.stageSelectedBlobBottomEdgeColorForShape?.(activeScenario, stageId) || preset.blobBottomEdge;
+    const maskBlur = selectionOverride?.maskBlur ?? callbacks.stageSelectedMaskBlurForShape?.(activeScenario, stageId) ?? preset.maskBlur;
     if (!selectionOverlay) return;
     applySelectedChromePreset(selectionOverlay, main, preset, {
       blobTopCore,
@@ -533,9 +542,9 @@ export function createMorphRender(ctx) {
   }
 
   function isIconOnlyThumb(shape) {
-    if (state.thumbContentState.kind === 'image' && state.thumbContentState.value) return ['circle', 'magic', 'listening', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    if (state.thumbContentState.kind === 'image' && state.thumbContentState.value) return ['circle', 'magic', 'listening', 'agent-circle', 'dot', 'pill', 'skill-pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
     const icon = (C.thumbLabel.textContent || '').trim();
-    return !!icon && icon !== '···' && ['circle', 'magic', 'listening', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    return !!icon && icon !== '···' && ['circle', 'magic', 'listening', 'agent-circle', 'dot', 'pill', 'skill-pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
   }
 
   function applyThumbVisualMode(shape) {
@@ -648,6 +657,7 @@ export function createMorphRender(ctx) {
     else if (shape === 'dot' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     else if (shape === 'dot' && fromShape === 'split') thumbOpacity = 0;
     else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
+    else if (shape === 'agent-circle') thumbOpacity = 0;
     setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
     const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
       el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
@@ -661,7 +671,7 @@ export function createMorphRender(ctx) {
     setEl(C.prim, pos.prim);
     setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.secondaryInAdvanceMs || 0)));
     setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.detailInAdvanceMs || 0)));
-    if (shape === 'ai' || shape === 'magic') {
+    if (shape === 'ai' || shape === 'magic' || shape === 'agent-circle') {
       C.prim.textContent = '';
       C.sec.textContent = '';
       C.det.textContent = '';
@@ -784,13 +794,15 @@ export function createMorphRender(ctx) {
     state.currentShape = shape;
     document.body.dataset.currentShape = shape;
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
-    const thinkingVisualShape = shape === 'magic' || shape === 'ai';
-    const enteringThinking = thinkingVisualShape && fromShape !== 'magic' && fromShape !== 'ai';
+    const orbVisualShape = (value) => value === 'magic' || value === 'ai' || value === 'agent-circle';
+    const thinkingVisualShape = orbVisualShape(shape);
+    const enteringThinking = thinkingVisualShape && !orbVisualShape(fromShape);
     const listeningToThinking = enteringThinking && fromShape === 'listening';
     DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
     DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
-    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic') && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
+    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic' || shape === 'agent-circle')
+      && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic' || fromShape === 'agent-circle');
     const goingHome = enteringHomeLike;
     if (goingHome) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);

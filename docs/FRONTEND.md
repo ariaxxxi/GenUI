@@ -83,8 +83,9 @@ Use `celestialSelectedPresetForRenderShape()` for preset routing.
 | Render shape | Preset |
 | --- | --- |
 | `pill` | `pill` |
+| `skill-pill` | `pill` |
 | `orb`, `listening`, `magic`, `ai` | `orb` |
-| `chip`, `list`, `dot`, `circle` | `list` |
+| `chip`, `list`, `dot`, `circle`, `agent-circle` | `list` |
 | `card`, `card-s`, `image`, `card-form`, `card-list` | `card` |
 | unknown | `chip` |
 
@@ -158,6 +159,7 @@ Layer timing:
 - The prototype editor is coordinated by `src/tool/index-app.js`.
 - Sidebar rendering and editing belong in `src/shared/sidebar*.js`.
 - Stage data normalization belongs in `src/shapes.js` and `src/shared/scenario-data.js`.
+- Prototype AI debug may use internal render shapes `skill-pill` and `agent-circle`; they are morph/render internals and must not be exposed as normal stage-library shapes.
 - Stage buttons support double-click inline rename; single-click selection must still work after the double-click guard delay.
 - Scenario buttons support the same double-click inline rename pattern.
 - List stage controls must include list item +/- controls and bottom orb toggle/icon settings in the Stage Components tab.
