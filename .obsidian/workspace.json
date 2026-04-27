@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/PLANS.md",
+                "file": "docs/exec-plans/active/current.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "PLANS"
+              "title": "current"
             }
           }
         ]
@@ -185,6 +185,7 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
+    "docs/PLANS.md",
     "src/shared/ai-orb-icon.js",
     "assets/Bixby.png",
     "assets/dragon-studio-mouse-click-346047.mp3",
@@ -208,7 +209,6 @@
     "docs/RELIABILITY.md",
     "docs/QUALITY_SCORE.md",
     "docs/PRODUCT_SENSE.md",
-    "docs/PLANS.md",
     "docs/design-docs/index.md",
     "docs/design-docs/core-beliefs.md",
     "docs/design-docs/celestial-visual.md",
@@ -230,7 +230,6 @@
     "src/assets/Button Refraction.svg",
     "src/bubble2-page.js",
     "src/styles/bubble2-page.css",
-    "bubble2.html",
     "Untitled.canvas"
   ]
 }

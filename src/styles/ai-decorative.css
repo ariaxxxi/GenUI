@@ -45,16 +45,19 @@ body[data-current-shape="magic"] #drop-main #siri-orb {
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 #drop-main.magic-glow #siri-orb .g-celestial-orb-sphere,
-#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-sphere {
-  animation: ai-orb-thinking-breathe-scale 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-sphere,
+body[data-current-shape="magic"] #drop-main #siri-orb .g-celestial-orb-sphere {
+  animation: ai-orb-thinking-breathe-scale 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite !important;
 }
 #drop-main.magic-glow #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
-#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
-  animation: ai-orb-thinking-breathe-rim 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim,
+body[data-current-shape="magic"] #drop-main #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
+  animation: ai-orb-thinking-breathe-rim 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite !important;
 }
 #drop-main.magic-glow #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight,
-#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
-  animation: ai-orb-thinking-breathe-highlight 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+#drop-main.orb-thinking-bridge #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight,
+body[data-current-shape="magic"] #drop-main #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
+  animation: ai-orb-thinking-breathe-highlight 3.4s cubic-bezier(0.45, 0, 0.55, 1) infinite !important;
 }
 
 @keyframes ai-orb-thinking-breathe-scale {
@@ -65,11 +68,11 @@ body[data-current-shape="magic"] #drop-main #siri-orb {
 @keyframes ai-orb-thinking-breathe-rim {
   0%, 100% {
     box-shadow:
-      inset 13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-rgb) 56%, white 10%),
-      inset -13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 58%, white 9%),
-      inset 0 9px 12px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 34%, var(--g-stage-selected-secondary-rgb)),
-      inset 0 -9px 12px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 36%, var(--g-stage-selected-rgb)),
-      inset 0 0 14px -5px rgba(255, 255, 255, 0.018);
+      inset 13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-rgb) 44%, white 7%),
+      inset -13px 0 16px -6px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 46%, white 6%),
+      inset 0 9px 12px -7px color-mix(in srgb, var(--g-stage-selected-rgb) 24%, var(--g-stage-selected-secondary-rgb)),
+      inset 0 -9px 12px -7px color-mix(in srgb, var(--g-stage-selected-secondary-rgb) 26%, var(--g-stage-selected-rgb)),
+      inset 0 0 14px -5px rgba(255, 255, 255, 0.008);
   }
   50% {
     box-shadow:
@@ -156,16 +159,16 @@ body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celes
 }
 body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-accent-rim {
   box-shadow:
-    inset calc(5px + var(--ai-listening-rim-level) * 9px) 0 calc(4px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
-      color-mix(in srgb, var(--g-stage-selected-rgb) calc(28% + var(--ai-listening-rim-level) * 34%), white calc(6% + var(--ai-listening-rim-level) * 12%)),
-    inset calc(-5px - var(--ai-listening-rim-level) * 9px) 0 calc(4px + var(--ai-listening-rim-level) * 18px) calc(-9px + var(--ai-listening-rim-level) * 3px)
-      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(30% + var(--ai-listening-rim-level) * 34%), white calc(6% + var(--ai-listening-rim-level) * 10%)),
-    inset 0 calc(3px + var(--ai-listening-rim-level) * 6px) calc(3px + var(--ai-listening-rim-level) * 12px) calc(-9px + var(--ai-listening-rim-level) * 2px)
-      color-mix(in srgb, var(--g-stage-selected-rgb) calc(18% + var(--ai-listening-rim-level) * 24%), var(--g-stage-selected-secondary-rgb)),
-    inset 0 calc(-3px - var(--ai-listening-rim-level) * 6px) calc(3px + var(--ai-listening-rim-level) * 12px) calc(-9px + var(--ai-listening-rim-level) * 2px)
-      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(20% + var(--ai-listening-rim-level) * 26%), var(--g-stage-selected-rgb)),
-    inset 0 0 calc(4px + var(--ai-listening-rim-level) * 18px) calc(-7px + var(--ai-listening-rim-level) * 2px)
-      rgba(255, 255, 255, calc(0.02 + var(--ai-listening-rim-level) * 0.06));
+    inset calc(8px + var(--ai-listening-rim-level) * 9px) 0 calc(10px + var(--ai-listening-rim-level) * 18px) calc(-5px + var(--ai-listening-rim-level) * 3px)
+      color-mix(in srgb, var(--g-stage-selected-rgb) calc(52% + var(--ai-listening-rim-level) * 34%), white calc(16% + var(--ai-listening-rim-level) * 12%)),
+    inset calc(-8px - var(--ai-listening-rim-level) * 9px) 0 calc(10px + var(--ai-listening-rim-level) * 18px) calc(-5px + var(--ai-listening-rim-level) * 3px)
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(54% + var(--ai-listening-rim-level) * 34%), white calc(15% + var(--ai-listening-rim-level) * 10%)),
+    inset 0 calc(5px + var(--ai-listening-rim-level) * 6px) calc(8px + var(--ai-listening-rim-level) * 12px) calc(-6px + var(--ai-listening-rim-level) * 2px)
+      color-mix(in srgb, var(--g-stage-selected-rgb) calc(36% + var(--ai-listening-rim-level) * 24%), var(--g-stage-selected-secondary-rgb)),
+    inset 0 calc(-5px - var(--ai-listening-rim-level) * 6px) calc(8px + var(--ai-listening-rim-level) * 12px) calc(-6px + var(--ai-listening-rim-level) * 2px)
+      color-mix(in srgb, var(--g-stage-selected-secondary-rgb) calc(38% + var(--ai-listening-rim-level) * 26%), var(--g-stage-selected-rgb)),
+    inset 0 0 calc(10px + var(--ai-listening-rim-level) * 18px) calc(-4px + var(--ai-listening-rim-level) * 2px)
+      rgba(255, 255, 255, calc(0.12 + var(--ai-listening-rim-level) * 0.06));
   transition: box-shadow 96ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 body[data-current-shape="listening"] #drop-main.listening-orb #siri-orb .g-celestial-orb-selection .g-stage-selected-highlight {
