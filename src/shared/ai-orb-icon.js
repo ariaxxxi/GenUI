@@ -248,8 +248,13 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
     const nextSlot = center.querySelector('.g-celestial-orb-center-slot--next');
     const visual = center.closest('.g-celestial-orb-visual, .bubble2-orb-visual');
     const shell = center.querySelector('.g-celestial-orb-center-shell');
-    const switchDirection = switchMotion === 'swipe' && target.kind === 'icon'
-      ? normalizeSwitchDirection(options.switchDirection || deriveIconSwitchDirection(currentContent?.iconId, target.iconId))
+    const switchDirection = switchMotion === 'swipe'
+      ? normalizeSwitchDirection(
+          options.switchDirection
+          || (target.kind === 'icon'
+            ? deriveIconSwitchDirection(currentContent?.iconId, target.iconId)
+            : DEFAULT_SWITCH_DIRECTION),
+        )
       : '';
     const switchDurationMs = switchMotion === 'swipe' ? SWIPE_SWITCH_DURATION_MS : FADE_SWITCH_DURATION_MS;
     const currentTimer = visual?._orbIconSwitchTimer;

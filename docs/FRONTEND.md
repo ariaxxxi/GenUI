@@ -160,6 +160,11 @@ Layer timing:
 - Sidebar rendering and editing belong in `src/shared/sidebar*.js`.
 - Stage data normalization belongs in `src/shapes.js` and `src/shared/scenario-data.js`.
 - Prototype AI debug may use internal render shapes `skill-pill` and `agent-circle`; they are morph/render internals and must not be exposed as normal stage-library shapes.
+- Prototype AI debug thinking states include:
+  - `thinking`: shared orb + verb stream
+  - `skill`: selected skill chip + looping phrase stream
+  - `agent`: agent circle / shared orb-center switching path
+  - `app`: agent-circle path with Bubble app icon content + `Launching {app name}` stream
 - Stage buttons support double-click inline rename; single-click selection must still work after the double-click guard delay.
 - Scenario buttons support the same double-click inline rename pattern.
 - List stage controls must include list item +/- controls and bottom orb toggle/icon settings in the Stage Components tab.

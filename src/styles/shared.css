@@ -598,6 +598,8 @@
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="icon"] > .g-celestial-orb-center-image,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="icon"] > .g-celestial-orb-center-image,
+.g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="image"] > .g-celestial-orb-center-image,
+.bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="image"] > .g-celestial-orb-center-image,
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--current[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji {
   animation: g-celestial-orb-icon-switch-current-visual 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;
@@ -605,6 +607,8 @@
 
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="icon"] > .g-celestial-orb-center-image,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="icon"] > .g-celestial-orb-center-image,
+.g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="image"] > .g-celestial-orb-center-image,
+.bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="image"] > .g-celestial-orb-center-image,
 .g-celestial-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji,
 .bubble2-orb-visual.is-orb-icon-switching[data-orb-switch-motion="swipe"] .g-celestial-orb-center-slot--next[data-slot-kind="emoji"] > .g-celestial-orb-center-emoji {
   animation: g-celestial-orb-icon-switch-next-visual 650ms cubic-bezier(0.24, 0.27, 0.19, 1) both;

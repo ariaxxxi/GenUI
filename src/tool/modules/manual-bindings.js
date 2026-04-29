@@ -1,4 +1,4 @@
-import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon } from '../../shared/ai-orb-icon.js';
+import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon, syncAiOrbCenterImage } from '../../shared/ai-orb-icon.js';
 
 export function initManualBindings({
   document,
@@ -214,6 +214,44 @@ export function initManualBindings({
       ],
     },
   ];
+  const PROTOTYPE_APPS = [
+    {
+      id: 'chatgpt',
+      label: 'ChatGPT',
+      src: 'src/assets/figma-chatgpt.png',
+      theme: { blobTopCore: 'rgb(247 249 255)', blobTopEdge: 'rgb(228 235 247)', blobBottomCore: 'rgb(255 255 255)', blobBottomEdge: 'rgb(214 223 238)' },
+    },
+    {
+      id: 'health',
+      label: 'Health',
+      src: 'src/assets/figma-health.png',
+      theme: { blobTopCore: 'rgb(173 255 211)', blobTopEdge: 'rgb(88 208 168)', blobBottomCore: 'rgb(125 227 255)', blobBottomEdge: 'rgb(59 143 255)' },
+    },
+    {
+      id: 'maps',
+      label: 'Maps',
+      src: 'src/assets/figma-map.png',
+      theme: { blobTopCore: 'rgb(170 205 255)', blobTopEdge: 'rgb(184 216 255)', blobBottomCore: 'rgb(123 180 255)', blobBottomEdge: 'rgb(37 93 255)' },
+    },
+    {
+      id: 'gemini',
+      label: 'Gemini',
+      src: 'src/assets/figma-gemini.png',
+      theme: { blobTopCore: 'rgb(122 183 255)', blobTopEdge: 'rgb(121 114 255)', blobBottomCore: 'rgb(203 178 255)', blobBottomEdge: 'rgb(108 64 255)' },
+    },
+    {
+      id: 'notes',
+      label: 'Notes',
+      src: 'src/assets/figma-note.png',
+      theme: { blobTopCore: 'rgb(255 182 182)', blobTopEdge: 'rgb(255 112 112)', blobBottomCore: 'rgb(255 146 111)', blobBottomEdge: 'rgb(209 63 63)' },
+    },
+    {
+      id: 'weather',
+      label: 'Weather',
+      src: 'src/assets/figma-weather.png',
+      theme: { blobTopCore: 'rgb(171 219 255)', blobTopEdge: 'rgb(85 157 255)', blobBottomCore: 'rgb(123 180 255)', blobBottomEdge: 'rgb(37 93 255)' },
+    },
+  ];
   const multiAgentRow = document.getElementById('prototype-multi-agent-row');
   const thinkingStateRow = document.getElementById('prototype-thinking-state-row');
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
@@ -224,6 +262,10 @@ export function initManualBindings({
     mode: 'thinking',
     familyActive: getPrototypeAiDebugState?.()?.active === true,
     activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
+    activeAppId: PROTOTYPE_APPS[0]?.id || '',
+    pendingSkillTransitionText: '',
+    pendingAppVisualSync: null,
+    pendingAppTransitionText: '',
     pendingAgentVisualSync: null,
     pendingAgentTransitionText: '',
     streamToken: 0,
@@ -253,7 +295,13 @@ export function initManualBindings({
   const skillChipMeasureCanvas = document.createElement('canvas');
   const skillChipMeasureContext = skillChipMeasureCanvas.getContext('2d');
   const aiAgentSequence = Object.keys(AI_ORB_ICON_OPTIONS);
+  const prototypeAppSequence = PROTOTYPE_APPS.map((item) => item.id);
   const getSkillById = (id) => PROTOTYPE_SKILLS.find((item) => item.id === id) || PROTOTYPE_SKILLS[0];
+  const getAppById = (id) => PROTOTYPE_APPS.find((item) => item.id === id) || PROTOTYPE_APPS[0];
+  const getSkillTransitionText = (skill) => {
+    const baseLabel = String(skill?.label || 'Skill').replace(/\s+Agent$/i, '').trim() || 'Skill';
+    return `Using ${baseLabel} skill`;
+  };
   const getSkillRenderContent = (skill) => ({
     icon: createIcon('emoji', skill?.emoji || '✨'),
     primary: skill?.label || 'Skill Agent',
@@ -271,6 +319,13 @@ export function initManualBindings({
       typography: agentDebugTypography,
     };
   };
+  const getAppRenderContent = (app = getAppById()) => ({
+    icon: createIcon('image', app?.src || ''),
+    primary: '',
+    secondary: '',
+    detail: '',
+    typography: agentDebugTypography,
+  });
   const measureSkillChipLabelWidth = (label) => {
     const text = String(label || '').trim();
     if (!text) return 0;
@@ -314,6 +369,18 @@ export function initManualBindings({
     const length = aiAgentSequence.length;
     const currentIndex = getAgentIndex(currentId);
     return aiAgentSequence[(currentIndex + step + length) % length] || aiAgentSequence[0];
+  };
+  const getAppIndex = (id) => Math.max(0, prototypeAppSequence.indexOf(String(id || '').trim().toLowerCase()));
+  const getAppSwitchDirection = (fromId, toId) => {
+    const currentId = String(fromId || '').trim().toLowerCase();
+    const nextId = String(toId || '').trim().toLowerCase();
+    if (!nextId || currentId === nextId) return 'left';
+    const length = prototypeAppSequence.length;
+    const currentIndex = getAppIndex(currentId);
+    const nextIndex = getAppIndex(nextId);
+    const forwardDistance = (nextIndex - currentIndex + length) % length;
+    const backwardDistance = (currentIndex - nextIndex + length) % length;
+    return forwardDistance <= backwardDistance ? 'right' : 'left';
   };
   const pickDifferentEntry = (items, currentId) => {
     const pool = items.filter((item) => item.id !== currentId);
@@ -494,6 +561,46 @@ export function initManualBindings({
       },
     });
   };
+  const queuePendingSkillTransitionText = (text = '') => {
+    thinkingDebugState.pendingSkillTransitionText = String(text || '').trim();
+  };
+  const flushPendingSkillTransitionText = () => {
+    const text = String(thinkingDebugState.pendingSkillTransitionText || '').trim();
+    thinkingDebugState.pendingSkillTransitionText = '';
+    return text;
+  };
+  const queuePendingAppVisualSync = (app, switchDirection) => {
+    thinkingDebugState.pendingAppVisualSync = app?.src ? {
+      src: app.src,
+      alt: `${app.label} app icon`,
+      theme: app.theme,
+      switchDirection,
+    } : null;
+  };
+  const queuePendingAppTransitionText = (text = '') => {
+    thinkingDebugState.pendingAppTransitionText = String(text || '').trim();
+  };
+  const flushPendingAppVisualSync = () => {
+    const pending = thinkingDebugState.pendingAppVisualSync;
+    if (!pending?.src) return false;
+    thinkingDebugState.pendingAppVisualSync = null;
+    syncAiOrbCenterImage(document, {
+      animate: true,
+      src: pending.src,
+      alt: pending.alt,
+      theme: pending.theme,
+      switchDirection: pending.switchDirection,
+      switchMotion: 'swipe',
+    });
+    return true;
+  };
+  const flushPendingAppTransitionText = () => {
+    const text = String(thinkingDebugState.pendingAppTransitionText || '').trim();
+    thinkingDebugState.pendingAppTransitionText = '';
+    if (!text) return false;
+    void transitionThinkingText(text);
+    return true;
+  };
   const transitionThinkingText = async (text) => {
     const value = String(text || '').trim();
     if (!value) return;
@@ -557,6 +664,21 @@ export function initManualBindings({
     }
     requestAnimationFrame(() => requestAnimationFrame(run));
   };
+  const syncAppOrbVisual = (app, { animate = false, switchDirection = '' } = {}) => {
+    const run = () => syncAiOrbCenterImage(document, {
+      animate,
+      src: app?.src || '',
+      alt: app?.label ? `${app.label} app icon` : '',
+      theme: app?.theme || null,
+      switchDirection,
+      switchMotion: 'swipe',
+    });
+    if (!animate) {
+      run();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  };
   const renderPrototypeDebugMode = ({ reroll = false, explicitAgentId = null, forceRemorph = false } = {}) => {
     const shape = currentPrototypeShape();
     const activeAgentId = loadAiOrbIconId();
@@ -577,9 +699,11 @@ export function initManualBindings({
         ? pickDifferentEntry(PROTOTYPE_SKILLS, thinkingDebugState.activeSkillId)
         : getSkillById(thinkingDebugState.activeSkillId);
       if (!nextSkill) return;
+      const skillTransitionText = getSkillTransitionText(nextSkill);
       thinkingDebugState.activeSkillId = nextSkill.id;
       setThinkingFamilyActive(true);
       setSkillSelectionOverride(nextSkill);
+      queuePendingSkillTransitionText(skillTransitionText);
       if (shape !== 'skill-pill' || reroll || forceRemorph) {
         morphTo('skill-pill', getSkillRenderContent(nextSkill), getSkillChipGeometry(nextSkill));
       }
@@ -587,8 +711,35 @@ export function initManualBindings({
         playSkillChipSquash();
       }
       void runSkillPhraseLoop(nextSkill, {
-        transitionText: (reroll && shape === 'skill-pill' && !forceRemorph) ? `Switching to ${nextSkill.label}` : '',
+        transitionText: skillTransitionText,
       });
+      return;
+    }
+    if (thinkingDebugState.mode === 'app') {
+      const currentApp = getAppById(thinkingDebugState.activeAppId);
+      const nextApp = reroll
+        ? pickDifferentEntry(PROTOTYPE_APPS, currentApp?.id)
+        : currentApp;
+      if (!nextApp) return;
+      const switchDirection = getAppSwitchDirection(currentApp?.id, nextApp.id);
+      const transitionLabel = `Launching ${nextApp.label}`;
+      thinkingDebugState.activeAppId = nextApp.id;
+      setThinkingFamilyActive(true);
+      stopThinkingStream();
+      setSkillSelectionOverride(null);
+      if (shape !== 'agent-circle' || forceRemorph) {
+        queuePendingAppVisualSync(nextApp, switchDirection);
+        queuePendingAppTransitionText(transitionLabel);
+        morphTo('agent-circle', getAppRenderContent(nextApp));
+      } else {
+        queuePendingAppVisualSync(null, '');
+        queuePendingAppTransitionText('');
+        syncAppOrbVisual(nextApp, {
+          animate: true,
+          switchDirection,
+        });
+        void transitionThinkingText(transitionLabel);
+      }
       return;
     }
     const nextAgentId = explicitAgentId || (
@@ -667,11 +818,27 @@ export function initManualBindings({
       const activeSkill = getSkillById(thinkingDebugState.activeSkillId);
       setSkillSelectionOverride(activeSkill);
       syncThinkingStateButtons();
-      void runSkillPhraseLoop(activeSkill);
+      void runSkillPhraseLoop(activeSkill, {
+        transitionText: flushPendingSkillTransitionText(),
+      });
       return;
     }
     if (shape === 'agent-circle') {
       setSkillSelectionOverride(null);
+      if (thinkingDebugState.mode === 'app') {
+        const activeApp = getAppById(thinkingDebugState.activeAppId);
+        const flushedVisual = flushPendingAppVisualSync();
+        const flushedText = flushPendingAppTransitionText();
+        if (!flushedVisual) {
+          syncAppOrbVisual(activeApp, { animate: false });
+        }
+        if (!flushedText) {
+          if (thinkingDebugState.currentText) setThinkingStreamVisible(true);
+          else stopThinkingStream();
+        }
+        syncThinkingStateButtons();
+        return;
+      }
       const flushedVisual = flushPendingAgentVisualSync();
       const flushedText = flushPendingAgentTransitionText();
       if (!flushedVisual) {
@@ -686,6 +853,9 @@ export function initManualBindings({
     }
     if (!inDebugFamily) {
       setSkillSelectionOverride(null);
+      queuePendingSkillTransitionText('');
+      queuePendingAppVisualSync(null, '');
+      queuePendingAppTransitionText('');
       stopThinkingStream();
       syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
       syncThinkingStateButtons();
@@ -900,6 +1070,11 @@ export function initManualBindings({
     }
     if (nextMode === 'agent') {
       thinkingDebugState.mode = 'agent';
+      renderPrototypeDebugMode({ reroll: true });
+      return;
+    }
+    if (nextMode === 'app') {
+      thinkingDebugState.mode = 'app';
       renderPrototypeDebugMode({ reroll: true });
     }
   }));
