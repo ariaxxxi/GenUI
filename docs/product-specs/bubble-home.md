@@ -7,9 +7,11 @@ Bubble Home is a standalone app-cluster home design for future AI home explorati
 ## Core Capabilities
 
 - Render a left-side content-set switcher for Bubble Home.
-- Render a left-side Bubble Home control panel that includes the content-set switcher and a press-scope toggle.
+- Render a left-side Bubble Home control panel that includes the content-set switcher, a press-scope toggle, and a canvas-removal toggle.
 - On desktop, that switcher is docked to the left side of the viewport rather than centered with the canvas row.
 - The press-scope toggle switches Bubble Home between `canvas only` press/pan start and `viewport anywhere except control panel` press/pan start.
+- The canvas-removal toggle hides the visible `420px` canvas frame and switches the viewport background to pure black without changing Bubble Home geometry.
+- In the current Bubble Home defaults, the `agent` tab turns both control toggles on by default, while the `app` tab keeps both toggles off by default.
 - Support scalable named content sets so Bubble Home can swap between different bubble collections without rewriting page logic.
 - Current scaffold sets:
   - `app`

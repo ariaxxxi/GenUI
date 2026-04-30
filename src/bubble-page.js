@@ -699,6 +699,12 @@ function getDefaultBubbleBaseSizeForSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubbleSetDefinition(setId)?.defaultBaseSize || BUBBLE_BASE_SIZE;
 }
 
+function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === 'agent'
+    ? { viewportPanEnabled: true, canvaslessEnabled: true }
+    : { viewportPanEnabled: false, canvaslessEnabled: false };
+}
+
 function findBubbleSlotById(slotId, setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubblesConfigForSet(setId).find((bubble) => bubble.id === slotId) || null;
 }
@@ -732,7 +738,7 @@ function resolveRenderedBubble(slot, setId = state.activeSetId) {
 
 const state = {
   activeSetId: DEFAULT_BUBBLE_SET_ID,
-  viewportPanEnabled: false,
+  ...getBubbleSetControlDefaults(DEFAULT_BUBBLE_SET_ID),
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -777,6 +783,7 @@ const refs = {
   controlPanel: document.querySelector('[data-bubble2-control-panel]'),
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
+  canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
@@ -792,6 +799,7 @@ function init() {
 
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
+  syncCanvaslessUi();
   buildScene();
   updateMeasuredChildChipWidths();
   if (document.fonts?.ready) {
@@ -1187,6 +1195,12 @@ function syncViewportPanToggleUi() {
   refs.viewportPanToggle.checked = state.viewportPanEnabled;
 }
 
+function syncCanvaslessUi() {
+  if (refs.canvaslessToggle) refs.canvaslessToggle.checked = state.canvaslessEnabled;
+  document.body.classList.toggle('is-canvasless', state.canvaslessEnabled);
+  refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
+}
+
 function resetStateForSetSwitch() {
   state.isPressed = false;
   state.hoveredBubble = null;
@@ -1218,8 +1232,13 @@ function switchBubbleSet(nextSetId) {
   const nextSet = getBubbleSetDefinition(nextSetId);
   if (!nextSet || nextSet.id === state.activeSetId) return;
   state.activeSetId = nextSet.id;
+  const nextDefaults = getBubbleSetControlDefaults(nextSet.id);
+  state.viewportPanEnabled = nextDefaults.viewportPanEnabled;
+  state.canvaslessEnabled = nextDefaults.canvaslessEnabled;
   resetStateForSetSwitch();
   syncSetSwitcherUi();
+  syncViewportPanToggleUi();
+  syncCanvaslessUi();
   buildScene();
   updateMeasuredChildChipWidths();
   render();
@@ -1229,6 +1248,7 @@ function bindEvents() {
   refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
+  refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
@@ -1246,6 +1266,13 @@ function handleViewportPanToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.viewportPanEnabled = target.checked;
   syncViewportPanToggleUi();
+}
+
+function handleCanvaslessToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.canvaslessEnabled = target.checked;
+  syncCanvaslessUi();
 }
 
 function shouldStartBubblePress(event) {

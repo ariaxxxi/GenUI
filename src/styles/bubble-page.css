@@ -28,6 +28,10 @@ body.bubble2-page {
   user-select: none;
 }
 
+body.bubble2-page.is-canvasless {
+  background: #000000;
+}
+
 .bubble2-stage {
   position: relative;
   width: 100%;
@@ -216,6 +220,13 @@ body.bubble2-page {
   border: 1px solid var(--bubble2-frame-border);
   background: var(--bubble2-frame-bg);
   box-shadow: var(--bubble2-shadow);
+}
+
+.bubble2-canvas.is-canvasless {
+  overflow: visible;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .bubble2-anchor {

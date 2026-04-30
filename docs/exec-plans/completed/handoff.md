@@ -1,5 +1,21 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble agent-tab control defaults
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added set-specific Bubble Home control defaults so the `agent` tab now turns both toggles on by default, while the `app` tab keeps both toggles off by default.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final set-switch feel and toggle sync still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble canvas-removal toggle
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a Bubble Home control-panel toggle that removes the visible `420px` canvas frame and switches the viewport background to pure black without changing the existing Bubble Home geometry or interaction logic.
+- Files changed: `bubble.html`, `src/styles/bubble-page.css`, `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final canvasless framing and panel contrast still need a human check on `/bubble`.
+
 ## 2026-04-30 - Bubble press-scope toggle
 
 - Completion status: completed with static verification; manual browser pass still recommended.
