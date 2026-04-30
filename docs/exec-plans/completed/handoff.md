@@ -1,5 +1,61 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble Claude scale parity with Spotify slot
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: confirmed the requested app-slot mapping was already in place for the Bubble Home `agent` set, then removed Claude’s local `imageScale: 0.82` override so it matches the Spotify slot’s full-scale image behavior instead of rendering smaller inside the same slot.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so if Claude still looks smaller on `/bubble`, the remaining cause would be padding baked into `assets/agents/Claude-ai-icon.png`.
+
+## 2026-04-30 - Bubble domain pill gap reduction
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: reduced the domain-agent image-to-text gap by `4px` in the Bubble Home `agent` set by moving the pill copy block left from `-8px` to `-12px` on the four domain pills.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final domain pill gap still needs a human check on `/bubble`.
+
+## 2026-04-30 - Bubble domain layout, shell-color, and uncropped-image cleanup
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: restored strict app-slot layout inheritance for the Bubble Home `agent` set, rethemed the four domain shells to match their blue/green/orange/yellow artwork, and disabled circular masking for those domain images in both the field bubble and promoted home orb.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final shell-color feel and uncropped domain-image framing still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble domain agent image replacement
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: replaced the Travel, Fitness, Budget, and Writing emoji graphics in the Bubble Home `agent` set with the requested `assets/agents` images while preserving the existing pill-expansion and promotion behavior.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final contained-image scale and home-orb appearance still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble pill title and subtitle size increase
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: increased Bubble Home top-level pill copy to `20px` titles and `18px` subtitles, and updated the pill width measurement plus CSS fallbacks so the render and sizing paths stay aligned.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final pill fit still needs a human check on `/bubble`.
+
+## 2026-04-30 - Bubble Claude and ChatGPT slot swap
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: swapped the Claude and ChatGPT inherited slot positions inside the Bubble Home `agent` set without changing any other agent bubble content or interactions.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final visual balance still needs a human check on `/bubble`.
+
+## 2026-04-30 - Bubble agent set app-layout inheritance
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: removed the custom `agent`-set slot geometry overrides and made the retained agent bubbles inherit the `app` set slot positions plus default field sizing, so both sets now share the same layout and depth-scaling logic.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final visual balance of Claude and the four domain pills still needs a human check on `/bubble`.
+
 ## 2026-04-30 - Bubble agent pill gap reduction
 
 - Completion status: completed with static verification; manual browser pass still recommended.

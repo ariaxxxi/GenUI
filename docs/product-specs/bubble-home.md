@@ -17,19 +17,21 @@ Bubble Home is a standalone app-cluster home design for future AI home explorati
   - `agent` keeps no child actions on any bubble
 - Render a central app bubble cluster.
 - Round top-level app bubbles use an orb-shell hover treatment: the outer shell stays at the bubble’s full size while the visible bubble content shrinks to `0.75`, and the shell still grows in from `0.8` to full size.
-- In the `agent` set, `Travel agent`, `Fitness agent`, `Budget agent`, and `Writing agent` keep their shell-plus-emoji bubble content at rest, then expand into text pills on hover.
+- In the `agent` set, `Travel agent`, `Fitness agent`, `Budget agent`, and `Writing agent` keep their shell-plus-agent-image bubble content at rest, then expand into text pills on hover.
 - Those expanded pills size from the shared text-width formula for their title/subtitle copy plus pill paddings, so width stays consistent across sets.
-- Those shell-plus-emoji bubbles size their emoji content to `0.6` of the bubble diameter.
-- Those domain-agent bubbles keep a quiet glass shell at rest with no Celestial treatment, then that shell expands into the full hover pill and gains the Celestial treatment only while hovered.
-- In the current `agent` layout, the four domain bubbles use a shared `80px` base size and field-size cap so they stay visually smaller than Claude, ChatGPT, and Gemini.
+- Top-level Bubble Home pill copy uses `20px` title text and `18px` subtitle text, and pill width measurement must use those same text sizes.
+- Those shell-plus-agent-image bubbles render the agent art as contained imagery inside the round bubble before hover expansion.
+- Those domain-agent bubbles keep a quiet glass shell at rest with no Celestial treatment, using shell colors that match the blue, green, orange, and yellow agent art, then that shell expands into the full hover pill and gains the Celestial treatment only while hovered.
+- The `agent` set reuses the `app` set slot positions and open-field sizing rules for the retained bubble ids, so both sets share the same layout and depth-scaling logic.
 - In the `agent` set, `Travel agent`, `Fitness agent`, `Budget agent`, and `Writing agent` are promotable on hover-and-release.
 - `Claude` is promotable in the `agent` set, unlike the non-promotable Spotify slot in `app`.
 - Releasing a promotable round top-level bubble keeps that full bubble-sized shell visible while the bubble content scales down toward `0.45` during the promotion motion into home.
 - Promoted home-orb image content is not circularly masked by default; the Claude promoted image keeps a circular crop as a special-case visual treatment.
+- The four domain-agent images stay uncropped in both the field bubble and the promoted home orb instead of being circularly masked.
 - Pill-shaped top-level bubbles shrink their leading bubble-plus-badge group to `0.8` on hover over `420ms`, using the combined group center as the scale anchor while leaving the pill text expansion behavior intact.
 - While panning the open field, top-level bubbles keep a clearance gap from the home orb instead of being allowed to overlap it.
 - While a top-level pill is expanded in the field, the home orb is pushed away by that same pill geometry with extra clearance so the orb shell does not overlap the pill body.
-- When a promotable domain-agent pill is released, that same shell collapses back from pill width to a circle while the emoji group scales continuously from the hovered `0.8` state down to the `0.45` home-orb target.
+- When a promotable domain-agent pill is released, that same shell collapses back from pill width to a circle while the leading image group scales continuously from the hovered `0.8` state down to the `0.45` home-orb target.
 - When the current home orb demotes back into the field, it returns as a plain round bubble with no inherited pill text from the destination slot.
 - Pill text sits `8px` closer to the thumbnail bubble than the previous spacing baseline.
 - Highlight child bubbles with the shared Celestial selection system.

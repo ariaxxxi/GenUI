@@ -332,6 +332,15 @@ body.bubble2-page {
   z-index: 2;
 }
 
+.bubble2-icon-wrap.is-uncropped {
+  overflow: visible;
+  border-radius: 0;
+}
+
+.bubble2-icon-wrap.is-uncropped .bubble2-icon {
+  border-radius: 0;
+}
+
 .bubble2-icon {
   display: block;
   width: 100%;
@@ -401,7 +410,7 @@ body.bubble2-page {
 .bubble2-pill-title {
   margin: 0;
   color: #ffffff;
-  font-size: var(--bubble2-title-size, 18px);
+  font-size: var(--bubble2-title-size, 20px);
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: 0.02em;
@@ -410,7 +419,7 @@ body.bubble2-page {
 .bubble2-pill-subtitle {
   margin: 0;
   color: rgba(255, 255, 255, 0.76);
-  font-size: var(--bubble2-subtitle-size, 16px);
+  font-size: var(--bubble2-subtitle-size, 18px);
   font-weight: 400;
   line-height: 1.1;
 }
@@ -695,6 +704,12 @@ body.bubble2-page {
 .bubble2-orb-visual.is-promoted-home-claude .g-celestial-orb-center-image {
   border-radius: 999px;
   overflow: hidden;
+}
+
+.bubble2-orb-visual.is-promoted-home-uncropped .g-celestial-orb-center-shell,
+.bubble2-orb-visual.is-promoted-home-uncropped .g-celestial-orb-center-image {
+  border-radius: 0;
+  overflow: visible;
 }
 
 @media (max-width: 760px) {

@@ -98,6 +98,8 @@ const CENTER_PROBE_BASE_Y = CANVAS_CENTER_Y - ORB_CENTER_Y;
 const FALLBACK_ICON = 'src/assets/fallback-icon.png';
 const PILL_TEXT_LEFT_PADDING = 8;
 const PILL_TEXT_RIGHT_PADDING = 24;
+const PILL_TITLE_FONT_SIZE = 20;
+const PILL_SUBTITLE_FONT_SIZE = 18;
 const PILL_TRAILING_ICON_SIZE = 40;
 const PILL_TRAILING_ICON_RIGHT = 18;
 const PILL_ACTION_GAP = 16;
@@ -137,6 +139,10 @@ const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt'])
 const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CLAUDE_AGENT_ASSET = 'assets/agents/Claude-ai-icon.png';
+const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
+const GREEN_AGENT_ASSET = 'assets/agents/green.png';
+const ORANGE_AGENT_ASSET = 'assets/agents/orange.png';
+const YELLOW_AGENT_ASSET = 'assets/agents/yellow.png';
 const CELESTIAL_CHIP_PRESET = celestialSelectedPresetForRenderShape('chip');
 const CELESTIAL_ORB_PRESET = celestialSelectedPresetForRenderShape('orb');
 const NON_PROMOTABLE_BUBBLE_IDS = new Set([1, 3, 4, 5]);
@@ -147,28 +153,28 @@ const CLAUDE_AGENT_THEME = Object.freeze({
   blobBottomEdge: 'rgb(187 110 72)',
 });
 const WRITING_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(126 186 255)',
-  blobTopEdge: 'rgb(92 132 255)',
-  blobBottomCore: 'rgb(197 223 255)',
-  blobBottomEdge: 'rgb(74 102 212)',
+  blobTopCore: 'rgb(255 243 158)',
+  blobTopEdge: 'rgb(255 212 72)',
+  blobBottomCore: 'rgb(255 249 208)',
+  blobBottomEdge: 'rgb(222 176 34)',
 });
 const BUDGET_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(121 255 168)',
-  blobTopEdge: 'rgb(78 214 127)',
-  blobBottomCore: 'rgb(214 255 143)',
-  blobBottomEdge: 'rgb(92 184 74)',
+  blobTopCore: 'rgb(255 204 152)',
+  blobTopEdge: 'rgb(255 144 76)',
+  blobBottomCore: 'rgb(255 228 194)',
+  blobBottomEdge: 'rgb(215 109 39)',
 });
 const FITNESS_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(118 255 199)',
-  blobTopEdge: 'rgb(72 210 165)',
-  blobBottomCore: 'rgb(187 255 229)',
-  blobBottomEdge: 'rgb(54 145 118)',
+  blobTopCore: 'rgb(146 255 191)',
+  blobTopEdge: 'rgb(82 214 134)',
+  blobBottomCore: 'rgb(210 255 176)',
+  blobBottomEdge: 'rgb(82 176 84)',
 });
 const TRAVEL_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(250 252 255)',
-  blobTopEdge: 'rgb(223 232 247)',
-  blobBottomCore: 'rgb(255 255 255)',
-  blobBottomEdge: 'rgb(201 214 234)',
+  blobTopCore: 'rgb(177 222 255)',
+  blobTopEdge: 'rgb(90 164 255)',
+  blobBottomCore: 'rgb(210 232 255)',
+  blobBottomEdge: 'rgb(48 108 226)',
 });
 
 const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
@@ -434,17 +440,32 @@ const APP_BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
+function getAppSetSlotLayout(slotId) {
+  const slot = APP_BUBBLES_CONFIG.find((bubble) => bubble.id === slotId);
+  if (!slot) {
+    return {
+      baseSize: APP_SET_BUBBLE_BASE_SIZE,
+      fieldMaxSize: BUBBLE_MAX_SIZE,
+      x: 0,
+      y: 0,
+      zIndex: 10,
+    };
+  }
+  return {
+    baseSize: slot.baseSize,
+    fieldMaxSize: slot.fieldMaxSize,
+    x: slot.x,
+    y: slot.y,
+    zIndex: slot.zIndex,
+  };
+}
+
 const AGENT_BUBBLES_CONFIG = [
   {
     id: 1,
-    baseSize: 120,
-    fieldMaxSize: 120,
-    x: 0,
-    y: -105,
-    zIndex: 20,
+    ...getAppSetSlotLayout(1),
     img: CLAUDE_AGENT_ASSET,
     fill: true,
-    imageScale: 0.82,
     theme: CLAUDE_AGENT_THEME,
     haloColor: CLAUDE_AGENT_THEME.blobTopCore,
     orbPromotionEnabled: true,
@@ -452,19 +473,14 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 3,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: -79,
-    y: -108,
-    zIndex: 15,
-    graphicKind: 'emoji',
-    emoji: '✈️',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(3),
+    img: BLUE_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Travel Agent',
     pillSubtitle: 'Plan trips',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: TRAVEL_AGENT_THEME,
@@ -474,19 +490,14 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 9,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: 31,
-    y: -165,
-    zIndex: 14,
-    graphicKind: 'emoji',
-    emoji: '📝',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(9),
+    img: YELLOW_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Writing Agent',
     pillSubtitle: 'Polish writing',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: WRITING_AGENT_THEME,
@@ -496,9 +507,7 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 2,
-    x: -69,
-    y: -36,
-    zIndex: 13,
+    ...getAppSetSlotLayout(2),
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
     haloColor: '#ffffff',
@@ -506,9 +515,7 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 8,
-    x: 69,
-    y: -36,
-    zIndex: 14,
+    ...getAppSetSlotLayout(8),
     img: FIGMA_ASSETS.gemini,
     fill: true,
     haloColor: '#A391FB',
@@ -516,19 +523,14 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 5,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: 79,
-    y: -108,
-    zIndex: 16,
-    graphicKind: 'emoji',
-    emoji: '🏃',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(5),
+    img: GREEN_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Fitness Agent',
     pillSubtitle: 'Train smart',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: FITNESS_AGENT_THEME,
@@ -538,19 +540,14 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 6,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: -31,
-    y: -165,
-    zIndex: 10,
-    graphicKind: 'emoji',
-    emoji: '💸',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(6),
+    img: ORANGE_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Budget Agent',
     pillSubtitle: 'Track spending',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: BUDGET_AGENT_THEME,
@@ -631,6 +628,7 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     alt: homeOrbContent.alt || '',
     fill: false,
     imageScale: homeOrbContent.fieldImageScale ?? 0.96,
+    disableCircularImageMask: Boolean(homeOrbContent.disableCircularImageMask),
     isPill: false,
     hoverExpandsToPill: false,
     pillTitle: '',
@@ -660,6 +658,7 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     alt: '',
     fill: Boolean(slot.fill),
     imageScale: slot.imageScale ?? (slot.fill ? 1 : 0.72),
+    disableCircularImageMask: Boolean(slot.disableCircularImageMask),
     isPill: Boolean(slot.isPill),
     hoverExpandsToPill: Boolean(slot.hoverExpandsToPill),
     pillTitle: slot.pillTitle || '',
@@ -938,6 +937,7 @@ function bubbleContentSignature(bubble) {
     img: bubble.img || '',
     fill: Boolean(bubble.fill),
     imageScale: bubble.imageScale ?? '',
+    disableCircularImageMask: Boolean(bubble.disableCircularImageMask),
     isPill: Boolean(bubble.isPill),
     hoverExpandsToPill: Boolean(bubble.hoverExpandsToPill),
     pillTitle: bubble.pillTitle || '',
@@ -984,6 +984,7 @@ function syncBubbleNodeContent(node, bubble) {
 
   const iconWrap = document.createElement('div');
   iconWrap.className = 'bubble2-icon-wrap';
+  iconWrap.classList.toggle('is-uncropped', Boolean(bubble.disableCircularImageMask));
   if (bubble.imageOutlineColor) {
     iconWrap.classList.add('has-inner-outline');
     iconWrap.style.setProperty('--bubble-image-outline-color', bubble.imageOutlineColor);
@@ -1128,6 +1129,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
     && content.graphicKind !== 'emoji'
     && content.img === CLAUDE_AGENT_ASSET;
   visual?.classList.toggle('is-promoted-home-claude', isClaudePromotedImage);
+  visual?.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
   if (content.kind === 'agent-orb') {
     syncAiOrbCenterIcon(root, {
       animate: options.animate,
@@ -1678,8 +1680,8 @@ function render() {
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
       node.pillCopy.style.transitionDuration = bubble.isExpanded ? '' : '0ms';
       node.pillCopy.style.opacity = bubble.isExpanded ? '' : '0';
-      node.pillCopy.style.setProperty('--bubble2-title-size', `${18 / pillContentScale}px`);
-      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${16 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-title-size', `${PILL_TITLE_FONT_SIZE / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${PILL_SUBTITLE_FONT_SIZE / pillContentScale}px`);
       node.pillCopy.style.setProperty('--bubble2-pill-gap', `${4 / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillContentScale}px`);
@@ -2308,8 +2310,8 @@ function resolveBubbleOrbFieldLayout(bubbles, orbNode, iterations = BUBBLE_LAYOU
 }
 
 function measurePillExtraWidth(bubble) {
-  const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 18px "DM Sans"');
-  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '400 16px "DM Sans"');
+  const titleWidth = measureTextWidth(bubble.pillTitle || '', `600 ${PILL_TITLE_FONT_SIZE}px "DM Sans"`);
+  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', `400 ${PILL_SUBTITLE_FONT_SIZE}px "DM Sans"`);
   const leftPadding = bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING;
   const rightPadding = getPillTextRightPadding(bubble);
   return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 10);
