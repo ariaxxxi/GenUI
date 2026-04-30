@@ -73,6 +73,8 @@ const DEFAULT_MOVE_DURATION_MS = 450;
 const ACTIVE_MOVE_DURATION_MS = 250;
 const APPEAR_MOVE_DURATION_MS = 400;
 const DISAPPEAR_MOVE_DURATION_MS = 300;
+const BUBBLE_HOVER_CONTENT_SCALE = 0.8;
+const PILL_HOVER_BUBBLE_SCALE = 0.8;
 const FADE_IN_DURATION_MS = 400;
 const FADE_OUT_DURATION_MS = 300;
 const BUBBLE_ENTER_EASE = 'cubic-bezier(0.22, 1.16, 0.3, 1.02)';
@@ -93,6 +95,7 @@ const PILL_TRAILING_ICON_RIGHT = 18;
 const PILL_ACTION_GAP = 16;
 const CHILD_STAGGER_STEP_MS = 60;
 const CHILD_MENU_HOLD_MS = 1500;
+const CHILD_BUBBLE_TRIGGER_ENABLED = false;
 const CHILD_BUBBLE_SIZE = 80;
 const CHILD_CHIP_FONT_SIZE = 20;
 const CHILD_CHIP_HEIGHT = 48;
@@ -112,6 +115,7 @@ const SWAP_PROMOTED_SHELL_ALPHA_DELAY_MS = 200;
 const SWAP_ORB_BLOOM_OVERSHOOT_MS = 150;
 const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
+const SWAP_DEMOTED_END_SCALE = 0.55;
 const ORB_CENTER_IMAGE_SIZE = 36;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
@@ -173,9 +177,17 @@ function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
   return `<div class="${cls}" data-stage-direction="${direction}" aria-hidden="true"><div class="g-stage-selected-refraction"><div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div><div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div></div><div class="g-stage-selected-sharp-pass"><div class="g-stage-selected-sharp-highlight"></div></div><div class="g-stage-selected-accent-rim"></div><div class="g-stage-selected-highlight"></div><div class="g-stage-selected-highlight-mask"><div class="g-stage-selected-highlight-mask-image"></div></div></div>`;
 }
 
-function applyBubbleCelestialChrome(chromeEl, hostEl, preset, colorOverrides = {}) {
+function applyBubbleCelestialChrome(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null) {
   if (!chromeEl || !hostEl || !preset) return;
-  applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides);
+  applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides, geometryOverride);
+}
+
+function orbGeometryForSize(size) {
+  return {
+    width: size,
+    height: size,
+    radius: size / 2,
+  };
 }
 
 function currentBubbleHomeOrbTheme() {
@@ -477,6 +489,7 @@ const state = {
   homeOrbContent: createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID),
   slotContentById: createInitialSlotContentMap(),
   swapTransition: null,
+  swapResetPending: false,
   panSnapPending: false,
   lastScene: null,
   renderQueued: false,
@@ -619,10 +632,13 @@ function createBubbleNode(bubble, index) {
     bubbleId: bubble.id,
     root,
     inner,
+    visual: null,
     surface: null,
     iconWrap: null,
+    leadingGroup: null,
     pillCopy: null,
     subIcon: null,
+    hoverShell: null,
     shadowEl,
     contentSignature: '',
   };
@@ -654,8 +670,26 @@ function syncBubbleNodeContent(node, bubble) {
   node.contentSignature = signature;
   node.inner.replaceChildren();
 
+  const visual = document.createElement('div');
+  visual.className = 'bubble2-item-visual';
+  node.inner.appendChild(visual);
+
   const surface = document.createElement('div');
   surface.className = `bubble2-surface${bubble.isPill ? ' is-pill' : ''}`;
+
+  if (!bubble.isPill) {
+    const hoverShell = document.createElement('div');
+    hoverShell.className = 'bubble2-hover-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
+    hoverShell.setAttribute('aria-hidden', 'true');
+    hoverShell.innerHTML = `
+      <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
+      ${renderCelestialSelectionChrome('bottom', 'bubble2-hover-shell-selection g-celestial-orb-selection')}
+    `;
+    node.inner.appendChild(hoverShell);
+    node.hoverShell = hoverShell;
+  } else {
+    node.hoverShell = null;
+  }
 
   const iconWrap = document.createElement('div');
   iconWrap.className = 'bubble2-icon-wrap';
@@ -665,7 +699,6 @@ function syncBubbleNodeContent(node, bubble) {
     iconWrap.style.setProperty('--bubble-image-outline-width', `${bubble.imageOutlineWidth ?? 2}px`);
   }
   iconWrap.appendChild(createBubbleGraphic(bubble));
-  surface.appendChild(iconWrap);
 
   let pillCopy = null;
   if (bubble.isPill) {
@@ -716,12 +749,25 @@ function syncBubbleNodeContent(node, bubble) {
       image.draggable = false;
       subIcon.appendChild(image);
     }
-    node.inner.appendChild(subIcon);
   }
 
-  node.inner.appendChild(surface);
+  let leadingGroup = null;
+  if (bubble.isPill) {
+    leadingGroup = document.createElement('div');
+    leadingGroup.className = 'bubble2-pill-leading-group';
+    leadingGroup.appendChild(iconWrap);
+    if (subIcon) leadingGroup.appendChild(subIcon);
+    visual.appendChild(leadingGroup);
+  } else {
+    surface.appendChild(iconWrap);
+    if (subIcon) visual.appendChild(subIcon);
+  }
+
+  visual.appendChild(surface);
+  node.visual = visual;
   node.surface = surface;
   node.iconWrap = iconWrap;
+  node.leadingGroup = leadingGroup;
   node.pillCopy = pillCopy;
   node.subIcon = subIcon;
 }
@@ -996,6 +1042,11 @@ function startBubbleSwap(scene, now) {
     siblingDurationMs: SWAP_SIBLING_DURATION_MS,
     highlightFreezeUntil: now + SWAP_HIGHLIGHT_FREEZE_MS,
     panOffset: { ...scene.panOffset },
+    demotedShellScaleStart: scene.orb?.targetScale ?? 1,
+    demotedShellScaleEnd: SWAP_DEMOTED_END_SCALE,
+    promotedRootScaleEnd: ORB_BASE_SIZE / selectedBubble.baseSize,
+    promotedVisualScaleStart: BUBBLE_HOVER_CONTENT_SCALE,
+    promotedVisualScaleEnd: ORB_CENTER_IMAGE_SIZE / ORB_BASE_SIZE,
     releaseBubbles: scene.bubbles.map(snapshotReleaseBubble),
     promotedContent,
     demotedContent,
@@ -1015,6 +1066,8 @@ function commitBubbleSwap() {
     [transition.selectedBubbleId]: transition.demotedContent,
   };
   state.swapTransition = null;
+  state.closeMotionUntil = 0;
+  state.swapResetPending = true;
   state.panSnapPending = true;
   clearSwapLayer();
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
@@ -1034,6 +1087,41 @@ function scheduleMotionPhaseRender(until) {
   window.setTimeout(() => {
     scheduleRender();
   }, delay);
+}
+
+function findPromotedReleaseBubble(transition) {
+  return transition?.releaseBubbles?.find((bubble) => bubble.id === transition.selectedBubbleId) || null;
+}
+
+function computePromotedSwapMotion(transition, promotedBubble, now) {
+  if (!transition || !promotedBubble) return null;
+  const progress = clamp((now - transition.startedAt) / transition.durationMs, 0, 1);
+  const travel = easeInOutCubic(progress);
+  const lift = Math.sin(Math.min(progress, 1) * Math.PI) * -8;
+  const orbCanvasDestinationX = -transition.panOffset.x;
+  const orbCanvasDestinationY = -transition.panOffset.y;
+  return {
+    progress,
+    currentCenterX: interpolate(promotedBubble.targetX, orbCanvasDestinationX, travel),
+    currentCenterY: interpolate(promotedBubble.targetY, orbCanvasDestinationY, travel) + lift,
+    rootScale: interpolate(promotedBubble.targetScale, transition.promotedRootScaleEnd, travel),
+    visualScale: interpolate(transition.promotedVisualScaleStart, transition.promotedVisualScaleEnd, travel),
+  };
+}
+
+function computeDemotedSwapMotion(transition, now) {
+  if (!transition) return null;
+  const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
+  return {
+    centerX: 0,
+    centerY: 0,
+    shellScale: interpolate(
+      transition.demotedShellScaleStart ?? 1,
+      transition.demotedShellScaleEnd ?? SWAP_DEMOTED_END_SCALE,
+      demotedProgress,
+    ),
+    opacity: 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / 220, 0, 1)),
+  };
 }
 
 function render() {
@@ -1057,6 +1145,8 @@ function render() {
   }
   const isInitialReveal = state.isPressed && now < state.openMotionUntil;
   const isSwapActive = Boolean(state.swapTransition?.active);
+  const isPostSwapReset = state.swapResetPending;
+  const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
 
   refs.panLayer.style.transitionDuration = panTransitionDuration;
@@ -1071,10 +1161,13 @@ function render() {
     syncBubbleNodeContent(node, bubble);
 
     const isHovered = scene.hoveredId === bubble.id;
+    const isPromoting = bubble.swapState === 'promoting';
+    const isRoundHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
     const isAppearing = isInitialReveal;
     const isSwapFade = bubble.swapState === 'fade';
     const isSwapHidden = bubble.swapState === 'hidden';
     const isReturning = !isSwapActive && !state.isPressed && now < state.closeMotionUntil;
+    const isForcedHiddenReset = isPostSwapReset && !state.isPressed && !isSwapActive;
     const staggerDelay = isSwapFade
       ? (node.index * BUBBLE_STAGGER_STEP_MS)
       : ((isAppearing || isReturning)
@@ -1104,7 +1197,7 @@ function render() {
       : (isReturning ? BUBBLE_EXIT_EASE : 'ease-out')));
     const translateX = bubble.targetX - bubble.baseSize / 2;
     const translateY = bubble.targetY - bubble.baseSize / 2;
-    node.root.style.zIndex = String(isHovered ? 50 : bubble.zIndex);
+    node.root.style.zIndex = String(isPromoting ? 60 : (isHovered ? 50 : bubble.zIndex));
     node.root.style.width = `${format(bubble.targetWidth)}px`;
     node.root.style.height = `${format(bubble.baseSize)}px`;
     const isContextParent = state.childMenuParentId === bubble.id;
@@ -1112,24 +1205,30 @@ function render() {
     const anyHovered = scene.hoveredId != null;
     const isHoverDimmed = anyHovered && !isHovered;
     const bubbleOpacity = isDimmed ? CHILD_DIMMED_OPACITY : isHoverDimmed ? 0.6 : 1;
-    node.root.style.opacity = state.isPressed
+    node.root.style.opacity = isPromoting
+      ? '1'
+      : state.isPressed
       ? String(bubbleOpacity)
       : (isSwapActive ? '0' : '0');
     if (node.shadowEl) {
-      const isTightHoverShadow = bubble.hoverShadowMode === 'tight';
-      const accentShadow = (!bubble.isPill && isHovered && bubble.haloColor)
-        ? (isTightHoverShadow
-          ? `0 0 16px 4px ${bubble.haloColor}`
-          : `0 0 20px 8px ${bubble.haloColor}`)
-        : '';
-      node.shadowEl.style.boxShadow = [
-        accentShadow,
-        isHovered
+      if (isRoundHoverShellActive || isPromoting) {
+        node.shadowEl.style.boxShadow = '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
+      } else {
+        const isTightHoverShadow = bubble.hoverShadowMode === 'tight';
+        const accentShadow = (!bubble.isPill && isHovered && bubble.haloColor)
           ? (isTightHoverShadow
-            ? '0 0 28px 12px rgba(0, 0, 0, 0.52)'
-            : '0 0 50px 40px rgba(0, 0, 0, 1)')
-          : '0 15px 35px -5px rgba(0, 0, 0, 0.3)'
-      ].filter(Boolean).join(', ');
+            ? `0 0 16px 4px ${bubble.haloColor}`
+            : `0 0 20px 8px ${bubble.haloColor}`)
+          : '';
+        node.shadowEl.style.boxShadow = [
+          accentShadow,
+          isHovered
+            ? (isTightHoverShadow
+              ? '0 0 28px 12px rgba(0, 0, 0, 0.52)'
+              : '0 0 50px 40px rgba(0, 0, 0, 1)')
+            : '0 15px 35px -5px rgba(0, 0, 0, 0.3)'
+        ].filter(Boolean).join(', ');
+      }
     }
     node.root.style.transform =
       `translate3d(${format(translateX)}px, ${format(translateY)}px, 0) scale(${bubble.targetScale.toFixed(4)})`;
@@ -1138,11 +1237,39 @@ function render() {
       : 'none';
     node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
     node.root.style.transitionDelay = `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
-    node.root.style.transitionDuration = `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
-    node.root.style.transitionTimingFunction = `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
+    node.root.style.transitionDuration = isForcedHiddenReset
+      ? '0ms, 0ms, 0ms, 0ms, 0ms'
+      : isPromoting
+      ? '0ms, 0ms, 0ms, 0ms, 0ms'
+      : `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
+    node.root.style.transitionTimingFunction = isForcedHiddenReset
+      ? 'linear, linear, linear, linear, linear'
+      : isPromoting
+      ? 'linear, linear, linear, linear, linear'
+      : `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
+    node.root.classList.toggle('is-round-hovered', isRoundHoverShellActive);
+    node.root.classList.toggle('is-swap-promoting', isPromoting);
+    if (node.visual) {
+      node.visual.style.transform = `scale(${isPromoting ? bubble.promotedVisualScale : (isRoundHoverShellActive ? BUBBLE_HOVER_CONTENT_SCALE : 1)})`;
+    }
+    if (node.hoverShell) {
+      applyBubbleCelestialChrome(
+        node.hoverShell.querySelector('.bubble2-hover-shell-selection'),
+        node.hoverShell,
+        CELESTIAL_ORB_PRESET,
+        bubble.theme || {},
+        orbGeometryForSize(bubble.baseSize),
+      );
+      node.hoverShell.style.opacity = isPromoting ? '1' : '';
+      node.hoverShell.style.transform = isPromoting ? 'scale(1)' : '';
+    }
 
     node.iconWrap.style.width = `${bubble.baseSize}px`;
     node.iconWrap.style.height = `${bubble.baseSize}px`;
+    node.iconWrap.style.left = '0px';
+    node.iconWrap.style.top = '0px';
+    const pillHoverBubbleScale = bubble.isPill && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
+    node.iconWrap.style.transform = bubble.isPill ? 'scale(1)' : `scale(${pillHoverBubbleScale})`;
     if (!bubble.isPill) {
       node.surface.classList.toggle('is-hovered', isHovered);
     }
@@ -1169,10 +1296,36 @@ function render() {
       const subIconSize = bubble.subIconSize ?? (bubble.baseSize * 0.38);
       const subIconOffsetX = bubble.subIconOffsetX ?? (bubble.baseSize * 0.6);
       const subIconOffsetY = bubble.subIconOffsetY ?? (bubble.baseSize * 0.6);
-      node.subIcon.style.width = `${format(subIconSize)}px`;
-      node.subIcon.style.height = `${format(subIconSize)}px`;
-      node.subIcon.style.left = `${format(subIconOffsetX)}px`;
-      node.subIcon.style.top = `${format(subIconOffsetY)}px`;
+      if (node.leadingGroup) {
+        const groupLeft = Math.min(0, subIconOffsetX);
+        const groupTop = Math.min(0, subIconOffsetY);
+        const groupRight = Math.max(bubble.baseSize, subIconOffsetX + subIconSize);
+        const groupBottom = Math.max(bubble.baseSize, subIconOffsetY + subIconSize);
+        node.leadingGroup.style.left = `${format(groupLeft)}px`;
+        node.leadingGroup.style.top = `${format(groupTop)}px`;
+        node.leadingGroup.style.width = `${format(groupRight - groupLeft)}px`;
+        node.leadingGroup.style.height = `${format(groupBottom - groupTop)}px`;
+        node.leadingGroup.style.transform = `scale(${pillHoverBubbleScale})`;
+        node.iconWrap.style.left = `${format(-groupLeft)}px`;
+        node.iconWrap.style.top = `${format(-groupTop)}px`;
+        node.subIcon.style.width = `${format(subIconSize)}px`;
+        node.subIcon.style.height = `${format(subIconSize)}px`;
+        node.subIcon.style.left = `${format(subIconOffsetX - groupLeft)}px`;
+        node.subIcon.style.top = `${format(subIconOffsetY - groupTop)}px`;
+        node.subIcon.style.transform = 'scale(1)';
+      } else {
+        node.subIcon.style.width = `${format(subIconSize)}px`;
+        node.subIcon.style.height = `${format(subIconSize)}px`;
+        node.subIcon.style.left = `${format(subIconOffsetX)}px`;
+        node.subIcon.style.top = `${format(subIconOffsetY)}px`;
+        node.subIcon.style.transform = `scale(${pillHoverBubbleScale})`;
+      }
+    } else if (node.leadingGroup) {
+      node.leadingGroup.style.left = '0px';
+      node.leadingGroup.style.top = '0px';
+      node.leadingGroup.style.width = `${bubble.baseSize}px`;
+      node.leadingGroup.style.height = `${bubble.baseSize}px`;
+      node.leadingGroup.style.transform = `scale(${pillHoverBubbleScale})`;
     }
   }
 
@@ -1225,20 +1378,27 @@ function render() {
 
   if (refs.orb) {
     refs.orb.classList.toggle('is-pressed', state.isPressed);
-    refs.orb.style.transform = 'translate3d(0, 0, 0)';
-    refs.orb.style.opacity = isSwapActive ? '0' : '1';
+    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms' : '';
+    refs.orb.style.transform = demotedSwapMotion
+      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
+      : 'translate3d(0, 0, 0)';
+    refs.orb.style.opacity = demotedSwapMotion ? format(demotedSwapMotion.opacity) : (isSwapActive ? '0' : '1');
   }
 
   if (refs.orbVisual) {
     syncBubbleHomeOrbVisual(refs.orb, { animate: false });
-    refs.orbVisual.style.transitionDuration = `${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms`;
-    refs.orbVisual.style.transform = `translate3d(0, 0, 0) scale(${scene.orb.targetScale.toFixed(4)})`;
+    refs.orbVisual.classList.toggle('is-promoted-home', state.homeOrbContent?.kind !== 'agent-orb');
+    refs.orbVisual.style.transitionDuration = (demotedSwapMotion || state.panSnapPending || state.swapResetPending)
+      ? '0ms'
+      : `${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms`;
+    refs.orbVisual.style.transform = `translate3d(0, 0, 0) scale(${(demotedSwapMotion ? demotedSwapMotion.shellScale : scene.orb.targetScale).toFixed(4)})`;
     refs.orbVisual.style.setProperty('--g-stage-h', `${ORB_BASE_SIZE}px`);
     applyBubbleCelestialChrome(
       refs.orbVisual.querySelector('.bubble2-orb-selection'),
       refs.orbVisual,
       CELESTIAL_ORB_PRESET,
       currentBubbleHomeOrbTheme(),
+      orbGeometryForSize(ORB_BASE_SIZE),
     );
   }
 
@@ -1250,6 +1410,9 @@ function render() {
   }
   if (state.panSnapPending) {
     state.panSnapPending = false;
+  }
+  if (state.swapResetPending) {
+    state.swapResetPending = false;
   }
 }
 
@@ -1471,21 +1634,23 @@ function computeScene(now = performance.now()) {
 
 function computeSwapTransitionScene(now) {
   const transition = state.swapTransition;
-  const freezeHovered = now < transition.highlightFreezeUntil ? transition.selectedBubbleId : null;
+  const promotedBubble = findPromotedReleaseBubble(transition);
+  const promotedMotion = computePromotedSwapMotion(transition, promotedBubble, now);
   return {
     bubbles: transition.releaseBubbles.map((bubble) => ({
       ...bubble,
-      swapState: bubble.id === transition.selectedBubbleId ? 'hidden' : 'fade',
-      targetX: bubble.targetX,
-      targetY: bubble.targetY,
-      targetScale: bubble.id === transition.selectedBubbleId ? bubble.targetScale : 0.2,
+      swapState: bubble.id === transition.selectedBubbleId ? 'promoting' : 'fade',
+      targetX: bubble.id === transition.selectedBubbleId ? promotedMotion?.currentCenterX ?? bubble.targetX : bubble.targetX,
+      targetY: bubble.id === transition.selectedBubbleId ? promotedMotion?.currentCenterY ?? bubble.targetY : bubble.targetY,
+      targetScale: bubble.id === transition.selectedBubbleId ? promotedMotion?.rootScale ?? bubble.targetScale : 0.2,
       targetWidth: bubble.targetWidth ?? bubble.baseSize,
       isExpanded: false,
       expandedExtraSourceWidth: 0,
+      promotedVisualScale: bubble.id === transition.selectedBubbleId ? (promotedMotion?.visualScale ?? transition.promotedVisualScaleStart) : 1,
     })),
     children: [],
     childZone: null,
-    hoveredId: freezeHovered,
+    hoveredId: null,
     hoveredChildId: null,
     orb: {
       id: 'orb',
@@ -1501,74 +1666,7 @@ function clearSwapLayer() {
 
 function syncSwapLayer(now) {
   if (!refs.swapLayer) return;
-  const transition = state.swapTransition;
-  if (!transition?.active) {
-    clearSwapLayer();
-    return;
-  }
-
-  if (!refs.swapLayer.firstElementChild) {
-    refs.swapLayer.appendChild(createSwapPromotedNode());
-    refs.swapLayer.appendChild(createSwapDemotedNode());
-  }
-
-  const promotedNode = refs.swapLayer.querySelector('.bubble2-swap-promoted');
-  const demotedNode = refs.swapLayer.querySelector('.bubble2-swap-demoted');
-  const promotedSphere = promotedNode?.querySelector('.g-celestial-orb-sphere');
-  const promotedSelection = promotedNode?.querySelector('.bubble2-orb-selection');
-  const progress = clamp((now - transition.startedAt) / transition.durationMs, 0, 1);
-  const travel = easeInOutCubic(progress);
-  const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
-  const lift = Math.sin(Math.min(progress, 1) * Math.PI) * -8;
-  const promotedBubble = transition.releaseBubbles.find((bubble) => bubble.id === transition.selectedBubbleId);
-  if (!promotedBubble || !promotedNode || !demotedNode || !promotedSphere || !promotedSelection) return;
-
-  const orbCanvasDestinationX = -transition.panOffset.x;
-  const orbCanvasDestinationY = -transition.panOffset.y;
-  const currentCenterX = promotedBubble.targetX + ((orbCanvasDestinationX - promotedBubble.targetX) * travel);
-  const currentCenterY = promotedBubble.targetY + ((orbCanvasDestinationY - promotedBubble.targetY) * travel) + lift;
-  const demotedLift = Math.sin(demotedProgress * Math.PI) * -4;
-  const demotedStartX = 0;
-  const demotedStartY = 0;
-  const demotedCenterX = demotedStartX + ((promotedBubble.targetX - demotedStartX) * demotedProgress);
-  const demotedCenterY = demotedStartY + ((promotedBubble.targetY - demotedStartY) * demotedProgress) + demotedLift;
-  const shellScale = computeShellBloomScale(
-    now - transition.startedAt,
-    clamp((promotedBubble.sourceDiameter / ORB_BASE_SIZE) * 0.82, 0.52, 0.9),
-  );
-  const promotedShellAlpha = easeOutQuart(
-    clamp(
-      (now - transition.startedAt - SWAP_PROMOTED_SHELL_ALPHA_DELAY_MS) /
-      Math.max(1, transition.durationMs - SWAP_PROMOTED_SHELL_ALPHA_DELAY_MS),
-      0,
-      1,
-    ),
-  );
-  const promotedIconSize = interpolate(
-    promotedBubble.sourceDiameter,
-    ORB_CENTER_IMAGE_SIZE,
-    easeInOutCubic(clamp(progress / 0.72, 0, 1)),
-  );
-  const demotedIconSize = interpolate(ORB_CENTER_IMAGE_SIZE, promotedBubble.sourceDiameter, demotedProgress);
-  const demotedShellOpacity = 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / 220, 0, 1));
-
-  applySwapOrbTheme(promotedNode, transition.promotedContent.theme);
-  applySwapOrbTheme(demotedNode, transition.previousHomeOrbContent.theme);
-  syncSwapOrbContent(promotedNode, transition.promotedContent);
-  syncSwapOrbContent(demotedNode, transition.previousHomeOrbContent);
-
-  promotedNode.style.setProperty('--swap-center-x', `${format(currentCenterX)}px`);
-  promotedNode.style.setProperty('--swap-center-y', `${format(currentCenterY)}px`);
-  promotedNode.style.setProperty('--swap-shell-scale', shellScale.toFixed(4));
-  promotedNode.style.setProperty('--swap-icon-size', `${format(promotedIconSize)}px`);
-  promotedNode.style.setProperty('--swap-rim-drift', `${format(Math.sin(Math.min(progress, 1) * Math.PI) * 2)}px`);
-  promotedSphere.style.opacity = promotedShellAlpha.toFixed(4);
-  promotedSelection.style.opacity = promotedShellAlpha.toFixed(4);
-
-  demotedNode.style.setProperty('--swap-center-x', `${format(demotedCenterX)}px`);
-  demotedNode.style.setProperty('--swap-center-y', `${format(demotedCenterY)}px`);
-  demotedNode.style.setProperty('--swap-icon-size', `${format(demotedIconSize)}px`);
-  demotedNode.style.setProperty('--swap-shell-opacity', format(demotedShellOpacity));
+  clearSwapLayer();
 }
 
 function computeShellBloomScale(elapsedMs, startScale) {
@@ -1611,7 +1709,7 @@ function applySwapOrbTheme(node, theme) {
   if (!node || !theme) return;
   const chrome = node.querySelector('.bubble2-orb-selection');
   const host = node.querySelector('.bubble2-orb-visual');
-  applyBubbleCelestialChrome(chrome, host, CELESTIAL_ORB_PRESET, theme);
+  applyBubbleCelestialChrome(chrome, host, CELESTIAL_ORB_PRESET, theme, orbGeometryForSize(ORB_BASE_SIZE));
 }
 
 function syncSwapOrbContent(node, content) {
@@ -1947,6 +2045,17 @@ function syncChildMenuState(nextHoveredBubbleId) {
     if (state.childMenuParentId != null) {
       state.childMenuParentId = null;
       state.childMenuPointerLock = null;
+      changed = true;
+    }
+    clearChildHoverTimer();
+    return changed;
+  }
+
+  if (!CHILD_BUBBLE_TRIGGER_ENABLED) {
+    if (state.childMenuParentId != null) {
+      state.childMenuParentId = null;
+      state.childMenuPointerLock = null;
+      state.hoveredChildBubble = null;
       changed = true;
     }
     clearChildHoverTimer();

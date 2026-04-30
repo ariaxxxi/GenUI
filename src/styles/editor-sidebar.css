@@ -575,6 +575,27 @@
     0 0 0 1px rgba(255,255,255,0.08) inset,
     0 8px 22px rgba(77, 112, 255, 0.12);
 }
+.prototype-thinking-copy-row {
+  margin-top: 12px;
+  gap: 10px;
+  align-items: flex-start;
+}
+.prototype-thinking-copy-controls {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.prototype-thinking-copy-input {
+  min-height: 40px;
+}
+.prototype-thinking-copy-fire {
+  min-width: 64px;
+}
+.prototype-thinking-copy-fire:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
 .sb-ai-icon-btn {
   min-height: 58px;
   padding: 8px 6px;

@@ -1,82 +1,24 @@
 # Completed Handoff
 
-## Task title
-Prototype thinking skill state becomes a selected pill
+## 2026-04-29 - Prototype custom thinking text fire control
 
-## Completion status
-- Completed with static verification
-- Interactive browser pass still recommended
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a `Custom Text` input plus `Fire` button to the prototype AI Debug panel and wired it to the existing thinking-stream typing path so user-entered text can interrupt the current loop and stream once without changing the active `thinking`, `skill`, `agent`, or `app` visual state.
+- Files changed: `index.html`, `src/tool/modules/manual-bindings.js`, `src/styles/editor-sidebar.css`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact feel of custom fire behavior in `/prototype` still needs a manual check across `thinking`, `skill`, `agent`, and `app`.
 
-## Summary of what was done
-- Reworked prototype thinking debug state handling in `src/tool/modules/manual-bindings.js` so the debug family is tracked independently from the raw render shape.
-- Replaced the old `skill` orb/typing presentation with a normal pill render that uses:
-  - emoji in the icon slot
-  - one primary label such as `Travel Agent` or `Fitness Agent`
-  - shared prototype selected chrome via a prototype selection override
-- Follow-up adjustment: the prototype `skill` surface now behaves like a chip instead of a full-width pill:
-  - smaller height
-  - responsive width based on label length
-  - `20px` primary text
-  - looping thinking text remains visible above the chip
-- Follow-up fix: `skill-pill` now lets `#drop-main` overflow visibly in the prototype editor so the looping text above the chip is not clipped away.
-- Follow-up fix: `skill-pill` and `agent-circle` now share the same vertical centerline, repeated skill rerolls trigger a squash animation again, and `agent-circle` once again uses the shared orb breathing + icon-swipe path instead of a static thumb-only render.
-- Follow-up fix: prototype agent switching now matches listening-mode sequencing:
-  - if already in `agent-circle`, it performs the direct shared orb swipe immediately
-  - if entering `agent-circle` from `skill-pill`, it defers the swipe until the new shape settles so the old orb icon is not overwritten first
-- Follow-up extension: prototype thinking-state debug now includes an `app` mode that duplicates the `agent` state path but swaps the orb-center content to Bubble app assets and types `Launching {app name}`.
-- Changed prototype `agent` mode to render as a non-orb circle with the current agent image inside the normal thumb slot.
-- Kept the shared orb only for true `thinking` and `listening` states.
-- Added internal morph/render shapes:
-  - `skill-pill`
-  - `agent-circle`
-- Routed those internal shapes through shared geometry/layout/preset code so they morph through the normal pipeline instead of using page-local overlays or orb forks.
-- Updated sidebar active-state handling so the outer `Thinking` button stays highlighted while the prototype debug family is in `thinking`, `skill`, `agent`, or `app`.
-- Kept ArrowLeft / ArrowRight agent cycling working in the new `agent-circle` state.
-- Updated durable docs to record the new internal render-shape contract.
+## 2026-04-29 - Bubble release motion continuity
 
-## Files changed
-- `src/tool/modules/manual-bindings.js`
-- `index.html`
-- `src/tool/index-app.js`
-- `src/shared/ai-orb-icon.js`
-- `src/styles/shared.css`
-- `src/shared/morph-layout.js`
-- `src/shared/morph-render.js`
-- `src/shared/celestial-selected-presets.js`
-- `src/shapes.js`
-- `src/styles/editor-layout.css`
-- `ARCHITECTURE.md`
-- `docs/FRONTEND.md`
-- `docs/exec-plans/completed/handoff.md`
-
-## Validation performed
-- `node --check src/tool/modules/manual-bindings.js`
-- `node --check src/tool/index-app.js`
-- `node --check src/shared/morph-layout.js`
-- `node --check src/shared/morph-render.js`
-- `node --check src/shapes.js`
-- `node --check src/shared/celestial-selected-presets.js`
-- `git diff --check`
-
-## Remaining issues / caveats
-- I did not run an interactive browser pass in this turn, so the exact feel of:
-  - `thinking -> skill-pill`
-  - skill chip width changes across labels
-  - looping top text while in `skill-pill`
-  - `skill-pill -> agent-circle`
-  - `skill-pill -> listening`
-  - repeated `skill` rerolls
-  still needs a human check in `index.html`.
-- Skill phrase arrays in `PROTOTYPE_SKILLS` are now used again for the looping top text in `skill-pill`.
-- Prototype `app` mode uses Bubble asset paths and slot-theme colors from the Bubble page for ChatGPT, Health, Maps, Gemini, Notes, and Weather.
-- The new selected chrome in skill mode is driven by a prototype-only selection override in `src/tool/index-app.js` + `src/shared/morph-render.js`; if future prototype debug states need custom selected styling, extend that path instead of forking page-local CSS.
-
-## Recommended next step
-1. Run Prototype Mode locally and verify:
-   - `Thinking -> skill` becomes a selected chip with emoji + `Xxx Agent`
-   - chip width responds to label length
-   - top thinking text keeps looping in skill mode
-   - `Thinking -> app` uses the agent-circle path, swaps in a Bubble app icon, and types `Launching {app name}`
-   - `skill -> agent` becomes a normal circle
-   - `skill -> listening` returns to the shared orb
-   - ArrowLeft / ArrowRight still cycle agents while in `agent-circle`
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: reworked Bubble Home release-on-hover promotion so the selected promotable round bubble remains the visual owner of the promoted motion, keeps its hover shell mounted through release, and shrinks continuously into the final home-orb state without a separate promoted-shell restart.
+- Follow-up adjustment: round top-level bubble hover now shrinks visible content to `0.8`, and the hover scale-down transition duration is longer for a softer settle before release.
+- Follow-up adjustment: pill-shaped top-level bubble hover now scales the leading bubble-plus-badge group down to `0.8` over `420ms` around the group center, while preserving the existing pill text expansion behavior.
+- Follow-up adjustment: the demoted previous home orb now starts from its current pressed size and shrinks/fades out in place as another bubble is released, instead of glitching larger or flying across the field at swap start.
+- Follow-up adjustment: orb-shell chrome on hovered/promoting round bubbles and the home orb now uses stable unscaled geometry during swap motion so the shell does not disappear and respawn mid-release.
+- Follow-up adjustment: after the promotion commit, field bubbles now snap hidden for one reset frame so the demoted content does not reuse the selected field node for a visible second pass or late fly-in.
+- Follow-up adjustment: the home orb visual now also snaps to its final scale on that reset frame, preventing a post-arrival shrink/grow rebound after the promoted bubble reaches home.
+- Follow-up adjustment: committed promoted home orbs now keep a rounded center-image mask and static shell treatment, preventing the final handoff from blinking to a brighter shell or squarer icon shape.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in that turn, so the exact continuity feel at release and the final handoff into the idle home orb still need a human check on `/bubble`.

@@ -91,6 +91,14 @@ body.bubble2-page {
   height: 100%;
 }
 
+.bubble2-item-visual {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transform-origin: center;
+  transition: transform 420ms var(--bubble2-ease);
+}
+
 .bubble2-item-shadow {
   position: absolute;
   inset: 0;
@@ -111,6 +119,43 @@ body.bubble2-page {
     border-color 220ms ease,
     box-shadow 220ms ease,
     background-color 220ms ease;
+}
+
+.bubble2-hover-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  filter: none;
+  transform: scale(0.8);
+  transition:
+    transform 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    opacity 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98);
+}
+
+.bubble2-hover-shell .g-celestial-orb-sphere,
+.bubble2-hover-shell .g-stage-selected-accent-rim,
+.bubble2-hover-shell .g-stage-selected-highlight {
+  animation: none;
+}
+
+.bubble2-hover-shell .g-stage-selected-accent-rim,
+.bubble2-hover-shell .g-stage-selected-highlight {
+  transition: none;
+}
+
+.bubble2-item.is-round-hovered .bubble2-hover-shell {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.bubble2-item.is-swap-promoting .bubble2-item-visual,
+.bubble2-item.is-swap-promoting .bubble2-hover-shell,
+.bubble2-item.is-swap-promoting .bubble2-subicon {
+  transition: none;
 }
 
 
@@ -178,7 +223,20 @@ body.bubble2-page {
   pointer-events: none;
   transform-origin: center;
   transition:
-    transform 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    transform 420ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    left 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    top 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    width 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    height 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98);
+}
+
+.bubble2-pill-leading-group {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  transform-origin: center;
+  transition:
+    transform 420ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     left 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     top 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     width 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
@@ -297,9 +355,9 @@ body.bubble2-page {
   overflow: hidden;
   border-radius: 999px;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
-  transform-origin: top left;
+  transform-origin: center;
   transition:
-    transform 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
+    transform 420ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     width 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     height 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     left 300ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
@@ -492,6 +550,7 @@ body.bubble2-page {
 
 .bubble2-swap-demoted-shell {
   opacity: var(--swap-shell-opacity, 1);
+  transform: scale(var(--swap-demoted-scale, 1));
 }
 
 .bubble2-swap-node .g-celestial-orb-center-shell {
@@ -514,6 +573,40 @@ body.bubble2-page {
   animation: none;
   transform: scale(1) translate3d(0,0,0);
   transition: transform 600ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.bubble2-orb-visual.is-promoted-home .g-celestial-orb-sphere,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-accent-rim,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-highlight,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-sharp-highlight,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-highlight-mask-image,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-blob--top-left,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-blob--bottom-right {
+  animation: none;
+}
+
+.bubble2-orb-visual.is-promoted-home .g-selection-chrome,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-accent-rim,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-highlight,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-sharp-highlight,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-highlight-mask-image,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-blob--top-left,
+.bubble2-orb-visual.is-promoted-home .g-stage-selected-blob--bottom-right,
+.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-halo {
+  transition: none;
+}
+
+.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-shell,
+.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-image {
+  border-radius: 999px;
+}
+
+.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-shell {
+  overflow: hidden;
+}
+
+.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-halo {
+  opacity: 0;
 }
 
 .message-badge {

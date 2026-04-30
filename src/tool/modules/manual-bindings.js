@@ -254,9 +254,12 @@ export function initManualBindings({
   ];
   const multiAgentRow = document.getElementById('prototype-multi-agent-row');
   const thinkingStateRow = document.getElementById('prototype-thinking-state-row');
+  const thinkingCopyRow = document.getElementById('prototype-thinking-copy-row');
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
   const thinkingStream = document.getElementById('prototype-thinking-stream');
   const thinkingStreamText = document.getElementById('prototype-thinking-stream-text');
+  const thinkingCopyInput = document.getElementById('prototype-thinking-copy-input');
+  const thinkingCopyFireBtn = document.getElementById('prototype-thinking-copy-fire');
   const DEBUG_FAMILY_SHAPES = new Set(['magic', 'skill-pill', 'agent-circle']);
   const thinkingDebugState = {
     mode: 'thinking',
@@ -619,6 +622,10 @@ export function initManualBindings({
       button.classList.toggle('active', button.dataset.thinkingState === thinkingDebugState.mode);
     });
   };
+  const syncThinkingCopyFireButton = () => {
+    if (!thinkingCopyFireBtn) return;
+    thinkingCopyFireBtn.disabled = !String(thinkingCopyInput?.value || '').trim();
+  };
   const setSkillSelectionOverride = (skill) => {
     setPrototypeSelectionOverride?.(skill ? {
       enabled: true,
@@ -804,6 +811,7 @@ export function initManualBindings({
     setThinkingFamilyActive(inDebugFamily);
     multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'agent-circle' && thinkingDebugState.mode === 'agent'));
     thinkingStateRow?.classList.toggle('hidden', !inDebugFamily);
+    thinkingCopyRow?.classList.toggle('hidden', !inDebugFamily);
     if (shape === 'magic') {
       setSkillSelectionOverride(null);
       if (thinkingDebugState.mode !== 'thinking') {
@@ -1078,6 +1086,21 @@ export function initManualBindings({
       renderPrototypeDebugMode({ reroll: true });
     }
   }));
+  const fireCustomThinkingText = () => {
+    const text = String(thinkingCopyInput?.value || '').trim();
+    if (!text || !isDebugFamilyShape()) return;
+    void transitionThinkingText(text);
+    if (thinkingCopyInput) thinkingCopyInput.value = '';
+    syncThinkingCopyFireButton();
+  };
+  thinkingCopyInput?.addEventListener('input', syncThinkingCopyFireButton);
+  thinkingCopyInput?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    fireCustomThinkingText();
+  });
+  thinkingCopyFireBtn?.addEventListener('click', fireCustomThinkingText);
+  syncThinkingCopyFireButton();
 
   new MutationObserver(syncPrototypeAiDebugPanels).observe(document.body, {
     attributes: true,
