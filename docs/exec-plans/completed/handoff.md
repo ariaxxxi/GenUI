@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble domain promotion continuity
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: updated domain-agent promotion so the hovered pill now promotes from its actual `0.8` hovered emoji-group scale, while the same shell collapses smoothly back from pill width to a circle on its way into the home orb.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact collapse timing and final visual continuity on `/bubble` still need a human check.
+
 ## 2026-04-30 - Bubble domain geometry tighten
 
 - Completion status: completed with static verification; manual browser pass still recommended.

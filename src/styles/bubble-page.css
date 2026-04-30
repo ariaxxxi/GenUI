@@ -203,6 +203,14 @@ body.bubble2-page {
     opacity 220ms ease;
 }
 
+.bubble2-surface-selection {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
 .bubble2-hover-shell {
   position: absolute;
   inset: 0;

@@ -430,7 +430,7 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 3,
-    baseSize: 60,
+    baseSize: 80,
     x: -87,
     y: -128,
     zIndex: 15,
@@ -439,7 +439,8 @@ const AGENT_BUBBLES_CONFIG = [
     emojiScale: 1,
     hoverExpandsToPill: true,
     pillTitle: 'Travel agent',
-    pillSubtitle: '',
+    pillSubtitle: 'Plan trips',
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 26,
     theme: TRAVEL_AGENT_THEME,
@@ -448,7 +449,7 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 9,
-    baseSize: 60,
+    baseSize: 80,
     x: 56,
     y: -170,
     zIndex: 14,
@@ -457,7 +458,8 @@ const AGENT_BUBBLES_CONFIG = [
     emojiScale: 1,
     hoverExpandsToPill: true,
     pillTitle: 'Writing agent',
-    pillSubtitle: '',
+    pillSubtitle: 'Write better',
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 26,
     theme: WRITING_AGENT_THEME,
@@ -486,7 +488,7 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 5,
-    baseSize: 60,
+    baseSize: 80,
     x: 110,
     y: -103,
     zIndex: 16,
@@ -495,7 +497,8 @@ const AGENT_BUBBLES_CONFIG = [
     emojiScale: 1,
     hoverExpandsToPill: true,
     pillTitle: 'Fitness agent',
-    pillSubtitle: '',
+    pillSubtitle: 'Train smart',
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 26,
     theme: FITNESS_AGENT_THEME,
@@ -504,7 +507,7 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 6,
-    baseSize: 60,
+    baseSize: 80,
     x: -21,
     y: -179,
     zIndex: 10,
@@ -513,7 +516,8 @@ const AGENT_BUBBLES_CONFIG = [
     emojiScale: 1,
     hoverExpandsToPill: true,
     pillTitle: 'Budget agent',
-    pillSubtitle: '',
+    pillSubtitle: 'Track spend',
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 26,
     theme: BUDGET_AGENT_THEME,
@@ -622,6 +626,7 @@ function createBaseSlotContent(slot) {
     pillTrailingIconRight: slot.pillTrailingIconRight,
     pillTextLeftPadding: slot.pillTextLeftPadding,
     pillTextRightPadding: slot.pillTextRightPadding,
+    pillCopyOffsetX: slot.pillCopyOffsetX,
     pillActionGap: slot.pillActionGap,
     imageOutlineColor: slot.imageOutlineColor,
     imageOutlineWidth: slot.imageOutlineWidth,
@@ -866,6 +871,7 @@ function createBubbleNode(bubble, index) {
     pillCopy: null,
     subIcon: null,
     hoverShell: null,
+    surfaceChrome: null,
     shadowEl,
     contentSignature: '',
   };
@@ -907,9 +913,10 @@ function syncBubbleNodeContent(node, bubble) {
   node.inner.appendChild(visual);
 
   const surface = document.createElement('div');
-  surface.className = 'bubble2-surface';
+  surface.className = `bubble2-surface${bubble.hoverExpandsToPill ? ' g-stage-selected-host' : ''}`;
+  let surfaceChrome = null;
 
-  if (!bubble.isPill) {
+  if (!bubble.isPill && !bubble.hoverExpandsToPill) {
     const hoverShell = document.createElement('div');
     hoverShell.className = 'bubble2-hover-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
     hoverShell.setAttribute('aria-hidden', 'true');
@@ -918,6 +925,11 @@ function syncBubbleNodeContent(node, bubble) {
     node.hoverShell = hoverShell;
   } else {
     node.hoverShell = null;
+  }
+
+  if (bubble.hoverExpandsToPill) {
+    surfaceChrome = createHtmlNode(renderCelestialSelectionChrome('bottom', 'bubble2-surface-selection'));
+    surface.appendChild(surfaceChrome);
   }
 
   const iconWrap = document.createElement('div');
@@ -999,6 +1011,7 @@ function syncBubbleNodeContent(node, bubble) {
   node.leadingGroup = leadingGroup;
   node.pillCopy = pillCopy;
   node.subIcon = subIcon;
+  node.surfaceChrome = surfaceChrome;
 }
 
 function createChildNode(parentBubble, action) {
@@ -1339,7 +1352,9 @@ function startBubbleSwap(scene, now) {
     demotedShellScaleStart: scene.orb?.targetScale ?? 1,
     demotedShellScaleEnd: SWAP_DEMOTED_END_SCALE,
     promotedRootScaleEnd: ORB_BASE_SIZE / selectedBubble.baseSize,
-    promotedVisualScaleStart: BUBBLE_HOVER_CONTENT_SCALE,
+    promotedVisualScaleStart: selectedBubble.hoverExpandsToPill
+      ? PILL_HOVER_BUBBLE_SCALE
+      : BUBBLE_HOVER_CONTENT_SCALE,
     promotedVisualScaleEnd: BUBBLE_RELEASE_CONTENT_SCALE,
     releaseBubbles: scene.bubbles.map(snapshotReleaseBubble),
     promotedContent,
@@ -1460,6 +1475,7 @@ function render() {
 
     const isHovered = scene.hoveredId === bubble.id;
     const isPromoting = bubble.swapState === 'promoting';
+    const isPromotingDomainPill = isPromoting && bubble.hoverExpandsToPill;
     const isHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
     const isRoundVisualScaleActive = (isHovered && !usesPillInteraction) || isPromoting;
     const isAppearing = isInitialReveal;
@@ -1549,26 +1565,27 @@ function render() {
     node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
     if (node.visual) {
-      node.visual.style.transform = `scale(${isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? BUBBLE_HOVER_CONTENT_SCALE : 1)})`;
+      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? BUBBLE_HOVER_CONTENT_SCALE : 1))})`;
+    }
+    if (node.surfaceChrome) {
+      applyBubbleCelestialChrome(
+        node.surfaceChrome,
+        node.surface,
+        CELESTIAL_ORB_PRESET,
+        bubble.theme || {},
+        {
+          width: bubble.targetWidth,
+          height: bubble.baseSize,
+          radius: bubble.baseSize / 2,
+        },
+      );
+      node.surfaceChrome.style.opacity = (isHovered || isPromoting) ? '1' : '0';
     }
     if (node.hoverShell) {
-      const hoverShellGeometry = usesPillInteraction
-        ? {
-            width: bubble.targetWidth,
-            height: bubble.baseSize,
-            radius: bubble.baseSize / 2,
-          }
-        : orbGeometryForSize(bubble.baseSize);
-      applyBubbleHoverShellChrome(node.hoverShell, bubble.theme, hoverShellGeometry);
-      if (usesPillInteraction) {
-        node.hoverShell.style.inset = '0';
-        node.hoverShell.style.width = `${bubble.targetWidth}px`;
-        node.hoverShell.style.height = `${bubble.baseSize}px`;
-      } else {
-        node.hoverShell.style.inset = '0';
-        node.hoverShell.style.width = '';
-        node.hoverShell.style.height = '';
-      }
+      applyBubbleHoverShellChrome(node.hoverShell, bubble.theme, orbGeometryForSize(bubble.baseSize));
+      node.hoverShell.style.inset = '0';
+      node.hoverShell.style.width = '';
+      node.hoverShell.style.height = '';
       node.hoverShell.style.opacity = isPromoting ? '1' : '';
       node.hoverShell.style.transform = isPromoting ? 'scale(1)' : '';
     }
@@ -1578,8 +1595,11 @@ function render() {
     node.iconWrap.style.left = '0px';
     node.iconWrap.style.top = '0px';
     const pillHoverBubbleScale = usesPillInteraction && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
-    node.iconWrap.style.transform = usesPillInteraction ? 'scale(1)' : `scale(${pillHoverBubbleScale})`;
+    node.iconWrap.style.transform = isPromotingDomainPill
+      ? 'scale(1)'
+      : (usesPillInteraction ? 'scale(1)' : `scale(${pillHoverBubbleScale})`);
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
+    node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting));
     if (!usesPillInteraction) {
       node.surface.classList.toggle('is-hovered', isHovered);
     } else {
@@ -1589,7 +1609,7 @@ function render() {
 
     if (node.pillCopy) {
       const pillContentScale = Math.max((bubble.targetScale ?? 1), 0.0001);
-      node.pillCopy.style.left = `${bubble.baseSize}px`;
+      node.pillCopy.style.left = `${bubble.baseSize + (bubble.pillCopyOffsetX ?? 0)}px`;
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
       node.pillCopy.style.transitionDuration = bubble.isExpanded ? '' : '0ms';
       node.pillCopy.style.opacity = bubble.isExpanded ? '' : '0';
@@ -1618,7 +1638,7 @@ function render() {
         node.leadingGroup.style.top = `${format(groupTop)}px`;
         node.leadingGroup.style.width = `${format(groupRight - groupLeft)}px`;
         node.leadingGroup.style.height = `${format(groupBottom - groupTop)}px`;
-        node.leadingGroup.style.transform = `scale(${pillHoverBubbleScale})`;
+        node.leadingGroup.style.transform = `scale(${isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale})`;
         node.iconWrap.style.left = `${format(-groupLeft)}px`;
         node.iconWrap.style.top = `${format(-groupTop)}px`;
         node.subIcon.style.width = `${format(subIconSize)}px`;
@@ -1638,7 +1658,7 @@ function render() {
       node.leadingGroup.style.top = '0px';
       node.leadingGroup.style.width = `${bubble.baseSize}px`;
       node.leadingGroup.style.height = `${bubble.baseSize}px`;
-      node.leadingGroup.style.transform = `scale(${pillHoverBubbleScale})`;
+      node.leadingGroup.style.transform = `scale(${isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale})`;
     }
     if (node.leadingGroup) {
       node.leadingGroup.style.opacity = '1';
@@ -1956,7 +1976,13 @@ function computeSwapTransitionScene(now) {
       targetX: bubble.id === transition.selectedBubbleId ? promotedMotion?.currentCenterX ?? bubble.targetX : bubble.targetX,
       targetY: bubble.id === transition.selectedBubbleId ? promotedMotion?.currentCenterY ?? bubble.targetY : bubble.targetY,
       targetScale: bubble.id === transition.selectedBubbleId ? promotedMotion?.rootScale ?? bubble.targetScale : 0.2,
-      targetWidth: bubble.targetWidth ?? bubble.baseSize,
+      targetWidth: bubble.id === transition.selectedBubbleId
+        ? interpolate(
+            bubble.targetWidth ?? bubble.baseSize,
+            bubble.baseSize,
+            easeInOutCubic(promotedMotion?.progress ?? 0),
+          )
+        : (bubble.targetWidth ?? bubble.baseSize),
       isExpanded: false,
       expandedExtraSourceWidth: 0,
       promotedVisualScale: bubble.id === transition.selectedBubbleId ? (promotedMotion?.visualScale ?? transition.promotedVisualScaleStart) : 1,

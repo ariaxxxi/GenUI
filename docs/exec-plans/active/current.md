@@ -47,7 +47,7 @@ On `/bubble`, replace the scaffold `agent` set clone with a distinct agent-focus
 ## Implementation steps
 
 1. Replace the `agent` set clone with an explicit 7-bubble definition that keeps ChatGPT and Gemini, remaps the retained slots to Claude, Travel agent, Fitness agent, Budget agent, and Writing agent, and removes Health and Weather.
-2. Give the four domain bubbles their own `72px` diameters and lower their `y` positions so they sit closer to the larger bubbles below.
+2. Give the four domain bubbles their own `80px` diameters and lower their `y` positions so they sit closer to the larger bubbles below.
 2. Extend bubble content data so field bubbles can render either image or emoji center content.
 3. Add a hover-pill capability separate from the existing app-set pill flag so Travel/Fitness/Budget/Writing keep a non-Celestial shell at rest, then expand that shell into a Celestial hover pill.
 4. Allow Claude to promote in the `agent` set even though the Spotify slot with the same id remains non-promotable in `app`.
@@ -60,7 +60,7 @@ On `/bubble`, replace the scaffold `agent` set clone with a distinct agent-focus
 - Health and Weather are absent in the `agent` set.
 - Claude renders larger than before and can promote on release in the `agent` set.
 - Travel, Fitness, Budget, and Writing render as shell-plus-emoji bubbles at rest, then expand that shell into `XX agent` hover pills with Celestial treatment.
-- The four domain bubbles are `72px` and visibly closer to the lower row than before.
+- The four domain bubbles are `80px` and visibly closer to the lower row than before.
 - ChatGPT and Gemini stay round in the `agent` set and do not expose child actions.
 - The `app` set remains unchanged.
 
