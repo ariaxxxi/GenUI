@@ -226,8 +226,10 @@ export function createMessageSendFlow(ctx) {
     const visibleCount = getComposeMenuVisibleCount();
     if (visibleCount <= 0) return setComposeMenuSelection(-1);
     const deltaUp = Math.max(0, composeMenuPointerOriginY - composeMenuPointerCurrentY);
-    const steps = Math.min(visibleCount, Math.floor(deltaUp / COMPOSE_MENU_POINTER_STEP_PX));
-    const nextIndex = steps <= 0 ? -1 : (visibleCount - steps);
+    const steps = Math.floor(deltaUp / COMPOSE_MENU_POINTER_STEP_PX);
+    const nextIndex = steps <= 0 || steps > visibleCount
+      ? -1
+      : (visibleCount - steps);
     return setComposeMenuSelection(nextIndex);
   }
 
@@ -390,7 +392,7 @@ export function createMessageSendFlow(ctx) {
     }
     if (timers.dots) clearInterval(timers.dots);
     timers.dots = null;
-    if (flow.state === GS.COMPOSE && state !== GS.COMPOSE) {
+    if (flow.state === GS.COMPOSE && state !== GS.COMPOSE && state !== GS.CONFIRM) {
       const field = ctx.C.rich?.querySelector("[data-compose-field]");
       if (field) {
         timers.composeExit = setTimeout(() => {
@@ -809,6 +811,9 @@ export function createMessageSendFlow(ctx) {
     } else {
       flow.showCheck = false;
       flow.msg = "";
+    }
+    if (fromDictation && flow.state === GS.COMPOSE && hadText === willHaveText && willHaveText) {
+      if (render.updateComposeFieldTextOnly?.(text, { magicPending: !!flow.composeChipMagicPending })) return;
     }
     render.render(hadText !== willHaveText);
   }

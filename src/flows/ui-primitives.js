@@ -20,8 +20,8 @@ function normalizeCssColor(value) {
   return `rgb(${text})`;
 }
 
-function renderSelectedChrome() {
-  return `<span class="g-selection-chrome" aria-hidden="true"><span class="g-stage-selected-sharp-pass"><span class="g-stage-selected-sharp-highlight"></span></span><span class="g-stage-selected-accent-rim"></span><span class="g-stage-selected-highlight"></span><span class="g-stage-selected-highlight-mask"><span class="g-stage-selected-highlight-mask-image"></span></span></span>`;
+function renderSelectedChrome(direction = "bottom") {
+  return `<span class="g-selection-chrome" data-stage-direction="${esc(direction || "bottom")}" aria-hidden="true"><span class="g-stage-selected-refraction"><span class="g-stage-selected-blob g-stage-selected-blob--top-left"></span><span class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></span></span><span class="g-stage-selected-sharp-pass"><span class="g-stage-selected-sharp-highlight"></span></span><span class="g-stage-selected-accent-rim"></span><span class="g-stage-selected-highlight-mask"><span class="g-stage-selected-highlight-mask-image"></span></span></span>`;
 }
 
 function renderFlightMetaRow(stops = "", price = "", priceColor = "") {
@@ -134,7 +134,7 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     if (Number.isFinite(Number(item?.yStart))) styleVars.push(`--pill-y-start:${Math.round(Number(item.yStart))}px`);
     if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
     if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
-    return `<div class="g-disambiguation-pill g-stage-selected-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderSelectedChrome()}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
+    return `<div class="g-disambiguation-pill g-stage-selected-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderSelectedChrome(item?.direction || "bottom")}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
   }).join("")}</div>`;
 }
 
@@ -167,8 +167,6 @@ function composeChipMotionVars(index) {
 export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 0 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
   return `<div class="g-compose-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""} ${resolvedVisibleCount > 3 ? "expanded" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
-    const accentRgb = normalizeCssColor(chip?.accentRgb || "255 255 255");
-    const accentSecondaryRgb = normalizeCssColor(chip?.accentSecondaryRgb || accentRgb);
     const motion = composeChipMotionVars(index);
     const styleVars = [
       `--chip-order:${motion.order}`,
@@ -177,8 +175,6 @@ export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = f
       `--chip-travel-start:${motion.travelStart}px`,
       `--chip-travel-end:${motion.travelEnd}px`,
     ];
-    if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
-    if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
     return `<div class="g-compose-chip g-stage-selected-host ${index === selectedIndex ? "selected" : ""} ${index < resolvedVisibleCount ? "is-visible" : ""}" data-chip-id="${esc(chip.id || index)}"${styleAttr}>${renderSelectedChrome()}<span class="g-compose-chip-label">${esc(chip.label || "")}</span></div>`;
   }).join("")}</div>`;
@@ -187,8 +183,6 @@ export function renderComposeChipStack({ chips = [], selectedIndex = 0, open = f
 export function renderFlightRecommendationChipStack({ chips = [], selectedIndex = 0, open = false, closing = false, visibleCount = 1 } = {}) {
   const resolvedVisibleCount = Math.max(0, Math.min(Number(visibleCount) || 0, chips.length));
   return `<div data-glass-body class="g-flight-recommendation-chip-stack ${open ? "open" : ""} ${closing ? "closing" : ""}" data-visible-count="${resolvedVisibleCount}">${chips.map((chip, index) => {
-    const accentRgb = normalizeCssColor(chip?.accentRgb || "244 247 255");
-    const accentSecondaryRgb = normalizeCssColor(chip?.accentSecondaryRgb || accentRgb);
     const motion = composeChipMotionVars(index);
     const styleVars = [
       `--chip-order:${motion.order}`,
@@ -197,8 +191,6 @@ export function renderFlightRecommendationChipStack({ chips = [], selectedIndex 
       `--chip-travel-start:${motion.travelStart}px`,
       `--chip-travel-end:${motion.travelEnd}px`,
     ];
-    if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
-    if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
     const styleAttr = styleVars.length ? ` style="${styleVars.join(";")};"` : "";
     const title = String(chip?.name || chip?.title || "").trim();
     const reason = String(chip?.reason || "").trim();

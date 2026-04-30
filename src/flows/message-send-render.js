@@ -13,6 +13,7 @@ import {
   renderTextBubble,
 } from "./ui-primitives.js";
 import { applyFlowChromeVisibility, measureSuccessToastGeometry, ensureMeasureLayer } from "../shared/flow-toast.js";
+import { applyAiCelestialChrome, clearDirectionalSelectionTimers, syncDirectionalSelection } from "../shared/celestial-selection-chrome.js";
 import { clamp } from "../utils.js";
 
 export function createMessageSendRender({
@@ -44,9 +45,12 @@ export function createMessageSendRender({
   const COMPOSE_FIELD_ACTIVE_H = 94;
   const COMPOSE_FIELD_MAX_H = 220;
   const COMPOSE_FIELD_SIDE_PADDING = 28;
-  const COMPOSE_AWAIT_ORB_SIZE = 50;
+  const COMPOSE_AWAIT_ORB_SIZE = 48;
   const COMPOSE_AWAIT_ORB_GAP = 16;
   const COMPOSE_AWAIT_ORB_SHIFT = COMPOSE_AWAIT_ORB_SIZE + COMPOSE_AWAIT_ORB_GAP;
+  const CONFIRM_LISTENING_ORB_SIZE = 48;
+  const CONFIRM_LISTENING_ORB_GAP = 16;
+  const CONFIRM_LISTENING_ORB_SHIFT = CONFIRM_LISTENING_ORB_SIZE + CONFIRM_LISTENING_ORB_GAP;
   const BOTTOM_ALIGN_STAGE_H = 420;
   let lastContentHeight = 180;
   const DISAMBIGUATION_ENTER_MS = 800;
@@ -65,6 +69,7 @@ export function createMessageSendRender({
   let outgoingDisambiguationTimer = null;
   let composeEntryLockRaf = null;
   let composeEntryLockUntil = 0;
+  const selectionMotionTimers = new Map();
 
   function glassStateShape(state) {
     if (state === GS.IDLE) return "listening";
@@ -91,13 +96,17 @@ export function createMessageSendRender({
 
   function composeGeo() {
     const flow = getFlow();
-    const showAwaitOrb = flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive);
+    const showConfirmListeningOrb = flow.state === GS.CONFIRM;
+    const showComposeAwaitOrb = flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive;
     const hasText = flow.state === GS.CONFIRM
       ? !!String(flow.msg || "").trim()
       : !!String(flow.composeText || "").trim();
     const w = measureComposeFieldWidth(hasText);
     const h = measureComposeFieldHeight(hasText, w);
-    const bottom = COMPOSE_FIELD_BOTTOM - (showAwaitOrb ? COMPOSE_AWAIT_ORB_SHIFT : 0);
+    const orbShift = showConfirmListeningOrb
+      ? CONFIRM_LISTENING_ORB_SHIFT
+      : (showComposeAwaitOrb ? COMPOSE_AWAIT_ORB_SHIFT : 0);
+    const bottom = COMPOSE_FIELD_BOTTOM - orbShift;
     return {
       ...SHAPES["card-form"],
       main: {
@@ -202,7 +211,7 @@ export function createMessageSendRender({
     const dropMain = document.getElementById("drop-main");
     if (!dropMain) return;
     const showComposeAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
-    const showListeningOrb = flow.active && (shape === "listening" || showComposeAwaitOrb);
+    const showListeningOrb = flow.active && ((shape === "listening" && flow.state !== GS.DISAMBIGUATE) || showComposeAwaitOrb);
     const showHomeGlow = flow.active && shape === "magic";
     dropMain.classList.toggle("compose-await-orb", showComposeAwaitOrb);
     dropMain.classList.toggle("listening-orb", showListeningOrb);
@@ -287,6 +296,7 @@ export function createMessageSendRender({
         return;
       }
       releaseComposeEntryLock();
+      C.rich.classList.remove("compose-entering");
       syncComposeFieldSelectionMetrics();
     };
     tick();
@@ -301,6 +311,54 @@ export function createMessageSendRender({
       field.scrollHeight || 0,
     ));
     if (height > 0) field.style.setProperty("--g-stage-h", `${height}px`);
+    return true;
+  }
+
+  function updateComposeFieldTextOnly(text, options = {}) {
+    const flow = getFlow();
+    if (!flow.active || flow.state !== GS.COMPOSE) return false;
+    const field = C.rich.querySelector("[data-compose-field]");
+    const textNode = field?.querySelector("[data-compose-field-text]");
+    if (!field || !textNode) return false;
+    const value = String(text || "");
+    const magicPending = options?.magicPending === true;
+    textNode.textContent = value;
+    textNode.classList.toggle("g-compose-text-pending", magicPending);
+    field.classList.toggle("active", !!value.trim());
+    field.classList.toggle("has-text", !!value.trim());
+    field.classList.toggle("g-compose-field-magic-pending", magicPending);
+    syncComposeFieldSelectionMetrics();
+
+    const shape = glassStateShape(flow.state);
+    const geo = composeGeo();
+    const currentGeo = getCurrentMainGeometry() || {};
+    if (
+      Math.abs(geo.main.w - (Number(currentGeo.w) || 0)) > 1
+      || Math.abs(geo.main.h - (Number(currentGeo.h) || 0)) > 1
+      || Math.abs(geo.main.ty - (Number(currentGeo.ty) || 0)) > 1
+    ) {
+      morphTo(shape, { icon: "", primary: "", secondary: "", detail: "" }, geo);
+    }
+    syncDropMainOrbClasses(shape);
+    applyAiCelestialChrome(document);
+    return true;
+  }
+
+  function syncDirectionalSelectionUi(selector, nextIndex) {
+    const nodes = Array.from(C.rich.querySelectorAll(selector));
+    if (!nodes.length) return false;
+    return syncDirectionalSelection(nodes, nextIndex, selectionMotionTimers, { durationMs: 700 });
+  }
+
+  function clearComposeChipSelection(chips) {
+    const nodes = Array.from(chips || []);
+    if (!nodes.length) return false;
+    clearDirectionalSelectionTimers(selectionMotionTimers);
+    nodes.forEach((chip) => {
+      chip.classList.remove("selected", "deselecting");
+      const chrome = chip.querySelector(".g-selection-chrome");
+      if (chrome) chrome.dataset.stageDirection = "bottom";
+    });
     return true;
   }
 
@@ -463,7 +521,7 @@ export function createMessageSendRender({
     const token = renderToken;
     const shape = glassStateShape(flow.state);
     const showComposeAwaitOrb = flow.active && (flow.state === GS.CONFIRM || (flow.state === GS.COMPOSE && !!flow.composeChipMagicOrbActive));
-    const shouldShowListeningOrb = flow.active && (shape === "listening" || showComposeAwaitOrb);
+    const shouldShowListeningOrb = flow.active && ((shape === "listening" && flow.state !== GS.DISAMBIGUATE) || showComposeAwaitOrb);
     const shouldShowHomeGlow = flow.active && shape === "magic";
     const screenSpec = buildScreenSpec();
     const dropMain = document.getElementById("drop-main");
@@ -474,6 +532,9 @@ export function createMessageSendRender({
     const enteringComposeText = flow.state === GS.COMPOSE && composeHasText && !prevComposeHasText;
     const muteOrbChrome = false;
     composePlaceholderDelayActive = enteringComposeFromDisambiguation && !composeHasText;
+    if (flow.state !== GS.DISAMBIGUATE && flow.state !== GS.COMPOSE) {
+      clearDirectionalSelectionTimers(selectionMotionTimers);
+    }
     document.body.classList.toggle("glass-flow-active", flow.active);
     if (enteringDisambiguation) {
       disambiguationPhase = "entering";
@@ -491,6 +552,7 @@ export function createMessageSendRender({
     const nextContent = buildContent();
     syncRichMarkup(nextContent);
     syncComposeFieldSelectionMetrics();
+    applyAiCelestialChrome(document);
     if (flow.state === GS.DISAMBIGUATE) syncDisambiguationPhaseUi();
     if (flow.sentToastEnterPending && flow.state === GS.SENT) flow.sentToastEnterPending = false;
     prevState = flow.state;
@@ -504,6 +566,17 @@ export function createMessageSendRender({
     dropMain?.classList.toggle("home-glow", shouldShowHomeGlow);
     dropMain?.classList.toggle("flow-orb-muted", muteOrbChrome);
     dropMain?.classList.toggle("sending-orb-fade-in", enteringSendingFromConfirm);
+    if (dropMain) {
+      if (showComposeAwaitOrb) {
+        const bottomOrbSize = flow.state === GS.CONFIRM ? CONFIRM_LISTENING_ORB_SIZE : COMPOSE_AWAIT_ORB_SIZE;
+        dropMain.style.setProperty("--g-compose-await-orb-size", `${bottomOrbSize}px`);
+        dropMain.style.setProperty("--g-compose-await-orb-radius", `${Math.round(bottomOrbSize / 2)}px`);
+      } else {
+        dropMain.style.removeProperty("--g-compose-await-orb-size");
+        dropMain.style.removeProperty("--g-compose-await-orb-radius");
+      }
+    }
+    applyAiCelestialChrome(document);
     C.rich.classList.toggle("visible", flow.active);
     const isComposeSurface = flow.active && (flow.state === GS.COMPOSE || flow.state === GS.CONFIRM);
     C.rich.classList.toggle("glass-active", flow.active && !isComposeSurface);
@@ -641,14 +714,10 @@ export function createMessageSendRender({
       const flow = getFlow();
       if (!flow.active) return false;
       if (flow.state === GS.DISAMBIGUATE) {
-        const pills = C.rich.querySelectorAll(".g-disambiguation-pill");
-        pills.forEach((pill, idx) => pill.classList.toggle("selected", idx === flow.sel));
-        return pills.length > 0;
+        return syncDirectionalSelectionUi(".g-disambiguation-pill", flow.sel);
       }
       if (flow.state === GS.COMPOSE && flow.composeMenuOpen) {
-        const chips = C.rich.querySelectorAll(".g-compose-chip");
-        chips.forEach((chip, idx) => chip.classList.toggle("selected", idx === flow.sel));
-        return chips.length > 0;
+        return syncDirectionalSelectionUi(".g-compose-chip", flow.sel);
       }
       if (flow.state === GS.CONFIRM) {
         renderControls(buildScreenSpec());
@@ -676,8 +745,10 @@ export function createMessageSendRender({
       syncComposeFieldSelectionMetrics();
       chips.forEach((chip, idx) => {
         chip.classList.toggle("is-visible", idx < visibleCount);
-        chip.classList.toggle("selected", idx === flow.sel);
       });
+      if (flow.sel < 0) clearComposeChipSelection(chips);
+      else syncDirectionalSelection(chips, flow.sel, selectionMotionTimers, { durationMs: 700 });
+      applyAiCelestialChrome(document);
       const nextStackRect = stack.getBoundingClientRect();
       const deltaY = previousStackRect.top - nextStackRect.top;
       if (Math.abs(deltaY) >= 1) {
@@ -689,5 +760,6 @@ export function createMessageSendRender({
       }
       return chips.length > 0;
     },
+    updateComposeFieldTextOnly,
   };
 }

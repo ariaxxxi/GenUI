@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Celestial Visual</title>
+  <title>Celestial Toolkit</title>
   <style>
     :root {
       --bg-0: rgba(0, 0, 0, 1);
@@ -410,12 +410,12 @@
       position: absolute;
       top: 0;
       left: 0;
-      width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
-      height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      width: var(--highlight-top-width, 84px);
+      height: var(--highlight-top-height, 84px);
       background-image: url('src/assets/button-highlight-top-left.png');
       background-repeat: no-repeat;
       background-position: left top;
-      background-size: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0)) var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      background-size: 100% 100%;
       mix-blend-mode: screen;
       filter: blur(calc((var(--shell-height, 56px) - 56px) * 0.0328));
       opacity: 0;
@@ -430,8 +430,8 @@
       position: absolute;
       right: 0;
       bottom: 0;
-      width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
-      height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      width: var(--highlight-bottom-width, 96px);
+      height: var(--highlight-bottom-height, 96px);
       pointer-events: none;
       z-index: 4;
     }
@@ -440,11 +440,11 @@
       position: absolute;
       right: 0;
       bottom: 0;
-      width: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0));
-      height: var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      width: var(--highlight-bottom-width, 96px);
+      height: var(--highlight-bottom-height, 96px);
       background-image: url('src/assets/figma-proto-button-highlight-bottom-mask.png');
       background-repeat: no-repeat;
-      background-size: var(--highlight-width, calc(112px + var(--shell-height, 56px) * 1.0)) var(--highlight-height, calc(39px + var(--shell-height, 56px) * 0.5));
+      background-size: 100% 100%;
       background-position: bottom right;
       mix-blend-mode: screen;
       filter: blur(calc((var(--shell-height, 56px) - 56px) * 0.0328));
@@ -1047,9 +1047,9 @@
       blobTopY: -55,
       blobBottomX: 27,
       blobBottomY: 58,
-      highlightTopX: -20,
-      highlightTopY: -15,
-      highlightBottomX: 8,
+      highlightTopX: 0,
+      highlightTopY: 0,
+      highlightBottomX: 0,
       highlightBottomY: 0,
       highlightScale: 100,
       innerGlowBlur: 2,
@@ -1162,9 +1162,9 @@
         blobTopY: -55,
         blobBottomX: 27,
         blobBottomY: 58,
-        highlightTopX: -20,
-        highlightTopY: -15,
-        highlightBottomX: 8,
+        highlightTopX: 0,
+        highlightTopY: 0,
+        highlightBottomX: 0,
         highlightBottomY: 0,
         highlightScale: 100,
         innerGlowBlur: 2,
@@ -1272,27 +1272,35 @@
       };
     }
 
-    function getHighlightLayout(direction) {
+    function getHighlightLayout(direction, topHighlightMetrics, bottomHighlightMetrics) {
       const exitOffsets = {
-        bottom: { x: "0px", y: "22px" },
-        top: { x: "0px", y: "-22px" },
-        left: { x: "-22px", y: "0px" },
-        right: { x: "22px", y: "0px" },
+        bottom: { x: 0, y: 22 },
+        top: { x: 0, y: -22 },
+        left: { x: -22, y: 0 },
+        right: { x: 22, y: 0 },
       };
 
       const offset = exitOffsets[direction] || exitOffsets.bottom;
+      const topAnchor = {
+        x: 10 - (topHighlightMetrics.width / 2) + state.highlightTopX,
+        y: 10 - (topHighlightMetrics.height / 2) + state.highlightTopY,
+      };
+      const bottomAnchor = {
+        x: (bottomHighlightMetrics.width / 2) + state.highlightBottomX,
+        y: (bottomHighlightMetrics.height / 2) + state.highlightBottomY,
+      };
 
       return {
         topStart: {
-          x: `calc(${state.highlightTopX}px + ${offset.x})`,
-          y: `calc(${state.highlightTopY}px + ${offset.y})`,
+          x: `${topAnchor.x + offset.x}px`,
+          y: `${topAnchor.y + offset.y}px`,
         },
-        topEnd: { x: `${state.highlightTopX}px`, y: `${state.highlightTopY}px` },
+        topEnd: { x: `${topAnchor.x}px`, y: `${topAnchor.y}px` },
         bottomStart: {
-          x: `calc(${state.highlightBottomX}px + ${offset.x})`,
-          y: `calc(${state.highlightBottomY}px + ${offset.y})`,
+          x: `${bottomAnchor.x + offset.x}px`,
+          y: `${bottomAnchor.y + offset.y}px`,
         },
-        bottomEnd: { x: `${state.highlightBottomX}px`, y: `${state.highlightBottomY}px` },
+        bottomEnd: { x: `${bottomAnchor.x}px`, y: `${bottomAnchor.y}px` },
       };
     }
 
@@ -1426,10 +1434,19 @@
       targetShell.style.setProperty("--inner-glow-shadow-active", chromeShadows.activeGlow);
       targetShell.style.setProperty("--inner-glow-shadow-inactive", chromeShadows.inactiveGlow);
       targetShell.style.setProperty("--blob-size", `${Math.round(Math.max(height * 1.9, Math.min(width * 0.42, height * 2.4)))}px`);
-      const baseHighlightWidth = 112 + height;
-      const baseHighlightHeight = 39 + (height * 0.5);
-      targetShell.style.setProperty("--highlight-width", `${Math.round(baseHighlightWidth * (state.highlightScale / 100))}px`);
-      targetShell.style.setProperty("--highlight-height", `${Math.round(baseHighlightHeight * (state.highlightScale / 100))}px`);
+      const highlightScale = state.highlightScale / 100;
+      const topHighlightMetrics = {
+        width: Math.round(84 * highlightScale),
+        height: Math.round(84 * highlightScale),
+      };
+      const bottomHighlightMetrics = {
+        width: Math.round(96 * highlightScale),
+        height: Math.round(96 * highlightScale),
+      };
+      targetShell.style.setProperty("--highlight-top-width", `${topHighlightMetrics.width}px`);
+      targetShell.style.setProperty("--highlight-top-height", `${topHighlightMetrics.height}px`);
+      targetShell.style.setProperty("--highlight-bottom-width", `${bottomHighlightMetrics.width}px`);
+      targetShell.style.setProperty("--highlight-bottom-height", `${bottomHighlightMetrics.height}px`);
       const blobLayout = getBlobLayout(direction);
       targetShell.style.setProperty("--blob-top-start-x", blobLayout.topStart.x);
       targetShell.style.setProperty("--blob-top-start-y", blobLayout.topStart.y);
@@ -1440,7 +1457,7 @@
       targetShell.style.setProperty("--blob-bottom-end-x", blobLayout.bottomEnd.x);
       targetShell.style.setProperty("--blob-bottom-end-y", blobLayout.bottomEnd.y);
 
-      const highlightLayout = getHighlightLayout(direction);
+      const highlightLayout = getHighlightLayout(direction, topHighlightMetrics, bottomHighlightMetrics);
       targetShell.style.setProperty("--highlight-top-start-x", highlightLayout.topStart.x);
       targetShell.style.setProperty("--highlight-top-start-y", highlightLayout.topStart.y);
       targetShell.style.setProperty("--highlight-top-end-x", highlightLayout.topEnd.x);

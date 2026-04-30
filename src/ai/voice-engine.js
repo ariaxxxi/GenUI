@@ -1,9 +1,15 @@
 export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz }) {
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
   const VIZ_FADE_IN_MS = 320;
+  const VIZ_NOISE_FLOOR = 0.08;
+  const VIZ_INPUT_ATTACK = 0.18;
+  const VIZ_INPUT_RELEASE = 0.1;
+  const VIZ_DISPLAY_ATTACK = 0.2;
+  const VIZ_DISPLAY_RELEASE = 0.08;
   let dictationStart = 0;
   let vizVisibleSince = 0;
   let vizLevel = 0;
+  let vizInputLevel = 0;
   let ttsSpeaking = false;
   let pausedModeForTts = '';
   let ttsCooldownUntil = 0;
@@ -45,7 +51,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.72;
+      analyser.smoothingTimeConstant = 0.84;
       ctx.createMediaStreamSource(stream).connect(analyser);
       voiceEngine.audioCtx = ctx;
       voiceEngine.analyser = analyser;
@@ -64,10 +70,10 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     const orb = getListeningOrb();
     const dropMain = document.getElementById('drop-main');
     const listeningShape = document.body?.dataset?.currentShape === 'listening';
-    const orbVisible = !!(orb && dropMain && listeningShape && dropMain.classList.contains('listening-orb'));
+    const confirmListeningOrb = !!(dropMain && dropMain.classList.contains('confirm-surface') && dropMain.classList.contains('listening-orb'));
+    const orbVisible = !!(orb && dropMain && dropMain.classList.contains('listening-orb') && (listeningShape || confirmListeningOrb));
     const orbSuppressed = !!(dropMain && (
       dropMain.classList.contains('disambiguation-surface') ||
-      dropMain.classList.contains('confirm-surface') ||
       dropMain.classList.contains('flow-orb-muted')
     ));
     return { orb, dropMain, orbVisible, orbSuppressed };
@@ -130,6 +136,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     if (!voiceEngine.analyser) return;
     if (voiceEngine.vizRaf) cancelAnimationFrame(voiceEngine.vizRaf);
     vizLevel = 0;
+    vizInputLevel = 0;
     vizVisibleSince = 0;
     const data = new Uint8Array(voiceEngine.analyser.frequencyBinCount);
     const tick = () => {
@@ -142,9 +149,14 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       const avg = bins.reduce((sum, value) => sum + value, 0) / Math.max(bins.length, 1);
       const peak = bins.reduce((max, value) => Math.max(max, value), 0);
       const weighted = (avg * 0.62) + (peak * 0.38);
-      const raw = Math.pow(Math.min(weighted / 52, 1), 0.82);
-      const target = raw * voiceVizFade();
-      const response = target > vizLevel ? 0.44 : 0.32;
+      const raw = Math.pow(Math.min(weighted / 72, 1), 0.92);
+      const gated = raw <= VIZ_NOISE_FLOOR
+        ? 0
+        : Math.min((raw - VIZ_NOISE_FLOOR) / (1 - VIZ_NOISE_FLOOR), 1);
+      const inputResponse = gated > vizInputLevel ? VIZ_INPUT_ATTACK : VIZ_INPUT_RELEASE;
+      vizInputLevel += (gated - vizInputLevel) * inputResponse;
+      const target = vizInputLevel * voiceVizFade();
+      const response = target > vizLevel ? VIZ_DISPLAY_ATTACK : VIZ_DISPLAY_RELEASE;
       vizLevel += (target - vizLevel) * response;
       applyVoiceVisualization(vizLevel, []);
       voiceEngine.vizRaf = requestAnimationFrame(tick);
@@ -171,14 +183,15 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
     document.querySelectorAll('.g-action-btn').forEach((btn) => { btn.style.transition = ''; btn.style.boxShadow = ''; });
   }
 
-  function stopVoiceViz() {
+  function stopVoiceViz({ clearOrb = true } = {}) {
     if (voiceEngine.vizRaf) { cancelAnimationFrame(voiceEngine.vizRaf); voiceEngine.vizRaf = null; }
     vizVisibleSince = 0;
-    resetVizStyles({ clearDropMain: true });
+    resetVizStyles({ clearDropMain: true, clearOrb });
   }
 
   function clearVoiceVizStyles() {
     vizVisibleSince = 0;
+    vizInputLevel = 0;
     resetVizStyles({ clearDropMain: true });
   }
 
@@ -283,8 +296,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
       initVoiceAnalyser().then(startVoiceViz);
     } catch {}
   };
-  voiceEngine.stop = function() {
-    stopVoiceViz();
+  voiceEngine.stop = function(options = {}) {
+    const preserveOrbStyles = options?.preserveOrbStyles === true;
+    stopVoiceViz({ clearOrb: !preserveOrbStyles });
     voiceEngine.restartOnEnd = false;
     voiceEngine.mode = 'off';
     if (voiceEngine.recognition && voiceEngine.active) { try { voiceEngine.recognition.stop(); } catch {} }

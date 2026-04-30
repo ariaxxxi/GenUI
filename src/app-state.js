@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   settings: 'genui.settings.v1',
   mode: 'genui.mode.v1',
   aiStage: 'genui.ai-stage.v1',
+  aiOrbIcon: 'genui.ai-orb-icon.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
 };
@@ -81,6 +82,11 @@ export function loadAiStageOverride() {
 export function loadAiVoiceEnabled() {
   const stored = readStoredJson(STORAGE_KEYS.aiVoiceEnabled, null);
   return stored !== false;
+}
+
+export function loadAiOrbIcon() {
+  const stored = readStoredJson(STORAGE_KEYS.aiOrbIcon, null);
+  return typeof stored === 'string' ? stored : 'bixby';
 }
 
 export function loadDisableTextInput() {

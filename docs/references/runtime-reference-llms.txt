@@ -1,0 +1,12 @@
+GenUI runtime reference for LLM agents:
+
+- No frontend framework.
+- No bundler.
+- HTML files import ES modules directly.
+- server.mjs serves static files and local API routes.
+- npm run start starts the local server.
+- Important routes:
+  - / and /prototype -> index.html
+  - /ai -> ai.html
+  - /bubble and /bubble2 -> bubble.html
+- Browser state is stored through src/app-state.js.

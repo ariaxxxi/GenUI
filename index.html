@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>GenUI Sys - Prototype</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<title>Fluid Interface Toolkit</title>
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="src/styles/shared.css"/>
 <link rel="stylesheet" href="src/styles/ai-glass.css"/>
+<link rel="stylesheet" href="src/styles/ai-decorative.css"/>
 <link rel="stylesheet" href="src/styles/editor-layout.css"/>
 <link rel="stylesheet" href="src/styles/editor-sidebar.css"/>
 <link rel="stylesheet" href="src/styles/editor-decorative.css"/>
@@ -137,11 +139,14 @@
         <div class="drop" id="drop-main">
           <div id="home-glow-layer"></div>
           <div id="prototype-stage-selection" aria-hidden="true">
+            <div class="g-stage-selected-refraction">
+              <div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div>
+              <div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div>
+            </div>
             <div class="g-stage-selected-sharp-pass">
               <div class="g-stage-selected-sharp-highlight"></div>
             </div>
             <div class="g-stage-selected-accent-rim"></div>
-            <div class="g-stage-selected-highlight"></div>
             <div class="g-stage-selected-highlight-mask">
               <div class="g-stage-selected-highlight-mask-image"></div>
             </div>
@@ -153,20 +158,9 @@
           <div id="c-detail"></div>
           <img id="c-media" alt=""/>
           <div id="c-rich"></div>
-          <div id="siri-orb">
-            <div class="thinking-orb-visual" aria-hidden="true">
-              <div class="thinking-orb-halo thinking-orb-halo-cloud"></div>
-              <div class="thinking-orb-halo thinking-orb-halo-ring"></div>
-              <div class="thinking-orb-sphere">
-                <div class="thinking-orb-layer thinking-orb-layer-base"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-wash"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-toplight"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-bottomlobe"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-rim"></div>
-                <div class="thinking-orb-layer thinking-orb-layer-grain"></div>
-              </div>
-            </div>
-            <canvas id="siri-canvas"></canvas>
+          <div id="siri-orb"></div>
+          <div id="prototype-thinking-stream" class="hidden" aria-hidden="true">
+            <span id="prototype-thinking-stream-text"></span>
           </div>
         </div>
         <div class="drop" id="drop-left"></div>
@@ -282,24 +276,20 @@
 
 <div id="sidebar">
 
-  <!-- Scenario name — always visible, always editable -->
-  <div class="sb-scenario-header mode-manual-only">
-    <input id="scenario-name" class="sb-input sb-scenario-name-input" type="text" autocomplete="off" spellcheck="false" placeholder="Scenario name"/>
-  </div>
-
   <!-- Tab bar -->
   <div class="sb-tabs mode-manual-only" id="sb-tab-bar">
     <button class="sb-tab active" data-tab="stage" type="button">Stage</button>
     <button class="sb-tab" data-tab="content" type="button">Content</button>
     <button class="sb-tab" data-tab="style" type="button">Style</button>
-    <button class="sb-tab" data-tab="config" type="button">Config</button>
   </div>
 
   <!-- ── Stage tab ── -->
   <div class="sb-tab-panel mode-manual-only" data-panel="stage">
-
-    <div class="sb-row tight">
-      <span class="sb-lbl">Stage</span>
+    <div class="sb-stage-rail">
+      <div class="sb-stage-strip">
+        <span class="sb-lbl">Stages</span>
+        <div class="sb-stage-strip-note">Double-click to rename</div>
+      </div>
       <div class="stage-timeline" id="scenario-shape-row"></div>
     </div>
 
@@ -315,56 +305,13 @@
       </div>
       <button id="stage-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate stage" aria-label="Duplicate stage">⧉</button>
       <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
-      <button id="stage-reset" class="sb-mini-btn icon-btn" type="button" title="Reset stage" aria-label="Reset stage">↻</button>
     </div>
 
-    <div id="stage-config-panel" class="sb-row tight">
-      <label class="sb-lbl" for="stage-name-input">Stage name</label>
-      <input id="stage-name-input" class="sb-input" type="text" autocomplete="off" spellcheck="false"/>
-      <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
-      <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0–120"/>
-      <div class="sb-pair-row">
-        <div class="sb-pair-col">
-          <label class="sb-lbl" for="stage-width-input">Width override</label>
-          <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        </div>
-        <div class="sb-pair-col">
-          <label class="sb-lbl" for="stage-height-input">Height override</label>
-          <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        </div>
-      </div>
-      <div class="sb-pair-row">
-        <div class="sb-pair-col">
-          <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
-          <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        </div>
-        <div class="sb-pair-col">
-          <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
-          <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
-        </div>
-      </div>
-      <div id="stage-card-s-row" class="sb-row tight hidden">
-        <label class="sb-toggle" for="stage-card-s-toggle">
-          <div class="sb-toggle-copy"><strong>Card-S layout</strong></div>
-          <input id="stage-card-s-toggle" class="sb-toggle-input" type="checkbox"/>
-        </label>
-      </div>
-      <div id="stage-list-count-row" class="sb-row tight hidden">
-        <label class="sb-lbl">List chips</label>
-        <div class="sb-btn-row">
-          <button id="stage-list-count-dec" class="sb-mini-btn" type="button">−</button>
-          <div id="stage-list-count-val" class="sb-input" style="text-align:center;pointer-events:none;">3</div>
-          <button id="stage-list-count-inc" class="sb-mini-btn" type="button">+</button>
-        </div>
-      </div>
-      <div id="stage-list-listening-orb-row" class="sb-row tight hidden">
-        <label class="sb-toggle" for="stage-list-listening-orb-toggle">
-          <div class="sb-toggle-copy"><strong>Listening orb</strong></div>
-          <input id="stage-list-listening-orb-toggle" class="sb-toggle-input" type="checkbox"/>
-        </label>
-      </div>
+    <div id="stage-config-panel" class="sb-stage-config">
       <div id="stage-components-panel" class="sb-row tight hidden">
-        <span class="sb-lbl">Components</span>
+        <div class="sb-stage-group-head">
+          <span class="sb-lbl">Components</span>
+        </div>
         <div id="stage-component-controls"></div>
       </div>
       <div id="phone-scene-visible-row" class="sb-row tight hidden">
@@ -384,6 +331,39 @@
         <div class="legacy-grid prototype-ai-debug-grid">
           <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
           <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Thinking</button>
+        </div>
+        <div id="prototype-multi-agent-row" class="sb-row tight prototype-ai-icon-row hidden">
+          <span class="sb-lbl">Multi Agent</span>
+          <div class="prototype-ai-icon-grid" role="group" aria-label="Multi Agent">
+            <button class="sb-shape-btn sb-ai-icon-btn" data-ai-orb-icon="bixby" type="button">
+              <span class="sb-ai-icon-btn__thumb"><img class="sb-ai-icon-btn__thumb-image" src="assets/Bixby.png" alt="Bixby"/></span>
+              <span class="sb-ai-icon-btn__label">Bixby</span>
+            </button>
+            <button class="sb-shape-btn sb-ai-icon-btn" data-ai-orb-icon="gemini" type="button">
+              <span class="sb-ai-icon-btn__thumb"><img class="sb-ai-icon-btn__thumb-image" src="src/assets/figma-gemini.png" alt="Gemini"/></span>
+              <span class="sb-ai-icon-btn__label">Gemini</span>
+            </button>
+            <button class="sb-shape-btn sb-ai-icon-btn" data-ai-orb-icon="chatgpt" type="button">
+              <span class="sb-ai-icon-btn__thumb"><img class="sb-ai-icon-btn__thumb-image" src="src/assets/figma-chatgpt.png" alt="ChatGPT"/></span>
+              <span class="sb-ai-icon-btn__label">ChatGPT</span>
+            </button>
+          </div>
+        </div>
+        <div id="prototype-thinking-state-row" class="sb-row tight prototype-thinking-state-row hidden">
+          <span class="sb-lbl">Thinking State</span>
+          <div class="prototype-thinking-state-grid" role="group" aria-label="Thinking state">
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="thinking" type="button">thinking</button>
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="skill" type="button">skill</button>
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="agent" type="button">agent</button>
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="app" type="button">app</button>
+          </div>
+        </div>
+        <div id="prototype-thinking-copy-row" class="sb-row tight prototype-thinking-copy-row hidden">
+          <span class="sb-lbl">Custom Text</span>
+          <div class="prototype-thinking-copy-controls">
+            <input id="prototype-thinking-copy-input" class="sb-input prototype-thinking-copy-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type custom thinking text"/>
+            <button id="prototype-thinking-copy-fire" class="sb-mini-btn prototype-thinking-copy-fire" type="button" disabled>Fire</button>
+          </div>
         </div>
       </div>
     </div>
@@ -520,14 +500,6 @@
 
   <!-- ── Style tab ── -->
   <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="style">
-
-    <div class="sb-row tight">
-      <label class="sb-toggle" for="stage-phone-blur-toggle">
-        <div class="sb-toggle-copy"><strong>Phone BG blur</strong></div>
-        <input id="stage-phone-blur-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-    </div>
-
     <div class="sb-row tight">
       <label class="sb-toggle" for="stage-selected-toggle">
         <div class="sb-toggle-copy"><strong>Selected</strong></div>
@@ -535,14 +507,92 @@
       </label>
     </div>
 
-    <div class="sb-row tight">
-      <label class="sb-lbl" for="stage-accent-color">Accent primary</label>
-      <input id="stage-accent-color" class="typo-color" type="color" value="#90acff"/>
+    <div id="stage-geometry-section" class="layer-row">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Geometry</span>
+        <span class="layer-row-preview"></span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <div class="sb-stage-grid">
+          <div class="sb-stage-field">
+            <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
+            <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0–120"/>
+          </div>
+          <div class="sb-stage-field">
+            <label class="sb-lbl" for="stage-width-input">Width override</label>
+            <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
+          <div class="sb-stage-field">
+            <label class="sb-lbl" for="stage-height-input">Height override</label>
+            <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
+          <div class="sb-stage-field">
+            <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
+            <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
+          <div class="sb-stage-field">
+            <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
+            <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          </div>
+        </div>
+        <div id="stage-card-s-row" class="sb-row tight hidden">
+          <label class="sb-toggle" for="stage-card-s-toggle">
+            <div class="sb-toggle-copy"><strong>Card-S layout</strong></div>
+            <input id="stage-card-s-toggle" class="sb-toggle-input" type="checkbox"/>
+          </label>
+        </div>
+        <div id="stage-list-count-row" class="sb-row tight hidden">
+          <label class="sb-lbl">List chips</label>
+          <div class="sb-btn-row">
+            <button id="stage-list-count-dec" class="sb-mini-btn" type="button">−</button>
+            <div id="stage-list-count-val" class="sb-input" style="text-align:center;pointer-events:none;">3</div>
+            <button id="stage-list-count-inc" class="sb-mini-btn" type="button">+</button>
+          </div>
+        </div>
+        <div id="stage-list-listening-orb-row" class="sb-row tight hidden">
+          <label class="sb-toggle" for="stage-list-listening-orb-toggle">
+            <div class="sb-toggle-copy"><strong>Bottom circle</strong></div>
+            <input id="stage-list-listening-orb-toggle" class="sb-toggle-input" type="checkbox"/>
+          </label>
+        </div>
+      </div>
     </div>
 
-    <div class="sb-row tight">
-      <label class="sb-lbl" for="stage-accent-secondary-color">Accent secondary</label>
-      <input id="stage-accent-secondary-color" class="typo-color" type="color" value="#9761ff"/>
+    <div class="sb-stage-group">
+      <div class="sb-stage-group-head">
+        <span class="sb-lbl">Accent blobs</span>
+      </div>
+      <div class="sb-stage-grid sb-style-color-grid">
+        <div class="sb-stage-field">
+          <label class="sb-lbl" for="stage-blob-top-core-color">Top-left core</label>
+          <input id="stage-blob-top-core-color" class="typo-color" type="color" value="#90acff"/>
+        </div>
+        <div class="sb-stage-field">
+          <label class="sb-lbl" for="stage-blob-top-edge-color">Top-left edge</label>
+          <input id="stage-blob-top-edge-color" class="typo-color" type="color" value="#9761ff"/>
+        </div>
+        <div class="sb-stage-field">
+          <label class="sb-lbl" for="stage-blob-bottom-core-color">Bottom-right core</label>
+          <input id="stage-blob-bottom-core-color" class="typo-color" type="color" value="#90acff"/>
+        </div>
+        <div class="sb-stage-field">
+          <label class="sb-lbl" for="stage-blob-bottom-edge-color">Bottom-right edge</label>
+          <input id="stage-blob-bottom-edge-color" class="typo-color" type="color" value="#9761ff"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-stage-group">
+      <div class="sb-stage-group-head">
+        <span class="sb-lbl">Refraction mask</span>
+      </div>
+      <div class="sb-stage-grid">
+        <div class="sb-stage-field">
+          <label class="sb-lbl" for="stage-mask-blur-input">Mask blur</label>
+          <input id="stage-mask-blur-input" class="sb-input" type="text" inputmode="decimal" placeholder="Auto"/>
+        </div>
+      </div>
     </div>
 
     <div class="sb-section" data-collapsible="1">
@@ -577,46 +627,6 @@
     </div>
 
   </div>
-
-  <!-- ── Config tab ── -->
-  <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="config">
-
-    <div class="sb-row tight">
-      <label class="sb-lbl" for="scenario-triggers">AI match phrases</label>
-      <textarea id="scenario-triggers" class="sb-textarea" spellcheck="false" placeholder="qr code, boarding pass, check in"></textarea>
-    </div>
-
-    <div class="sb-section collapsed" data-collapsible="1">
-      <button class="sb-section-toggle" type="button">
-        <div class="sb-heading">Legacy / Debug</div>
-        <span class="sb-chevron">▾</span>
-      </button>
-      <div class="sb-section-body">
-        <div class="legacy-grid">
-          <button class="sb-shape-btn active" data-shape="circle" onclick="manualShape('circle')"><span class="sb-shape-num">1</span> Home</button>
-          <button class="sb-shape-btn" data-shape="list" onclick="manualShape('list')"><span class="sb-shape-num">5</span> List</button>
-          <button class="sb-shape-btn" data-shape="split" onclick="manualShape('split')"><span class="sb-shape-num">6</span> Split</button>
-          <button class="sb-shape-btn" data-shape="ai" onclick="manualShape('ai')"><span class="sb-shape-num">8</span> Thinking</button>
-          <button class="sb-shape-btn" data-shape="custom" onclick="openCustom()"><span class="sb-shape-num">7</span> Custom</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="sb-section" data-collapsible="1">
-      <button class="sb-section-toggle" type="button">
-        <div class="sb-heading">Export</div>
-        <span class="sb-chevron">▾</span>
-      </button>
-      <div class="sb-section-body">
-        <div class="sb-btn-row">
-          <button class="sb-mini-btn" type="button" onclick="copyStagePng()">Copy PNG</button>
-          <button class="sb-mini-btn" type="button" onclick="exportStageSvg()" disabled style="opacity:0.3;cursor:not-allowed">Export SVG</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
 
 </div>
 

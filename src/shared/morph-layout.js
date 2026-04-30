@@ -17,8 +17,39 @@ export function createMorphLayout(ctx) {
 
   function contentPos(shape, w, h) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
-    if (shape === 'list') return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
-    if (['circle', 'magic', 'listening', 'dot'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'list') {
+      const scenario = callbacks.selectedScenario?.();
+      const showListOrb = !!callbacks.stageListListeningOrbForShape?.(scenario, scenario?.shape || 'list');
+      return {
+        thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:showListOrb ? 1 : 0 },
+        prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true },
+        sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+        div:{ x:P, y:h/2, dw:0, op:0 },
+        det:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+      };
+    }
+    if (['circle', 'magic', 'listening', 'dot', 'agent-circle'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'skill-pill') {
+      const typography = normalizeTypography(state.contentTypographyState, 'pill');
+      const chipIconSize = 36;
+      const chipIconRadius = '18px';
+      const chipLeft = 18;
+      const chipGap = 10;
+      const chipTextLeft = chipLeft + chipIconSize + chipGap;
+      const chipRightPad = 22;
+      const hasIcon = hasIconContent(state.thumbContentState);
+      const textWidth = Math.max(40, w - chipTextLeft - chipRightPad);
+      const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
+      const iconTop = Math.round((h - chipIconSize) / 2);
+      const primaryTop = Math.round((h - primaryHeight) / 2);
+      return {
+        thumb:{ x:chipLeft, y:iconTop, w:chipIconSize, h:chipIconSize, br:chipIconRadius, op:hasIcon ? 1 : 0 },
+        prim:{ x:chipTextLeft, y:primaryTop, op:1, fs:typography.primary.size, cx:false, w:textWidth },
+        sec:{ x:chipTextLeft, y:primaryTop, op:0, fs:typography.secondary.size, cx:false },
+        div:{ x:P, y:h/2, dw:0, op:0 },
+        det:{ x:chipTextLeft, y:primaryTop, op:0, fs:typography.detail.size, cx:false },
+      };
+    }
     if (shape === 'pill') {
       const isAiHomeContext = document.body?.dataset?.pageMode === 'ai' && document.body?.dataset?.aiHomeState === 'context';
       if (isAiHomeContext) {
@@ -130,6 +161,10 @@ export function createMorphLayout(ctx) {
     if (shape === 'pill') {
       const textX = hasIcon ? (callbacks.stageIconLeftPadding(callbacks.selectedScenario()?.shape, 'pill') + TS + callbacks.stageIconTextGap(callbacks.selectedScenario()?.shape, 'pill')) : PILL_NO_ICON_P;
       return Math.max(120, width - textX - P);
+    }
+    if (shape === 'skill-pill') {
+      const textX = hasIcon ? 64 : 20;
+      return Math.max(60, width - textX - 22);
     }
     if (shape === 'card') return Math.max(120, width - CARD_P * 2);
     if (shape === 'card-s') {
@@ -250,8 +285,9 @@ export function createMorphLayout(ctx) {
   }
 
   function resolveGeometryForContent(shape, contentData, customGeo, stageId = null) {
-    const rawGeo = customGeo || SHAPES[shape] || SHAPES.card;
     const scenario = callbacks.selectedScenario();
+    const showListOrb = !customGeo && shape === 'list' && !!callbacks.stageListListeningOrbForShape?.(scenario, stageId || shape);
+    const rawGeo = customGeo || (showListOrb ? SHAPES.circle : (SHAPES[shape] || SHAPES.card));
     const stageSizeOverride = callbacks.normalizeStageSizeEntry(contentData?.sizeOverride, callbacks.scenarioStageSizeOverride(scenario, stageId));
     const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
     const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
@@ -260,6 +296,9 @@ export function createMorphLayout(ctx) {
       const nextRadius = stageCornerRadiusPx(stageId, geo.main.br);
       return nextRadius === geo.main.br ? geo : { ...geo, main:{ ...geo.main, br: nextRadius } };
     };
+    if (showListOrb) {
+      return rawGeo;
+    }
     if ((shape !== 'card' && shape !== 'card-s' && shape !== 'image') || customGeo) {
       return withStageRadius(baseGeo);
     }
@@ -320,13 +359,14 @@ export function createMorphLayout(ctx) {
   function scenarioToRenderContent(scenario) {
     const shape = scenario?.shape || 'pill';
     const stage = callbacks.stageById?.(shape);
+    const showListOrbIcon = stage?.renderShape === 'list' && stage?.listListeningOrb === true;
     const has = (component) => {
       if (!stage) return true;
       return (stage.components || []).includes(component);
     };
     const text = callbacks.stageTextForShape(scenario, shape);
     return {
-      icon: has('icon') ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
+      icon: (has('icon') || showListOrbIcon) ? callbacks.stageIconForShape(scenario, shape) : callbacks.createIcon('none', ''),
       listChipIcons: has('icon') ? callbacks.stageListChipIconsForShape?.(scenario, shape) : null,
       listItems: callbacks.stageListItemsForShape?.(scenario, shape) || [],
       primary: has('primary') ? text.primary : '',

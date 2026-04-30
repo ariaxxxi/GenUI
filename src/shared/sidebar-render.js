@@ -1,4 +1,6 @@
 export function createSidebarRender(ctx, refs) {
+  let scenarioClickTimer = null;
+
   function captureFocusedEditableState() {
     const active = document.activeElement;
     const isTextInput = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
@@ -39,9 +41,22 @@ export function createSidebarRender(ctx, refs) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'scenario-item' + (item.id === ctx.getSelectedScenarioId() ? ' active' : '');
+      button.dataset.scenarioId = item.id;
       const stage = ctx.stageById(item.shape);
       button.innerHTML = `<span class="scenario-item-name">${item.name}</span><span class="scenario-item-meta">${stage?.name || item.shape}</span>`;
-      button.addEventListener('click', () => refs.actions.selectScenario(item.id));
+      button.addEventListener('click', (event) => {
+        if (event.target.closest('.sb-inline-rename-input')) return;
+        if (scenarioClickTimer) clearTimeout(scenarioClickTimer);
+        scenarioClickTimer = setTimeout(() => {
+          scenarioClickTimer = null;
+          refs.actions.selectScenario(item.id);
+        }, 220);
+      });
+      button.addEventListener('dblclick', () => {
+        if (!scenarioClickTimer) return;
+        clearTimeout(scenarioClickTimer);
+        scenarioClickTimer = null;
+      });
       ctx.UI.scenarioList.appendChild(button);
     });
     if (ctx.UI.scenarioDuplicate) ctx.UI.scenarioDuplicate.disabled = !scenario;
@@ -72,6 +87,7 @@ export function createSidebarRender(ctx, refs) {
     if (!stage) return;
     const list = document.createElement('div');
     list.className = 'stage-comp-list';
+    const renderShape = String(stage?.renderShape || '');
     const counts = ctx.stageComponentCounts(stage);
     ctx.STAGE_COMPONENT_TYPES.forEach((type) => {
       const row = document.createElement('div');
@@ -86,6 +102,22 @@ export function createSidebarRender(ctx, refs) {
       }
       list.appendChild(row);
     });
+    if (renderShape === 'list') {
+      const listItemCount = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(ctx.selectedScenario(), stage.id).length : 0;
+      const row = document.createElement('div');
+      row.className = 'stage-comp-row';
+      row.innerHTML = `<span class="stage-comp-label">items</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="remove">-</button><span class="stage-comp-count">${listItemCount}</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="add">+</button>`;
+      const removeBtn = row.querySelector('[data-stage-list-count-action="remove"]');
+      const addBtn = row.querySelector('[data-stage-list-count-action="add"]');
+      if (removeBtn) removeBtn.disabled = listItemCount <= 1;
+      if (addBtn) addBtn.disabled = listItemCount >= 8;
+      list.appendChild(row);
+
+      const orbRow = document.createElement('div');
+      orbRow.className = 'stage-comp-row toggle';
+      orbRow.innerHTML = `<span class="stage-comp-label">bottom orb</span><input class="stage-comp-check" type="checkbox" data-stage-list-orb-toggle="1" ${stage?.listListeningOrb ? 'checked' : ''}/>`;
+      list.appendChild(orbRow);
+    }
     ctx.UI.stageComponentControls.appendChild(list);
   }
 
@@ -95,20 +127,31 @@ export function createSidebarRender(ctx, refs) {
     const builtin = ctx.builtinStageById(stage?.id);
     const sizeOverride = ctx.scenarioStageSizeOverride(scenario, scenario?.shape);
     const stageSelected = ctx.stageSelectedForShape ? ctx.stageSelectedForShape(scenario, scenario?.shape) : !!stage?.selected;
-    const stageAccentColor = ctx.stageAccentColorForShape ? ctx.stageAccentColorForShape(scenario, scenario?.shape) : String(stage?.accentColor || '#90acff');
-    const stageAccentSecondaryColor = ctx.stageSecondaryAccentColorForShape ? ctx.stageSecondaryAccentColorForShape(scenario, scenario?.shape) : String(stage?.secondaryAccentColor || '#9761ff');
+    const stageBlobTopCoreColor = ctx.stageSelectedBlobTopCoreColorForShape
+      ? ctx.stageSelectedBlobTopCoreColorForShape(scenario, scenario?.shape)
+      : String(stage?.accentColor || '#90acff');
+    const stageBlobTopEdgeColor = ctx.stageSelectedBlobTopEdgeColorForShape
+      ? ctx.stageSelectedBlobTopEdgeColorForShape(scenario, scenario?.shape)
+      : String(stage?.secondaryAccentColor || '#9761ff');
+    const stageBlobBottomCoreColor = ctx.stageSelectedBlobBottomCoreColorForShape
+      ? ctx.stageSelectedBlobBottomCoreColorForShape(scenario, scenario?.shape)
+      : String(stage?.accentColor || '#90acff');
+    const stageBlobBottomEdgeColor = ctx.stageSelectedBlobBottomEdgeColorForShape
+      ? ctx.stageSelectedBlobBottomEdgeColorForShape(scenario, scenario?.shape)
+      : String(stage?.secondaryAccentColor || '#9761ff');
+    const stageMaskBlur = ctx.stageSelectedMaskBlurForShape
+      ? ctx.stageSelectedMaskBlurForShape(scenario, scenario?.shape)
+      : '';
     const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
     const isCardLike = renderShape === 'card' || renderShape === 'card-s';
-    if (ctx.UI.stageNameInput) ctx.UI.stageNameInput.value = stage?.name || '';
     if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
     if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
     if (ctx.UI.stageHeightInput) ctx.UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
     if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
     if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
-    if (ctx.UI.stagePhoneBlurToggle) ctx.UI.stagePhoneBlurToggle.checked = !!stage?.phoneBgBlur;
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
-    if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.toggle('hidden', renderShape !== 'list');
-    if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.toggle('hidden', renderShape !== 'list');
+    if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.add('hidden');
+    if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.add('hidden');
     const listItemCount = renderShape === 'list' && ctx.stageListItemsForShape
       ? ctx.stageListItemsForShape(scenario, scenario?.shape).length
       : 0;
@@ -124,18 +167,29 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
     }
     if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
-    if (ctx.UI.stageAccentColor) {
-      ctx.UI.stageAccentColor.value = String(stageAccentColor || '#90acff');
-      ctx.UI.stageAccentColor.disabled = !stage;
+    if (ctx.UI.stageBlobTopCoreColor) {
+      ctx.UI.stageBlobTopCoreColor.value = String(stageBlobTopCoreColor || '#90acff');
+      ctx.UI.stageBlobTopCoreColor.disabled = !stage;
     }
-    if (ctx.UI.stageAccentSecondaryColor) {
-      ctx.UI.stageAccentSecondaryColor.value = String(stageAccentSecondaryColor || '#9761ff');
-      ctx.UI.stageAccentSecondaryColor.disabled = !stage;
+    if (ctx.UI.stageBlobTopEdgeColor) {
+      ctx.UI.stageBlobTopEdgeColor.value = String(stageBlobTopEdgeColor || '#9761ff');
+      ctx.UI.stageBlobTopEdgeColor.disabled = !stage;
+    }
+    if (ctx.UI.stageBlobBottomCoreColor) {
+      ctx.UI.stageBlobBottomCoreColor.value = String(stageBlobBottomCoreColor || '#90acff');
+      ctx.UI.stageBlobBottomCoreColor.disabled = !stage;
+    }
+    if (ctx.UI.stageBlobBottomEdgeColor) {
+      ctx.UI.stageBlobBottomEdgeColor.value = String(stageBlobBottomEdgeColor || '#9761ff');
+      ctx.UI.stageBlobBottomEdgeColor.disabled = !stage;
+    }
+    if (ctx.UI.stageMaskBlurInput) {
+      ctx.UI.stageMaskBlurInput.value = Number.isFinite(stageMaskBlur) ? String(stageMaskBlur) : '';
+      ctx.UI.stageMaskBlurInput.disabled = !stage;
     }
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
     if (ctx.UI.stageDuplicate) ctx.UI.stageDuplicate.disabled = !stage;
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage;
-    if (ctx.UI.stageReset) ctx.UI.stageReset.disabled = !stage || !builtin;
     renderStageComponentControls(stage);
   }
 
@@ -200,7 +254,6 @@ export function createSidebarRender(ctx, refs) {
     const hasIcon = ctx.stageHasComponent(stage, 'icon');
     const hasImage = ctx.stageHasComponent(stage, 'image');
     const hasIntentHeader = ctx.stageHasComponent(stage, 'intent-header');
-    if (ctx.UI.scenarioName) ctx.UI.scenarioName.value = scenario?.name || '';
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
     const stageText = ctx.stageTextForShape(scenario, scenario?.shape);
@@ -221,7 +274,8 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.scenarioDetailColor) ctx.UI.scenarioDetailColor.value = typography.detail.color;
     if (ctx.UI.scenarioIntentHeaderSize) ctx.UI.scenarioIntentHeaderSize.value = String(typography.intentHeader.size);
     if (ctx.UI.scenarioIntentHeaderColor) ctx.UI.scenarioIntentHeaderColor.value = typography.intentHeader.color;
-    if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !hasIcon);
+    const showListOrbIconEditor = renderShape === 'list' && !!stage?.listListeningOrb;
+    if (ctx.UI.editorIcon) ctx.UI.editorIcon.classList.toggle('hidden', !(hasIcon || showListOrbIconEditor));
     if (ctx.UI.editorListItems) ctx.UI.editorListItems.classList.toggle('hidden', renderShape !== 'list');
     if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('primary'));
     if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('secondary'));

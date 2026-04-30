@@ -1,0 +1,13 @@
+GenUI design-system reference for LLM agents:
+
+- Celestial is the canonical selected/orb visual system.
+- Detailed Celestial rules live in docs/design-docs/celestial-visual.md.
+- Shared implementation files:
+  - src/shared/celestial-selected-presets.js
+  - src/shared/celestial-selection-chrome.js
+  - src/styles/shared.css
+- src/styles/ai-decorative.css controls AI/prototype state behavior only, not Celestial core values.
+- Do not fork selected/orb styling per page or product.
+- Celestial visual-core updates must flow through shared presets, shared chrome JS, and src/styles/shared.css so all products inherit them.
+- AI thinking and listening must use the same Celestial layer stack.
+- Listening at zero volume must keep a subtle colored rim.

@@ -10,10 +10,14 @@ import { initManualDemo } from './modules/manual-demo.js';
 import { initManualActions } from './modules/manual-actions.js';
 import { initManualBindings } from './modules/manual-bindings.js';
 import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptureHotkeyAction } from '../shared/stage-capture.js';
+import { applyAiCelestialChrome } from '../shared/celestial-selection-chrome.js';
+import { bindAiOrbIconStorageSync } from '../shared/ai-orb-icon.js';
+import { initVoiceEngine } from '../ai/voice-engine.js';
 
 const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
 const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
 const UI = buildUiRefs(document);
+bindAiOrbIconStorageSync(document, window);
 const detailMeasureEl = document.createElement('div');
 detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";
 document.body.appendChild(detailMeasureEl);
@@ -33,9 +37,13 @@ let flight = null;
 let actions = null;
 let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
+let prototypeOrbChromeSyncRaf = 0;
+let prototypeVoice = null;
+let prototypeSelectionOverride = null;
+const prototypeAiDebugState = { active: false, mode: 'thinking' };
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -115,9 +123,7 @@ function applyCanvasSettings() {
 function applyStagePhoneBlur(shape) {
   const frame = document.getElementById('ui-frame');
   if (!frame) return;
-  const stage = stageById(shape, selectedScenario());
-  const shouldBlur = currentScenarioFrameMode() === 'phone' && !!canvasSettings.phoneFrameBackground?.src && !!stage?.phoneBgBlur;
-  frame.classList.toggle('stage-blur', shouldBlur);
+  frame.classList.remove('stage-blur');
 }
 
 function applyResponseModeUi() {
@@ -228,11 +234,57 @@ function syncPrototypeIntentHeader(scenario) {
   trackPrototypeIntentHeader();
 }
 
+function syncManualShapeButtonStates(shape = document.body?.dataset?.currentShape || '') {
+  const actualShape = String(shape || '').trim();
+  const displayShape = prototypeAiDebugState.active && ['magic', 'skill-pill', 'agent-circle'].includes(actualShape)
+    ? 'magic'
+    : actualShape;
+  document.querySelectorAll('.sb-shape-btn').forEach((button) => {
+    button.classList.toggle('active', button.dataset.shape === displayShape);
+  });
+}
+
 function updateActive(shape) {
-  document.querySelectorAll('.sb-shape-btn').forEach((b) => b.classList.toggle('active', b.dataset.shape === shape));
+  syncManualShapeButtonStates(shape);
+  syncPrototypeOrbChrome();
+  syncPrototypeListeningOrb(shape);
+}
+
+function syncPrototypeOrbChrome() {
+  if (prototypeOrbChromeSyncRaf) cancelAnimationFrame(prototypeOrbChromeSyncRaf);
+  prototypeOrbChromeSyncRaf = requestAnimationFrame(() => {
+    prototypeOrbChromeSyncRaf = requestAnimationFrame(() => {
+      prototypeOrbChromeSyncRaf = 0;
+      applyAiCelestialChrome(document);
+    });
+  });
+}
+
+function syncPrototypeListeningOrb(shape) {
+  if (!prototypeVoice?.voiceEngine) return;
+  if (shape === 'listening') {
+    prototypeVoice.voiceEngine.start('command');
+    return;
+  }
+  const dropMain = document.getElementById('drop-main');
+  const preservingThinkingBridge = shape === 'magic' || shape === 'ai' || dropMain?.classList.contains('orb-thinking-bridge');
+  prototypeVoice.voiceEngine.stop({ preserveOrbStyles: preservingThinkingBridge });
 }
 
 const anim = initAnimControls({ document, clamp });
+prototypeVoice = initVoiceEngine({
+  document,
+  input: null,
+  addSimLog: () => {},
+  getGlassUi: () => null,
+  getGlassState: () => null,
+  shouldKeepCommandListening: () => morphApi?.getCurrentShape?.() === 'listening',
+  shouldShowCommandViz: () => (
+    document.body?.dataset?.currentShape === 'listening' ||
+    document.getElementById('drop-main')?.classList.contains('listening-orb')
+  ),
+  onTranscriptUpdate: () => {},
+});
 stageLibrary = loadStageLibrary();
 scenarioLibrary = loadScenarioLibrary();
 selectedScenarioId = scenarioLibrary[0]?.id || '';
@@ -288,11 +340,10 @@ function previewScenarioInstant(scenario) {
   morphApi.setSuppressDeformation(true);
   morphApi.setCurrentShape(shape);
   morphApi.applyGeometry(shape, geo, scenario.shape, scenario);
-  const listHasListeningOrb = shape === 'list' && !!stageListListeningOrbForShape(scenario, scenario?.shape);
   DROPS.main.style.setProperty('--home-glow-delay', '0ms');
-  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic' || listHasListeningOrb);
+  DROPS.main.classList.toggle('home-glow', shape === 'listening' || shape === 'magic');
   DROPS.main.classList.toggle('magic-glow', shape === 'magic');
-  DROPS.main.classList.toggle('listening-orb', shape === 'listening' || listHasListeningOrb);
+  DROPS.main.classList.toggle('listening-orb', shape === 'listening');
   morphApi.applyContent(content);
   morphApi.applyContentPositions(shape, geo.main.w, geo.main.h, 0, 0, shape, geo.main.w, geo.main.h, null, null);
   if (shape === 'list') morphApi.showPrototypeListStage?.(content, { entering: false });
@@ -338,6 +389,11 @@ morphApi = initMorph({
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    stageSelectedBlobTopCoreColorForShape,
+    stageSelectedBlobTopEdgeColorForShape,
+    stageSelectedBlobBottomCoreColorForShape,
+    stageSelectedBlobBottomEdgeColorForShape,
+    getPrototypeSelectionOverride: () => prototypeSelectionOverride,
     createIcon,
     getAnimDuration: anim.getAnimDuration,
     getEasingFns: anim.getEasingFns,
@@ -388,6 +444,10 @@ const sidebar = initSidebar({
   stageSelectedForShape,
   stageAccentColorForShape,
   stageSecondaryAccentColorForShape,
+  stageSelectedBlobTopCoreColorForShape,
+  stageSelectedBlobTopEdgeColorForShape,
+  stageSelectedBlobBottomCoreColorForShape,
+  stageSelectedBlobBottomEdgeColorForShape,
   normalizeTriggers,
   normalizeIconByShape,
   normalizeListChipIconsByShape,
@@ -509,7 +569,7 @@ async function copyStagePng() {
 }
 
 async function exportStageSvg() {
-  const ok = await exportStageSvgFile({ root: document.getElementById('stage-wrap'), filenamePrefix: 'genui-prototype-stage', documentRef: document });
+  const ok = await exportStageSvgFile({ root: document.getElementById('stage-wrap'), filenamePrefix: 'genui-tool-stage', documentRef: document });
   if (!ok) console.warn('[stage-capture] SVG export did not complete.');
 }
 
@@ -571,6 +631,7 @@ initManualBindings({
   applyResponseModeUi,
   previewScenarioInstant,
   previewScenario,
+  morphTo: morphApi.morphTo,
   hideRich: morphApi.hideRich,
   hideIntentHeader,
   handleSend: actions.handleSend,
@@ -580,6 +641,16 @@ initManualBindings({
   flight,
   rebuildAnim: anim.rebuildAnim,
   initStarfield: anim.initStarfield,
+  setPrototypeSelectionOverride: (value) => {
+    prototypeSelectionOverride = value ? { ...value } : null;
+    syncPrototypeOrbChrome();
+  },
+  setPrototypeAiDebugState: (value = {}) => {
+    prototypeAiDebugState.active = value.active === true;
+    prototypeAiDebugState.mode = value.mode || prototypeAiDebugState.mode || 'thinking';
+    syncManualShapeButtonStates();
+  },
+  getPrototypeAiDebugState: () => ({ ...prototypeAiDebugState }),
 });
 
 document.addEventListener('keydown', (event) => {

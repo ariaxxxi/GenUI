@@ -115,8 +115,7 @@ export function createMorphBridges(ctx) {
         return;
       }
       if (shape === 'pill') return void runtime.morphCore('pill', contentData, customGeo, false, null, stageId);
-      runtime.morphCore('pill', null, null, true);
-      runtime.morphTo(shape, contentData, customGeo, stageId);
+      runtime.morphCore(shape, contentData, customGeo, false, null, stageId);
     }, listPhaseTwoStartMs());
   }
 

@@ -210,6 +210,23 @@ export function initEditorBindings({
     });
   });
   UI.stageComponentControls?.addEventListener("click", (e) => {
+    const listCountButton = e.target.closest("[data-stage-list-count-action]");
+    if (listCountButton) {
+      const scenario = selectedScenario();
+      if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== "list") return;
+      const action = String(listCountButton.dataset.stageListCountAction || "");
+      if (action === "remove") {
+        commitListItems((items) => items.length > 1 ? items.slice(0, -1) : items);
+        return;
+      }
+      if (action === "add") {
+        commitListItems((items) => {
+          if (items.length >= 8) return items;
+          return [...items, createDefaultListItem(`List item ${items.length + 1}`)];
+        });
+      }
+      return;
+    }
     const button = e.target.closest("[data-stage-comp-action][data-stage-comp-type]");
     const type = String(button?.dataset?.stageCompType || "");
     const action = String(button?.dataset?.stageCompAction || "");
@@ -218,6 +235,16 @@ export function initEditorBindings({
     sidebar.commitStageChange(stage.id, (draft) => { const next = [...(draft.components || [])]; if (action === "add") next.push(type); else if (action === "remove") { const idx = next.lastIndexOf(type); if (idx >= 0) next.splice(idx, 1); } draft.components = next; return draft; });
   });
   UI.stageComponentControls?.addEventListener("change", (e) => {
+    const orbToggle = e.target.closest("[data-stage-list-orb-toggle]");
+    if (orbToggle) {
+      const stage = stageById(selectedScenario()?.shape);
+      if (!stage || stage.renderShape !== "list") return;
+      sidebar.commitStageChange(stage.id, (draft) => {
+        draft.listListeningOrb = orbToggle.checked;
+        return draft;
+      });
+      return;
+    }
     const checkbox = e.target.closest("[data-stage-comp-toggle]");
     const type = String(checkbox?.dataset?.stageCompToggle || "");
     const stage = stageById(selectedScenario()?.shape);
