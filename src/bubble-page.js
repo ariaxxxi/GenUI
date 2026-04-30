@@ -126,6 +126,7 @@ const SWAP_ORB_BLOOM_OVERSHOOT_MS = 150;
 const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
 const SWAP_DEMOTED_END_SCALE = 0.55;
+const BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS = 1200;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -243,6 +244,10 @@ function orbGeometryForSize(size) {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function currentBubbleHomeOrbTheme() {
   return state.homeOrbContent?.theme || getAiOrbIconOption(state.orbAgentId)?.theme || {};
 }
@@ -270,6 +275,15 @@ function resetBubbleHomeOrbCenter(root = refs.orb) {
   visual.removeAttribute('data-orb-switch-motion');
   visual.removeAttribute('data-orb-switch-direction');
   center.outerHTML = renderAiOrbCenterMarkup();
+}
+
+function syncBubbleHomeOrbVisualStateClasses(visual, content = state.homeOrbContent) {
+  if (!visual || !content) return;
+  const isClaudePromotedImage = content.kind !== 'agent-orb'
+    && content.graphicKind !== 'emoji'
+    && content.img === CLAUDE_AGENT_ASSET;
+  visual.classList.toggle('is-promoted-home-claude', isClaudePromotedImage);
+  visual.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
 }
 
 function applyBubbleHoverShellChrome(hostEl, theme, geometryOverride) {
@@ -464,6 +478,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 1,
     ...getAppSetSlotLayout(1),
+    label: 'Claude',
     img: CLAUDE_AGENT_ASSET,
     fill: true,
     theme: CLAUDE_AGENT_THEME,
@@ -474,6 +489,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 3,
     ...getAppSetSlotLayout(3),
+    label: 'Travel Agent',
     img: BLUE_AGENT_ASSET,
     imageScale: 0.72,
     disableCircularImageMask: true,
@@ -491,6 +507,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 9,
     ...getAppSetSlotLayout(9),
+    label: 'Writing Agent',
     img: YELLOW_AGENT_ASSET,
     imageScale: 0.72,
     disableCircularImageMask: true,
@@ -508,6 +525,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 2,
     ...getAppSetSlotLayout(2),
+    label: 'ChatGPT',
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
     haloColor: '#ffffff',
@@ -516,6 +534,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 8,
     ...getAppSetSlotLayout(8),
+    label: 'Gemini',
     img: FIGMA_ASSETS.gemini,
     fill: true,
     haloColor: '#A391FB',
@@ -524,6 +543,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 5,
     ...getAppSetSlotLayout(5),
+    label: 'Fitness Agent',
     img: GREEN_AGENT_ASSET,
     imageScale: 0.72,
     disableCircularImageMask: true,
@@ -541,6 +561,7 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 6,
     ...getAppSetSlotLayout(6),
+    label: 'Budget Agent',
     img: ORANGE_AGENT_ASSET,
     imageScale: 0.72,
     disableCircularImageMask: true,
@@ -556,6 +577,8 @@ const AGENT_BUBBLES_CONFIG = [
     childActions: [],
   },
 ].map(enrichBubbleMetrics);
+
+const BUBBLE_HOME_AGENT_SET_SEQUENCE = Object.freeze(AGENT_BUBBLES_CONFIG.map((bubble) => bubble.id));
 
 const BUBBLE_SET_DEFINITIONS = Object.freeze([
   Object.freeze({
@@ -598,6 +621,7 @@ function createAgentOrbContent(id) {
     kind: 'agent-orb',
     contentId: `agent-orb:${option.id}`,
     sourceSlotId: null,
+    label: option.label,
     iconId: option.id,
     img: option.src,
     alt: `${option.label} orb icon`,
@@ -620,6 +644,7 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     kind: 'demoted-orb-bubble',
     contentId: `demoted:${homeOrbContent.contentId}`,
     sourceSlotId: null,
+    label: homeOrbContent.label || '',
     graphicKind: homeOrbContent.graphicKind || 'image',
     emoji: homeOrbContent.emoji || '',
     emojiScale: homeOrbContent.emojiScale ?? 1,
@@ -648,6 +673,7 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     kind: 'slot-bubble',
     contentId: `slot:${slot.id}`,
     sourceSlotId: slot.id,
+    label: slot.label || slot.pillTitle || '',
     baseSize: slot.baseSize ?? getDefaultBubbleBaseSizeForSet(setId),
     fieldMaxSize: slot.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     graphicKind: slot.graphicKind || 'image',
@@ -771,6 +797,12 @@ const state = {
   renderQueued: false,
 };
 
+const bubbleHomeStreamState = {
+  streamToken: 0,
+  currentText: '',
+  currentCursor: null,
+};
+
 let previousHoveredId = null;
 let previousHoveredChildId = null;
 let syncedChildSelectionParentId = null;
@@ -787,6 +819,8 @@ const refs = {
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
+  orbStream: null,
+  orbStreamText: null,
   swapLayer: null,
   bubbleNodes: new Map(),
   childNodes: new Map(),
@@ -823,6 +857,8 @@ function buildScene() {
   refs.childNodes.clear();
   refs.orb = null;
   refs.orbVisual = null;
+  refs.orbStream = null;
+  refs.orbStreamText = null;
   refs.swapLayer = null;
   syncedChildSelectionParentId = null;
   syncedChildSelectionId = null;
@@ -844,6 +880,8 @@ function buildScene() {
 
   refs.orb = createOrbNode();
   refs.orbVisual = refs.orb.querySelector('.bubble2-orb-visual');
+  refs.orbStream = refs.orb.querySelector('.bubble2-orb-stream');
+  refs.orbStreamText = refs.orb.querySelector('.bubble2-orb-stream-text');
   fragment.appendChild(refs.orb);
   refs.swapLayer = document.createElement('div');
   refs.swapLayer.className = 'bubble2-swap-layer';
@@ -1128,9 +1166,136 @@ function createOrbNode() {
 
   visual.innerHTML = renderBubbleOrbShellMarkup();
   button.appendChild(visual);
+  button.insertAdjacentHTML(
+    'beforeend',
+    '<div class="bubble2-orb-stream hidden" aria-hidden="true"><span class="bubble2-orb-stream-text"></span></div>',
+  );
   syncBubbleHomeOrbVisual(button, { animate: false });
 
   return button;
+}
+
+function createBubbleHomePixelCursor() {
+  const px = document.createElement('span');
+  px.className = 'pixel-cursor';
+  for (let i = 0; i < 16; i += 1) {
+    const dot = document.createElement('span');
+    px.appendChild(dot);
+  }
+  return px;
+}
+
+function removeBubbleHomeStreamCursor() {
+  if (!bubbleHomeStreamState.currentCursor) return;
+  bubbleHomeStreamState.currentCursor.remove();
+  bubbleHomeStreamState.currentCursor = null;
+}
+
+function setBubbleHomeStreamVisible(visible) {
+  if (!refs.orbStream) return;
+  refs.orbStream.classList.toggle('hidden', !visible);
+}
+
+function clearBubbleHomeStream() {
+  removeBubbleHomeStreamCursor();
+  bubbleHomeStreamState.currentText = '';
+  if (refs.orbStreamText) refs.orbStreamText.textContent = '';
+}
+
+function stopBubbleHomeStream() {
+  bubbleHomeStreamState.streamToken += 1;
+  clearBubbleHomeStream();
+  setBubbleHomeStreamVisible(false);
+}
+
+async function waitForBubbleHomeStream(ms, token) {
+  await sleep(ms);
+  return token === bubbleHomeStreamState.streamToken && Boolean(refs.orbStreamText?.isConnected);
+}
+
+function tokenizeBubbleHomeStreamText(text) {
+  const tokens = [];
+  let idx = 0;
+  while (idx < text.length) {
+    const len = Math.random() < 0.4 ? 1 : Math.random() < 0.6 ? 2 : Math.random() < 0.7 ? 3 : 4;
+    tokens.push(text.slice(idx, idx + len));
+    idx += len;
+  }
+  return tokens;
+}
+
+async function typeBubbleHomeStreamText(text, token) {
+  if (!refs.orbStreamText || token !== bubbleHomeStreamState.streamToken) return false;
+  removeBubbleHomeStreamCursor();
+  const px = createBubbleHomePixelCursor();
+  let settled = '';
+  const tokens = tokenizeBubbleHomeStreamText(text);
+  for (const tokenText of tokens) {
+    const cycles = 2 + Math.floor(Math.random() * 3);
+    for (let cycle = 0; cycle < cycles; cycle += 1) {
+      if (token !== bubbleHomeStreamState.streamToken || !refs.orbStreamText?.isConnected) {
+        removeBubbleHomeStreamCursor();
+        return false;
+      }
+      Array.from(px.children).forEach((dot) => {
+        dot.style.opacity = Math.random() < 0.5 ? '1' : '0.08';
+      });
+      await sleep(21);
+    }
+    settled += tokenText;
+    bubbleHomeStreamState.currentText = settled;
+    refs.orbStreamText.textContent = settled;
+    refs.orbStreamText.appendChild(px);
+    bubbleHomeStreamState.currentCursor = px;
+    await sleep(6);
+  }
+  removeBubbleHomeStreamCursor();
+  return token === bubbleHomeStreamState.streamToken;
+}
+
+async function deleteBubbleHomeStreamText(token) {
+  if (!refs.orbStreamText) return false;
+  let settled = bubbleHomeStreamState.currentText;
+  while (settled.length > 0) {
+    if (token !== bubbleHomeStreamState.streamToken || !refs.orbStreamText?.isConnected) return false;
+    settled = settled.slice(0, -1);
+    bubbleHomeStreamState.currentText = settled;
+    refs.orbStreamText.textContent = settled;
+    await sleep(21 + (Math.random() * 14));
+  }
+  return token === bubbleHomeStreamState.streamToken;
+}
+
+function getBubbleHomeContentLabel(content = state.homeOrbContent) {
+  if (!content) return '';
+  if (content.label) return String(content.label).trim();
+  if (content.kind === 'agent-orb') {
+    return String(getAiOrbIconOption(content.iconId)?.label || '').trim();
+  }
+  const slot = Number.isFinite(content.sourceSlotId)
+    ? findBubbleSlotById(content.sourceSlotId, state.activeSetId)
+    : null;
+  return String(slot?.label || slot?.pillTitle || '').trim();
+}
+
+async function streamBubbleHomeTransitionText(text) {
+  const value = String(text || '').trim();
+  if (!value || !refs.orbStreamText) return;
+  const token = ++bubbleHomeStreamState.streamToken;
+  setBubbleHomeStreamVisible(true);
+  removeBubbleHomeStreamCursor();
+  if (bubbleHomeStreamState.currentText) {
+    const cleared = await deleteBubbleHomeStreamText(token);
+    if (!cleared) return;
+    if (!(await waitForBubbleHomeStream(200, token))) return;
+  }
+  const typed = await typeBubbleHomeStreamText(value, token);
+  if (!typed) return;
+  if (!(await waitForBubbleHomeStream(BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS, token))) return;
+  const deleted = await deleteBubbleHomeStreamText(token);
+  if (!deleted) return;
+  if (token !== bubbleHomeStreamState.streamToken) return;
+  setBubbleHomeStreamVisible(false);
 }
 
 function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
@@ -1138,11 +1303,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
   const content = state.homeOrbContent;
   if (!content) return;
   const visual = root?.querySelector?.('.bubble2-orb-visual');
-  const isClaudePromotedImage = content.kind !== 'agent-orb'
-    && content.graphicKind !== 'emoji'
-    && content.img === CLAUDE_AGENT_ASSET;
-  visual?.classList.toggle('is-promoted-home-claude', isClaudePromotedImage);
-  visual?.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
+  syncBubbleHomeOrbVisualStateClasses(visual, content);
   if (content.kind === 'agent-orb') {
     syncAiOrbCenterIcon(root, {
       animate: options.animate,
@@ -1158,6 +1319,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
       animate: options.animate,
       emoji: content.emoji,
       emojiScale: content.homeEmojiScale ?? 1,
+      switchDirection: options.switchDirection,
       theme: content.theme,
       switchMotion: options.switchMotion || 'fade',
     });
@@ -1167,6 +1329,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
     animate: options.animate,
     src: content.img,
     alt: content.alt || '',
+    switchDirection: options.switchDirection,
     theme: content.theme,
     switchMotion: options.switchMotion || 'fade',
   });
@@ -1202,6 +1365,7 @@ function syncCanvaslessUi() {
 }
 
 function resetStateForSetSwitch() {
+  stopBubbleHomeStream();
   state.isPressed = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -1287,13 +1451,21 @@ function handleKeyDown(event) {
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
   if (event.key === 'ArrowRight') {
     event.preventDefault();
-    cycleBubbleHomeAgent(1);
+    cycleBubbleHomeSelection(1);
     return;
   }
   if (event.key === 'ArrowLeft') {
     event.preventDefault();
-    cycleBubbleHomeAgent(-1);
+    cycleBubbleHomeSelection(-1);
   }
+}
+
+function cycleBubbleHomeSelection(step) {
+  if (state.activeSetId === 'agent') {
+    cycleBubbleHomeAgentSetItem(step);
+    return;
+  }
+  cycleBubbleHomeAgent(step);
 }
 
 function cycleBubbleHomeAgent(step) {
@@ -1305,9 +1477,39 @@ function cycleBubbleHomeAgent(step) {
   if (nextId === state.orbAgentId) return;
   state.orbAgentId = nextId;
   state.homeOrbContent = createAgentOrbContent(nextId);
+  void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(state.homeOrbContent)}`);
   syncBubbleHomeOrbVisual(refs.orb, {
     animate: true,
     switchDirection: step > 0 ? 'right' : 'left',
+    switchMotion: 'swipe',
+  });
+  scheduleRender();
+}
+
+function cycleBubbleHomeAgentSetItem(step) {
+  if (!refs.orb || !step || state.swapTransition?.active) return;
+  const sequence = BUBBLE_HOME_AGENT_SET_SEQUENCE;
+  if (!sequence.length) return;
+
+  const currentSlotId = Number.isFinite(state.homeOrbContent?.sourceSlotId)
+    ? state.homeOrbContent.sourceSlotId
+    : null;
+  const currentIndex = currentSlotId != null ? sequence.indexOf(currentSlotId) : -1;
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : (step > 0 ? -1 : 0);
+  const nextIndex = (safeCurrentIndex + step + sequence.length) % sequence.length;
+  const nextSlotId = sequence[nextIndex];
+  if (nextSlotId == null) return;
+
+  const slot = findBubbleSlotById(nextSlotId, 'agent');
+  if (!slot) return;
+  const nextContent = createBaseSlotContent(slot, 'agent');
+  const switchDirection = step > 0 ? 'right' : 'left';
+
+  state.homeOrbContent = nextContent;
+  void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
+  syncBubbleHomeOrbVisual(refs.orb, {
+    animate: true,
+    switchDirection,
     switchMotion: 'swipe',
   });
   scheduleRender();
@@ -1843,7 +2045,10 @@ function render() {
   }
 
   if (refs.orbVisual) {
-    syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+    syncBubbleHomeOrbVisualStateClasses(refs.orbVisual, state.homeOrbContent);
+    if (!refs.orbVisual.classList.contains('is-orb-icon-switching')) {
+      syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+    }
     refs.orbVisual.classList.toggle('is-promoted-home', state.homeOrbContent?.kind !== 'agent-orb');
     refs.orbVisual.style.transitionDuration = (demotedSwapMotion || state.panSnapPending || state.swapResetPending)
       ? '0ms'

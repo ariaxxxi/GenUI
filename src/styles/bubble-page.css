@@ -713,6 +713,52 @@ body.bubble2-page.is-canvasless {
   transition: transform 1000ms var(--bubble2-ease);
 }
 
+.bubble2-orb-stream {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  pointer-events: none;
+  z-index: 24;
+  white-space: nowrap;
+}
+
+.bubble2-orb-stream.hidden {
+  display: none;
+}
+
+.bubble2-orb-stream-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  line-height: 1.7;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.96);
+  letter-spacing: 0.01em;
+}
+
+.bubble2-orb-stream .pixel-cursor {
+  display: inline-grid;
+  grid-template-columns: repeat(4, 3px);
+  grid-template-rows: repeat(4, 3px);
+  gap: 1px;
+  vertical-align: middle;
+  margin-left: 3px;
+  margin-bottom: 1px;
+  flex-shrink: 0;
+}
+
+.bubble2-orb-stream .pixel-cursor span {
+  display: block;
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
 .bubble2-swap-layer {
   position: absolute;
   inset: 0;

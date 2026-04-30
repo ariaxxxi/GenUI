@@ -1,5 +1,42 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble orb arrow-switch transition text
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a Bubble Home-local orb stream layer that reuses the prototype chunked type/delete transition-text treatment, so left/right keyboard switching now shows a transient `Switch to {agent name}` label above the orb before clearing itself.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final stream timing, placement, and repeat-key behavior still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble orb delayed-swipe rollback
+
+- Completion status: completed with static verification.
+- Summary: removed the delayed two-`requestAnimationFrame` Bubble Home orb switch workaround after tracing that it allowed a normal render to push the target content into the orb before the swipe began, which is why the visual jumped instead of animating.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+
+## 2026-04-30 - Bubble orb swipe timing alignment
+
+- Completion status: completed with static verification.
+- Summary: aligned Bubble Home keyboard-driven orb switching with the prototype listening-stage timing by deferring the animated orb sync by two animation frames before starting the shared swipe motion, fixing the direct-jump behavior.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+
+## 2026-04-30 - Bubble agent-set sequence init-order fix
+
+- Completion status: completed with static verification.
+- Summary: moved the Bubble Home `agent`-set keyboard sequence constant below `AGENT_BUBBLES_CONFIG` so the page no longer throws `Cannot access 'AGENT_BUBBLES_CONFIG' before initialization` at startup.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+
+## 2026-04-30 - Bubble agent-set arrow cycling
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: changed Bubble Home left/right keyboard behavior so the `agent` tab now cycles the home orb through the ordered `agent` set bubble content using the existing shared swipe animation path instead of the old three-icon orb sequence.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final sequence order and swipe feel still need a human check on `/bubble`.
+
 ## 2026-04-30 - Bubble agent-tab control defaults
 
 - Completion status: completed with static verification; manual browser pass still recommended.

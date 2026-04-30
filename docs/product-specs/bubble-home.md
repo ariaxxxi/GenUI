@@ -12,6 +12,7 @@ Bubble Home is a standalone app-cluster home design for future AI home explorati
 - The press-scope toggle switches Bubble Home between `canvas only` press/pan start and `viewport anywhere except control panel` press/pan start.
 - The canvas-removal toggle hides the visible `420px` canvas frame and switches the viewport background to pure black without changing Bubble Home geometry.
 - In the current Bubble Home defaults, the `agent` tab turns both control toggles on by default, while the `app` tab keeps both toggles off by default.
+- In the `agent` set, left/right arrow keys cycle the home orb through the agent-set bubbles using the same swipe motion as the prototype listening-stage agent switch, and each keyboard switch streams a transient `Switch to {agent name}` label above the orb using the same prototype text-stream treatment before disappearing.
 - Support scalable named content sets so Bubble Home can swap between different bubble collections without rewriting page logic.
 - Current scaffold sets:
   - `app`
