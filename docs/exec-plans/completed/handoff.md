@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble agent pill gap reduction
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: reduced the emoji-to-text gap in the four `agent`-set domain pills by `4px` by moving the pill copy block leftward, without changing pill width logic.
+- Files changed: `src/bubble-page.js`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final agent-pill spacing still needs a human check on `/bubble`.
+
 ## 2026-04-30 - Bubble domain size restore to 80
 
 - Completion status: completed with static verification; manual browser pass still recommended.
