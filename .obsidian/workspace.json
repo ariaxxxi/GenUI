@@ -185,8 +185,12 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
-    "docs/exec-plans/completed/handoff.md",
     "docs/exec-plans/active/current.md",
+    "assets/agents/perplexity.png",
+    "assets/agents/Claude-ai-icon.png",
+    "assets/agents/Unconfirmed 404769.crdownload",
+    "assets/agents",
+    "docs/exec-plans/completed/handoff.md",
     "README.md",
     "docs/PLANS.md",
     "src/shared/ai-orb-icon.js",
@@ -221,16 +225,11 @@
     "docs/FRONTEND.md",
     "docs/DESIGN.md",
     "bubble.html",
-    "context/task✅.md",
     "src/assets/button-highlight-top-left.png",
     "src/assets/Button Highlight top left.png",
     "src/assets/figma-proto-button-refraction-mask-zero-spread.svg",
     "src/assets/figma-proto-button-refraction-center-mask.svg",
     "src/assets/figma-proto-button-highlight-bottom-mask.png",
-    "src/assets/Button Refraction.png",
-    "src/assets/Button Refraction.svg",
-    "src/bubble2-page.js",
-    "src/styles/bubble2-page.css",
     "Untitled.canvas"
   ]
 }

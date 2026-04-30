@@ -1,5 +1,53 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble domain geometry tighten
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: reduced the four `agent`-set domain bubbles to `72px` and lowered them so they sit closer to the larger bubbles beneath them, without changing shell styling or interaction behavior.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact spacing still needs a human check on `/bubble`.
+
+## 2026-04-29 - Bubble agent set remap
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: replaced the scaffold `agent` set clone with a distinct 7-bubble agent collection, added emoji-centered field bubble rendering for Fitness/Budget/Writing, and split hover-pill capability from the existing app pill path so those domain agents stay round at rest and expand into `XX agent` pills on hover.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact emoji sizing, Claude logo fit, and round-to-pill hover feel on `/bubble` still need a human check.
+
+## 2026-04-29 - Bubble agent-set shell and promotion follow-up
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: changed the former Perplexity slot into `Travel agent`, gave the domain-agent bubbles a quiet default shell that expands into the full Celestial hover pill, and allowed `Claude` to promote in the `agent` set while also increasing its center-logo scale.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the pill-expansion alignment and Claude’s visual scale still need a human check.
+
+## 2026-04-29 - Bubble set switcher left docking
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: docked the Bubble Home content-set switcher to the left side of the viewport on desktop while keeping the bubble canvas centered and preserving the stacked mobile layout.
+- Files changed: `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact desktop spacing and left-edge placement on `/bubble` still need a human check.
+
+## 2026-04-29 - Bubble content set switcher scaffold
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: replaced Bubble Home’s single hardcoded bubble collection with scalable named set definitions, added a left-side `App`/`Agent` switcher panel, and duplicated the current content into the new `agent` set so future set additions can stay data-driven.
+- Files changed: `bubble.html`, `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact left-panel layout and `App`/`Agent` switching behavior on `/bubble` still need a human check.
+
+## 2026-04-29 - Bubble health promotion disable
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added health to Bubble Home’s non-promotable bubble set so hovering health can still highlight, but releasing it no longer fires the home-orb promotion swap, matching the profile-pill behavior.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the exact health hover-and-release behavior on `/bubble` still needs a human check.
+
 ## 2026-04-29 - Prototype custom thinking text fire control
 
 - Completion status: completed with static verification; manual browser pass still recommended.

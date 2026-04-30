@@ -9,6 +9,7 @@ import {
   bindAiOrbIconStorageSync,
   getAiOrbIconOption,
   renderAiOrbCenterMarkup,
+  syncAiOrbCenterEmoji,
   syncAiOrbCenterIcon,
   syncAiOrbCenterImage,
 } from './shared/ai-orb-icon.js';
@@ -73,7 +74,8 @@ const DEFAULT_MOVE_DURATION_MS = 450;
 const ACTIVE_MOVE_DURATION_MS = 250;
 const APPEAR_MOVE_DURATION_MS = 400;
 const DISAPPEAR_MOVE_DURATION_MS = 300;
-const BUBBLE_HOVER_CONTENT_SCALE = 0.8;
+const BUBBLE_HOVER_CONTENT_SCALE = 0.75;
+const BUBBLE_RELEASE_CONTENT_SCALE = 0.45;
 const PILL_HOVER_BUBBLE_SCALE = 0.8;
 const FADE_IN_DURATION_MS = 400;
 const FADE_OUT_DURATION_MS = 300;
@@ -88,7 +90,7 @@ const ORB_CENTER_Y = 356;
 const CENTER_PROBE_BASE_X = CANVAS_CENTER_X - ORB_CENTER_X;
 const CENTER_PROBE_BASE_Y = CANVAS_CENTER_Y - ORB_CENTER_Y;
 const FALLBACK_ICON = 'src/assets/fallback-icon.png';
-const PILL_TEXT_LEFT_PADDING = 16;
+const PILL_TEXT_LEFT_PADDING = 8;
 const PILL_TEXT_RIGHT_PADDING = 64;
 const PILL_TRAILING_ICON_SIZE = 40;
 const PILL_TRAILING_ICON_RIGHT = 18;
@@ -116,7 +118,6 @@ const SWAP_ORB_BLOOM_OVERSHOOT_MS = 150;
 const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
 const SWAP_DEMOTED_END_SCALE = 0.55;
-const ORB_CENTER_IMAGE_SIZE = 36;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -129,9 +130,40 @@ const FIGMA_ASSETS = {
 const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt']);
 const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
+const CLAUDE_AGENT_ASSET = 'assets/agents/Claude-ai-icon.png';
 const CELESTIAL_CHIP_PRESET = celestialSelectedPresetForRenderShape('chip');
 const CELESTIAL_ORB_PRESET = celestialSelectedPresetForRenderShape('orb');
-const NON_PROMOTABLE_BUBBLE_IDS = new Set([1, 3, 5]);
+const NON_PROMOTABLE_BUBBLE_IDS = new Set([1, 3, 4, 5]);
+const CLAUDE_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 206 175)',
+  blobTopEdge: 'rgb(226 142 92)',
+  blobBottomCore: 'rgb(255 230 208)',
+  blobBottomEdge: 'rgb(187 110 72)',
+});
+const WRITING_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(126 186 255)',
+  blobTopEdge: 'rgb(92 132 255)',
+  blobBottomCore: 'rgb(197 223 255)',
+  blobBottomEdge: 'rgb(74 102 212)',
+});
+const BUDGET_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(121 255 168)',
+  blobTopEdge: 'rgb(78 214 127)',
+  blobBottomCore: 'rgb(214 255 143)',
+  blobBottomEdge: 'rgb(92 184 74)',
+});
+const FITNESS_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(118 255 199)',
+  blobTopEdge: 'rgb(72 210 165)',
+  blobBottomCore: 'rgb(187 255 229)',
+  blobBottomEdge: 'rgb(54 145 118)',
+});
+const TRAVEL_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(250 252 255)',
+  blobTopEdge: 'rgb(223 232 247)',
+  blobBottomCore: 'rgb(255 255 255)',
+  blobBottomEdge: 'rgb(201 214 234)',
+});
 
 const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
   2: Object.freeze({
@@ -177,6 +209,15 @@ function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
   return `<div class="${cls}" data-stage-direction="${direction}" aria-hidden="true"><div class="g-stage-selected-refraction"><div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div><div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div></div><div class="g-stage-selected-sharp-pass"><div class="g-stage-selected-sharp-highlight"></div></div><div class="g-stage-selected-accent-rim"></div><div class="g-stage-selected-highlight"></div><div class="g-stage-selected-highlight-mask"><div class="g-stage-selected-highlight-mask-image"></div></div></div>`;
 }
 
+function renderBubbleOrbShellMarkup(options = {}) {
+  const includeCenter = options.includeCenter !== false;
+  return `
+    <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
+    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
+    ${includeCenter ? renderAiOrbCenterMarkup() : ''}
+  `;
+}
+
 function applyBubbleCelestialChrome(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null) {
   if (!chromeEl || !hostEl || !preset) return;
   applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides, geometryOverride);
@@ -194,7 +235,29 @@ function currentBubbleHomeOrbTheme() {
   return state.homeOrbContent?.theme || getAiOrbIconOption(state.orbAgentId)?.theme || {};
 }
 
-const BUBBLES_CONFIG = [
+function applyBubbleHomeOrbShellChrome(hostEl, theme) {
+  if (!hostEl) return;
+  applyBubbleCelestialChrome(
+    hostEl.querySelector('.bubble2-orb-selection'),
+    hostEl,
+    CELESTIAL_ORB_PRESET,
+    theme || {},
+    orbGeometryForSize(ORB_BASE_SIZE),
+  );
+}
+
+function applyBubbleHoverShellChrome(hostEl, theme, geometryOverride) {
+  if (!hostEl) return;
+  applyBubbleCelestialChrome(
+    hostEl.querySelector('.bubble2-orb-selection'),
+    hostEl,
+    CELESTIAL_ORB_PRESET,
+    theme || {},
+    geometryOverride,
+  );
+}
+
+const APP_BUBBLES_CONFIG = [
   {
     id: 1,
     x: 9,
@@ -351,7 +414,132 @@ const BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
-const BUBBLE_STAGGER_TOTAL_MS = Math.max(0, (BUBBLES_CONFIG.length - 1) * BUBBLE_STAGGER_STEP_MS);
+const AGENT_BUBBLES_CONFIG = [
+  {
+    id: 1,
+    x: 9,
+    y: -142,
+    zIndex: 20,
+    img: CLAUDE_AGENT_ASSET,
+    fill: true,
+    imageScale: 1,
+    theme: CLAUDE_AGENT_THEME,
+    haloColor: CLAUDE_AGENT_THEME.blobTopCore,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+  {
+    id: 3,
+    baseSize: 60,
+    x: -87,
+    y: -128,
+    zIndex: 15,
+    graphicKind: 'emoji',
+    emoji: '✈️',
+    emojiScale: 1,
+    hoverExpandsToPill: true,
+    pillTitle: 'Travel agent',
+    pillSubtitle: '',
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 26,
+    theme: TRAVEL_AGENT_THEME,
+    haloColor: TRAVEL_AGENT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 9,
+    baseSize: 60,
+    x: 56,
+    y: -170,
+    zIndex: 14,
+    graphicKind: 'emoji',
+    emoji: '📝',
+    emojiScale: 1,
+    hoverExpandsToPill: true,
+    pillTitle: 'Writing agent',
+    pillSubtitle: '',
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 26,
+    theme: WRITING_AGENT_THEME,
+    haloColor: WRITING_AGENT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 2,
+    x: -86,
+    y: -57,
+    zIndex: 13,
+    img: FIGMA_ASSETS.chatgpt,
+    fill: true,
+    haloColor: '#ffffff',
+    childActions: [],
+  },
+  {
+    id: 8,
+    x: 91,
+    y: -28,
+    zIndex: 14,
+    img: FIGMA_ASSETS.gemini,
+    fill: true,
+    haloColor: '#A391FB',
+    childActions: [],
+  },
+  {
+    id: 5,
+    baseSize: 60,
+    x: 110,
+    y: -103,
+    zIndex: 16,
+    graphicKind: 'emoji',
+    emoji: '🏃',
+    emojiScale: 1,
+    hoverExpandsToPill: true,
+    pillTitle: 'Fitness agent',
+    pillSubtitle: '',
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 26,
+    theme: FITNESS_AGENT_THEME,
+    haloColor: FITNESS_AGENT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 6,
+    baseSize: 60,
+    x: -21,
+    y: -179,
+    zIndex: 10,
+    graphicKind: 'emoji',
+    emoji: '💸',
+    emojiScale: 1,
+    hoverExpandsToPill: true,
+    pillTitle: 'Budget agent',
+    pillSubtitle: '',
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 26,
+    theme: BUDGET_AGENT_THEME,
+    haloColor: BUDGET_AGENT_THEME.blobTopCore,
+    childActions: [],
+  },
+].map(enrichBubbleMetrics);
+
+const BUBBLE_SET_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: 'app',
+    label: 'App',
+    slots: APP_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: 'agent',
+    label: 'Agent',
+    slots: AGENT_BUBBLES_CONFIG,
+  }),
+]);
+
+const DEFAULT_BUBBLE_SET_ID = BUBBLE_SET_DEFINITIONS[0]?.id || 'app';
+const BUBBLE_STAGGER_TOTAL_MS = Math.max(
+  0,
+  ((Math.max(...BUBBLE_SET_DEFINITIONS.map((setDef) => setDef.slots.length), 1)) - 1) * BUBBLE_STAGGER_STEP_MS,
+);
 const OPEN_PHASE_LATCH_MS = APPEAR_MOVE_DURATION_MS;
 const CLOSE_PHASE_LATCH_MS = DISAPPEAR_MOVE_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS;
 
@@ -388,13 +576,16 @@ function createAgentOrbContent(id) {
 
 function createDemotedOrbSlotContent(homeOrbContent) {
   if (Number.isFinite(homeOrbContent?.sourceSlotId)) {
-    const sourceSlot = BUBBLES_CONFIG.find((slot) => slot.id === homeOrbContent.sourceSlotId);
+    const sourceSlot = findBubbleSlotById(homeOrbContent.sourceSlotId, state.activeSetId);
     if (sourceSlot) return createBaseSlotContent(sourceSlot);
   }
   return {
     kind: 'demoted-orb-bubble',
     contentId: `demoted:${homeOrbContent.contentId}`,
     sourceSlotId: null,
+    graphicKind: homeOrbContent.graphicKind || 'image',
+    emoji: homeOrbContent.emoji || '',
+    emojiScale: homeOrbContent.emojiScale ?? 1,
     img: homeOrbContent.img,
     alt: homeOrbContent.alt || '',
     fill: false,
@@ -408,15 +599,21 @@ function createDemotedOrbSlotContent(homeOrbContent) {
 }
 
 function createBaseSlotContent(slot) {
+  const slotTheme = slot.theme || bubbleSlotThemeForId(slot.id);
   return {
     kind: 'slot-bubble',
     contentId: `slot:${slot.id}`,
     sourceSlotId: slot.id,
+    baseSize: slot.baseSize ?? BUBBLE_BASE_SIZE,
+    graphicKind: slot.graphicKind || 'image',
+    emoji: slot.emoji || '',
+    emojiScale: slot.emojiScale ?? 1,
     img: slot.img,
     alt: '',
     fill: Boolean(slot.fill),
     imageScale: slot.imageScale ?? (slot.fill ? 1 : 0.72),
     isPill: Boolean(slot.isPill),
+    hoverExpandsToPill: Boolean(slot.hoverExpandsToPill),
     pillTitle: slot.pillTitle || '',
     pillSubtitle: slot.pillSubtitle || '',
     pillTrailingIcon: slot.pillTrailingIcon || '',
@@ -435,35 +632,53 @@ function createBaseSlotContent(slot) {
     subIconOffsetY: slot.subIconOffsetY,
     childActions: slot.childActions || [],
     childLayout: slot.childLayout || null,
-    haloColor: slot.haloColor || haloColorForTheme(bubbleSlotThemeForId(slot.id)),
-    theme: bubbleSlotThemeForId(slot.id),
+    haloColor: slot.haloColor || haloColorForTheme(slotTheme),
+    theme: slotTheme,
     hoverShadowMode: 'default',
-    orbPromotionEnabled: !NON_PROMOTABLE_BUBBLE_IDS.has(slot.id),
+    orbPromotionEnabled: slot.orbPromotionEnabled ?? !NON_PROMOTABLE_BUBBLE_IDS.has(slot.id),
   };
 }
 
-function createInitialSlotContentMap() {
-  return Object.fromEntries(BUBBLES_CONFIG.map((slot) => [slot.id, createBaseSlotContent(slot)]));
+function getBubbleSetDefinition(setId = DEFAULT_BUBBLE_SET_ID) {
+  return BUBBLE_SET_DEFINITIONS.find((setDef) => setDef.id === setId) || BUBBLE_SET_DEFINITIONS[0];
 }
 
-function getCurrentSlotContent(slotId) {
-  return state.slotContentById[slotId] || createBaseSlotContent(BUBBLES_CONFIG.find((bubble) => bubble.id === slotId));
+function getBubblesConfigForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return getBubbleSetDefinition(setId)?.slots || [];
 }
 
-function resolveRenderedBubble(slot) {
-  const content = getCurrentSlotContent(slot.id);
+function findBubbleSlotById(slotId, setId = DEFAULT_BUBBLE_SET_ID) {
+  return getBubblesConfigForSet(setId).find((bubble) => bubble.id === slotId) || null;
+}
+
+function createInitialSlotContentMap(setId) {
+  return Object.fromEntries(getBubblesConfigForSet(setId).map((slot) => [slot.id, createBaseSlotContent(slot)]));
+}
+
+function createInitialSlotContentMaps() {
+  return Object.fromEntries(BUBBLE_SET_DEFINITIONS.map((setDef) => [setDef.id, createInitialSlotContentMap(setDef.id)]));
+}
+
+function getCurrentSlotContent(slotId, setId = state.activeSetId) {
+  const contentMap = state.slotContentBySetId[setId] || {};
+  return contentMap[slotId] || createBaseSlotContent(findBubbleSlotById(slotId, setId));
+}
+
+function resolveRenderedBubble(slot, setId = state.activeSetId) {
+  const content = getCurrentSlotContent(slot.id, setId);
   return {
     ...slot,
     ...content,
     id: slot.id,
-    baseSize: BUBBLE_BASE_SIZE,
-    expandedExtraWidth: content.isPill ? measurePillExtraWidth(content) : 0,
+    baseSize: content.baseSize ?? slot.baseSize ?? BUBBLE_BASE_SIZE,
+    expandedExtraWidth: bubbleSupportsPillExpansion(content) ? measurePillExtraWidth(content) : 0,
     childActions: content.childActions || [],
     imageScale: content.imageScale ?? (content.fill ? 1 : 0.72),
   };
 }
 
 const state = {
+  activeSetId: DEFAULT_BUBBLE_SET_ID,
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -487,7 +702,7 @@ const state = {
   closeMotionUntil: 0,
   orbAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
   homeOrbContent: createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID),
-  slotContentById: createInitialSlotContentMap(),
+  slotContentBySetId: createInitialSlotContentMaps(),
   swapTransition: null,
   swapResetPending: false,
   panSnapPending: false,
@@ -503,6 +718,7 @@ const childSelectionMotionTimers = new Map();
 
 const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
+  setPanel: document.querySelector('[data-bubble2-set-panel]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
@@ -516,6 +732,7 @@ init();
 function init() {
   if (!refs.shell || !refs.panLayer) return;
 
+  syncSetSwitcherUi();
   buildScene();
   updateMeasuredChildChipWidths();
   if (document.fonts?.ready) {
@@ -533,10 +750,20 @@ function init() {
 }
 
 function buildScene() {
+  clearDirectionalSelectionTimers(childSelectionMotionTimers);
+  refs.panLayer.replaceChildren();
+  refs.bubbleNodes.clear();
+  refs.childNodes.clear();
+  refs.orb = null;
+  refs.orbVisual = null;
+  refs.swapLayer = null;
+  syncedChildSelectionParentId = null;
+  syncedChildSelectionId = null;
   const fragment = document.createDocumentFragment();
   const childFragment = document.createDocumentFragment();
+  const activeBubbles = getBubblesConfigForSet(state.activeSetId);
 
-  BUBBLES_CONFIG.forEach((bubble, index) => {
+  activeBubbles.forEach((bubble, index) => {
     const node = createBubbleNode(bubble, index);
     refs.bubbleNodes.set(bubble.id, node);
     fragment.appendChild(node.root);
@@ -559,7 +786,7 @@ function buildScene() {
 }
 
 function getChildSelectionSurfaces(parentId) {
-  const slot = BUBBLES_CONFIG.find((bubble) => bubble.id === parentId);
+  const slot = findBubbleSlotById(parentId, state.activeSetId);
   const parentBubble = slot ? resolveRenderedBubble(slot) : null;
   if (!parentBubble?.childActions?.length) return [];
   return parentBubble.childActions
@@ -597,7 +824,7 @@ function syncChildDirectionalSelectionUi(parentId, hoveredChildId) {
     return false;
   }
 
-  const slot = BUBBLES_CONFIG.find((bubble) => bubble.id === resolvedParentId);
+  const slot = findBubbleSlotById(resolvedParentId, state.activeSetId);
   const parentBubble = slot ? resolveRenderedBubble(slot) : null;
   const nextIndex = parentBubble?.childActions?.findIndex(
     (action) => getChildBubbleKey(resolvedParentId, action.id) === resolvedChildId,
@@ -649,10 +876,14 @@ function createBubbleNode(bubble, index) {
 function bubbleContentSignature(bubble) {
   return JSON.stringify({
     contentId: bubble.contentId || '',
+    graphicKind: bubble.graphicKind || 'image',
+    emoji: bubble.emoji || '',
+    emojiScale: bubble.emojiScale ?? '',
     img: bubble.img || '',
     fill: Boolean(bubble.fill),
     imageScale: bubble.imageScale ?? '',
     isPill: Boolean(bubble.isPill),
+    hoverExpandsToPill: Boolean(bubble.hoverExpandsToPill),
     pillTitle: bubble.pillTitle || '',
     pillSubtitle: bubble.pillSubtitle || '',
     pillTrailingIcon: bubble.pillTrailingIcon || '',
@@ -669,22 +900,20 @@ function syncBubbleNodeContent(node, bubble) {
   if (node.contentSignature === signature) return;
   node.contentSignature = signature;
   node.inner.replaceChildren();
+  const usesPillInteraction = bubbleSupportsPillExpansion(bubble);
 
   const visual = document.createElement('div');
   visual.className = 'bubble2-item-visual';
   node.inner.appendChild(visual);
 
   const surface = document.createElement('div');
-  surface.className = `bubble2-surface${bubble.isPill ? ' is-pill' : ''}`;
+  surface.className = 'bubble2-surface';
 
   if (!bubble.isPill) {
     const hoverShell = document.createElement('div');
     hoverShell.className = 'bubble2-hover-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
     hoverShell.setAttribute('aria-hidden', 'true');
-    hoverShell.innerHTML = `
-      <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
-      ${renderCelestialSelectionChrome('bottom', 'bubble2-hover-shell-selection g-celestial-orb-selection')}
-    `;
+    hoverShell.innerHTML = renderBubbleOrbShellMarkup({ includeCenter: false });
     node.inner.appendChild(hoverShell);
     node.hoverShell = hoverShell;
   } else {
@@ -701,7 +930,7 @@ function syncBubbleNodeContent(node, bubble) {
   iconWrap.appendChild(createBubbleGraphic(bubble));
 
   let pillCopy = null;
-  if (bubble.isPill) {
+  if (usesPillInteraction) {
     pillCopy = document.createElement('div');
     pillCopy.className = 'bubble2-pill-copy';
     if (bubble.pillTrailingIcon) pillCopy.classList.add('has-action');
@@ -752,7 +981,7 @@ function syncBubbleNodeContent(node, bubble) {
   }
 
   let leadingGroup = null;
-  if (bubble.isPill) {
+  if (usesPillInteraction) {
     leadingGroup = document.createElement('div');
     leadingGroup.className = 'bubble2-pill-leading-group';
     leadingGroup.appendChild(iconWrap);
@@ -820,11 +1049,7 @@ function createOrbNode() {
   const visual = document.createElement('div');
   visual.className = 'bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
 
-  visual.innerHTML = `
-    <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
-    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
-    ${renderAiOrbCenterMarkup()}
-  `;
+  visual.innerHTML = renderBubbleOrbShellMarkup();
   button.appendChild(visual);
   syncBubbleHomeOrbVisual(button, { animate: false });
 
@@ -845,6 +1070,15 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
     });
     return;
   }
+  if (content.graphicKind === 'emoji') {
+    syncAiOrbCenterEmoji(root, {
+      animate: options.animate,
+      emoji: content.emoji,
+      theme: content.theme,
+      switchMotion: options.switchMotion || 'fade',
+    });
+    return;
+  }
   syncAiOrbCenterImage(root, {
     animate: options.animate,
     src: content.img,
@@ -856,12 +1090,72 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
 
 bindAiOrbIconStorageSync(document, window);
 
+function syncSetSwitcherUi() {
+  if (!refs.setPanel) return;
+  refs.setPanel.replaceChildren(
+    ...BUBBLE_SET_DEFINITIONS.map((setDef) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `bubble2-set-button${setDef.id === state.activeSetId ? ' is-active' : ''}`;
+      button.dataset.bubbleSetId = setDef.id;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', String(setDef.id === state.activeSetId));
+      button.textContent = setDef.label;
+      return button;
+    }),
+  );
+}
+
+function resetStateForSetSwitch() {
+  state.isPressed = false;
+  state.hoveredBubble = null;
+  state.hoveredChildBubble = null;
+  state.dragOffset = { x: 0, y: 0, active: false };
+  state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.pointerMovedSincePress = false;
+  state.lockedExpandedPillId = null;
+  state.lockedExpandedPillScale = null;
+  clearChildHoverTimer();
+  state.childHoverCandidateId = null;
+  state.childMenuParentId = null;
+  state.childMenuPointerLock = null;
+  state.openMotionUntil = 0;
+  state.closeMotionUntil = 0;
+  state.swapTransition = null;
+  state.swapResetPending = false;
+  state.panSnapPending = false;
+  state.lastScene = null;
+  previousHoveredId = null;
+  previousHoveredChildId = null;
+  syncedChildSelectionParentId = null;
+  syncedChildSelectionId = null;
+  clearDirectionalSelectionTimers(childSelectionMotionTimers);
+}
+
+function switchBubbleSet(nextSetId) {
+  const nextSet = getBubbleSetDefinition(nextSetId);
+  if (!nextSet || nextSet.id === state.activeSetId) return;
+  state.activeSetId = nextSet.id;
+  resetStateForSetSwitch();
+  syncSetSwitcherUi();
+  buildScene();
+  updateMeasuredChildChipWidths();
+  render();
+}
+
 function bindEvents() {
   refs.shell?.addEventListener('pointerdown', handlePointerDown);
+  refs.setPanel?.addEventListener('click', handleSetPanelClick);
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
+}
+
+function handleSetPanelClick(event) {
+  const target = event.target instanceof Element ? event.target.closest('[data-bubble-set-id]') : null;
+  if (!target) return;
+  switchBubbleSet(target.dataset.bubbleSetId || '');
 }
 
 function handleKeyDown(event) {
@@ -1046,7 +1340,7 @@ function startBubbleSwap(scene, now) {
     demotedShellScaleEnd: SWAP_DEMOTED_END_SCALE,
     promotedRootScaleEnd: ORB_BASE_SIZE / selectedBubble.baseSize,
     promotedVisualScaleStart: BUBBLE_HOVER_CONTENT_SCALE,
-    promotedVisualScaleEnd: ORB_CENTER_IMAGE_SIZE / ORB_BASE_SIZE,
+    promotedVisualScaleEnd: BUBBLE_RELEASE_CONTENT_SCALE,
     releaseBubbles: scene.bubbles.map(snapshotReleaseBubble),
     promotedContent,
     demotedContent,
@@ -1061,9 +1355,12 @@ function commitBubbleSwap() {
   const transition = state.swapTransition;
   if (!transition) return;
   state.homeOrbContent = transition.promotedContent;
-  state.slotContentById = {
-    ...state.slotContentById,
-    [transition.selectedBubbleId]: transition.demotedContent,
+  state.slotContentBySetId = {
+    ...state.slotContentBySetId,
+    [state.activeSetId]: {
+      ...(state.slotContentBySetId[state.activeSetId] || {}),
+      [transition.selectedBubbleId]: transition.demotedContent,
+    },
   };
   state.swapTransition = null;
   state.closeMotionUntil = 0;
@@ -1159,10 +1456,12 @@ function render() {
     const node = refs.bubbleNodes.get(bubble.id);
     if (!node) continue;
     syncBubbleNodeContent(node, bubble);
+    const usesPillInteraction = bubbleSupportsPillExpansion(bubble);
 
     const isHovered = scene.hoveredId === bubble.id;
     const isPromoting = bubble.swapState === 'promoting';
-    const isRoundHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
+    const isHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
+    const isRoundVisualScaleActive = (isHovered && !usesPillInteraction) || isPromoting;
     const isAppearing = isInitialReveal;
     const isSwapFade = bubble.swapState === 'fade';
     const isSwapHidden = bubble.swapState === 'hidden';
@@ -1211,11 +1510,11 @@ function render() {
       ? String(bubbleOpacity)
       : (isSwapActive ? '0' : '0');
     if (node.shadowEl) {
-      if (isRoundHoverShellActive || isPromoting) {
+      if (isHoverShellActive || isPromoting) {
         node.shadowEl.style.boxShadow = '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
       } else {
         const isTightHoverShadow = bubble.hoverShadowMode === 'tight';
-        const accentShadow = (!bubble.isPill && isHovered && bubble.haloColor)
+        const accentShadow = (!usesPillInteraction && isHovered && bubble.haloColor)
           ? (isTightHoverShadow
             ? `0 0 16px 4px ${bubble.haloColor}`
             : `0 0 20px 8px ${bubble.haloColor}`)
@@ -1247,19 +1546,29 @@ function render() {
       : isPromoting
       ? 'linear, linear, linear, linear, linear'
       : `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
-    node.root.classList.toggle('is-round-hovered', isRoundHoverShellActive);
+    node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
     if (node.visual) {
-      node.visual.style.transform = `scale(${isPromoting ? bubble.promotedVisualScale : (isRoundHoverShellActive ? BUBBLE_HOVER_CONTENT_SCALE : 1)})`;
+      node.visual.style.transform = `scale(${isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? BUBBLE_HOVER_CONTENT_SCALE : 1)})`;
     }
     if (node.hoverShell) {
-      applyBubbleCelestialChrome(
-        node.hoverShell.querySelector('.bubble2-hover-shell-selection'),
-        node.hoverShell,
-        CELESTIAL_ORB_PRESET,
-        bubble.theme || {},
-        orbGeometryForSize(bubble.baseSize),
-      );
+      const hoverShellGeometry = usesPillInteraction
+        ? {
+            width: bubble.targetWidth,
+            height: bubble.baseSize,
+            radius: bubble.baseSize / 2,
+          }
+        : orbGeometryForSize(bubble.baseSize);
+      applyBubbleHoverShellChrome(node.hoverShell, bubble.theme, hoverShellGeometry);
+      if (usesPillInteraction) {
+        node.hoverShell.style.inset = '0';
+        node.hoverShell.style.width = `${bubble.targetWidth}px`;
+        node.hoverShell.style.height = `${bubble.baseSize}px`;
+      } else {
+        node.hoverShell.style.inset = '0';
+        node.hoverShell.style.width = '';
+        node.hoverShell.style.height = '';
+      }
       node.hoverShell.style.opacity = isPromoting ? '1' : '';
       node.hoverShell.style.transform = isPromoting ? 'scale(1)' : '';
     }
@@ -1268,11 +1577,15 @@ function render() {
     node.iconWrap.style.height = `${bubble.baseSize}px`;
     node.iconWrap.style.left = '0px';
     node.iconWrap.style.top = '0px';
-    const pillHoverBubbleScale = bubble.isPill && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
-    node.iconWrap.style.transform = bubble.isPill ? 'scale(1)' : `scale(${pillHoverBubbleScale})`;
-    if (!bubble.isPill) {
+    const pillHoverBubbleScale = usesPillInteraction && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
+    node.iconWrap.style.transform = usesPillInteraction ? 'scale(1)' : `scale(${pillHoverBubbleScale})`;
+    node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
+    if (!usesPillInteraction) {
       node.surface.classList.toggle('is-hovered', isHovered);
+    } else {
+      node.surface.classList.remove('is-hovered');
     }
+    node.surface.style.opacity = '';
 
     if (node.pillCopy) {
       const pillContentScale = Math.max((bubble.targetScale ?? 1), 0.0001);
@@ -1326,6 +1639,9 @@ function render() {
       node.leadingGroup.style.width = `${bubble.baseSize}px`;
       node.leadingGroup.style.height = `${bubble.baseSize}px`;
       node.leadingGroup.style.transform = `scale(${pillHoverBubbleScale})`;
+    }
+    if (node.leadingGroup) {
+      node.leadingGroup.style.opacity = '1';
     }
   }
 
@@ -1393,13 +1709,7 @@ function render() {
       : `${state.isPressed ? ORB_PRESSED_DURATION_MS : ORB_IDLE_DURATION_MS}ms`;
     refs.orbVisual.style.transform = `translate3d(0, 0, 0) scale(${(demotedSwapMotion ? demotedSwapMotion.shellScale : scene.orb.targetScale).toFixed(4)})`;
     refs.orbVisual.style.setProperty('--g-stage-h', `${ORB_BASE_SIZE}px`);
-    applyBubbleCelestialChrome(
-      refs.orbVisual.querySelector('.bubble2-orb-selection'),
-      refs.orbVisual,
-      CELESTIAL_ORB_PRESET,
-      currentBubbleHomeOrbTheme(),
-      orbGeometryForSize(ORB_BASE_SIZE),
-    );
+    applyBubbleHomeOrbShellChrome(refs.orbVisual, currentBubbleHomeOrbTheme());
   }
 
   syncSwapLayer(now);
@@ -1427,7 +1737,7 @@ function computeScene(now = performance.now()) {
   const hoverEnabled = state.isPressed && state.pointerMovedSincePress;
 
   function buildSceneState(centerProbe) {
-    let processedBubbles = BUBBLES_CONFIG.map((slot) => {
+    let processedBubbles = getBubblesConfigForSet(state.activeSetId).map((slot) => {
       const bubble = resolveRenderedBubble(slot);
       let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
       let dx = 0;
@@ -1480,7 +1790,7 @@ function computeScene(now = performance.now()) {
     let bestHit = hoverState.bubbleId;
     let hoveredChildId = hoverState.childId;
 
-    const hoveredPill = processedBubbles.find((bubble) => bubble.id === bestHit && bubble.isPill);
+    const hoveredPill = processedBubbles.find((bubble) => bubble.id === bestHit && bubbleSupportsPillExpansion(bubble));
     if (hoveredPill && state.isPressed) {
       if (state.lockedExpandedPillId !== hoveredPill.id) {
         state.lockedExpandedPillId = hoveredPill.id;
@@ -1496,16 +1806,19 @@ function computeScene(now = performance.now()) {
       let finalTargetScale = bubble.targetScale;
       if (
         isHovered &&
-        bubble.isPill &&
+        bubbleSupportsPillExpansion(bubble) &&
         state.lockedExpandedPillId === bubble.id &&
         state.lockedExpandedPillScale != null
       ) {
         finalTargetScale = state.lockedExpandedPillScale;
       }
-      const expandedExtraSourceWidth = bubble.isPill
+      const expandedExtraSourceWidth = bubbleSupportsPillExpansion(bubble)
         ? bubble.expandedExtraWidth / Math.max(finalTargetScale || 1, 0.0001)
         : 0;
-      const isExpanded = state.isPressed && isHovered && bubble.isPill && state.childMenuParentId !== bubble.id;
+      const isExpanded = state.isPressed
+        && isHovered
+        && bubbleSupportsPillExpansion(bubble)
+        && state.childMenuParentId !== bubble.id;
       return {
         ...bubble,
         isExpanded,
@@ -1684,9 +1997,7 @@ function createSwapPromotedNode() {
   wrapper.className = 'bubble2-swap-node bubble2-swap-promoted';
   wrapper.innerHTML = `
     <div class="bubble2-swap-orb bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected">
-      <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
-      ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
-      ${renderAiOrbCenterMarkup()}
+      ${renderBubbleOrbShellMarkup()}
     </div>
   `;
   return wrapper;
@@ -1697,9 +2008,7 @@ function createSwapDemotedNode() {
   wrapper.className = 'bubble2-swap-node bubble2-swap-demoted';
   wrapper.innerHTML = `
     <div class="bubble2-swap-demoted-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected">
-      <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
-      ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
-      ${renderAiOrbCenterMarkup()}
+      ${renderBubbleOrbShellMarkup()}
     </div>
   `;
   return wrapper;
@@ -1707,9 +2016,7 @@ function createSwapDemotedNode() {
 
 function applySwapOrbTheme(node, theme) {
   if (!node || !theme) return;
-  const chrome = node.querySelector('.bubble2-orb-selection');
-  const host = node.querySelector('.bubble2-orb-visual');
-  applyBubbleCelestialChrome(chrome, host, CELESTIAL_ORB_PRESET, theme, orbGeometryForSize(ORB_BASE_SIZE));
+  applyBubbleHomeOrbShellChrome(node.querySelector('.bubble2-orb-visual'), theme);
 }
 
 function syncSwapOrbContent(node, content) {
@@ -1718,6 +2025,14 @@ function syncSwapOrbContent(node, content) {
     syncAiOrbCenterIcon(node, {
       animate: false,
       id: content.iconId,
+      theme: content.theme,
+    });
+    return;
+  }
+  if (content.graphicKind === 'emoji') {
+    syncAiOrbCenterEmoji(node, {
+      animate: false,
+      emoji: content.emoji,
       theme: content.theme,
     });
     return;
@@ -1846,6 +2161,10 @@ function measureTextWidth(text, font) {
   return textMeasureContext.measureText(text).width;
 }
 
+function bubbleSupportsPillExpansion(bubble) {
+  return Boolean(bubble?.isPill || bubble?.hoverExpandsToPill);
+}
+
 function measureChildChipWidth(action) {
   if (action.measuredWidth) return action.measuredWidth;
   const fontWeight = action.fontWeight || 400;
@@ -1879,12 +2198,19 @@ function updateMeasuredChildChipWidths() {
 function enrichBubbleMetrics(bubble) {
   return {
     ...bubble,
-    baseSize: BUBBLE_BASE_SIZE,
-    expandedExtraWidth: bubble.isPill ? measurePillExtraWidth(bubble) : 0,
+    baseSize: bubble.baseSize ?? BUBBLE_BASE_SIZE,
+    expandedExtraWidth: bubbleSupportsPillExpansion(bubble) ? measurePillExtraWidth(bubble) : 0,
   };
 }
 
 function createBubbleGraphic(bubble) {
+  if (bubble.graphicKind === 'emoji') {
+    const emoji = document.createElement('span');
+    emoji.className = 'bubble2-icon-emoji';
+    emoji.textContent = bubble.emoji || '✨';
+    emoji.style.setProperty('--bubble-emoji-scale', String(bubble.emojiScale ?? 1));
+    return emoji;
+  }
   const image = document.createElement('img');
   image.className = bubble.fill ? 'bubble2-icon is-fill' : 'bubble2-icon is-contain';
   image.src = bubble.img;
@@ -2165,7 +2491,7 @@ function isPointerInsideBubble(point, bubble) {
   const dx = point.x - bubble.targetX;
   const dy = point.y - bubble.targetY;
 
-  if (previousHoveredId === bubble.id && bubble.isPill && state.childMenuParentId !== bubble.id) {
+  if (previousHoveredId === bubble.id && bubbleSupportsPillExpansion(bubble) && state.childMenuParentId !== bubble.id) {
     return (
       dx >= -hitRadius - stickyPadding &&
       dx <= hitRadius + bubble.expandedExtraWidth + stickyPadding + 10 &&
