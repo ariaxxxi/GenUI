@@ -732,6 +732,7 @@ function resolveRenderedBubble(slot, setId = state.activeSetId) {
 
 const state = {
   activeSetId: DEFAULT_BUBBLE_SET_ID,
+  viewportPanEnabled: false,
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -771,8 +772,11 @@ let syncedChildSelectionId = null;
 const childSelectionMotionTimers = new Map();
 
 const refs = {
+  stage: document.querySelector('[data-bubble2-stage]'),
   shell: document.querySelector('[data-bubble2-shell]'),
+  controlPanel: document.querySelector('[data-bubble2-control-panel]'),
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
+  viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
@@ -784,9 +788,10 @@ const refs = {
 init();
 
 function init() {
-  if (!refs.shell || !refs.panLayer) return;
+  if (!refs.stage || !refs.shell || !refs.panLayer) return;
 
   syncSetSwitcherUi();
+  syncViewportPanToggleUi();
   buildScene();
   updateMeasuredChildChipWidths();
   if (document.fonts?.ready) {
@@ -1177,6 +1182,11 @@ function syncSetSwitcherUi() {
   );
 }
 
+function syncViewportPanToggleUi() {
+  if (!refs.viewportPanToggle) return;
+  refs.viewportPanToggle.checked = state.viewportPanEnabled;
+}
+
 function resetStateForSetSwitch() {
   state.isPressed = false;
   state.hoveredBubble = null;
@@ -1216,8 +1226,9 @@ function switchBubbleSet(nextSetId) {
 }
 
 function bindEvents() {
-  refs.shell?.addEventListener('pointerdown', handlePointerDown);
+  refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
+  refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
@@ -1228,6 +1239,21 @@ function handleSetPanelClick(event) {
   const target = event.target instanceof Element ? event.target.closest('[data-bubble-set-id]') : null;
   if (!target) return;
   switchBubbleSet(target.dataset.bubbleSetId || '');
+}
+
+function handleViewportPanToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.viewportPanEnabled = target.checked;
+  syncViewportPanToggleUi();
+}
+
+function shouldStartBubblePress(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return false;
+  if (refs.controlPanel?.contains(target)) return false;
+  if (!state.viewportPanEnabled) return refs.shell?.contains(target) || false;
+  return refs.stage?.contains(target) || false;
 }
 
 function handleKeyDown(event) {
@@ -1261,6 +1287,7 @@ function cycleBubbleHomeAgent(step) {
 }
 
 function handlePointerDown(event) {
+  if (!shouldStartBubblePress(event)) return;
   if (state.swapTransition?.active) return;
   event.preventDefault();
   const now = performance.now();

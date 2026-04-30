@@ -10,11 +10,23 @@
 <link rel="stylesheet" href="src/styles/bubble-page.css"/>
 </head>
 <body class="bubble2-page">
-  <main class="bubble2-stage" aria-label="Bubble 2 app cluster demo">
+  <main class="bubble2-stage" data-bubble2-stage aria-label="Bubble 2 app cluster demo">
     <aside class="bubble2-sidebar" aria-label="Bubble content sets">
-      <div class="bubble2-sidebar-card">
+      <div class="bubble2-sidebar-card" data-bubble2-control-panel>
         <p class="bubble2-sidebar-eyebrow">Content Sets</p>
         <div class="bubble2-set-switcher" data-bubble2-set-panel role="tablist" aria-label="Bubble content set switcher"></div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Press Scope</p>
+          <label class="bubble2-toggle-row" for="bubble2-viewport-pan-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Viewport Anywhere</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-viewport-pan-toggle" type="checkbox" data-bubble2-viewport-pan-toggle aria-label="Allow Bubble Home press and pan from anywhere in the viewport except the control panel"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
       </div>
     </aside>
     <section class="bubble2-canvas" data-bubble2-shell>

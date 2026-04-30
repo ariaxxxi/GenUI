@@ -1,6 +1,6 @@
 # Title
 
-Bubble Home Claude scale parity with Spotify slot
+Bubble Home press-scope toggle
 
 ## Status
 
@@ -8,46 +8,57 @@ Coder-complete in working tree. Ready for review.
 
 ## Objective
 
-On `/bubble`, keep the requested app-slot mapping in the `agent` set and remove the Claude-only visual scale override so Claude matches the Spotify slot’s apparent size behavior.
+On `/bubble`, add a control-panel toggle that switches Bubble Home between canvas-only press/pan start and viewport-anywhere press/pan start, while keeping the control panel excluded from viewport-start behavior.
 
 ## In scope
 
-- Bubble Home Claude content-scale cleanup in `src/bubble-page.js`.
-- Execution-note updates for the parity fix.
+- Bubble Home control-panel markup updates in `bubble.html`.
+- Bubble Home toggle styling updates in `src/styles/bubble-page.css`.
+- Bubble Home press-scope state and pointer-start gating in `src/bubble-page.js`.
+- Bubble Home product-spec and execution-note updates for the new control.
 
 ## Out of scope
 
-- Bubble Home slot layout remapping.
-- Bubble Home shell-color, image-mask, or pill-gap changes.
-- Bubble Home interaction or promotion behavior changes.
+- Bubble Home layout remapping.
+- Bubble Home bubble visual changes.
+- Bubble Home promotion or child-bubble behavior changes.
 - AI Mode or shared Celestial visual changes.
 
 ## Relevant context
 
-- The requested slot mapping is already present in the current `agent` set: ChatGPT->ChatGPT, Spotify->Claude, Profile1->Travel, Maps->Budget, Notes->Writing, and Profile2->Fitness.
-- Claude still had a local `imageScale: 0.82` override, while Spotify uses the slot at full image scale.
-- That override makes Claude appear smaller even when its slot size and position already match Spotify.
+- Bubble Home currently starts press/pan only from pointerdown events on the canvas shell.
+- The new behavior needs to preserve current canvas behavior when off, and allow press/pan start from anywhere in the Bubble Home viewport except the control panel when on.
+- The existing pointer move and release path already runs on `window`, so only the press-start gate needs to change.
 
 ## Files to inspect
 
+- `bubble.html`
+- `src/styles/bubble-page.css`
 - `src/bubble-page.js`
+- `docs/product-specs/bubble-home.md`
 
 ## Files allowed to change
 
+- `bubble.html`
+- `src/styles/bubble-page.css`
 - `src/bubble-page.js`
+- `docs/product-specs/bubble-home.md`
 - `docs/exec-plans/active/current.md`
 - `docs/exec-plans/completed/handoff.md`
 
 ## Implementation steps
 
-1. Remove the Claude-only `imageScale: 0.82` override from the `agent` set.
-2. Record the cause and result in the execution notes.
+1. Add a press-scope toggle control to the Bubble Home sidebar card.
+2. Add Bubble Home state and UI sync for the toggle.
+3. Move pointerdown binding to the stage and gate press start based on the selected scope, excluding the control panel in viewport mode.
+4. Update Bubble Home docs and execution notes to reflect the new control path.
 
 ## Acceptance criteria
 
-- Claude still uses the Spotify slot position and size in the `agent` set.
-- Claude no longer uses a smaller local image scale than Spotify.
-- No Bubble Home layout or interaction behavior changes beyond the Claude scale fix.
+- Bubble Home exposes a control-panel toggle for press scope.
+- With the toggle off, press/pan starts only from inside the canvas.
+- With the toggle on, press/pan can start anywhere in the Bubble Home viewport except the control panel.
+- Existing Bubble Home pan, hover, and promotion behavior remains unchanged after press start.
 
 ## Validation checklist
 
@@ -57,4 +68,4 @@ On `/bubble`, keep the requested app-slot mapping in the `agent` set and remove 
 
 ## Risks / notes
 
-- If Claude still looks smaller after this change, the remaining cause would be padding baked into the source asset rather than Bubble Home slot geometry.
+- This change alters the press-start event boundary, so a browser pass is still needed to confirm control-panel exclusion and mobile layout feel.

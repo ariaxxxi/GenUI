@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble press-scope toggle
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a Bubble Home control-panel toggle that switches press/pan start between canvas-only and viewport-anywhere modes, with the control panel excluded from viewport-start behavior.
+- Files changed: `bubble.html`, `src/styles/bubble-page.css`, `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final control-panel exclusion and viewport-start feel still need a human check on `/bubble`.
+
 ## 2026-04-30 - Bubble Claude scale parity with Spotify slot
 
 - Completion status: completed with static verification; manual browser pass still recommended.
