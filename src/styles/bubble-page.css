@@ -355,7 +355,7 @@ body.bubble2-page {
   place-items: center;
   width: 100%;
   height: 100%;
-  font-size: calc(38px * var(--bubble-emoji-scale, 1));
+  font-size: calc(var(--bubble-emoji-size, 38px) * var(--bubble-emoji-scale, 1));
   line-height: 1;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
   transform: translateY(1px);
@@ -401,7 +401,7 @@ body.bubble2-page {
 .bubble2-pill-title {
   margin: 0;
   color: #ffffff;
-  font-size: var(--bubble2-title-size, 22px);
+  font-size: var(--bubble2-title-size, 18px);
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: 0.02em;
@@ -410,7 +410,7 @@ body.bubble2-page {
 .bubble2-pill-subtitle {
   margin: 0;
   color: rgba(255, 255, 255, 0.76);
-  font-size: var(--bubble2-subtitle-size, 18px);
+  font-size: var(--bubble2-subtitle-size, 16px);
   font-weight: 400;
   line-height: 1.1;
 }
@@ -687,17 +687,14 @@ body.bubble2-page {
   transition: none;
 }
 
-.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-shell,
-.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-image {
-  border-radius: 999px;
-}
-
-.bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-shell {
-  overflow: hidden;
-}
-
 .bubble2-orb-visual.is-promoted-home .g-celestial-orb-center-halo {
   opacity: 0;
+}
+
+.bubble2-orb-visual.is-promoted-home-claude .g-celestial-orb-center-shell,
+.bubble2-orb-visual.is-promoted-home-claude .g-celestial-orb-center-image {
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 @media (max-width: 760px) {

@@ -243,6 +243,7 @@ function syncAiOrbCenterContent(root = document, content, options = {}) {
   else if (target.kind === 'icon') syncAiOrbSelectionTheme(scope, target.iconId);
 
   scope.querySelectorAll('.g-celestial-orb-center').forEach((center) => {
+    center.style.setProperty('--g-orb-center-emoji-scale', String(options.emojiScale ?? 1));
     const currentContent = currentContentForCenter(center);
     const currentSlot = center.querySelector('.g-celestial-orb-center-slot--current');
     const nextSlot = center.querySelector('.g-celestial-orb-center-slot--next');

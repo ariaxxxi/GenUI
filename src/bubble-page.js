@@ -54,7 +54,9 @@ function playBubbleHoverSound() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BUBBLE_BASE_SIZE = 110;
+const APP_SET_BUBBLE_BASE_SIZE = 110;
+const AGENT_SET_BUBBLE_BASE_SIZE = 110;
+const BUBBLE_BASE_SIZE = APP_SET_BUBBLE_BASE_SIZE;
 const BUBBLE_MIN_SIZE = 60;
 const BUBBLE_MAX_SIZE = 110;
 const MAX_DIST = 260;
@@ -65,8 +67,12 @@ const CANVAS_CENTER_Y = CANVAS_SIZE / 2;
 const PAN_MARGIN_PX = 24;
 const CANVAS_HALF_SIZE = 210;
 const DEFAULT_BUBBLE_GAP = 8;
+const ORB_FIELD_LAYOUT_GAP = 10;
 const PILL_LAYOUT_GAP = 10;
 const PILL_REPULSION_INFLUENCE = 28;
+const ORB_PILL_LAYOUT_GAP = 34;
+const EXPANDED_PILL_VIEWPORT_MARGIN_X = 24;
+const EXPANDED_PILL_VIEWPORT_MARGIN_Y = 14;
 const PILL_REPULSION_ITERATIONS = 12;
 const BUBBLE_LAYOUT_ITERATIONS = 12;
 const BUBBLE_STAGGER_STEP_MS = 35;
@@ -91,7 +97,7 @@ const CENTER_PROBE_BASE_X = CANVAS_CENTER_X - ORB_CENTER_X;
 const CENTER_PROBE_BASE_Y = CANVAS_CENTER_Y - ORB_CENTER_Y;
 const FALLBACK_ICON = 'src/assets/fallback-icon.png';
 const PILL_TEXT_LEFT_PADDING = 8;
-const PILL_TEXT_RIGHT_PADDING = 64;
+const PILL_TEXT_RIGHT_PADDING = 24;
 const PILL_TRAILING_ICON_SIZE = 40;
 const PILL_TRAILING_ICON_RIGHT = 18;
 const PILL_ACTION_GAP = 16;
@@ -244,6 +250,20 @@ function applyBubbleHomeOrbShellChrome(hostEl, theme) {
     theme || {},
     orbGeometryForSize(ORB_BASE_SIZE),
   );
+}
+
+function resetBubbleHomeOrbCenter(root = refs.orb) {
+  const visual = root?.querySelector?.('.bubble2-orb-visual');
+  const center = visual?.querySelector?.('.g-celestial-orb-center');
+  if (!visual || !center) return;
+  if (visual._orbIconSwitchTimer) {
+    clearTimeout(visual._orbIconSwitchTimer);
+    visual._orbIconSwitchTimer = null;
+  }
+  visual.classList.remove('is-orb-icon-switching');
+  visual.removeAttribute('data-orb-switch-motion');
+  visual.removeAttribute('data-orb-switch-direction');
+  center.outerHTML = renderAiOrbCenterMarkup();
 }
 
 function applyBubbleHoverShellChrome(hostEl, theme, geometryOverride) {
@@ -417,12 +437,14 @@ const APP_BUBBLES_CONFIG = [
 const AGENT_BUBBLES_CONFIG = [
   {
     id: 1,
-    x: 9,
-    y: -142,
+    baseSize: 120,
+    fieldMaxSize: 120,
+    x: 0,
+    y: -105,
     zIndex: 20,
     img: CLAUDE_AGENT_ASSET,
     fill: true,
-    imageScale: 1,
+    imageScale: 0.82,
     theme: CLAUDE_AGENT_THEME,
     haloColor: CLAUDE_AGENT_THEME.blobTopCore,
     orbPromotionEnabled: true,
@@ -431,45 +453,51 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 3,
     baseSize: 80,
-    x: -87,
-    y: -128,
+    fieldMaxSize: 80,
+    x: -79,
+    y: -108,
     zIndex: 15,
     graphicKind: 'emoji',
     emoji: '✈️',
     emojiScale: 1,
+    homeEmojiScale: 1.2,
     hoverExpandsToPill: true,
-    pillTitle: 'Travel agent',
+    pillTitle: 'Travel Agent',
     pillSubtitle: 'Plan trips',
-    pillCopyOffsetX: -12,
+    pillCopyOffsetX: -4,
     pillTextLeftPadding: 2,
-    pillTextRightPadding: 26,
+    pillTextRightPadding: 18,
     theme: TRAVEL_AGENT_THEME,
     haloColor: TRAVEL_AGENT_THEME.blobTopCore,
+    orbPromotionEnabled: true,
     childActions: [],
   },
   {
     id: 9,
     baseSize: 80,
-    x: 56,
-    y: -170,
+    fieldMaxSize: 80,
+    x: 31,
+    y: -165,
     zIndex: 14,
     graphicKind: 'emoji',
     emoji: '📝',
     emojiScale: 1,
+    homeEmojiScale: 1.2,
     hoverExpandsToPill: true,
-    pillTitle: 'Writing agent',
-    pillSubtitle: 'Write better',
-    pillCopyOffsetX: -12,
+    pillTitle: 'Writing Agent',
+    pillSubtitle: 'Polish writing',
+    pillCopyOffsetX: -4,
     pillTextLeftPadding: 2,
-    pillTextRightPadding: 26,
+    pillTextRightPadding: 18,
     theme: WRITING_AGENT_THEME,
     haloColor: WRITING_AGENT_THEME.blobTopCore,
+    orbPromotionEnabled: true,
     childActions: [],
   },
   {
     id: 2,
-    x: -86,
-    y: -57,
+    x: -69,
+    y: -36,
     zIndex: 13,
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
@@ -478,8 +506,8 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 8,
-    x: 91,
-    y: -28,
+    x: 69,
+    y: -36,
     zIndex: 14,
     img: FIGMA_ASSETS.gemini,
     fill: true,
@@ -489,39 +517,45 @@ const AGENT_BUBBLES_CONFIG = [
   {
     id: 5,
     baseSize: 80,
-    x: 110,
-    y: -103,
+    fieldMaxSize: 80,
+    x: 79,
+    y: -108,
     zIndex: 16,
     graphicKind: 'emoji',
     emoji: '🏃',
     emojiScale: 1,
+    homeEmojiScale: 1.2,
     hoverExpandsToPill: true,
-    pillTitle: 'Fitness agent',
+    pillTitle: 'Fitness Agent',
     pillSubtitle: 'Train smart',
-    pillCopyOffsetX: -12,
+    pillCopyOffsetX: -4,
     pillTextLeftPadding: 2,
-    pillTextRightPadding: 26,
+    pillTextRightPadding: 18,
     theme: FITNESS_AGENT_THEME,
     haloColor: FITNESS_AGENT_THEME.blobTopCore,
+    orbPromotionEnabled: true,
     childActions: [],
   },
   {
     id: 6,
     baseSize: 80,
-    x: -21,
-    y: -179,
+    fieldMaxSize: 80,
+    x: -31,
+    y: -165,
     zIndex: 10,
     graphicKind: 'emoji',
     emoji: '💸',
     emojiScale: 1,
+    homeEmojiScale: 1.2,
     hoverExpandsToPill: true,
-    pillTitle: 'Budget agent',
-    pillSubtitle: 'Track spend',
-    pillCopyOffsetX: -12,
+    pillTitle: 'Budget Agent',
+    pillSubtitle: 'Track spending',
+    pillCopyOffsetX: -4,
     pillTextLeftPadding: 2,
-    pillTextRightPadding: 26,
+    pillTextRightPadding: 18,
     theme: BUDGET_AGENT_THEME,
     haloColor: BUDGET_AGENT_THEME.blobTopCore,
+    orbPromotionEnabled: true,
     childActions: [],
   },
 ].map(enrichBubbleMetrics);
@@ -530,11 +564,13 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
   Object.freeze({
     id: 'app',
     label: 'App',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
     slots: APP_BUBBLES_CONFIG,
   }),
   Object.freeze({
     id: 'agent',
     label: 'Agent',
+    defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
     slots: AGENT_BUBBLES_CONFIG,
   }),
 ]);
@@ -590,10 +626,16 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     graphicKind: homeOrbContent.graphicKind || 'image',
     emoji: homeOrbContent.emoji || '',
     emojiScale: homeOrbContent.emojiScale ?? 1,
+    homeEmojiScale: homeOrbContent.homeEmojiScale ?? 1,
     img: homeOrbContent.img,
     alt: homeOrbContent.alt || '',
     fill: false,
     imageScale: homeOrbContent.fieldImageScale ?? 0.96,
+    isPill: false,
+    hoverExpandsToPill: false,
+    pillTitle: '',
+    pillSubtitle: '',
+    pillTrailingIcon: '',
     theme: homeOrbContent.theme || null,
     haloColor: homeOrbContent.haloColor || haloColorForTheme(homeOrbContent.theme),
     hoverShadowMode: 'tight',
@@ -602,16 +644,18 @@ function createDemotedOrbSlotContent(homeOrbContent) {
   };
 }
 
-function createBaseSlotContent(slot) {
+function createBaseSlotContent(slot, setId = state.activeSetId) {
   const slotTheme = slot.theme || bubbleSlotThemeForId(slot.id);
   return {
     kind: 'slot-bubble',
     contentId: `slot:${slot.id}`,
     sourceSlotId: slot.id,
-    baseSize: slot.baseSize ?? BUBBLE_BASE_SIZE,
+    baseSize: slot.baseSize ?? getDefaultBubbleBaseSizeForSet(setId),
+    fieldMaxSize: slot.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     graphicKind: slot.graphicKind || 'image',
     emoji: slot.emoji || '',
     emojiScale: slot.emojiScale ?? 1,
+    homeEmojiScale: slot.homeEmojiScale ?? 1,
     img: slot.img,
     alt: '',
     fill: Boolean(slot.fill),
@@ -652,12 +696,16 @@ function getBubblesConfigForSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubbleSetDefinition(setId)?.slots || [];
 }
 
+function getDefaultBubbleBaseSizeForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return getBubbleSetDefinition(setId)?.defaultBaseSize || BUBBLE_BASE_SIZE;
+}
+
 function findBubbleSlotById(slotId, setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubblesConfigForSet(setId).find((bubble) => bubble.id === slotId) || null;
 }
 
 function createInitialSlotContentMap(setId) {
-  return Object.fromEntries(getBubblesConfigForSet(setId).map((slot) => [slot.id, createBaseSlotContent(slot)]));
+  return Object.fromEntries(getBubblesConfigForSet(setId).map((slot) => [slot.id, createBaseSlotContent(slot, setId)]));
 }
 
 function createInitialSlotContentMaps() {
@@ -666,7 +714,7 @@ function createInitialSlotContentMaps() {
 
 function getCurrentSlotContent(slotId, setId = state.activeSetId) {
   const contentMap = state.slotContentBySetId[setId] || {};
-  return contentMap[slotId] || createBaseSlotContent(findBubbleSlotById(slotId, setId));
+  return contentMap[slotId] || createBaseSlotContent(findBubbleSlotById(slotId, setId), setId);
 }
 
 function resolveRenderedBubble(slot, setId = state.activeSetId) {
@@ -675,7 +723,8 @@ function resolveRenderedBubble(slot, setId = state.activeSetId) {
     ...slot,
     ...content,
     id: slot.id,
-    baseSize: content.baseSize ?? slot.baseSize ?? BUBBLE_BASE_SIZE,
+    baseSize: content.baseSize ?? slot.baseSize ?? getDefaultBubbleBaseSizeForSet(setId),
+    fieldMaxSize: content.fieldMaxSize ?? slot.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     expandedExtraWidth: bubbleSupportsPillExpansion(content) ? measurePillExtraWidth(content) : 0,
     childActions: content.childActions || [],
     imageScale: content.imageScale ?? (content.fill ? 1 : 0.72),
@@ -711,6 +760,7 @@ const state = {
   swapTransition: null,
   swapResetPending: false,
   panSnapPending: false,
+  pendingDemotedSlotSwap: null,
   lastScene: null,
   renderQueued: false,
 };
@@ -1073,6 +1123,11 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
   if (!root) return;
   const content = state.homeOrbContent;
   if (!content) return;
+  const visual = root?.querySelector?.('.bubble2-orb-visual');
+  const isClaudePromotedImage = content.kind !== 'agent-orb'
+    && content.graphicKind !== 'emoji'
+    && content.img === CLAUDE_AGENT_ASSET;
+  visual?.classList.toggle('is-promoted-home-claude', isClaudePromotedImage);
   if (content.kind === 'agent-orb') {
     syncAiOrbCenterIcon(root, {
       animate: options.animate,
@@ -1087,6 +1142,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
     syncAiOrbCenterEmoji(root, {
       animate: options.animate,
       emoji: content.emoji,
+      emojiScale: content.homeEmojiScale ?? 1,
       theme: content.theme,
       switchMotion: options.switchMotion || 'fade',
     });
@@ -1137,6 +1193,7 @@ function resetStateForSetSwitch() {
   state.swapTransition = null;
   state.swapResetPending = false;
   state.panSnapPending = false;
+  state.pendingDemotedSlotSwap = null;
   state.lastScene = null;
   previousHoveredId = null;
   previousHoveredChildId = null;
@@ -1341,6 +1398,9 @@ function startBubbleSwap(scene, now) {
 
   const promotedContent = { ...getCurrentSlotContent(selectedBubble.id) };
   const demotedContent = createDemotedOrbSlotContent(state.homeOrbContent);
+  const promotedImageScaleCompensation = selectedBubble.graphicKind === 'emoji'
+    ? 1
+    : (selectedBubble.fill ? (1 / Math.max(selectedBubble.imageScale ?? 1, 0.0001)) : 1);
   state.swapTransition = {
     active: true,
     selectedBubbleId: selectedBubble.id,
@@ -1349,13 +1409,17 @@ function startBubbleSwap(scene, now) {
     siblingDurationMs: SWAP_SIBLING_DURATION_MS,
     highlightFreezeUntil: now + SWAP_HIGHLIGHT_FREEZE_MS,
     panOffset: { ...scene.panOffset },
+    demotedCenterStartX: scene.orb?.targetX ?? 0,
+    demotedCenterStartY: scene.orb?.targetY ?? 0,
     demotedShellScaleStart: scene.orb?.targetScale ?? 1,
     demotedShellScaleEnd: SWAP_DEMOTED_END_SCALE,
     promotedRootScaleEnd: ORB_BASE_SIZE / selectedBubble.baseSize,
     promotedVisualScaleStart: selectedBubble.hoverExpandsToPill
       ? PILL_HOVER_BUBBLE_SCALE
       : BUBBLE_HOVER_CONTENT_SCALE,
-    promotedVisualScaleEnd: BUBBLE_RELEASE_CONTENT_SCALE,
+    promotedVisualScaleEnd: BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.graphicKind === 'emoji'
+      ? (selectedBubble.homeEmojiScale ?? 1)
+      : promotedImageScaleCompensation),
     releaseBubbles: scene.bubbles.map(snapshotReleaseBubble),
     promotedContent,
     demotedContent,
@@ -1370,18 +1434,17 @@ function commitBubbleSwap() {
   const transition = state.swapTransition;
   if (!transition) return;
   state.homeOrbContent = transition.promotedContent;
-  state.slotContentBySetId = {
-    ...state.slotContentBySetId,
-    [state.activeSetId]: {
-      ...(state.slotContentBySetId[state.activeSetId] || {}),
-      [transition.selectedBubbleId]: transition.demotedContent,
-    },
-  };
   state.swapTransition = null;
   state.closeMotionUntil = 0;
   state.swapResetPending = true;
   state.panSnapPending = true;
+  state.pendingDemotedSlotSwap = {
+    setId: state.activeSetId,
+    slotId: transition.selectedBubbleId,
+    content: transition.demotedContent,
+  };
   clearSwapLayer();
+  resetBubbleHomeOrbCenter(refs.orb);
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
 }
 
@@ -1425,8 +1488,8 @@ function computeDemotedSwapMotion(transition, now) {
   if (!transition) return null;
   const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
   return {
-    centerX: 0,
-    centerY: 0,
+    centerX: transition.demotedCenterStartX ?? 0,
+    centerY: transition.demotedCenterStartY ?? 0,
     shellScale: interpolate(
       transition.demotedShellScaleStart ?? 1,
       transition.demotedShellScaleEnd ?? SWAP_DEMOTED_END_SCALE,
@@ -1438,9 +1501,10 @@ function computeDemotedSwapMotion(transition, now) {
 
 function render() {
   const now = performance.now();
-  if (state.swapTransition?.active && now >= state.swapTransition.startedAt + state.swapTransition.durationMs) {
-    commitBubbleSwap();
-  }
+  const swapShouldCommit = Boolean(
+    state.swapTransition?.active
+    && now >= state.swapTransition.startedAt + state.swapTransition.durationMs
+  );
 
   let scene = computeScene(now);
   const hoverChanged = state.hoveredBubble !== scene.hoveredId || state.hoveredChildBubble !== scene.hoveredChildId;
@@ -1594,6 +1658,7 @@ function render() {
     node.iconWrap.style.height = `${bubble.baseSize}px`;
     node.iconWrap.style.left = '0px';
     node.iconWrap.style.top = '0px';
+    node.iconWrap.style.setProperty('--bubble-emoji-size', `${bubble.baseSize * 0.6}px`);
     const pillHoverBubbleScale = usesPillInteraction && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
     node.iconWrap.style.transform = isPromotingDomainPill
       ? 'scale(1)'
@@ -1613,8 +1678,8 @@ function render() {
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
       node.pillCopy.style.transitionDuration = bubble.isExpanded ? '' : '0ms';
       node.pillCopy.style.opacity = bubble.isExpanded ? '' : '0';
-      node.pillCopy.style.setProperty('--bubble2-title-size', `${24 / pillContentScale}px`);
-      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${24 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-title-size', `${18 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${16 / pillContentScale}px`);
       node.pillCopy.style.setProperty('--bubble2-pill-gap', `${4 / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillContentScale}px`);
@@ -1717,7 +1782,7 @@ function render() {
     refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms' : '';
     refs.orb.style.transform = demotedSwapMotion
       ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
-      : 'translate3d(0, 0, 0)';
+      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0)`;
     refs.orb.style.opacity = demotedSwapMotion ? format(demotedSwapMotion.opacity) : (isSwapActive ? '0' : '1');
   }
 
@@ -1743,6 +1808,22 @@ function render() {
   }
   if (state.swapResetPending) {
     state.swapResetPending = false;
+    if (state.pendingDemotedSlotSwap) {
+      const pending = state.pendingDemotedSlotSwap;
+      state.slotContentBySetId = {
+        ...state.slotContentBySetId,
+        [pending.setId]: {
+          ...(state.slotContentBySetId[pending.setId] || {}),
+          [pending.slotId]: pending.content,
+        },
+      };
+      state.pendingDemotedSlotSwap = null;
+      scheduleRender();
+    }
+  }
+
+  if (swapShouldCommit) {
+    commitBubbleSwap();
   }
 }
 
@@ -1757,6 +1838,13 @@ function computeScene(now = performance.now()) {
   const hoverEnabled = state.isPressed && state.pointerMovedSincePress;
 
   function buildSceneState(centerProbe) {
+    const orbFieldNode = state.isPressed
+      ? {
+        targetX: 0,
+        targetY: 0,
+        radius: (ORB_BASE_SIZE * 0.8) / 2,
+      }
+      : null;
     let processedBubbles = getBubblesConfigForSet(state.activeSetId).map((slot) => {
       const bubble = resolveRenderedBubble(slot);
       let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
@@ -1765,10 +1853,11 @@ function computeScene(now = performance.now()) {
       let visualSize = BUBBLE_MIN_SIZE;
 
       if (state.isPressed) {
+        const fieldMaxSize = bubble.fieldMaxSize ?? BUBBLE_MAX_SIZE;
         const dist = Math.hypot(bubble.x - centerProbe.x, bubble.y - centerProbe.y);
         const factor = Math.max(0, 1 - dist / MAX_DIST);
         const smoothFactor = smoothstep(factor);
-        visualSize = BUBBLE_MIN_SIZE + ((BUBBLE_MAX_SIZE - BUBBLE_MIN_SIZE) * smoothFactor);
+        visualSize = BUBBLE_MIN_SIZE + ((fieldMaxSize - BUBBLE_MIN_SIZE) * smoothFactor);
         depthScale = visualSize / bubble.baseSize;
 
         if (factor > 0) {
@@ -1792,6 +1881,7 @@ function computeScene(now = performance.now()) {
 
     if (state.isPressed) {
       resolveBubbleFieldLayout(processedBubbles);
+      resolveBubbleOrbFieldLayout(processedBubbles, orbFieldNode);
     }
 
     const childMenuParent = state.isPressed && state.childMenuParentId != null
@@ -1886,6 +1976,8 @@ function computeScene(now = performance.now()) {
           }
         }
       }
+
+      resolveBubbleOrbFieldLayout(processedBubbles, orbFieldNode);
     }
 
     if (childNodes.length && childMenuParent) {
@@ -1913,6 +2005,7 @@ function computeScene(now = performance.now()) {
           }
         }
         resolveBubbleFieldLayout(processedBubbles);
+        resolveBubbleOrbFieldLayout(processedBubbles, orbFieldNode, 1);
       }
     }
 
@@ -1955,11 +2048,46 @@ function computeScene(now = performance.now()) {
   previousHoveredId = sceneData.hoveredId;
   previousHoveredChildId = sceneData.hoveredChildId;
 
+  const orbPressedScale = state.isPressed ? 0.8 : 1;
+  let orbOffset = { x: 0, y: 0 };
+  const expandedPill = sceneData.bubbles.find((bubble) => bubble.isExpanded);
+  if (expandedPill) {
+    const initialOrbPush = getExpandedPillRepulsion(
+      expandedPill,
+      {
+        targetX: 0,
+        targetY: 0,
+        radius: (ORB_BASE_SIZE * orbPressedScale) / 2,
+        layoutGap: ORB_PILL_LAYOUT_GAP,
+      },
+      PILL_REPULSION_INFLUENCE,
+    );
+    if (initialOrbPush) {
+      orbOffset = { ...initialOrbPush };
+      const settleOrbPush = getExpandedPillRepulsion(
+        expandedPill,
+        {
+          targetX: orbOffset.x,
+          targetY: orbOffset.y,
+          radius: (ORB_BASE_SIZE * orbPressedScale) / 2,
+          layoutGap: ORB_PILL_LAYOUT_GAP,
+        },
+        0,
+      );
+      if (settleOrbPush) {
+        orbOffset.x += settleOrbPush.x;
+        orbOffset.y += settleOrbPush.y;
+      }
+    }
+  }
+
   return {
     ...sceneData,
     orb: {
       id: 'orb',
-      targetScale: state.isPressed ? 0.8 : 1,
+      targetScale: orbPressedScale,
+      targetX: orbOffset.x,
+      targetY: orbOffset.y,
     },
     panOffset,
   };
@@ -2094,7 +2222,7 @@ function clampPanOffset(desiredPan, sceneData) {
   if (expandedPill) {
     return clampBoundsIntoViewport(
       { x: desiredPan.x, y: desiredPan.y },
-      getBubbleBounds(expandedPill),
+      getExpandedPillViewportBounds(expandedPill),
     );
   }
 
@@ -2120,7 +2248,8 @@ function getExpandedPillRepulsion(pill, bubble, influencePadding) {
   }
 
   const dist = Math.hypot(dx, dy) || 1;
-  const safeDist = bubble.radius + PILL_LAYOUT_GAP;
+  const safeGap = bubble.layoutGap ?? PILL_LAYOUT_GAP;
+  const safeDist = bubble.radius + safeGap;
   const influenceZone = safeDist + influencePadding;
   if (dist >= influenceZone) return null;
 
@@ -2165,12 +2294,25 @@ function resolveBubbleFieldLayout(bubbles) {
   }
 }
 
+function resolveBubbleOrbFieldLayout(bubbles, orbNode, iterations = BUBBLE_LAYOUT_ITERATIONS) {
+  if (!orbNode) return;
+
+  for (let iter = 0; iter < iterations; iter += 1) {
+    for (const bubble of bubbles) {
+      const orbPush = getNodeRepulsion(orbNode, bubble, 0, ORB_FIELD_LAYOUT_GAP);
+      if (!orbPush) continue;
+      bubble.targetX += orbPush.x;
+      bubble.targetY += orbPush.y;
+    }
+  }
+}
+
 function measurePillExtraWidth(bubble) {
-  const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 22px "DM Sans"');
-  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '400 18px "DM Sans"');
+  const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 18px "DM Sans"');
+  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '400 16px "DM Sans"');
   const leftPadding = bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING;
   const rightPadding = getPillTextRightPadding(bubble);
-  return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 2);
+  return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 10);
 }
 
 function getPillTextRightPadding(bubble) {
@@ -2225,6 +2367,7 @@ function enrichBubbleMetrics(bubble) {
   return {
     ...bubble,
     baseSize: bubble.baseSize ?? BUBBLE_BASE_SIZE,
+    fieldMaxSize: bubble.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     expandedExtraWidth: bubbleSupportsPillExpansion(bubble) ? measurePillExtraWidth(bubble) : 0,
   };
 }
@@ -2549,6 +2692,16 @@ function getNodeBounds(node) {
 
 function getBubbleBounds(bubble) {
   return getNodeBounds(bubble);
+}
+
+function getExpandedPillViewportBounds(bubble) {
+  const bounds = getBubbleBounds(bubble);
+  return {
+    left: bounds.left - EXPANDED_PILL_VIEWPORT_MARGIN_X,
+    right: bounds.right + EXPANDED_PILL_VIEWPORT_MARGIN_X,
+    top: bounds.top - EXPANDED_PILL_VIEWPORT_MARGIN_Y,
+    bottom: bounds.bottom + EXPANDED_PILL_VIEWPORT_MARGIN_Y,
+  };
 }
 
 function clampBoundsIntoViewport(panOffset, bounds) {
