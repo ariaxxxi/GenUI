@@ -575,6 +575,43 @@
     0 0 0 1px rgba(255,255,255,0.08) inset,
     0 8px 22px rgba(77, 112, 255, 0.12);
 }
+.prototype-thinking-pause-row {
+  margin-top: 12px;
+  gap: 10px;
+  align-items: flex-start;
+}
+.prototype-thinking-pause-controls {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.prototype-thinking-pause-btn,
+.prototype-thinking-resume-btn {
+  min-height: 40px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.prototype-thinking-pause-btn {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03)),
+    rgba(255,255,255,0.02);
+}
+.prototype-thinking-resume-btn:not(:disabled) {
+  border-color: rgba(196, 214, 255, 0.84);
+  background:
+    linear-gradient(180deg, rgba(194, 218, 255, 0.18), rgba(133, 150, 255, 0.08)),
+    rgba(255,255,255,0.04);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08) inset,
+    0 8px 22px rgba(77, 112, 255, 0.16);
+}
+.prototype-thinking-pause-controls .sb-mini-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
+  box-shadow: none;
+}
 .prototype-thinking-copy-row {
   margin-top: 12px;
   gap: 10px;

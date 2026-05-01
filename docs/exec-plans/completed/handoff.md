@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-04-30 - Prototype debug pause and resume controls
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added prototype-only `Pause` and `Resume` playback controls for the thinking-family debug states, including static paused labels, queued custom text while paused, and a paused Celestial-orb settle treatment that keeps agent/skill/app switching interactive.
+- Files changed: `index.html`, `src/tool/modules/manual-bindings.js`, `src/styles/ai-decorative.css`, `src/styles/editor-layout.css`, `src/styles/editor-sidebar.css`, `docs/FRONTEND.md`, `README.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final paused-orb motion feel, queued custom-text resume behavior, and cross-mode timing still need a human check on `/prototype`.
+
 ## 2026-04-30 - Bubble orb arrow-switch transition text
 
 - Completion status: completed with static verification; manual browser pass still recommended.

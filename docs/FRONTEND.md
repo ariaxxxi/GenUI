@@ -166,6 +166,9 @@ Layer timing:
   - `agent`: agent circle / shared orb-center switching path
   - `app`: agent-circle path with Bubble app icon content + `Launching {app name}` stream
 - Prototype AI debug must expose a custom text input plus `Fire` action that can interrupt the current debug text loop and one-shot stream user-provided text with the same typing animation while keeping the active `thinking`, `skill`, `agent`, or `app` visual state unchanged.
+- Prototype AI debug must expose `Pause` and `Resume` controls for `thinking`, `skill`, `agent`, and `app` debug playback without disabling agent/skill/app switching or the `Fire` control.
+- While prototype debug playback is paused, the stream must show a static paused label for the current mode/selection, morphs and orb-center swipe changes must still run, and no typing loop or transition copy may restart until `Resume`.
+- Prototype debug pause is ephemeral and local to the prototype page. Leaving the debug-family shapes must clear the paused state and any queued paused custom text.
 - Stage buttons support double-click inline rename; single-click selection must still work after the double-click guard delay.
 - Scenario buttons support the same double-click inline rename pattern.
 - List stage controls must include list item +/- controls and bottom orb toggle/icon settings in the Stage Components tab.

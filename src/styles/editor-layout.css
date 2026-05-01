@@ -294,6 +294,9 @@ body {
   pointer-events: none;
   z-index: 16;
   white-space: nowrap;
+  transition:
+    opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 #prototype-thinking-stream.hidden {
   display: none;
@@ -308,6 +311,14 @@ body[data-current-shape="skill-pill"] #drop-main {
   font-weight: 500;
   color: rgba(255,255,255,0.96);
   letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 #prototype-thinking-stream .pixel-cursor {
   display: inline-grid;
@@ -324,6 +335,12 @@ body[data-current-shape="skill-pill"] #drop-main {
   width: 3px;
   height: 3px;
   background: rgba(255,255,255,0.96);
+}
+#prototype-thinking-stream.is-paused-debug {
+  transform: translateX(-50%);
+}
+#prototype-thinking-stream.is-paused-debug .pixel-cursor {
+  display: none;
 }
 #c-primary {
   position: absolute; z-index: 3;

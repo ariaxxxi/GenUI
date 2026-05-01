@@ -85,6 +85,15 @@ To add a new skill, append a new object to `PROTOTYPE_SKILLS` following the same
 
 When switching between skills, the stream first shows `"Switching to [skill.label]"` (held for 3 seconds), then begins the phrase loop for the new skill. When entering skill mode fresh (not a switch), phrases start immediately with no transition label.
 
+### Pause and resume debug playback
+
+The prototype thinking debug panel also includes `Pause` and `Resume` controls for `thinking`, `skill`, `agent`, and `app` states.
+
+- `Pause` cancels the active typing loop, keeps the current debug visual state active, and replaces the stream with a static paused badge such as `Paused thinking` or `Paused · Budget Agent`.
+- While paused, agent/app switches and skill rerolls still morph and animate normally, but no transition copy or phrase loop restarts until `Resume`.
+- If you hit `Fire` while paused, the custom text is queued instead of typed immediately. That queued text plays once on `Resume`, then the active mode continues its normal behavior.
+- Leaving the debug-family shapes clears the paused state and any queued paused custom text.
+
 ### How the stream works internally
 
 All thinking stream animation runs through `runThinkingTextLoop`, which accepts:
