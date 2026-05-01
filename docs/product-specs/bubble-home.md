@@ -11,15 +11,22 @@ Bubble Home is a standalone app-cluster home design for future AI home explorati
 - On desktop, that switcher is docked to the left side of the viewport rather than centered with the canvas row.
 - The press-scope toggle switches Bubble Home between `canvas only` press/pan start and `viewport anywhere except control panel` press/pan start.
 - The canvas-removal toggle hides the visible `420px` canvas frame and switches the viewport background to pure black without changing Bubble Home geometry.
-- In the current Bubble Home defaults, the `agent` tab turns both control toggles on by default, while the `app` tab keeps both toggles off by default.
-- In the `agent` set, left/right arrow keys cycle the home orb through the agent-set bubbles using the same swipe motion as the prototype listening-stage agent switch, and each keyboard switch streams a transient `Switch to {agent name}` label above the orb using the same prototype text-stream treatment before disappearing.
+- In the current Bubble Home defaults, the `agent` and `interrupt` tabs turn both control toggles on by default, while the `app` tab keeps both toggles off by default.
+- In the `agent` and `interrupt` sets, left/right arrow keys cycle the home orb through the set bubbles using the same swipe motion as the prototype listening-stage agent switch, and each keyboard switch streams a transient `Switch to {bubble name}` label above the orb using the same prototype text-stream treatment before disappearing.
 - Support scalable named content sets so Bubble Home can swap between different bubble collections without rewriting page logic.
 - Current scaffold sets:
   - `app`
   - `agent`
+  - `interrupt`
   - `agent` is a distinct 7-bubble set: `Claude`, `Travel agent`, `ChatGPT`, `Gemini`, `Fitness agent`, `Budget agent`, and `Writing agent`
   - `agent` removes `Health` and `Weather`
   - `agent` keeps no child actions on any bubble
+  - `interrupt` is a distinct 3-bubble set: `Pause`, `End`, and `Add`
+  - `interrupt` uses the old Claude, ChatGPT, and Gemini positions only
+  - `interrupt` keeps no child actions on any bubble
+  - The primary interrupt control toggles between `Pause` and `Play`
+  - `Pause` uses the Bootstrap `pause-fill` glyph, `Play` uses a filled play glyph, `End` uses a rounded-square stop glyph, and `Add` uses a plus glyph
+  - At rest, the `interrupt` set home orb loops the streamed labels `Reasoning`, `Thinking`, and `Taking action` only while the session is not paused
 - Render a central app bubble cluster.
 - Round top-level app bubbles use an orb-shell hover treatment: the outer shell stays at the bubble’s full size while the visible bubble content shrinks to `0.75`, and the shell still grows in from `0.8` to full size.
 - In the `agent` set, `Travel agent`, `Fitness agent`, `Budget agent`, and `Writing agent` keep their shell-plus-agent-image bubble content at rest, then expand into text pills on hover.
@@ -27,9 +34,12 @@ Bubble Home is a standalone app-cluster home design for future AI home explorati
 - Top-level Bubble Home pill copy uses `20px` title text and `18px` subtitle text, and pill width measurement must use those same text sizes.
 - Those shell-plus-agent-image bubbles render the agent art as contained imagery inside the round bubble before hover expansion.
 - Those domain-agent bubbles keep a quiet glass shell at rest with no Celestial treatment, using shell colors that match the blue, green, orange, and yellow agent art, then that shell expands into the full hover pill and gains the Celestial treatment only while hovered.
-- The `agent` set reuses the `app` set slot positions and open-field sizing rules for the retained bubble ids, so both sets share the same layout and depth-scaling logic.
-- In the `agent` set, `Travel agent`, `Fitness agent`, `Budget agent`, and `Writing agent` are promotable on hover-and-release.
-- `Claude` is promotable in the `agent` set, unlike the non-promotable Spotify slot in `app`.
+- The `agent` and `interrupt` sets reuse `app`-set slot geometry for their visible bubbles, so these sets share the same base layout and depth-scaling logic.
+- In the `interrupt` set, `Pause`, `End`, and `Add` keep a single quiet glass shell at rest and apply the Celestial hover treatment onto that same shell instead of spawning a second hover circle.
+- In the `interrupt` set, `Pause`, `End`, and `Add` scale up to `1.1` on hover instead of using the shared round-bubble shrink-to-`0.75` motion.
+- Long-pressing to reveal the `interrupt` control bubbles fades out the looping orb stream copy as the field opens.
+- Releasing `Pause` in the `interrupt` set does not promote that bubble into the home orb; the current home orb settles back to the home position while the field fades away, and only after the bubbles clear does the orb stream `Session paused` with the shared typing treatment and hold that label.
+- After `Pause` has been fired, the primary interrupt bubble becomes `Play` on the next long-press reveal, and only releasing `Play` resumes the looping `Reasoning` / `Thinking` / `Taking action` stream.
 - Releasing a promotable round top-level bubble keeps that full bubble-sized shell visible while the bubble content scales down toward `0.45` during the promotion motion into home.
 - Promoted home-orb image content is not circularly masked by default; the Claude promoted image keeps a circular crop as a special-case visual treatment.
 - The four domain-agent images stay uncropped in both the field bubble and the promoted home orb instead of being circularly masked.

@@ -85,24 +85,10 @@ export function initManualBindings({
   const sendBtn = document.getElementById('send-btn');
   let stageShapeClickTimer = null;
   const THINKING_VERBS = [
-    'Waffling',
-    'Spiraling',
-    'Levitating',
-    'Hallucinating',
-    'Overthinking',
-    'Reticulating',
-    'Triangulating',
-    'Meandering',
-    'Philosophizing',
-    'Untangling',
-    'Daydreaming',
-    'Cogitating',
-    'Extrapolating',
-    'Ruminating',
-    'Vibing',
-    'Catastrophizing',
-    'Manifesting',
-    'Yapping',
+    'Reasoning',
+    'Thinking',
+    'Searching',
+    'Finalizing',
   ];
   const PROTOTYPE_SKILLS = [
     {

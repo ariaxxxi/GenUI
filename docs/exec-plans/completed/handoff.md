@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-04-30 - Bubble interrupt set
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a third Bubble Home set named `interrupt` as a 3-bubble control set with a stateful `Pause`/`Play` primary control plus `End` and `Add`, kept the shared set-aware control-default and left/right orb-cycling helpers, gave those control bubbles a single domain-style shell path, added an idle home-orb stream loop for `Reasoning`, `Thinking`, and `Taking action` that fades out on long-press reveal, and made `Pause` settle the current home orb back home while the field fades away, then hold `Session paused` until `Play` is fired to resume the loop.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final 3-bubble `interrupt` spacing, shell feel, and pause/end/add interaction timing still need a human check on `/bubble`.
+
 ## 2026-04-30 - Prototype debug pause and resume controls
 
 - Completion status: completed with static verification; manual browser pass still recommended.

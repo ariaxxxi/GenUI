@@ -81,6 +81,7 @@ const ACTIVE_MOVE_DURATION_MS = 250;
 const APPEAR_MOVE_DURATION_MS = 400;
 const DISAPPEAR_MOVE_DURATION_MS = 300;
 const BUBBLE_HOVER_CONTENT_SCALE = 0.75;
+const CONTROL_BUBBLE_HOVER_SCALE = 1.1;
 const BUBBLE_RELEASE_CONTENT_SCALE = 0.45;
 const PILL_HOVER_BUBBLE_SCALE = 0.8;
 const FADE_IN_DURATION_MS = 400;
@@ -127,6 +128,10 @@ const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
 const SWAP_DEMOTED_END_SCALE = 0.55;
 const BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS = 1200;
+const BUBBLE_HOME_IDLE_STREAM_TEXTS = Object.freeze(['Reasoning', 'Thinking', 'Taking action']);
+const BUBBLE_HOME_IDLE_STREAM_HOLD_MS = 1600;
+const BUBBLE_HOME_IDLE_STREAM_GAP_MS = 180;
+const BUBBLE_HOME_STREAM_FADE_MS = 180;
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -177,6 +182,18 @@ const TRAVEL_AGENT_THEME = Object.freeze({
   blobBottomCore: 'rgb(210 232 255)',
   blobBottomEdge: 'rgb(48 108 226)',
 });
+const INTERRUPT_WHITE_THEME = Object.freeze({
+  blobTopCore: 'rgb(247 249 255)',
+  blobTopEdge: 'rgb(228 235 247)',
+  blobBottomCore: 'rgb(255 255 255)',
+  blobBottomEdge: 'rgb(214 223 238)',
+});
+const INTERRUPT_RED_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 182 182)',
+  blobTopEdge: 'rgb(255 112 112)',
+  blobBottomCore: 'rgb(255 146 111)',
+  blobBottomEdge: 'rgb(209 63 63)',
+});
 
 const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
   2: Object.freeze({
@@ -216,6 +233,55 @@ const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
     blobBottomEdge: 'rgb(37 93 255)',
   }),
 });
+
+function renderInterruptControlSvg(kind) {
+  if (kind === 'pause-fill') {
+    return `
+      <svg class="bubble2-icon-svg bubble2-icon-svg--pause" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+      </svg>
+    `;
+  }
+  if (kind === 'play-fill') {
+    return `
+      <svg class="bubble2-icon-svg bubble2-icon-svg--play" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M11.596 8.697 6.233 11.89A1 1 0 0 1 4.75 11.034V4.966a1 1 0 0 1 1.483-.856l5.363 3.193a.8.8 0 0 1 0 1.394"/>
+      </svg>
+    `;
+  }
+  if (kind === 'plus') {
+    return `
+      <svg class="bubble2-icon-svg bubble2-icon-svg--plus" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H8.75V12a.75.75 0 0 1-1.5 0V8.75H4a.75.75 0 0 1 0-1.5h3.25V4A.75.75 0 0 1 8 3.25"/>
+      </svg>
+    `;
+  }
+  return `
+    <svg class="bubble2-icon-svg bubble2-icon-svg--end" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="2.4" fill="currentColor"/>
+    </svg>
+  `;
+}
+
+function createInterruptControlIconDataUri(kind) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      ${kind === 'pause-fill'
+        ? '<path fill="#FFFFFF" d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>'
+        : (kind === 'play-fill'
+          ? '<path fill="#FFFFFF" d="M11.596 8.697 6.233 11.89A1 1 0 0 1 4.75 11.034V4.966a1 1 0 0 1 1.483-.856l5.363 3.193a.8.8 0 0 1 0 1.394"/>'
+        : (kind === 'plus'
+          ? '<path fill="#FFFFFF" d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H8.75V12a.75.75 0 0 1-1.5 0V8.75H4a.75.75 0 0 1 0-1.5h3.25V4A.75.75 0 0 1 8 3.25"/>'
+          : '<rect x="3.25" y="3.25" width="9.5" height="9.5" rx="2.4" fill="#FFFFFF"/>'))}
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+const PAUSE_CONTROL_ASSET = createInterruptControlIconDataUri('pause-fill');
+const PLAY_CONTROL_ASSET = createInterruptControlIconDataUri('play-fill');
+const PLUS_CONTROL_ASSET = createInterruptControlIconDataUri('plus');
+const END_CONTROL_ASSET = createInterruptControlIconDataUri('end-square');
 
 function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
   const cls = [extraClass, 'g-selection-chrome'].filter(Boolean).join(' ');
@@ -301,7 +367,7 @@ const APP_BUBBLES_CONFIG = [
   {
     id: 1,
     x: 9,
-    y: -102,
+    y: -122,
     zIndex: 20,
     img: 'src/assets/spotify-album-happiness.jpg',
     fill: true,
@@ -578,7 +644,49 @@ const AGENT_BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
-const BUBBLE_HOME_AGENT_SET_SEQUENCE = Object.freeze(AGENT_BUBBLES_CONFIG.map((bubble) => bubble.id));
+const INTERRUPT_BUBBLES_CONFIG = [
+  {
+    id: 1,
+    ...getAppSetSlotLayout(1),
+    label: 'Pause',
+    graphicKind: 'interrupt-control',
+    controlIcon: 'pause-fill',
+    img: PAUSE_CONTROL_ASSET,
+    controlAction: 'pause-session',
+    controlToggleMode: 'pause-play',
+    theme: INTERRUPT_WHITE_THEME,
+    haloColor: '#ffffff',
+    usesSurfaceShell: true,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+  {
+    id: 2,
+    ...getAppSetSlotLayout(2),
+    label: 'End',
+    graphicKind: 'interrupt-control',
+    controlIcon: 'end-square',
+    img: END_CONTROL_ASSET,
+    theme: INTERRUPT_RED_THEME,
+    haloColor: INTERRUPT_RED_THEME.blobTopCore,
+    usesSurfaceShell: true,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+  {
+    id: 8,
+    ...getAppSetSlotLayout(8),
+    label: 'Add',
+    graphicKind: 'interrupt-control',
+    controlIcon: 'plus',
+    img: PLUS_CONTROL_ASSET,
+    theme: BUBBLE_HOME_SLOT_THEMES[8],
+    haloColor: '#A391FB',
+    usesSurfaceShell: true,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+].map(enrichBubbleMetrics);
 
 const BUBBLE_SET_DEFINITIONS = Object.freeze([
   Object.freeze({
@@ -592,6 +700,12 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     label: 'Agent',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
     slots: AGENT_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: 'interrupt',
+    label: 'Interrupt',
+    defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    slots: INTERRUPT_BUBBLES_CONFIG,
   }),
 ]);
 
@@ -646,6 +760,7 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     sourceSlotId: null,
     label: homeOrbContent.label || '',
     graphicKind: homeOrbContent.graphicKind || 'image',
+    controlAction: homeOrbContent.controlAction || '',
     emoji: homeOrbContent.emoji || '',
     emojiScale: homeOrbContent.emojiScale ?? 1,
     homeEmojiScale: homeOrbContent.homeEmojiScale ?? 1,
@@ -656,6 +771,8 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     disableCircularImageMask: Boolean(homeOrbContent.disableCircularImageMask),
     isPill: false,
     hoverExpandsToPill: false,
+    controlIcon: homeOrbContent.controlIcon || '',
+    usesSurfaceShell: Boolean(homeOrbContent.usesSurfaceShell),
     pillTitle: '',
     pillSubtitle: '',
     pillTrailingIcon: '',
@@ -667,26 +784,52 @@ function createDemotedOrbSlotContent(homeOrbContent) {
   };
 }
 
+let interruptSessionPaused = false;
+
+function resolveInterruptPrimaryControlState(slot) {
+  if (slot?.controlToggleMode !== 'pause-play') return null;
+  if (interruptSessionPaused) {
+    return {
+      label: 'Play',
+      controlIcon: 'play-fill',
+      img: PLAY_CONTROL_ASSET,
+      controlAction: 'play-session',
+    };
+  }
+  return {
+    label: 'Pause',
+    controlIcon: 'pause-fill',
+    img: PAUSE_CONTROL_ASSET,
+    controlAction: 'pause-session',
+  };
+}
+
 function createBaseSlotContent(slot, setId = state.activeSetId) {
   const slotTheme = slot.theme || bubbleSlotThemeForId(slot.id);
+  const resolvedPrimaryControl = setId === 'interrupt' && slot?.id === 1
+    ? resolveInterruptPrimaryControlState(slot)
+    : null;
   return {
     kind: 'slot-bubble',
     contentId: `slot:${slot.id}`,
     sourceSlotId: slot.id,
-    label: slot.label || slot.pillTitle || '',
+    label: resolvedPrimaryControl?.label || slot.label || slot.pillTitle || '',
     baseSize: slot.baseSize ?? getDefaultBubbleBaseSizeForSet(setId),
     fieldMaxSize: slot.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     graphicKind: slot.graphicKind || 'image',
+    controlAction: resolvedPrimaryControl?.controlAction || slot.controlAction || '',
+    controlIcon: resolvedPrimaryControl?.controlIcon || slot.controlIcon || '',
     emoji: slot.emoji || '',
     emojiScale: slot.emojiScale ?? 1,
     homeEmojiScale: slot.homeEmojiScale ?? 1,
-    img: slot.img,
+    img: resolvedPrimaryControl?.img || slot.img,
     alt: '',
     fill: Boolean(slot.fill),
     imageScale: slot.imageScale ?? (slot.fill ? 1 : 0.72),
     disableCircularImageMask: Boolean(slot.disableCircularImageMask),
     isPill: Boolean(slot.isPill),
     hoverExpandsToPill: Boolean(slot.hoverExpandsToPill),
+    usesSurfaceShell: Boolean(slot.usesSurfaceShell),
     pillTitle: slot.pillTitle || '',
     pillSubtitle: slot.pillSubtitle || '',
     pillTrailingIcon: slot.pillTrailingIcon || '',
@@ -725,10 +868,18 @@ function getDefaultBubbleBaseSizeForSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubbleSetDefinition(setId)?.defaultBaseSize || BUBBLE_BASE_SIZE;
 }
 
+function isAgentStyleBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === 'agent' || setId === 'interrupt';
+}
+
 function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
-  return setId === 'agent'
+  return isAgentStyleBubbleSet(setId)
     ? { viewportPanEnabled: true, canvaslessEnabled: true }
     : { viewportPanEnabled: false, canvaslessEnabled: false };
+}
+
+function getBubbleSetSequence(setId = DEFAULT_BUBBLE_SET_ID) {
+  return getBubblesConfigForSet(setId).map((bubble) => bubble.id);
 }
 
 function findBubbleSlotById(slotId, setId = DEFAULT_BUBBLE_SET_ID) {
@@ -744,6 +895,9 @@ function createInitialSlotContentMaps() {
 }
 
 function getCurrentSlotContent(slotId, setId = state.activeSetId) {
+  if (setId === 'interrupt' && slotId === 1) {
+    return createBaseSlotContent(findBubbleSlotById(slotId, setId), setId);
+  }
   const contentMap = state.slotContentBySetId[setId] || {};
   return contentMap[slotId] || createBaseSlotContent(findBubbleSlotById(slotId, setId), setId);
 }
@@ -801,6 +955,10 @@ const bubbleHomeStreamState = {
   streamToken: 0,
   currentText: '',
   currentCursor: null,
+  idleLoopToken: 0,
+  idleLoopActive: false,
+  idleLoopTimer: null,
+  fadeTimer: null,
 };
 
 let previousHoveredId = null;
@@ -847,6 +1005,7 @@ function init() {
   }
   bindEvents();
   render();
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
   // initHandTracking();
 }
 
@@ -983,6 +1142,7 @@ function bubbleContentSignature(bubble) {
   return JSON.stringify({
     contentId: bubble.contentId || '',
     graphicKind: bubble.graphicKind || 'image',
+    controlAction: bubble.controlAction || '',
     emoji: bubble.emoji || '',
     emojiScale: bubble.emojiScale ?? '',
     img: bubble.img || '',
@@ -991,6 +1151,8 @@ function bubbleContentSignature(bubble) {
     disableCircularImageMask: Boolean(bubble.disableCircularImageMask),
     isPill: Boolean(bubble.isPill),
     hoverExpandsToPill: Boolean(bubble.hoverExpandsToPill),
+    usesSurfaceShell: Boolean(bubble.usesSurfaceShell),
+    controlIcon: bubble.controlIcon || '',
     pillTitle: bubble.pillTitle || '',
     pillSubtitle: bubble.pillSubtitle || '',
     pillTrailingIcon: bubble.pillTrailingIcon || '',
@@ -1014,10 +1176,10 @@ function syncBubbleNodeContent(node, bubble) {
   node.inner.appendChild(visual);
 
   const surface = document.createElement('div');
-  surface.className = `bubble2-surface${bubble.hoverExpandsToPill ? ' g-stage-selected-host' : ''}`;
+  surface.className = `bubble2-surface${(bubble.hoverExpandsToPill || bubble.usesSurfaceShell) ? ' g-stage-selected-host' : ''}`;
   let surfaceChrome = null;
 
-  if (!bubble.isPill && !bubble.hoverExpandsToPill) {
+  if (!bubble.isPill && !bubble.hoverExpandsToPill && !bubble.usesSurfaceShell) {
     const hoverShell = document.createElement('div');
     hoverShell.className = 'bubble2-hover-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
     hoverShell.setAttribute('aria-hidden', 'true');
@@ -1028,7 +1190,7 @@ function syncBubbleNodeContent(node, bubble) {
     node.hoverShell = null;
   }
 
-  if (bubble.hoverExpandsToPill) {
+  if (bubble.hoverExpandsToPill || bubble.usesSurfaceShell) {
     surfaceChrome = createHtmlNode(renderCelestialSelectionChrome('bottom', 'bubble2-surface-selection'));
     surface.appendChild(surfaceChrome);
   }
@@ -1191,8 +1353,23 @@ function removeBubbleHomeStreamCursor() {
   bubbleHomeStreamState.currentCursor = null;
 }
 
+function clearBubbleHomeStreamTimers() {
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  if (bubbleHomeStreamState.fadeTimer) {
+    window.clearTimeout(bubbleHomeStreamState.fadeTimer);
+    bubbleHomeStreamState.fadeTimer = null;
+  }
+}
+
 function setBubbleHomeStreamVisible(visible) {
   if (!refs.orbStream) return;
+  if (visible && bubbleHomeStreamState.fadeTimer) {
+    window.clearTimeout(bubbleHomeStreamState.fadeTimer);
+    bubbleHomeStreamState.fadeTimer = null;
+  }
   refs.orbStream.classList.toggle('hidden', !visible);
 }
 
@@ -1203,9 +1380,56 @@ function clearBubbleHomeStream() {
 }
 
 function stopBubbleHomeStream() {
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  clearBubbleHomeStreamTimers();
   bubbleHomeStreamState.streamToken += 1;
   clearBubbleHomeStream();
   setBubbleHomeStreamVisible(false);
+}
+
+async function showPersistentBubbleHomeStreamText(text, { animate = true } = {}) {
+  const value = String(text || '').trim();
+  if (!value || !refs.orbStreamText) return;
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  const token = ++bubbleHomeStreamState.streamToken;
+  setBubbleHomeStreamVisible(true);
+  removeBubbleHomeStreamCursor();
+  if (bubbleHomeStreamState.currentText && bubbleHomeStreamState.currentText !== value) {
+    const cleared = await deleteBubbleHomeStreamText(token);
+    if (!cleared) return;
+    if (!(await waitForBubbleHomeStream(120, token))) return;
+  }
+  if (animate && bubbleHomeStreamState.currentText !== value) {
+    const typed = await typeBubbleHomeStreamText(value, token);
+    if (!typed) return;
+    return;
+  }
+  bubbleHomeStreamState.currentText = value;
+  refs.orbStreamText.textContent = value;
+}
+
+function fadeOutBubbleHomeStream({ clearAfter = true } = {}) {
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  bubbleHomeStreamState.streamToken += 1;
+  removeBubbleHomeStreamCursor();
+  setBubbleHomeStreamVisible(false);
+  if (!clearAfter) return;
+  if (bubbleHomeStreamState.fadeTimer) window.clearTimeout(bubbleHomeStreamState.fadeTimer);
+  bubbleHomeStreamState.fadeTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.fadeTimer = null;
+    if (refs.orbStream?.classList.contains('hidden')) clearBubbleHomeStream();
+  }, BUBBLE_HOME_STREAM_FADE_MS);
 }
 
 async function waitForBubbleHomeStream(ms, token) {
@@ -1281,6 +1505,12 @@ function getBubbleHomeContentLabel(content = state.homeOrbContent) {
 async function streamBubbleHomeTransitionText(text) {
   const value = String(text || '').trim();
   if (!value || !refs.orbStreamText) return;
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
   const token = ++bubbleHomeStreamState.streamToken;
   setBubbleHomeStreamVisible(true);
   removeBubbleHomeStreamCursor();
@@ -1296,6 +1526,75 @@ async function streamBubbleHomeTransitionText(text) {
   if (!deleted) return;
   if (token !== bubbleHomeStreamState.streamToken) return;
   setBubbleHomeStreamVisible(false);
+  scheduleInterruptRestingStream();
+}
+
+function shouldRunInterruptIdleStream() {
+  return state.activeSetId === 'interrupt'
+    && !interruptSessionPaused
+    && !state.isPressed
+    && !state.swapTransition?.active
+    && !state.pointerMovedSincePress
+    && Boolean(refs.orbStreamText?.isConnected);
+}
+
+function scheduleInterruptRestingStream(delayMs = 0) {
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  if (state.activeSetId !== 'interrupt' || state.isPressed || state.swapTransition?.active) return;
+  bubbleHomeStreamState.idleLoopTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.idleLoopTimer = null;
+    if (state.activeSetId !== 'interrupt' || state.isPressed || state.swapTransition?.active) return;
+    if (interruptSessionPaused) {
+      void showPersistentBubbleHomeStreamText('Session paused', { animate: false });
+      return;
+    }
+    void runInterruptIdleStreamLoop();
+  }, delayMs);
+}
+
+async function runInterruptIdleStreamLoop() {
+  if (!shouldRunInterruptIdleStream() || bubbleHomeStreamState.idleLoopActive) return;
+  const idleToken = ++bubbleHomeStreamState.idleLoopToken;
+  bubbleHomeStreamState.idleLoopActive = true;
+  while (idleToken === bubbleHomeStreamState.idleLoopToken && shouldRunInterruptIdleStream()) {
+    for (const text of BUBBLE_HOME_IDLE_STREAM_TEXTS) {
+      if (idleToken !== bubbleHomeStreamState.idleLoopToken || !shouldRunInterruptIdleStream()) break;
+      const token = ++bubbleHomeStreamState.streamToken;
+      setBubbleHomeStreamVisible(true);
+      if (bubbleHomeStreamState.currentText) {
+        const cleared = await deleteBubbleHomeStreamText(token);
+        if (!cleared) {
+          bubbleHomeStreamState.idleLoopActive = false;
+          return;
+        }
+        if (!(await waitForBubbleHomeStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS, token))) {
+          bubbleHomeStreamState.idleLoopActive = false;
+          return;
+        }
+      }
+      const typed = await typeBubbleHomeStreamText(text, token);
+      if (!typed) {
+        bubbleHomeStreamState.idleLoopActive = false;
+        return;
+      }
+      if (!(await waitForBubbleHomeStream(BUBBLE_HOME_IDLE_STREAM_HOLD_MS, token))) {
+        bubbleHomeStreamState.idleLoopActive = false;
+        return;
+      }
+    }
+  }
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (!shouldRunInterruptIdleStream()) return;
+  if (bubbleHomeStreamState.currentText) {
+    const token = ++bubbleHomeStreamState.streamToken;
+    const deleted = await deleteBubbleHomeStreamText(token);
+    if (!deleted) return;
+  }
+  setBubbleHomeStreamVisible(false);
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
 }
 
 function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
@@ -1406,6 +1705,7 @@ function switchBubbleSet(nextSetId) {
   buildScene();
   updateMeasuredChildChipWidths();
   render();
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
 }
 
 function bindEvents() {
@@ -1461,8 +1761,8 @@ function handleKeyDown(event) {
 }
 
 function cycleBubbleHomeSelection(step) {
-  if (state.activeSetId === 'agent') {
-    cycleBubbleHomeAgentSetItem(step);
+  if (isAgentStyleBubbleSet(state.activeSetId)) {
+    cycleBubbleHomeSetItem(step, state.activeSetId);
     return;
   }
   cycleBubbleHomeAgent(step);
@@ -1486,9 +1786,9 @@ function cycleBubbleHomeAgent(step) {
   scheduleRender();
 }
 
-function cycleBubbleHomeAgentSetItem(step) {
+function cycleBubbleHomeSetItem(step, setId = state.activeSetId) {
   if (!refs.orb || !step || state.swapTransition?.active) return;
-  const sequence = BUBBLE_HOME_AGENT_SET_SEQUENCE;
+  const sequence = getBubbleSetSequence(setId);
   if (!sequence.length) return;
 
   const currentSlotId = Number.isFinite(state.homeOrbContent?.sourceSlotId)
@@ -1500,9 +1800,9 @@ function cycleBubbleHomeAgentSetItem(step) {
   const nextSlotId = sequence[nextIndex];
   if (nextSlotId == null) return;
 
-  const slot = findBubbleSlotById(nextSlotId, 'agent');
+  const slot = findBubbleSlotById(nextSlotId, setId);
   if (!slot) return;
-  const nextContent = createBaseSlotContent(slot, 'agent');
+  const nextContent = createBaseSlotContent(slot, setId);
   const switchDirection = step > 0 ? 'right' : 'left';
 
   state.homeOrbContent = nextContent;
@@ -1519,6 +1819,9 @@ function handlePointerDown(event) {
   if (!shouldStartBubblePress(event)) return;
   if (state.swapTransition?.active) return;
   event.preventDefault();
+  if (state.activeSetId === 'interrupt') {
+    fadeOutBubbleHomeStream();
+  }
   const now = performance.now();
   clearChildHoverTimer();
   if (refs.shell) {
@@ -1618,6 +1921,7 @@ function handlePointerRelease(event) {
   previousHoveredChildId = null;
   scheduleMotionPhaseRender(state.closeMotionUntil);
   scheduleRender();
+  scheduleInterruptRestingStream(CLOSE_PHASE_LATCH_MS);
 }
 
 function shouldStartBubbleSwap(scene) {
@@ -1632,6 +1936,18 @@ function snapshotReleaseBubble(bubble) {
     ...bubble,
     sourceDiameter: bubble.baseSize * bubble.targetScale,
   };
+}
+
+function isPauseSessionSwap(transition = state.swapTransition) {
+  return transition?.specialAction === 'pause-session';
+}
+
+function isPlaySessionSwap(transition = state.swapTransition) {
+  return transition?.specialAction === 'play-session';
+}
+
+function isInterruptPlaybackSwap(transition = state.swapTransition) {
+  return isPauseSessionSwap(transition) || isPlaySessionSwap(transition);
 }
 
 function startBubbleSwap(scene, now) {
@@ -1656,14 +1972,17 @@ function startBubbleSwap(scene, now) {
 
   const promotedContent = { ...getCurrentSlotContent(selectedBubble.id) };
   const demotedContent = createDemotedOrbSlotContent(state.homeOrbContent);
+  const isPauseAction = selectedBubble.controlAction === 'pause-session';
+  const isPlayAction = selectedBubble.controlAction === 'play-session';
   const promotedImageScaleCompensation = selectedBubble.graphicKind === 'emoji'
     ? 1
     : (selectedBubble.fill ? (1 / Math.max(selectedBubble.imageScale ?? 1, 0.0001)) : 1);
   state.swapTransition = {
     active: true,
+    specialAction: isPauseAction ? 'pause-session' : (isPlayAction ? 'play-session' : ''),
     selectedBubbleId: selectedBubble.id,
     startedAt: now,
-    durationMs: SWAP_DURATION_MS,
+    durationMs: (isPauseAction || isPlayAction) ? (SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS) : SWAP_DURATION_MS,
     siblingDurationMs: SWAP_SIBLING_DURATION_MS,
     highlightFreezeUntil: now + SWAP_HIGHLIGHT_FREEZE_MS,
     panOffset: { ...scene.panOffset },
@@ -1691,6 +2010,25 @@ function startBubbleSwap(scene, now) {
 function commitBubbleSwap() {
   const transition = state.swapTransition;
   if (!transition) return;
+  if (isPauseSessionSwap(transition)) {
+    interruptSessionPaused = true;
+    state.swapTransition = null;
+    state.closeMotionUntil = 0;
+    clearSwapLayer();
+    void showPersistentBubbleHomeStreamText('Session paused');
+    scheduleRender();
+    return;
+  }
+  if (isPlaySessionSwap(transition)) {
+    interruptSessionPaused = false;
+    state.swapTransition = null;
+    state.closeMotionUntil = 0;
+    clearSwapLayer();
+    fadeOutBubbleHomeStream();
+    scheduleInterruptRestingStream(BUBBLE_HOME_STREAM_FADE_MS + BUBBLE_HOME_IDLE_STREAM_GAP_MS);
+    scheduleRender();
+    return;
+  }
   state.homeOrbContent = transition.promotedContent;
   state.swapTransition = null;
   state.closeMotionUntil = 0;
@@ -1704,6 +2042,7 @@ function commitBubbleSwap() {
   clearSwapLayer();
   resetBubbleHomeOrbCenter(refs.orb);
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
 }
 
 function scheduleRender() {
@@ -1744,6 +2083,7 @@ function computePromotedSwapMotion(transition, promotedBubble, now) {
 
 function computeDemotedSwapMotion(transition, now) {
   if (!transition) return null;
+  if (isInterruptPlaybackSwap(transition)) return null;
   const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
   return {
     centerX: transition.demotedCenterStartX ?? 0,
@@ -1800,6 +2140,9 @@ function render() {
     const isPromotingDomainPill = isPromoting && bubble.hoverExpandsToPill;
     const isHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
     const isRoundVisualScaleActive = (isHovered && !usesPillInteraction) || isPromoting;
+    const hoverVisualScale = bubble.usesSurfaceShell
+      ? CONTROL_BUBBLE_HOVER_SCALE
+      : BUBBLE_HOVER_CONTENT_SCALE;
     const isAppearing = isInitialReveal;
     const isSwapFade = bubble.swapState === 'fade';
     const isSwapHidden = bubble.swapState === 'hidden';
@@ -1887,7 +2230,7 @@ function render() {
     node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
     if (node.visual) {
-      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? BUBBLE_HOVER_CONTENT_SCALE : 1))})`;
+      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
     }
     if (node.surfaceChrome) {
       applyBubbleCelestialChrome(
@@ -1921,6 +2264,7 @@ function render() {
     node.iconWrap.style.transform = isPromotingDomainPill
       ? 'scale(1)'
       : (usesPillInteraction ? 'scale(1)' : `scale(${pillHoverBubbleScale})`);
+    node.surface.classList.toggle('has-surface-shell', Boolean(bubble.usesSurfaceShell));
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
     node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting));
     if (!usesPillInteraction) {
@@ -2041,7 +2385,9 @@ function render() {
     refs.orb.style.transform = demotedSwapMotion
       ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
       : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0)`;
-    refs.orb.style.opacity = demotedSwapMotion ? format(demotedSwapMotion.opacity) : (isSwapActive ? '0' : '1');
+    refs.orb.style.opacity = demotedSwapMotion
+      ? format(demotedSwapMotion.opacity)
+      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : '1');
   }
 
   if (refs.orbVisual) {
@@ -2356,6 +2702,33 @@ function computeScene(now = performance.now()) {
 
 function computeSwapTransitionScene(now) {
   const transition = state.swapTransition;
+  if (isInterruptPlaybackSwap(transition)) {
+    const progress = easeInOutCubic(clamp((now - transition.startedAt) / transition.durationMs, 0, 1));
+    return {
+      bubbles: transition.releaseBubbles.map((bubble) => ({
+        ...bubble,
+        swapState: 'fade',
+        targetScale: 0.2,
+        isExpanded: false,
+        expandedExtraSourceWidth: 0,
+        promotedVisualScale: 1,
+      })),
+      children: [],
+      childZone: null,
+      hoveredId: null,
+      hoveredChildId: null,
+      orb: {
+        id: 'orb',
+        targetScale: 1,
+        targetX: 0,
+        targetY: 0,
+      },
+      panOffset: {
+        x: interpolate(transition.panOffset.x, 0, progress),
+        y: interpolate(transition.panOffset.y, 0, progress),
+      },
+    };
+  }
   const promotedBubble = findPromotedReleaseBubble(transition);
   const promotedMotion = computePromotedSwapMotion(transition, promotedBubble, now);
   return {
@@ -2634,6 +3007,9 @@ function enrichBubbleMetrics(bubble) {
 }
 
 function createBubbleGraphic(bubble) {
+  if (bubble.graphicKind === 'interrupt-control') {
+    return createHtmlNode(renderInterruptControlSvg(bubble.controlIcon));
+  }
   if (bubble.graphicKind === 'emoji') {
     const emoji = document.createElement('span');
     emoji.className = 'bubble2-icon-emoji';

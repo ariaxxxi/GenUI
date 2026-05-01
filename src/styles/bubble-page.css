@@ -340,6 +340,7 @@ body.bubble2-page.is-canvasless {
 
 
 .bubble2-surface.is-pill,
+.bubble2-surface.has-surface-shell,
 .bubble2-child-surface {
   background: transparent;
   box-shadow:
@@ -348,6 +349,7 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-surface.is-pill::before,
+.bubble2-surface.has-surface-shell::before,
 .bubble2-child-surface::before {
   content: "";
   position: absolute;
@@ -374,6 +376,7 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-surface.is-pill::after,
+.bubble2-surface.has-surface-shell::after,
 .bubble2-child-surface::after {
   content: "";
   position: absolute;
@@ -470,6 +473,25 @@ body.bubble2-page.is-canvasless {
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
   transform: translateY(1px);
   user-select: none;
+}
+
+.bubble2-icon-svg {
+  display: block;
+  width: 44%;
+  height: 44%;
+  color: #ffffff;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.22));
+  overflow: visible;
+}
+
+.bubble2-icon-svg--pause {
+  width: 42%;
+  height: 42%;
+}
+
+.bubble2-icon-svg--end {
+  width: 40%;
+  height: 40%;
 }
 
 .bubble2-pill-copy {
@@ -726,10 +748,16 @@ body.bubble2-page.is-canvasless {
   pointer-events: none;
   z-index: 24;
   white-space: nowrap;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 180ms ease, visibility 0ms linear 0ms;
+  will-change: opacity;
 }
 
 .bubble2-orb-stream.hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 0ms linear 180ms;
 }
 
 .bubble2-orb-stream-text {

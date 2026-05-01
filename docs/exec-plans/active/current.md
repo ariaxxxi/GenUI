@@ -1,6 +1,6 @@
 # Title
 
-Prototype debug pause and resume for thinking states
+Bubble Home interrupt set
 
 ## Status
 
@@ -8,72 +8,63 @@ Coder-complete in working tree. Ready for review.
 
 ## Objective
 
-On `/prototype`, add debug-only `Pause` and `Resume` controls for the prototype thinking-family states so `thinking`, `skill`, `agent`, and `app` playback can be frozen and resumed without disabling the rest of the debug controls.
+On `/bubble`, keep the third content set named `interrupt` as a compact control set with a stateful `Pause`/`Play` primary control plus `End` and `Add`.
 
 ## In scope
 
-- Prototype AI debug control markup in `index.html`.
-- Prototype thinking debug playback state and stream behavior in `src/tool/modules/manual-bindings.js`.
-- Prototype paused-text and paused-orb styling in `src/styles/editor-layout.css`, `src/styles/editor-sidebar.css`, and `src/styles/ai-decorative.css`.
-- Prototype behavior docs and execution notes.
+- Bubble Home set data and set-aware helper updates in `src/bubble-page.js`
+- Bubble Home product-spec updates for the new `interrupt` set
+- Execution notes for the landed set behavior
 
 ## Out of scope
 
-- AI Mode behavior.
-- Bubble Home behavior.
-- Celestial visual-core presets or shared orb markup.
+- AI Mode behavior
+- Prototype page behavior
+- Bubble Home visual redesign beyond the new set membership and inherited set behavior
 
 ## Relevant context
 
-- Prototype debug playback is token-gated through `thinkingDebugState.streamToken` in `src/tool/modules/manual-bindings.js`.
-- The prototype and AI surfaces share one Celestial orb implementation, so the paused visual must be a state-only treatment layered onto the existing orb selectors.
-- The user explicitly wants pause to stop text playback while still allowing skill, agent, and app switching.
+- Bubble Home already supports data-driven named content sets through `BUBBLE_SET_DEFINITIONS`
+- The current `agent` set still relies on a single hardcoded sequence for left/right orb cycling and control defaults
+- The new `interrupt` set should inherit the same set-level behavior as `agent` instead of adding a one-off runtime path
 
 ## Files to inspect
 
-- `index.html`
-- `src/tool/modules/manual-bindings.js`
-- `src/styles/ai-decorative.css`
-- `src/styles/editor-layout.css`
-- `src/styles/editor-sidebar.css`
-- `docs/FRONTEND.md`
-- `README.md`
+- `src/bubble-page.js`
+- `docs/product-specs/bubble-home.md`
+- `docs/exec-plans/completed/handoff.md`
 
 ## Files allowed to change
 
-- `index.html`
-- `src/tool/modules/manual-bindings.js`
-- `src/styles/ai-decorative.css`
-- `src/styles/editor-layout.css`
-- `src/styles/editor-sidebar.css`
-- `docs/FRONTEND.md`
-- `README.md`
+- `src/bubble-page.js`
+- `docs/product-specs/bubble-home.md`
 - `docs/exec-plans/active/current.md`
 - `docs/exec-plans/completed/handoff.md`
 
 ## Implementation steps
 
-1. Add `Pause` and `Resume` controls to the prototype AI debug sidebar.
-2. Extend the prototype thinking debug state with paused playback and queued custom text.
-3. Cancel active text animation on pause, render static paused labels per mode, and let morph/orb-switch behavior continue while paused.
-4. Resume by optionally one-shot playing queued custom text, then restarting only the correct mode-specific playback.
-5. Add a paused badge treatment for the stream and a paused-state Celestial orb settle treatment without forking the shared orb system.
-6. Update prototype behavior docs and execution notes.
+1. Add a third Bubble Home set definition named `interrupt` alongside `app` and `agent`.
+2. Build the `interrupt` set as a 3-bubble config with `Pause`, `End`, and `Add` in the old Claude, ChatGPT, and Gemini positions.
+3. Keep the interrupt-specific hover, shell, idle-stream, paused-state, and pause/play stream behavior on the control bubbles.
+4. Keep the set-aware control-default and left/right cycle helpers working for the reduced `interrupt` sequence.
+5. Update Bubble Home product docs and execution notes.
 
 ## Acceptance criteria
 
-- `thinking`, `skill`, `agent`, and `app` debug states can be paused and resumed on `/prototype`.
-- While paused, agent/app switches and skill changes still work, but no stream loop or transition copy types until resume.
-- `Fire` while paused queues custom text and plays it once after resume.
-- Leaving the debug-family shapes clears the paused state and queued paused custom text.
-- The paused orb treatment reuses the existing shared Celestial orb path instead of introducing new orb markup.
+- The set switcher shows `Interrupt` alongside `App` and `Agent`.
+- Switching to `Interrupt` keeps the same control defaults as `Agent`.
+- The `interrupt` set renders `Pause`, `End`, and `Add` in the old Claude, ChatGPT, and Gemini slots.
+- Left/right arrow keys cycle the home orb through the reduced 3-bubble `interrupt` sequence using the same shared swipe motion and transient `Switch to …` stream treatment used by the `agent` set.
+- At rest, the `interrupt` set home orb loops `Reasoning`, `Thinking`, and `Taking action` only while unpaused, and that stream fades out when the field opens.
+- After `Pause` fires, the orb holds `Session paused` and the primary control bubble switches to `Play`; only firing `Play` resumes the looping stream.
+- Existing `agent` and `app` set behavior remains unchanged.
 
 ## Validation checklist
 
-- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/bubble-page.js`
 - `git diff --check`
-- Manual `/prototype` browser pass recommended for final interaction and motion confirmation.
+- Manual `/bubble` browser pass recommended for final layout and cycle confirmation.
 
 ## Risks / notes
 
-- This is a timing-sensitive debug UX change, so a browser pass is still needed to confirm pause timing, queued custom-text resume, and the paused orb feel across `thinking`, `skill`, `agent`, and `app`.
+- This is a set-layout and keyboard-cycle change, so a browser pass is still needed to confirm the 3-bubble spacing, shell feel, and left/right orb cycle order on `/bubble`.
