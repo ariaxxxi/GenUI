@@ -58,15 +58,17 @@ export const AI_ORB_ICON_OPTIONS = Object.freeze({
 
 To add a new agent, add an entry to `AI_ORB_ICON_OPTIONS` with `id`, `label`, `src` (icon image path), and a `theme` block with four `rgb(...)` color values.
 
-### Skill mode phrases
+### Domain mode phrases
 
-When the orb shape is `skill-pill`, the stream cycles through that skill's `phrases` array. Skills are defined in `PROTOTYPE_SKILLS` inside `manual-bindings.js`. Each skill entry has:
+In the prototype thinking debug UI, the visible mode label is `domain`. Internally, it still uses the `skill` mode key and `skill-pill` render shape.
+
+When the orb shape is `skill-pill`, the stream cycles through that domain agent's `phrases` array. Domain agents are defined in `PROTOTYPE_SKILLS` inside `manual-bindings.js`. Each entry has:
 
 ```js
 {
   id: 'budget',             // unique identifier
-  label: 'Budget Agent',    // shown as "Switching to Budget Agent" on skill switch
-  emoji: '💸',              // displayed in the skill chip
+  label: 'Budget Agent',    // shown in the domain chip
+  src: 'assets/agents/orange.png', // Bubble Home domain image
   theme: {                  // orb glow colors
     blobTopCore:    'rgb(...)',
     blobTopEdge:    'rgb(...)',
@@ -81,16 +83,16 @@ When the orb shape is `skill-pill`, the stream cycles through that skill's `phra
 }
 ```
 
-To add a new skill, append a new object to `PROTOTYPE_SKILLS` following the same shape. Phrases cycle in order and loop. Each phrase is held for ~2.2 seconds before transitioning to the next.
+To add a new domain agent, append a new object to `PROTOTYPE_SKILLS` following the same shape. Phrases cycle in order and loop. Each phrase is held for ~2.2 seconds before transitioning to the next.
 
-When switching between skills, the stream first shows `"Switching to [skill.label]"` (held for 3 seconds), then begins the phrase loop for the new skill. When entering skill mode fresh (not a switch), phrases start immediately with no transition label.
+When switching between domain agents, the stream first shows `"Using [domain] domain"` (held for 3 seconds), then begins the phrase loop for the new selection. When entering domain mode fresh (not a switch), phrases start immediately with no transition label.
 
 ### Pause and resume debug playback
 
 The prototype thinking debug panel also includes `Pause` and `Resume` controls for `thinking`, `skill`, `agent`, and `app` states.
 
 - `Pause` cancels the active typing loop, keeps the current debug visual state active, and replaces the stream with a static paused badge such as `Paused thinking` or `Paused · Budget Agent`.
-- While paused, agent/app switches and skill rerolls still morph and animate normally, but no transition copy or phrase loop restarts until `Resume`.
+- While paused, agent/app switches and domain rerolls still morph and animate normally, but no transition copy or phrase loop restarts until `Resume`.
 - If you hit `Fire` while paused, the custom text is queued instead of typed immediately. That queued text plays once on `Resume`, then the active mode continues its normal behavior.
 - Leaving the debug-family shapes clears the paused state and any queued paused custom text.
 

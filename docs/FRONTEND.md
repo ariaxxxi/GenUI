@@ -162,7 +162,7 @@ Layer timing:
 - Prototype AI debug may use internal render shapes `skill-pill` and `agent-circle`; they are morph/render internals and must not be exposed as normal stage-library shapes.
 - Prototype AI debug thinking states include:
   - `thinking`: shared orb + verb stream
-  - `skill`: selected skill chip + looping phrase stream
+  - `skill`: selected domain chip + looping phrase stream; the user-facing control label on `/prototype` should read `domain`
   - `agent`: agent circle / shared orb-center switching path
   - `app`: agent-circle path with Bubble app icon content + `Launching {app name}` stream
 - Prototype AI debug must expose a custom text input plus `Fire` action that can interrupt the current debug text loop and one-shot stream user-provided text with the same typing animation while keeping the active `thinking`, `skill`, `agent`, or `app` visual state unchanged.

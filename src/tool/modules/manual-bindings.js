@@ -90,66 +90,16 @@ export function initManualBindings({
     'Searching',
     'Finalizing',
   ];
+  const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
+  const GREEN_AGENT_ASSET = 'assets/agents/green.png';
+  const ORANGE_AGENT_ASSET = 'assets/agents/orange.png';
+  const YELLOW_AGENT_ASSET = 'assets/agents/yellow.png';
   const PROTOTYPE_SKILLS = [
-    {
-      id: 'doc-writing',
-      label: 'Writing Agent',
-      emoji: '📝',
-      theme: { blobTopCore: 'rgb(126 186 255)', blobTopEdge: 'rgb(92 132 255)', blobBottomCore: 'rgb(197 223 255)', blobBottomEdge: 'rgb(74 102 212)' },
-      phrases: [
-        'Outlining the big idea',
-        'Finding the cleaner headline',
-        'Tightening the messy sentence',
-        'Smoothing the intro paragraph',
-        'Pulling out the key point',
-        'Reshaping the closing line',
-        'Cutting the extra fluff',
-        'Making the structure clearer',
-        'Rewriting for warmer tone',
-        'Sharpening the summary',
-      ],
-    },
-    {
-      id: 'budget',
-      label: 'Budget Agent',
-      emoji: '💸',
-      theme: { blobTopCore: 'rgb(121 255 168)', blobTopEdge: 'rgb(78 214 127)', blobBottomCore: 'rgb(214 255 143)', blobBottomEdge: 'rgb(92 184 74)' },
-      phrases: [
-        'Checking the monthly burn',
-        'Looking for hidden subscriptions',
-        'Balancing bills against fun',
-        'Reworking the grocery cap',
-        'Setting aside travel money',
-        'Pressure-testing the weekend spend',
-        'Comparing fixed and flexible costs',
-        'Searching for the easy save',
-        'Trimming the impulse bucket',
-        'Finding room for a treat',
-      ],
-    },
-    {
-      id: 'wine-pairing-expert',
-      label: 'Wine Agent',
-      emoji: '🍷',
-      theme: { blobTopCore: 'rgb(188 66 120)', blobTopEdge: 'rgb(118 28 88)', blobBottomCore: 'rgb(244 146 188)', blobBottomEdge: 'rgb(90 20 68)' },
-      phrases: [
-        'Matching acidity to the dish',
-        'Softening the tannin choice',
-        'Leaning into brighter fruit',
-        'Comparing light and bold pours',
-        'Balancing spice with sweetness',
-        'Picking the cleaner finish',
-        'Choosing a better dinner bottle',
-        'Checking the texture pairing',
-        'Finding the safer crowd pleaser',
-        'Saving the richer red for later',
-      ],
-    },
     {
       id: 'trip-planner',
       label: 'Travel Agent',
-      emoji: '✈️',
-      theme: { blobTopCore: 'rgb(115 204 255)', blobTopEdge: 'rgb(73 147 255)', blobBottomCore: 'rgb(209 241 255)', blobBottomEdge: 'rgb(74 110 224)' },
+      src: BLUE_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(177 222 255)', blobTopEdge: 'rgb(90 164 255)', blobBottomCore: 'rgb(210 232 255)', blobBottomEdge: 'rgb(48 108 226)' },
       phrases: [
         'Comparing the morning flights',
         'Moving the hotel closer in',
@@ -164,10 +114,28 @@ export function initManualBindings({
       ],
     },
     {
+      id: 'doc-writing',
+      label: 'Writing Agent',
+      src: YELLOW_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(255 243 158)', blobTopEdge: 'rgb(255 212 72)', blobBottomCore: 'rgb(255 249 208)', blobBottomEdge: 'rgb(222 176 34)' },
+      phrases: [
+        'Outlining the big idea',
+        'Finding the cleaner headline',
+        'Tightening the messy sentence',
+        'Smoothing the intro paragraph',
+        'Pulling out the key point',
+        'Reshaping the closing line',
+        'Cutting the extra fluff',
+        'Making the structure clearer',
+        'Rewriting for warmer tone',
+        'Sharpening the summary',
+      ],
+    },
+    {
       id: 'fitness-coach',
       label: 'Fitness Agent',
-      emoji: '🏃',
-      theme: { blobTopCore: 'rgb(118 255 199)', blobTopEdge: 'rgb(72 210 165)', blobBottomCore: 'rgb(187 255 229)', blobBottomEdge: 'rgb(54 145 118)' },
+      src: GREEN_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(146 255 191)', blobTopEdge: 'rgb(82 214 134)', blobBottomCore: 'rgb(210 255 176)', blobBottomEdge: 'rgb(82 176 84)' },
       phrases: [
         'Adjusting the recovery day',
         'Turning down the injury risk',
@@ -182,21 +150,21 @@ export function initManualBindings({
       ],
     },
     {
-      id: 'meal-planner',
-      label: 'Meal Agent',
-      emoji: '🍱',
-      theme: { blobTopCore: 'rgb(255 182 108)', blobTopEdge: 'rgb(255 123 86)', blobBottomCore: 'rgb(255 227 146)', blobBottomEdge: 'rgb(210 108 56)' },
+      id: 'budget',
+      label: 'Budget Agent',
+      src: ORANGE_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(255 204 152)', blobTopEdge: 'rgb(255 144 76)', blobBottomCore: 'rgb(255 228 194)', blobBottomEdge: 'rgb(215 109 39)' },
       phrases: [
-        'Using up what is in the fridge',
-        'Balancing quick and cozy dinners',
-        'Planning leftovers on purpose',
-        'Pairing the sides more cleanly',
-        'Checking the protein spread',
-        'Making lunch easier tomorrow',
-        'Keeping prep time reasonable',
-        'Turning one base into two meals',
-        'Finding a lighter dinner option',
-        'Saving the easiest dish for late',
+        'Checking the monthly burn',
+        'Looking for hidden subscriptions',
+        'Balancing bills against fun',
+        'Reworking the grocery cap',
+        'Setting aside travel money',
+        'Pressure-testing the weekend spend',
+        'Comparing fixed and flexible costs',
+        'Searching for the easy save',
+        'Trimming the impulse bucket',
+        'Finding room for a treat',
       ],
     },
   ];
@@ -298,12 +266,12 @@ export function initManualBindings({
     return AI_ORB_ICON_OPTIONS[id] || AI_ORB_ICON_OPTIONS[fallbackId] || Object.values(AI_ORB_ICON_OPTIONS)[0] || null;
   };
   const getSkillTransitionText = (skill) => {
-    const baseLabel = String(skill?.label || 'Skill').replace(/\s+Agent$/i, '').trim() || 'Skill';
-    return `Using ${baseLabel} skill`;
+    const baseLabel = String(skill?.label || 'Domain').replace(/\s+Agent$/i, '').trim() || 'Domain';
+    return `Using ${baseLabel} domain`;
   };
   const getSkillRenderContent = (skill) => ({
-    icon: createIcon('emoji', skill?.emoji || '✨'),
-    primary: skill?.label || 'Skill Agent',
+    icon: createIcon('image', skill?.src || ''),
+    primary: skill?.label || 'Domain Agent',
     secondary: '',
     detail: '',
     typography: skillChipTypography,
@@ -335,7 +303,7 @@ export function initManualBindings({
     return text.length * 12;
   };
   const getSkillChipGeometry = (skill) => {
-    const labelWidth = measureSkillChipLabelWidth(skill?.label || 'Skill Agent');
+    const labelWidth = measureSkillChipLabelWidth(skill?.label || 'Domain Agent');
     const chipHeight = 68;
     const leftPad = 18;
     const iconSize = 36;

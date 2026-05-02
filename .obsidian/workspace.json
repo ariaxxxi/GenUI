@@ -185,6 +185,7 @@
   },
   "active": "553ce0265026a14c",
   "lastOpenFiles": [
+    "docs/exec-plans/active/current.md",
     "assets/agents/yellow.png",
     "assets/agents/orange.png",
     "assets/agents/green.png",
@@ -195,7 +196,6 @@
     "src/shared/ai-orb-icon.js",
     "src/bubble-page.js",
     "docs/exec-plans/completed/handoff.md",
-    "docs/exec-plans/active/current.md",
     "docs/references/runtime-reference-llms.txt",
     "docs/references/design-system-reference-llms.txt",
     "docs/references/decisions.md",
@@ -230,7 +230,6 @@
     "assets/Group.png",
     "assets/OneUI7/Icon/Entertainment/Group.png",
     "src/assets/button-highlight-top-left.png",
-    "src/assets/Button Highlight top left.png",
     "Untitled.canvas"
   ]
 }

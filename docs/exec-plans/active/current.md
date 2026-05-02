@@ -1,6 +1,6 @@
 # Title
 
-Bubble Home interrupt set
+Prototype thinking domain rename and Bubble-aligned imagery
 
 ## Status
 
@@ -8,63 +8,65 @@ Coder-complete in working tree. Ready for review.
 
 ## Objective
 
-On `/bubble`, keep the third content set named `interrupt` as a compact control set with a stateful `Pause`/`Play` primary control plus `End` and `Add`.
+On `/prototype`, keep the existing internal thinking debug `skill` mode mechanics, but change the user-facing mode name to `domain` and replace the old emoji-based domain agents with the same four Bubble Home domain agent images.
 
 ## In scope
 
-- Bubble Home set data and set-aware helper updates in `src/bubble-page.js`
-- Bubble Home product-spec updates for the new `interrupt` set
-- Execution notes for the landed set behavior
+- Prototype debug thinking-state label copy in `index.html`
+- Prototype domain-agent data and render content in `src/tool/modules/manual-bindings.js`
+- Prototype-facing docs that describe the domain debug mode
+- Execution notes for the landed change
 
 ## Out of scope
 
+- Bubble Home behavior or assets
 - AI Mode behavior
-- Prototype page behavior
-- Bubble Home visual redesign beyond the new set membership and inherited set behavior
+- Prototype debug mode-key renames or morph-shape refactors beyond user-facing copy
 
 ## Relevant context
 
-- Bubble Home already supports data-driven named content sets through `BUBBLE_SET_DEFINITIONS`
-- The current `agent` set still relies on a single hardcoded sequence for left/right orb cycling and control defaults
-- The new `interrupt` set should inherit the same set-level behavior as `agent` instead of adding a one-off runtime path
+- Prototype debug uses the internal `skill` thinking state and `skill-pill` render shape; those internal names should stay unchanged unless a broader refactor is requested.
+- Bubble Home already defines the desired domain imagery through `assets/agents/Blue.png`, `green.png`, `orange.png`, and `yellow.png`.
+- The prototype debug row currently exposes a visible `skill` button and emoji-based domain roster that no longer matches Bubble Home.
 
 ## Files to inspect
 
-- `src/bubble-page.js`
-- `docs/product-specs/bubble-home.md`
-- `docs/exec-plans/completed/handoff.md`
+- `index.html`
+- `src/tool/modules/manual-bindings.js`
+- `README.md`
+- `docs/FRONTEND.md`
 
 ## Files allowed to change
 
-- `src/bubble-page.js`
-- `docs/product-specs/bubble-home.md`
+- `index.html`
+- `src/tool/modules/manual-bindings.js`
+- `README.md`
+- `docs/FRONTEND.md`
 - `docs/exec-plans/active/current.md`
 - `docs/exec-plans/completed/handoff.md`
 
 ## Implementation steps
 
-1. Add a third Bubble Home set definition named `interrupt` alongside `app` and `agent`.
-2. Build the `interrupt` set as a 3-bubble config with `Pause`, `End`, and `Add` in the old Claude, ChatGPT, and Gemini positions.
-3. Keep the interrupt-specific hover, shell, idle-stream, paused-state, and pause/play stream behavior on the control bubbles.
-4. Keep the set-aware control-default and left/right cycle helpers working for the reduced `interrupt` sequence.
-5. Update Bubble Home product docs and execution notes.
+1. Change the visible prototype thinking-state button label from `skill` to `domain` without changing the underlying mode key.
+2. Replace the prototype emoji-based skill/domain list with the four Bubble Home domain agents: `Travel Agent`, `Writing Agent`, `Fitness Agent`, and `Budget Agent`, using the same image assets and aligned theme colors.
+3. Update prototype debug domain copy so transition text and fallback labels read `domain` instead of `skill`.
+4. Update durable docs to explain that the visible prototype mode is `domain` while the internal `skill` debug path remains in place.
+5. Record the completed work in the execution handoff.
 
 ## Acceptance criteria
 
-- The set switcher shows `Interrupt` alongside `App` and `Agent`.
-- Switching to `Interrupt` keeps the same control defaults as `Agent`.
-- The `interrupt` set renders `Pause`, `End`, and `Add` in the old Claude, ChatGPT, and Gemini slots.
-- Left/right arrow keys cycle the home orb through the reduced 3-bubble `interrupt` sequence using the same shared swipe motion and transient `Switch to …` stream treatment used by the `agent` set.
-- At rest, the `interrupt` set home orb loops `Reasoning`, `Thinking`, and `Taking action` only while unpaused, and that stream fades out when the field opens.
-- After `Pause` fires, the orb holds `Session paused` and the primary control bubble switches to `Play`; only firing `Play` resumes the looping stream.
-- Existing `agent` and `app` set behavior remains unchanged.
+- On `/prototype`, the thinking-state debug row shows `domain` instead of `skill`.
+- Entering the prototype domain state renders Bubble Home-style agent images instead of emoji icons.
+- The prototype domain roster contains the four Bubble Home domain agents only.
+- Domain transition copy reads naturally with `domain` wording instead of `skill`.
+- Existing internal `skill` state routing continues to function without a broader refactor.
 
 ## Validation checklist
 
-- `node --check src/bubble-page.js`
+- `node --check src/tool/modules/manual-bindings.js`
 - `git diff --check`
-- Manual `/bubble` browser pass recommended for final layout and cycle confirmation.
+- Manual `/prototype` browser pass recommended for final visual confirmation.
 
 ## Risks / notes
 
-- This is a set-layout and keyboard-cycle change, so a browser pass is still needed to confirm the 3-bubble spacing, shell feel, and left/right orb cycle order on `/bubble`.
+- This is intentionally a user-facing rename only; internal keys such as `skill` and `skill-pill` remain because they are shared prototype morph/render internals.

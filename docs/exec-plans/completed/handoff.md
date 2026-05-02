@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-05-01 - Prototype thinking domain rename and Bubble-aligned imagery
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: changed the prototype thinking debug control label from `skill` to `domain`, kept the internal `skill` / `skill-pill` routing intact, replaced the old emoji-based prototype skill roster with the four Bubble Home domain agents using the same `Blue`, `yellow`, `green`, and `orange` image assets and aligned theme colors, and updated the prototype-facing docs to explain the user-facing rename.
+- Files changed: `index.html`, `src/tool/modules/manual-bindings.js`, `README.md`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final `/prototype` domain-chip image fit and copy feel still need a human check.
+
 ## 2026-04-30 - Bubble interrupt set
 
 - Completion status: completed with static verification; manual browser pass still recommended.
