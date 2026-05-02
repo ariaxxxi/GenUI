@@ -85,7 +85,7 @@ When the orb shape is `skill-pill`, the stream cycles through that domain agent'
 
 To add a new domain agent, append a new object to `PROTOTYPE_SKILLS` following the same shape. Phrases cycle in order and loop. Each phrase is held for ~2.2 seconds before transitioning to the next.
 
-When switching between domain agents, the stream first shows `"Using [domain] domain"` (held for 3 seconds), then begins the phrase loop for the new selection. When entering domain mode fresh (not a switch), phrases start immediately with no transition label.
+When switching between domain agents, the stream first shows `"Using [domain] skill"` (held for 3 seconds), then begins the phrase loop for the new selection. When entering domain mode fresh (not a switch), phrases start immediately with no transition label.
 
 ### Pause and resume debug playback
 

@@ -267,7 +267,7 @@ export function initManualBindings({
   };
   const getSkillTransitionText = (skill) => {
     const baseLabel = String(skill?.label || 'Domain').replace(/\s+Agent$/i, '').trim() || 'Domain';
-    return `Using ${baseLabel} domain`;
+    return `Using ${baseLabel} skill`;
   };
   const getSkillRenderContent = (skill) => ({
     icon: createIcon('image', skill?.src || ''),
