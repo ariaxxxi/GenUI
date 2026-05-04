@@ -1,6 +1,6 @@
 # Title
 
-Prototype thinking domain rename and Bubble-aligned imagery
+Prototype thinking minimize toggle
 
 ## Status
 
@@ -8,38 +8,40 @@ Coder-complete in working tree. Ready for review.
 
 ## Objective
 
-On `/prototype`, keep the existing internal thinking debug `skill` mode mechanics, but change the user-facing mode name to `domain` and replace the old emoji-based domain agents with the same four Bubble Home domain agent images.
+On `/prototype`, add a click-to-minimize interaction for the debug `thinking` mode so the shared orb shrinks smoothly to `0.4` from a bottom-center anchor and the thinking stream fades out until the orb is clicked again.
 
 ## In scope
 
-- Prototype debug thinking-state label copy in `index.html`
-- Prototype domain-agent data and render content in `src/tool/modules/manual-bindings.js`
-- Prototype-facing docs that describe the domain debug mode
-- Execution notes for the landed change
+- Prototype debug thinking-mode minimize state and toggle handling
+- Prototype thinking orb motion and stream fade styling
+- Prototype/frontend docs and execution notes for the new interaction
 
 ## Out of scope
 
-- Bubble Home behavior or assets
-- AI Mode behavior
-- Prototype debug mode-key renames or morph-shape refactors beyond user-facing copy
+- `domain`, `agent`, or `app` debug-mode behavior
+- AI Mode orb behavior
+- Bubble Home behavior
+- Shared Celestial visual-core preset changes
 
 ## Relevant context
 
-- Prototype debug uses the internal `skill` thinking state and `skill-pill` render shape; those internal names should stay unchanged unless a broader refactor is requested.
-- Bubble Home already defines the desired domain imagery through `assets/agents/Blue.png`, `green.png`, `orange.png`, and `yellow.png`.
-- The prototype debug row currently exposes a visible `skill` button and emoji-based domain roster that no longer matches Bubble Home.
+- Prototype thinking mode already reuses the shared Celestial orb and should keep doing so; this task is a state-behavior change only.
+- The minimize interaction is local to prototype `thinking` mode and should clear automatically when the user leaves that mode.
+- The thinking stream should remain mounted so unminimizing restores the current text state instead of restarting the loop.
 
 ## Files to inspect
 
-- `index.html`
 - `src/tool/modules/manual-bindings.js`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-layout.css`
 - `README.md`
 - `docs/FRONTEND.md`
 
 ## Files allowed to change
 
-- `index.html`
 - `src/tool/modules/manual-bindings.js`
+- `src/styles/ai-decorative.css`
+- `src/styles/editor-layout.css`
 - `README.md`
 - `docs/FRONTEND.md`
 - `docs/exec-plans/active/current.md`
@@ -47,26 +49,26 @@ On `/prototype`, keep the existing internal thinking debug `skill` mode mechanic
 
 ## Implementation steps
 
-1. Change the visible prototype thinking-state button label from `skill` to `domain` without changing the underlying mode key.
-2. Replace the prototype emoji-based skill/domain list with the four Bubble Home domain agents: `Travel Agent`, `Writing Agent`, `Fitness Agent`, and `Budget Agent`, using the same image assets and aligned theme colors.
-3. Update prototype debug domain copy so transition text and fallback labels read `domain` instead of `skill`.
-4. Update durable docs to explain that the visible prototype mode is `domain` while the internal `skill` debug path remains in place.
-5. Record the completed work in the execution handoff.
+1. Add prototype-local thinking minimize state and click handling on the shared orb host, scoped to `thinking` mode only.
+2. Apply a minimized orb treatment through existing prototype/AI CSS seams so the orb scales to `0.4` from a bottom-center anchor with smooth motion.
+3. Fade the thinking stream out while minimized without unmounting or restarting the underlying loop.
+4. Clear minimized state automatically when leaving prototype `thinking` mode.
+5. Update durable docs and execution notes.
 
 ## Acceptance criteria
 
-- On `/prototype`, the thinking-state debug row shows `domain` instead of `skill`.
-- Entering the prototype domain state renders Bubble Home-style agent images instead of emoji icons.
-- The prototype domain roster contains the four Bubble Home domain agents only.
-- Domain transition copy reads naturally with `domain` wording instead of `skill`.
-- Existing internal `skill` state routing continues to function without a broader refactor.
+- On `/prototype`, while the debug mode is `thinking`, clicking the orb toggles minimized state on and off.
+- In minimized state, the orb appears at `0.4` of normal size and scales from its bottom center.
+- In minimized state, the thinking stream fades out smoothly and returns when restored.
+- Leaving prototype `thinking` mode clears minimized state automatically.
+- No new shared-orb visual fork is introduced.
 
 ## Validation checklist
 
 - `node --check src/tool/modules/manual-bindings.js`
 - `git diff --check`
-- Manual `/prototype` browser pass recommended for final visual confirmation.
+- Manual `/prototype` browser pass recommended for final motion/feel confirmation.
 
 ## Risks / notes
 
-- This is intentionally a user-facing rename only; internal keys such as `skill` and `skill-pill` remain because they are shared prototype morph/render internals.
+- The minimized treatment layers on top of existing paused-thinking styling, so a browser pass is still needed to confirm the combined paused+minimized feel.

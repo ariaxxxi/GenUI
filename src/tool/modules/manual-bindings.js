@@ -211,6 +211,7 @@ export function initManualBindings({
   const thinkingPauseRow = document.getElementById('prototype-thinking-pause-row');
   const thinkingCopyRow = document.getElementById('prototype-thinking-copy-row');
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
+  const thinkingOrb = document.getElementById('siri-orb');
   const thinkingStream = document.getElementById('prototype-thinking-stream');
   const thinkingStreamText = document.getElementById('prototype-thinking-stream-text');
   const thinkingPauseBtn = document.getElementById('prototype-thinking-pause');
@@ -222,6 +223,7 @@ export function initManualBindings({
     mode: 'thinking',
     familyActive: getPrototypeAiDebugState?.()?.active === true,
     paused: false,
+    minimized: false,
     activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
     activeAppId: PROTOTYPE_APPS[0]?.id || '',
     pendingCustomText: '',
@@ -382,11 +384,58 @@ export function initManualBindings({
     if (thinkingStreamText) thinkingStreamText.textContent = '';
     setThinkingStreamPausedStyle(false);
   };
+  const isThinkingMinimizable = (shape = currentPrototypeShape()) => (
+    thinkingDebugState.familyActive
+    && String(shape || '').trim().toLowerCase() === 'magic'
+    && thinkingDebugState.mode === 'thinking'
+  );
+  const syncThinkingOrbToggleUi = () => {
+    const enabled = isThinkingMinimizable();
+    if (!enabled) thinkingDebugState.minimized = false;
+    if (thinkingDebugState.minimized) document.body?.setAttribute('data-thinking-debug-minimized', 'true');
+    else document.body?.removeAttribute('data-thinking-debug-minimized');
+    if (!(thinkingOrb instanceof HTMLElement)) return;
+    if (!enabled) {
+      thinkingOrb.tabIndex = -1;
+      thinkingOrb.removeAttribute('role');
+      thinkingOrb.removeAttribute('aria-label');
+      thinkingOrb.removeAttribute('aria-pressed');
+      thinkingOrb.removeAttribute('title');
+      return;
+    }
+    const nextLabel = thinkingDebugState.minimized ? 'Expand thinking orb' : 'Minimize thinking orb';
+    thinkingOrb.tabIndex = 0;
+    thinkingOrb.setAttribute('role', 'button');
+    thinkingOrb.setAttribute('aria-label', nextLabel);
+    thinkingOrb.setAttribute('aria-pressed', thinkingDebugState.minimized ? 'true' : 'false');
+    thinkingOrb.setAttribute('title', nextLabel);
+  };
+  const setThinkingDebugMinimized = (minimized) => {
+    const next = Boolean(minimized) && isThinkingMinimizable();
+    if (thinkingDebugState.minimized === next) {
+      syncThinkingOrbToggleUi();
+      return;
+    }
+    thinkingDebugState.minimized = next;
+    syncThinkingOrbToggleUi();
+  };
+  const toggleThinkingDebugMinimized = () => {
+    if (!isThinkingMinimizable()) return;
+    setThinkingDebugMinimized(!thinkingDebugState.minimized);
+  };
   const syncPrototypeDebugState = () => {
+    if (thinkingDebugState.familyActive) {
+      document.body?.setAttribute('data-thinking-debug-family-active', 'true');
+      document.body?.setAttribute('data-thinking-debug-mode', thinkingDebugState.mode || 'thinking');
+    } else {
+      document.body?.removeAttribute('data-thinking-debug-family-active');
+      document.body?.removeAttribute('data-thinking-debug-mode');
+    }
     setPrototypeAiDebugState?.({
       active: thinkingDebugState.familyActive,
       mode: thinkingDebugState.mode,
     });
+    syncThinkingOrbToggleUi();
   };
   const setThinkingFamilyActive = (active) => {
     thinkingDebugState.familyActive = !!active;
@@ -1222,6 +1271,19 @@ export function initManualBindings({
   }));
   syncAiOrbIconButtons();
   syncThinkingPauseButtons();
+  thinkingOrb?.addEventListener('click', (e) => {
+    if (!isThinkingMinimizable()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleThinkingDebugMinimized();
+  });
+  thinkingOrb?.addEventListener('keydown', (e) => {
+    if (!isThinkingMinimizable()) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleThinkingDebugMinimized();
+  });
 
   thinkingStateButtons.forEach((button) => button.addEventListener('click', () => {
     const nextMode = String(button.dataset.thinkingState || '').trim().toLowerCase();

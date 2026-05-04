@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-05-04 - Prototype thinking minimize toggle
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a prototype-local minimize toggle for debug `thinking` mode so clicking the shared orb now shrinks it to `0.4` from a bottom-center anchor, fades the thinking stream out without unmounting it, restores on second click, and automatically clears the minimized state when leaving `thinking` mode.
+- Files changed: `src/tool/modules/manual-bindings.js`, `src/styles/ai-decorative.css`, `src/styles/editor-layout.css`, `README.md`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final minimized-orb anchor feel and paused+minimized interaction still need a human check on `/prototype`.
+
 ## 2026-05-01 - Prototype thinking domain rename and Bubble-aligned imagery
 
 - Completion status: completed with static verification; manual browser pass still recommended.
