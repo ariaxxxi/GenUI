@@ -49,7 +49,7 @@ On `/prototype`, add a click-to-minimize interaction for the debug `thinking` mo
 
 ## Implementation steps
 
-1. Add prototype-local thinking minimize state and click handling on the shared orb host, scoped to `thinking` mode only.
+1. Add prototype-local thinking minimize state and click/keyboard handling on the shared orb host, scoped to `thinking` mode only.
 2. Apply a minimized orb treatment through existing prototype/AI CSS seams so the orb scales to `0.4` from a bottom-center anchor with smooth motion.
 3. Fade the thinking stream out while minimized without unmounting or restarting the underlying loop.
 4. Clear minimized state automatically when leaving prototype `thinking` mode.
@@ -57,7 +57,7 @@ On `/prototype`, add a click-to-minimize interaction for the debug `thinking` mo
 
 ## Acceptance criteria
 
-- On `/prototype`, while the debug mode is `thinking`, clicking the orb toggles minimized state on and off.
+- On `/prototype`, while the debug mode is `thinking`, clicking the orb or pressing `m` toggles minimized state on and off.
 - In minimized state, the orb appears at `0.4` of normal size and scales from its bottom center.
 - In minimized state, the thinking stream fades out smoothly and returns when restored.
 - Leaving prototype `thinking` mode clears minimized state automatically.

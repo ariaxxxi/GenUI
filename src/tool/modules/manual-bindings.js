@@ -1186,6 +1186,11 @@ export function initManualBindings({
       movePrototypeListSelection?.(1);
       return;
     }
+    if (e.key.toLowerCase() === 'm' && isThinkingMinimizable()) {
+      e.preventDefault();
+      toggleThinkingDebugMinimized();
+      return;
+    }
     if (e.key === 'ArrowRight' && switchAgentByStep(1)) {
       e.preventDefault();
       return;

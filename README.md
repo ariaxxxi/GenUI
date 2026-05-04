@@ -98,7 +98,7 @@ The prototype thinking debug panel also includes `Pause` and `Resume` controls f
 
 ### Thinking-orb minimize toggle
 
-When the orb shape is `magic` and the prototype debug mode is `thinking`, clicking the orb toggles a local minimized state.
+When the orb shape is `magic` and the prototype debug mode is `thinking`, clicking the orb or pressing `m` toggles a local minimized state.
 
 - Minimized scales the shared orb visual to `0.4` using a bottom-center anchor, so it settles downward instead of shrinking toward the middle.
 - The thinking stream stays mounted but fades out during the minimized state, then fades back in when you click the orb again.
