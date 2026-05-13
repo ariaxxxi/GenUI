@@ -384,6 +384,20 @@ export function createMorphRender(ctx) {
     });
   }
 
+  function inferPrototypeSelectionPresetKey(requestedShape, main) {
+    const shape = String(requestedShape || 'pill');
+    if (!main) return shape;
+    const rect = main.getBoundingClientRect();
+    const width = Number.parseFloat(main.style.width) || rect.width || 0;
+    const height = Number.parseFloat(main.style.height) || rect.height || 0;
+    if (width <= 0 || height <= 0) return shape;
+    const ratio = width / Math.max(1, height);
+    if (ratio >= 1.42 && height >= 120) return 'card';
+    if (ratio >= 2.2 && height <= 120) return 'pill';
+    if (Math.abs(width - height) <= 16 && Math.min(width, height) <= 132) return 'dot';
+    return shape;
+  }
+
   function startPrototypeSelectionChromeSync(selectionOverlay, main, preset, colorOverrides, maskBlur) {
     if (!selectionOverlay || !main || !preset) return;
     clearPrototypeSelectionChromeSyncFrame();
@@ -469,11 +483,12 @@ export function createMorphRender(ctx) {
       || stageId
       || 'pill'
     );
-    const preset = celestialSelectedPresetForRenderShape(renderShape);
+    const presetKey = inferPrototypeSelectionPresetKey(renderShape, main);
+    const preset = celestialSelectedPresetForRenderShape(presetKey);
     main.classList.toggle('prototype-stage-selected', selected);
     if (selectionOverlay) {
       selectionOverlay.dataset.stageDirection = state.prototypeSelectionDirection || 'bottom';
-      selectionOverlay.dataset.renderShape = renderShape;
+      selectionOverlay.dataset.renderShape = presetKey;
       selectionOverlay.style.width = main.style.width || `${state.lastMainGeo?.w || 0}px`;
       selectionOverlay.style.height = main.style.height || `${state.lastMainGeo?.h || 0}px`;
       selectionOverlay.style.borderRadius = main.style.borderRadius || String(state.lastMainGeo?.br || '0px');
