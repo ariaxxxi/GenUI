@@ -29,6 +29,14 @@ Open:
 
 The prototype page (`index.html`) has a thinking/skill debug panel that streams animated text in the orb while in thinking mode. Engineers can customize what text appears for thinking verbs, agent transitions, and skill phrases directly in [`src/tool/modules/manual-bindings.js`](src/tool/modules/manual-bindings.js).
 
+## Prototype Listening Transcript
+
+The prototype page also mirrors AI Mode's live listening prompt while the stage shape is `listening`.
+
+- Voice transcripts render in `#prototype-listening-prompt`, positioned above the orb with the same top-centered placement pattern AI Mode uses for `#home-start-prompt`.
+- Transcript updates currently come from the prototype `initVoiceEngine(...)` hook in [`src/tool/index-app.js`](src/tool/index-app.js).
+- Leaving the `listening` shape clears the prompt so stale dictated text does not reappear on the next listening pass.
+
 ### Thinking verbs (base thinking mode)
 
 When the orb shape is `magic` and mode is `thinking`, the stream cycles through `THINKING_VERBS` — a plain array of single-word present-participle strings. To add or change verbs, edit the array:

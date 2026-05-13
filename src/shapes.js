@@ -90,9 +90,9 @@ export const SHAPES = {
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
   dot: {
-    main: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 1 },
-    left: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
-    right: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
+    main: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 1 },
+    left: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
+    right: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
   },
   list: {
     main: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },

@@ -170,6 +170,7 @@ Layer timing:
 - While prototype debug playback is paused, the stream must show a static paused label for the current mode/selection, morphs and orb-center swipe changes must still run, and no typing loop or transition copy may restart until `Resume`.
 - Prototype debug pause is ephemeral and local to the prototype page. Leaving the debug-family shapes must clear the paused state and any queued paused custom text.
 - In prototype `thinking` mode only, clicking the shared orb or pressing `m` must toggle a local minimized state: the orb visual scales to `0.4` from a bottom-center anchor, the stream fades out smoothly, and leaving `thinking` mode clears minimized state.
+- Prototype `listening` mode must surface the live speech transcript above the orb using the same prompt positioning pattern as AI Mode, and leaving `listening` must clear that transcript.
 - Stage buttons support double-click inline rename; single-click selection must still work after the double-click guard delay.
 - Scenario buttons support the same double-click inline rename pattern.
 - List stage controls must include list item +/- controls and bottom orb toggle/icon settings in the Stage Components tab.

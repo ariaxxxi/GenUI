@@ -1,5 +1,13 @@
 # Completed Handoff
 
+## 2026-05-05 - Prototype listening transcript prompt
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a prototype-local listening transcript prompt above the shared orb, wired prototype voice-engine transcript updates into it so `/prototype` listening now mirrors AI Mode’s live dictated text pattern, and clears that prompt automatically when leaving the `listening` shape.
+- Files changed: `index.html`, `src/tool/index-app.js`, `src/styles/editor-layout.css`, `README.md`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/index-app.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final prompt placement, long-transcript truncation, and browser speech-recognition behavior still need a human check on `/prototype`.
+
 ## 2026-05-04 - Prototype thinking minimize toggle
 
 - Completion status: completed with static verification; manual browser pass still recommended.

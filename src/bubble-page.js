@@ -160,6 +160,18 @@ const CLAUDE_AGENT_THEME = Object.freeze({
   blobBottomCore: 'rgb(255 230 208)',
   blobBottomEdge: 'rgb(187 110 72)',
 });
+const CHATGPT_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(190 255 224)',
+  blobTopEdge: 'rgb(88 206 149)',
+  blobBottomCore: 'rgb(227 255 243)',
+  blobBottomEdge: 'rgb(28 142 95)',
+});
+const GEMINI_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(180 214 255)',
+  blobTopEdge: 'rgb(95 152 255)',
+  blobBottomCore: 'rgb(218 191 255)',
+  blobBottomEdge: 'rgb(123 92 255)',
+});
 const WRITING_AGENT_THEME = Object.freeze({
   blobTopCore: 'rgb(255 243 158)',
   blobTopEdge: 'rgb(255 212 72)',
@@ -549,6 +561,12 @@ const AGENT_BUBBLES_CONFIG = [
     label: 'Claude',
     img: CLAUDE_AGENT_ASSET,
     fill: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Claude',
+    pillSubtitle: 'Reason deeply',
+    pillCopyOffsetX: -12,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
     theme: CLAUDE_AGENT_THEME,
     haloColor: CLAUDE_AGENT_THEME.blobTopCore,
     orbPromotionEnabled: true,
@@ -596,7 +614,14 @@ const AGENT_BUBBLES_CONFIG = [
     label: 'ChatGPT',
     img: FIGMA_ASSETS.chatgpt,
     fill: true,
-    haloColor: '#ffffff',
+    hoverExpandsToPill: true,
+    pillTitle: 'ChatGPT',
+    pillSubtitle: 'Ask anything',
+    pillCopyOffsetX: -12,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: CHATGPT_AGENT_THEME,
+    haloColor: CHATGPT_AGENT_THEME.blobTopCore,
     childActions: [],
   },
   {
@@ -605,7 +630,14 @@ const AGENT_BUBBLES_CONFIG = [
     label: 'Gemini',
     img: FIGMA_ASSETS.gemini,
     fill: true,
-    haloColor: '#A391FB',
+    hoverExpandsToPill: true,
+    pillTitle: 'Gemini',
+    pillSubtitle: 'Search and reason',
+    pillCopyOffsetX: -12,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: GEMINI_AGENT_THEME,
+    haloColor: GEMINI_AGENT_THEME.blobTopCore,
     childActions: [],
   },
   {

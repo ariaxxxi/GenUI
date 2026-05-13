@@ -47,6 +47,12 @@ export function createMorphRender(ctx) {
     state.prototypeSelectionMotionFrame = null;
   }
 
+  function clearPrototypeSelectionChromeSyncFrame() {
+    if (!state.prototypeSelectionChromeSyncFrame) return;
+    cancelAnimationFrame(state.prototypeSelectionChromeSyncFrame);
+    state.prototypeSelectionChromeSyncFrame = null;
+  }
+
   function derivePrototypeListInitials(label = '') {
     const words = String(label || '').trim().split(/\s+/).filter(Boolean);
     if (!words.length) return '•';
@@ -365,6 +371,44 @@ export function createMorphRender(ctx) {
     });
   }
 
+  function syncPrototypeSelectionChromeFrame(selectionOverlay, main, preset, colorOverrides, maskBlur) {
+    if (!selectionOverlay || !main || !preset) return;
+    const rect = main.getBoundingClientRect();
+    const computed = getComputedStyle(main);
+    applySelectedChromePreset(selectionOverlay, main, preset, colorOverrides, {
+      width: rect.width,
+      height: rect.height,
+      radius: Number.parseFloat(computed.borderRadius) || Math.min(rect.width, rect.height) / 2,
+    }, {
+      maskBlur,
+    });
+  }
+
+  function startPrototypeSelectionChromeSync(selectionOverlay, main, preset, colorOverrides, maskBlur) {
+    if (!selectionOverlay || !main || !preset) return;
+    clearPrototypeSelectionChromeSyncFrame();
+    let stableFrameCount = 0;
+    let lastSignature = '';
+    const deadline = performance.now() + Math.max(1400, (Number(state.currentTransitionAnimMs) || 0) + 500);
+    const syncForFrame = () => {
+      syncPrototypeSelectionChromeFrame(selectionOverlay, main, preset, colorOverrides, maskBlur);
+      const rect = main.getBoundingClientRect();
+      const signature = [
+        Math.round(rect.width * 10),
+        Math.round(rect.height * 10),
+        Math.round((Number.parseFloat(getComputedStyle(main).borderRadius) || 0) * 10),
+      ].join(':');
+      stableFrameCount = signature === lastSignature ? stableFrameCount + 1 : 0;
+      lastSignature = signature;
+      if (stableFrameCount >= 3 || performance.now() >= deadline) {
+        state.prototypeSelectionChromeSyncFrame = null;
+        return;
+      }
+      state.prototypeSelectionChromeSyncFrame = requestAnimationFrame(syncForFrame);
+    };
+    syncForFrame();
+  }
+
   function applyPrototypeListSelectedChromePresets(entries = []) {
     if (!prototypeListRoot) return;
     const activeScenario = state.prototypeListContent?.scenario || callbacks.selectedScenario?.() || null;
@@ -429,8 +473,13 @@ export function createMorphRender(ctx) {
     main.classList.toggle('prototype-stage-selected', selected);
     if (selectionOverlay) {
       selectionOverlay.dataset.stageDirection = state.prototypeSelectionDirection || 'bottom';
+      selectionOverlay.dataset.renderShape = renderShape;
+      selectionOverlay.style.width = main.style.width || `${state.lastMainGeo?.w || 0}px`;
+      selectionOverlay.style.height = main.style.height || `${state.lastMainGeo?.h || 0}px`;
+      selectionOverlay.style.borderRadius = main.style.borderRadius || String(state.lastMainGeo?.br || '0px');
     }
     if (!selected) {
+      clearPrototypeSelectionChromeSyncFrame();
       main.style.removeProperty('--g-stage-selected-rgb');
       main.style.removeProperty('--g-stage-selected-secondary-rgb');
       main.style.removeProperty('--g-stage-selected-blob-top-core');
@@ -452,18 +501,14 @@ export function createMorphRender(ctx) {
     const blobBottomEdge = selectionOverride?.theme?.blobBottomEdge || callbacks.stageSelectedBlobBottomEdgeColorForShape?.(activeScenario, stageId) || preset.blobBottomEdge;
     const maskBlur = selectionOverride?.maskBlur ?? callbacks.stageSelectedMaskBlurForShape?.(activeScenario, stageId) ?? preset.maskBlur;
     if (!selectionOverlay) return;
-    applySelectedChromePreset(selectionOverlay, main, preset, {
+    const colorOverrides = {
       blobTopCore,
       blobTopEdge,
       blobBottomCore,
       blobBottomEdge,
-    }, {
-      width: Number.parseFloat(main.style.width) || state.lastMainGeo?.w || stage?.widthOverride || null,
-      height: Number.parseFloat(main.style.height) || state.lastMainGeo?.h || stage?.heightOverride || null,
-      radius: Number.parseFloat(main.style.borderRadius) || state.lastMainGeo?.br || null,
-    }, {
-      maskBlur,
-    });
+    };
+    syncPrototypeSelectionChromeFrame(selectionOverlay, main, preset, colorOverrides, maskBlur);
+    startPrototypeSelectionChromeSync(selectionOverlay, main, preset, colorOverrides, maskBlur);
     playPrototypeSelectionMotion(selectionOverlay, true);
   }
 
@@ -634,7 +679,10 @@ export function createMorphRender(ctx) {
     const geometryEase = 'var(--motion-ease)';
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
+    const collapsingToDot = toShape === 'dot'
+      && ['pill', 'skill-pill', 'card', 'card-s', 'image'].includes(fromShape);
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
+    let borderRadiusAnimMs = transitionMs;
     if ((fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill')) { primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900); textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820); }
     if (fromShape === 'pill' && toCardLike) { secondaryInAdvanceMs = 60; detailInAdvanceMs = 200; }
     if (fromShape === 'dot' && toCardLike) contentMoveMs = 0;
@@ -642,9 +690,12 @@ export function createMorphRender(ctx) {
     if (fromCardLike && toShape === 'dot') { contentFadeMs = 200; detailFadeMs = 200; }
     if (fromCardLike && toShape === 'pill') mediaFadeMs = transitionMs;
     if ((fromShape === 'idle' && toShape === 'dot') || (fromShape === 'dot' && toShape === 'idle')) thumbFadeMs = 200;
+    if (collapsingToDot) {
+      borderRadiusAnimMs = Math.min(140, transitionMs);
+    }
     state.contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
     state.currentContentFadeMs = contentFadeMs; state.currentDetailFadeMs = detailFadeMs; state.currentMediaFadeMs = mediaFadeMs; state.currentTransitionAnimMs = transitionMs;
-    [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', transitionMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
+    [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', borderRadiusAnimMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
     root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`); root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`); root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`); root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`); root.style.setProperty('--content-move-t', `${contentMoveMs}ms ${geometryEase}`); root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`); root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
   }
 

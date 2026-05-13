@@ -281,6 +281,30 @@ body {
 }
 #drop-main.home-blur { filter: blur(2px); }
 #drop-main.home-glow #home-glow-layer { opacity: 1; }
+#prototype-listening-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  z-index: 30;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 300;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  letter-spacing: 0;
+  white-space: nowrap;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition: opacity 220ms var(--motion-ease), transform 220ms var(--motion-ease);
+  pointer-events: none;
+}
+#prototype-listening-prompt.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
 #prototype-thinking-stream {
   position: absolute;
   left: 50%;

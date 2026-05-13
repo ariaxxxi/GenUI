@@ -40,6 +40,7 @@ let prototypeIntentHeaderTrackRaf = null;
 let prototypeOrbChromeSyncRaf = 0;
 let prototypeVoice = null;
 let prototypeSelectionOverride = null;
+let prototypeListeningPromptText = '';
 const prototypeAiDebugState = { active: false, mode: 'thinking' };
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
@@ -247,6 +248,7 @@ function syncManualShapeButtonStates(shape = document.body?.dataset?.currentShap
 function updateActive(shape) {
   syncManualShapeButtonStates(shape);
   syncPrototypeOrbChrome();
+  syncPrototypeListeningPrompt(shape);
   syncPrototypeListeningOrb(shape);
 }
 
@@ -260,12 +262,46 @@ function syncPrototypeOrbChrome() {
   });
 }
 
+function positionPrototypeListeningPrompt(hasText) {
+  const prompt = document.getElementById('prototype-listening-prompt');
+  if (!prompt) return;
+  if (document.body?.dataset?.currentShape !== 'listening' || !hasText) {
+    prompt.style.top = '';
+    prompt.style.bottom = '';
+    return;
+  }
+  const stage = document.getElementById('stage');
+  const main = document.getElementById('drop-main');
+  if (!stage || !main) return;
+  const stageRect = stage.getBoundingClientRect();
+  const mainRect = main.getBoundingClientRect();
+  const promptH = prompt.offsetHeight || 24;
+  prompt.style.top = `${Math.max(8, Math.round(mainRect.top - stageRect.top - promptH - 12))}px`;
+  prompt.style.bottom = 'auto';
+}
+
+function syncPrototypeListeningPrompt(shape = document.body?.dataset?.currentShape || '') {
+  const prompt = document.getElementById('prototype-listening-prompt');
+  if (!prompt) return;
+  const listeningShape = String(shape || '').trim().toLowerCase() === 'listening';
+  const text = listeningShape ? String(prototypeListeningPromptText || '').trim() : '';
+  prompt.textContent = text;
+  positionPrototypeListeningPrompt(!!text);
+  prompt.classList.toggle('visible', listeningShape && !!text);
+}
+
+function setPrototypeListeningPromptText(text = '') {
+  prototypeListeningPromptText = String(text || '');
+  syncPrototypeListeningPrompt();
+}
+
 function syncPrototypeListeningOrb(shape) {
   if (!prototypeVoice?.voiceEngine) return;
   if (shape === 'listening') {
     prototypeVoice.voiceEngine.start('command');
     return;
   }
+  setPrototypeListeningPromptText('');
   const dropMain = document.getElementById('drop-main');
   const preservingThinkingBridge = shape === 'magic' || shape === 'ai' || dropMain?.classList.contains('orb-thinking-bridge');
   prototypeVoice.voiceEngine.stop({ preserveOrbStyles: preservingThinkingBridge });
@@ -283,7 +319,14 @@ prototypeVoice = initVoiceEngine({
     document.body?.dataset?.currentShape === 'listening' ||
     document.getElementById('drop-main')?.classList.contains('listening-orb')
   ),
-  onTranscriptUpdate: () => {},
+  onTranscriptUpdate: (text) => {
+    const transcript = String(text || '');
+    setPrototypeListeningPromptText(transcript);
+    const prototypeInput = document.getElementById('user-input');
+    if (!prototypeInput) return;
+    prototypeInput.value = transcript;
+    prototypeInput.dispatchEvent(new Event('input', { bubbles: true }));
+  },
 });
 stageLibrary = loadStageLibrary();
 scenarioLibrary = loadScenarioLibrary();

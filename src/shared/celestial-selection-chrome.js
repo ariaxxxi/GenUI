@@ -3,6 +3,7 @@ import { renderAiOrbCenterMarkup, syncAiOrbCenterIcon, syncAiOrbSelectionTheme }
 
 const DEFAULT_DIRECTION = "bottom";
 const DEFAULT_DURATION_MS = 700;
+const chromeResizeObservers = new WeakMap();
 const SHARED_ORB_MARKUP = `
   <div class="g-celestial-orb-visual" aria-hidden="true">
     <div class="g-celestial-orb-sphere">
@@ -50,6 +51,10 @@ function readCssVar(el, name) {
   return el.style?.getPropertyValue?.(name)?.trim?.() || "";
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 export function buildZeroSpreadMaskUrl(width, height, radius, blurBase) {
   const blur = Math.max(0, (height * blurBase) / 56);
   const stdDeviation = blur / 2;
@@ -93,12 +98,14 @@ export function ensureSharedAiOrb(root = document) {
 export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrides = {}, geometryOverride = null, runtimeOverrides = {}) {
   if (!chromeEl || !hostEl || !preset) return;
   const rect = geometryOverride ? null : hostEl.getBoundingClientRect();
+  const computed = getComputedStyle(hostEl);
   const width = Math.max(
     1,
     Math.round(
       Number(geometryOverride?.width)
-      || Number.parseFloat(hostEl.style.width)
       || rect?.width
+      || Number.parseFloat(computed.width)
+      || Number.parseFloat(hostEl.style.width)
       || hostEl.offsetWidth
       || 1,
     ),
@@ -107,18 +114,18 @@ export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrid
     1,
     Math.round(
       Number(geometryOverride?.height)
-      || Number.parseFloat(hostEl.style.height)
       || rect?.height
+      || Number.parseFloat(computed.height)
+      || Number.parseFloat(hostEl.style.height)
       || hostEl.offsetHeight
       || 1,
     ),
   );
-  const computed = getComputedStyle(hostEl);
   const radius = Math.max(
     0,
     Number(geometryOverride?.radius)
-    || Number.parseFloat(hostEl.style.borderRadius)
     || Number.parseFloat(computed.borderRadius)
+    || Number.parseFloat(hostEl.style.borderRadius)
     || Math.min(width, height) / 2,
   );
   const blobTopCore = hexToCssColor(colorOverrides.blobTopCore, hexToCssColor(preset.blobTopCore, "rgb(144 172 255)"));
@@ -132,10 +139,23 @@ export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrid
   const rimSecondary = blobBottomCore;
   const unit = Math.max(0.65, Math.min(width, height) / 320);
   const highlightScale = preset.highlightScale / 100;
-  const topHighlightWidth = Math.round(84 * highlightScale);
-  const topHighlightHeight = Math.round(84 * highlightScale);
-  const bottomHighlightWidth = Math.round(96 * highlightScale);
-  const bottomHighlightHeight = Math.round(96 * highlightScale);
+  const minDimension = Math.max(1, Math.min(width, height));
+  const maxDimension = Math.max(width, height);
+  const circularity = clamp(minDimension / Math.max(1, maxDimension), 0, 1);
+  const circularityProgress = clamp((circularity - 0.58) / 0.42, 0, 1);
+  const renderShape = String(chromeEl.dataset.renderShape || hostEl.dataset.renderShape || "");
+  const dotLikePrototypeSelection = chromeEl.id === "prototype-stage-selection"
+    && ["dot", "circle", "agent-circle", "listening"].includes(renderShape);
+  const topHighlightRatio = dotLikePrototypeSelection
+    ? (0.67 + (0.33 * circularityProgress))
+    : (0.5 + (0.5 * circularityProgress)) * highlightScale;
+  const bottomHighlightRatio = dotLikePrototypeSelection
+    ? (0.77 + (0.35 * circularityProgress))
+    : (0.58 + (0.54 * circularityProgress)) * highlightScale;
+  const topHighlightWidth = Math.round(clamp(minDimension * topHighlightRatio, 72, dotLikePrototypeSelection ? 132 : 132 * highlightScale));
+  const topHighlightHeight = Math.round(clamp(minDimension * topHighlightRatio, 72, dotLikePrototypeSelection ? 132 : 132 * highlightScale));
+  const bottomHighlightWidth = Math.round(clamp(minDimension * bottomHighlightRatio, 84, dotLikePrototypeSelection ? 151 : 151 * highlightScale));
+  const bottomHighlightHeight = Math.round(clamp(minDimension * bottomHighlightRatio, 84, dotLikePrototypeSelection ? 151 : 151 * highlightScale));
   const topHighlightAnchorX = 10 - (topHighlightWidth / 2) + preset.highlightTopX;
   const topHighlightAnchorY = 10 - (topHighlightHeight / 2) + preset.highlightTopY;
   const bottomHighlightAnchorX = (bottomHighlightWidth / 2) + preset.highlightBottomX;
@@ -191,10 +211,11 @@ function presetKeyForSelectionHost(hostEl) {
 function hostChromePair(node) {
   if (!node) return null;
   if (node.id === "prototype-stage-selection") {
+    const renderShape = String(node.dataset.renderShape || "pill");
     return {
       chromeEl: node,
       hostEl: document.getElementById("drop-main") || node,
-      presetKey: presetKeyForSelectionHost(node),
+      presetKey: renderShape,
     };
   }
   if (node.classList?.contains("g-celestial-orb-selection")) {
@@ -207,11 +228,39 @@ function hostChromePair(node) {
   }
   const chromeEl = node.querySelector?.(":scope > .g-selection-chrome");
   if (!chromeEl) return null;
+  if (chromeEl.id === "prototype-stage-selection") return null;
   return {
     chromeEl,
     hostEl: node,
     presetKey: presetKeyForSelectionHost(node),
   };
+}
+
+function syncChromePair(pair) {
+  if (!pair) return;
+  const preset = celestialSelectedPresetForRenderShape(pair.presetKey);
+  applySelectedChromePreset(
+    pair.chromeEl,
+    pair.hostEl,
+    preset,
+    chromeColorOverrides(pair.hostEl, pair.chromeEl, preset),
+    null,
+    chromeRuntimeOverrides(pair.hostEl, preset),
+  );
+  if (!pair.chromeEl.dataset.stageDirection) {
+    pair.chromeEl.dataset.stageDirection = DEFAULT_DIRECTION;
+  }
+}
+
+function ensureChromeResizeObserver(pair) {
+  if (!pair?.chromeEl || !pair?.hostEl || typeof ResizeObserver !== "function") return;
+  if (chromeResizeObservers.has(pair.chromeEl)) return;
+  const observer = new ResizeObserver(() => {
+    syncChromePair(pair);
+  });
+  observer.observe(pair.hostEl);
+  if (pair.chromeEl !== pair.hostEl) observer.observe(pair.chromeEl);
+  chromeResizeObservers.set(pair.chromeEl, observer);
 }
 
 function chromeRuntimeOverrides(hostEl, preset) {
@@ -249,18 +298,8 @@ export function applyAiCelestialChrome(root = document) {
   scope.querySelectorAll(selectors.join(", ")).forEach((node) => {
     const pair = hostChromePair(node);
     if (!pair) return;
-    const preset = celestialSelectedPresetForRenderShape(pair.presetKey);
-    applySelectedChromePreset(
-      pair.chromeEl,
-      pair.hostEl,
-      preset,
-      chromeColorOverrides(pair.hostEl, pair.chromeEl, preset),
-      null,
-      chromeRuntimeOverrides(pair.hostEl, preset),
-    );
-    if (!pair.chromeEl.dataset.stageDirection) {
-      pair.chromeEl.dataset.stageDirection = DEFAULT_DIRECTION;
-    }
+    syncChromePair(pair);
+    ensureChromeResizeObserver(pair);
   });
   syncAiOrbSelectionTheme(scope);
 }

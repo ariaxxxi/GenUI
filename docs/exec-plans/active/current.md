@@ -1,6 +1,6 @@
 # Title
 
-Prototype thinking minimize toggle
+Prototype listening transcript prompt
 
 ## Status
 
@@ -8,39 +8,39 @@ Coder-complete in working tree. Ready for review.
 
 ## Objective
 
-On `/prototype`, add a click-to-minimize interaction for the debug `thinking` mode so the shared orb shrinks smoothly to `0.4` from a bottom-center anchor and the thinking stream fades out until the orb is clicked again.
+On `/prototype`, surface the same live dictated transcript text used in AI Mode while the shared listening orb is active.
 
 ## In scope
 
-- Prototype debug thinking-mode minimize state and toggle handling
-- Prototype thinking orb motion and stream fade styling
+- Prototype listening transcript state and prompt rendering
+- Prototype listening prompt DOM/CSS placement
 - Prototype/frontend docs and execution notes for the new interaction
 
 ## Out of scope
 
-- `domain`, `agent`, or `app` debug-mode behavior
-- AI Mode orb behavior
+- Prototype `thinking`, `domain`, `agent`, or `app` debug-mode behavior
+- AI Mode behavior
 - Bubble Home behavior
 - Shared Celestial visual-core preset changes
 
 ## Relevant context
 
-- Prototype thinking mode already reuses the shared Celestial orb and should keep doing so; this task is a state-behavior change only.
-- The minimize interaction is local to prototype `thinking` mode and should clear automatically when the user leaves that mode.
-- The thinking stream should remain mounted so unminimizing restores the current text state instead of restarting the loop.
+- Prototype `listening` mode already starts the shared voice engine in command mode and already reuses the shared listening orb.
+- AI Mode’s live transcript appears in a dedicated top-centered prompt above the orb; prototype should mirror that pattern without changing AI Mode itself.
+- Leaving prototype `listening` should clear the stored transcript so stale dictated text does not reappear on later entries.
 
 ## Files to inspect
 
-- `src/tool/modules/manual-bindings.js`
-- `src/styles/ai-decorative.css`
+- `index.html`
+- `src/tool/index-app.js`
 - `src/styles/editor-layout.css`
 - `README.md`
 - `docs/FRONTEND.md`
 
 ## Files allowed to change
 
-- `src/tool/modules/manual-bindings.js`
-- `src/styles/ai-decorative.css`
+- `index.html`
+- `src/tool/index-app.js`
 - `src/styles/editor-layout.css`
 - `README.md`
 - `docs/FRONTEND.md`
@@ -49,26 +49,25 @@ On `/prototype`, add a click-to-minimize interaction for the debug `thinking` mo
 
 ## Implementation steps
 
-1. Add prototype-local thinking minimize state and click/keyboard handling on the shared orb host, scoped to `thinking` mode only.
-2. Apply a minimized orb treatment through existing prototype/AI CSS seams so the orb scales to `0.4` from a bottom-center anchor with smooth motion.
-3. Fade the thinking stream out while minimized without unmounting or restarting the underlying loop.
-4. Clear minimized state automatically when leaving prototype `thinking` mode.
+1. Add a prototype listening-prompt node and local transcript state for the `/prototype` listening shape.
+2. Feed prototype voice-engine transcript updates into that prompt while keeping the existing shared listening orb path intact.
+3. Position and style the prompt above the orb using the same top-centered listening placement pattern AI Mode uses.
+4. Clear the prompt automatically when leaving prototype `listening`.
 5. Update durable docs and execution notes.
 
 ## Acceptance criteria
 
-- On `/prototype`, while the debug mode is `thinking`, clicking the orb or pressing `m` toggles minimized state on and off.
-- In minimized state, the orb appears at `0.4` of normal size and scales from its bottom center.
-- In minimized state, the thinking stream fades out smoothly and returns when restored.
-- Leaving prototype `thinking` mode clears minimized state automatically.
-- No new shared-orb visual fork is introduced.
+- On `/prototype`, while the current shape is `listening`, live speech transcript text appears above the orb.
+- The prompt follows the same top-centered placement pattern as AI Mode’s listening transcript.
+- Leaving prototype `listening` clears the visible transcript.
+- No new listening-orb visual fork is introduced.
 
 ## Validation checklist
 
-- `node --check src/tool/modules/manual-bindings.js`
+- `node --check src/tool/index-app.js`
 - `git diff --check`
-- Manual `/prototype` browser pass recommended for final motion/feel confirmation.
+- Manual `/prototype` browser pass recommended for final transcript/placement confirmation.
 
 ## Risks / notes
 
-- The minimized treatment layers on top of existing paused-thinking styling, so a browser pass is still needed to confirm the combined paused+minimized feel.
+- Prototype still uses command-mode recognition for the listening stage, so the final transcript lifecycle is intentionally simpler than AI Mode’s wake-word/request-processing path.
