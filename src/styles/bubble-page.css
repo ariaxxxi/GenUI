@@ -222,6 +222,29 @@ body.bubble2-page.is-canvasless {
   box-shadow: var(--bubble2-shadow);
 }
 
+.bubble2-canvas-banner {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  z-index: 8;
+  transform: translateX(-50%);
+  padding: 0 14px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 220ms ease;
+}
+
+.bubble2-canvas-banner.is-hidden {
+  opacity: 0;
+}
+
 .bubble2-canvas.is-canvasless {
   overflow: visible;
   border-color: transparent;

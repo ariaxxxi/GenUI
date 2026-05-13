@@ -132,6 +132,8 @@ const BUBBLE_HOME_IDLE_STREAM_TEXTS = Object.freeze(['Reasoning', 'Thinking', 'T
 const BUBBLE_HOME_IDLE_STREAM_HOLD_MS = 1600;
 const BUBBLE_HOME_IDLE_STREAM_GAP_MS = 180;
 const BUBBLE_HOME_STREAM_FADE_MS = 180;
+const AGENT_SET_RETURN_HOLD_MS = 10000;
+const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -931,6 +933,7 @@ const state = {
     x: ORB_CENTER_X,
     y: ORB_CENTER_Y,
   },
+  lastPointerClient: null,
   pointerMovedSincePress: false,
   lockedExpandedPillId: null,
   lockedExpandedPillScale: null,
@@ -947,6 +950,9 @@ const state = {
   swapResetPending: false,
   panSnapPending: false,
   pendingDemotedSlotSwap: null,
+  agentSetReturnTimer: null,
+  agentSetReturnTriggered: false,
+  agentSetReturnPhase: '',
   lastScene: null,
   renderQueued: false,
 };
@@ -974,6 +980,7 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  canvasBanner: document.querySelector('[data-bubble2-canvas-banner]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
@@ -1670,6 +1677,7 @@ function resetStateForSetSwitch() {
   state.hoveredChildBubble = null;
   state.dragOffset = { x: 0, y: 0, active: false };
   state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.lastPointerClient = null;
   state.pointerMovedSincePress = false;
   state.lockedExpandedPillId = null;
   state.lockedExpandedPillScale = null;
@@ -1683,12 +1691,94 @@ function resetStateForSetSwitch() {
   state.swapResetPending = false;
   state.panSnapPending = false;
   state.pendingDemotedSlotSwap = null;
+  clearAgentSetReturnInteraction();
   state.lastScene = null;
   previousHoveredId = null;
   previousHoveredChildId = null;
   syncedChildSelectionParentId = null;
   syncedChildSelectionId = null;
   clearDirectionalSelectionTimers(childSelectionMotionTimers);
+}
+
+function clearAgentSetReturnTimer() {
+  if (state.agentSetReturnTimer) {
+    window.clearTimeout(state.agentSetReturnTimer);
+    state.agentSetReturnTimer = null;
+  }
+}
+
+function clearAgentSetReturnInteraction() {
+  clearAgentSetReturnTimer();
+  state.agentSetReturnTriggered = false;
+  state.agentSetReturnPhase = '';
+}
+
+function resetAgentSetToDefaults() {
+  state.slotContentBySetId = {
+    ...state.slotContentBySetId,
+    agent: createInitialSlotContentMap('agent'),
+  };
+  state.orbAgentId = BUBBLE_HOME_DEFAULT_AGENT_ID;
+  state.homeOrbContent = createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID);
+  state.pendingDemotedSlotSwap = null;
+  state.panSnapPending = false;
+  state.swapResetPending = false;
+  syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+}
+
+function handleAgentSetReturnLongPress() {
+  if (!state.isPressed || state.activeSetId !== 'agent' || state.swapTransition?.active) return;
+  const now = performance.now();
+  clearAgentSetReturnTimer();
+  state.isPressed = false;
+  state.openMotionUntil = 0;
+  state.closeMotionUntil = now + CLOSE_PHASE_LATCH_MS;
+  state.agentSetReturnTriggered = true;
+  state.agentSetReturnPhase = 'closing';
+  state.dragOffset = { x: 0, y: 0, active: false };
+  state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.lastPointerClient = null;
+  state.pointerMovedSincePress = false;
+  state.hoveredBubble = null;
+  state.hoveredChildBubble = null;
+  state.lockedExpandedPillId = null;
+  state.lockedExpandedPillScale = null;
+  state.childMenuParentId = null;
+  state.childMenuPointerLock = null;
+  clearChildHoverTimer();
+  previousHoveredId = null;
+  previousHoveredChildId = null;
+  scheduleMotionPhaseRender(state.closeMotionUntil);
+  window.setTimeout(() => {
+    if (!state.agentSetReturnTriggered || state.agentSetReturnPhase !== 'closing' || state.activeSetId !== 'agent' || state.swapTransition?.active) return;
+    const reopenNow = performance.now();
+    resetAgentSetToDefaults();
+    state.isPressed = true;
+    state.openMotionUntil = reopenNow + OPEN_PHASE_LATCH_MS;
+    state.closeMotionUntil = 0;
+    state.agentSetReturnPhase = 'reopening';
+    state.dragOffset = { x: 0, y: 0, active: true };
+    state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+    state.lastPointerClient = null;
+    state.pointerMovedSincePress = false;
+    scheduleMotionPhaseRender(state.openMotionUntil);
+    scheduleRender();
+  }, CLOSE_PHASE_LATCH_MS);
+  scheduleRender();
+}
+
+function scheduleAgentSetReturnLongPress() {
+  clearAgentSetReturnTimer();
+  if (state.activeSetId !== 'agent') return;
+  state.agentSetReturnTimer = window.setTimeout(handleAgentSetReturnLongPress, AGENT_SET_RETURN_HOLD_MS);
+}
+
+function getVisibleSlotsForActiveSet(now = performance.now()) {
+  const slots = getBubblesConfigForSet(state.activeSetId);
+  if (state.activeSetId !== 'agent' || !state.isPressed || !state.agentSetReturnTriggered) return slots;
+  if (state.agentSetReturnPhase !== 'reopening') return slots;
+  const visibleIds = new Set(AGENT_SET_SPREAD_SLOT_IDS);
+  return slots.filter((slot) => visibleIds.has(slot.id));
 }
 
 function switchBubbleSet(nextSetId) {
@@ -1838,6 +1928,10 @@ function handlePointerDown(event) {
       y: ORB_CENTER_Y,
     };
   }
+  state.lastPointerClient = {
+    x: event.clientX,
+    y: event.clientY,
+  };
   state.isPressed = true;
   state.pointerMovedSincePress = false;
   state.openMotionUntil = now + OPEN_PHASE_LATCH_MS;
@@ -1846,6 +1940,7 @@ function handlePointerDown(event) {
   state.hoveredChildBubble = null;
   state.childMenuParentId = null;
   state.childMenuPointerLock = null;
+  clearAgentSetReturnInteraction();
   state.dragOffset = {
     x: 0,
     y: 0,
@@ -1854,12 +1949,44 @@ function handlePointerDown(event) {
   if (refs.shell?.setPointerCapture && event.pointerId != null) {
     try { refs.shell.setPointerCapture(event.pointerId); } catch (_) {}
   }
+  scheduleAgentSetReturnLongPress();
   scheduleMotionPhaseRender(state.openMotionUntil);
   scheduleRender();
 }
 
 function handlePointerMove(event) {
   if (state.swapTransition?.active || !state.isPressed || !refs.shell) return;
+
+  if (
+    state.activeSetId === 'agent'
+    && state.agentSetReturnTriggered
+    && state.agentSetReturnPhase === 'reopening'
+  ) {
+    if (!state.lastPointerClient) {
+      state.lastPointerClient = {
+        x: event.clientX,
+        y: event.clientY,
+      };
+      return;
+    }
+    const rect = refs.shell.getBoundingClientRect();
+    const scaleX = rect.width / 420;
+    const scaleY = rect.height / 420;
+    const deltaX = (event.clientX - state.lastPointerClient.x) / scaleX;
+    const deltaY = (event.clientY - state.lastPointerClient.y) / scaleY;
+    state.lastPointerClient = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    state.dragOffset = {
+      x: state.dragOffset.x + deltaX,
+      y: state.dragOffset.y + deltaY,
+      active: true,
+    };
+    state.pointerMovedSincePress = state.pointerMovedSincePress || deltaX !== 0 || deltaY !== 0;
+    scheduleRender();
+    return;
+  }
 
   const rect = refs.shell.getBoundingClientRect();
   const scaleX = rect.width / 420;
@@ -1874,6 +2001,10 @@ function handlePointerMove(event) {
     y: dragOffsetY,
     active: true,
   };
+  state.lastPointerClient = {
+    x: event.clientX,
+    y: event.clientY,
+  };
   state.pointerMovedSincePress = state.pointerMovedSincePress || dragOffsetX !== 0 || dragOffsetY !== 0;
 
   scheduleRender();
@@ -1883,6 +2014,7 @@ function handlePointerRelease(event) {
   if (!state.isPressed) return;
   const now = performance.now();
   const releaseScene = computeScene(now);
+  clearAgentSetReturnTimer();
 
   if (refs.shell?.releasePointerCapture && event.pointerId != null) {
     try {
@@ -1909,6 +2041,7 @@ function handlePointerRelease(event) {
     x: ORB_CENTER_X,
     y: ORB_CENTER_Y,
   };
+  state.lastPointerClient = null;
   state.pointerMovedSincePress = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -1916,6 +2049,8 @@ function handlePointerRelease(event) {
   state.lockedExpandedPillScale = null;
   state.childMenuParentId = null;
   state.childMenuPointerLock = null;
+  state.agentSetReturnTriggered = false;
+  state.agentSetReturnRevealUntil = 0;
   clearChildHoverTimer();
   previousHoveredId = null;
   previousHoveredChildId = null;
@@ -1954,11 +2089,13 @@ function startBubbleSwap(scene, now) {
   const selectedBubble = scene.bubbles.find((bubble) => bubble.id === scene.hoveredId);
   if (!selectedBubble) return;
 
+  clearAgentSetReturnInteraction();
   state.isPressed = false;
   state.openMotionUntil = 0;
   state.closeMotionUntil = now + SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS;
   state.dragOffset = { x: 0, y: 0, active: false };
   state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.lastPointerClient = null;
   state.pointerMovedSincePress = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -2122,6 +2259,16 @@ function render() {
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
+  const showDefaultAgentBanner = state.activeSetId === 'agent'
+    && state.agentSetReturnTriggered
+    && state.agentSetReturnPhase === 'reopening'
+    && state.isPressed;
+
+  if (refs.canvasBanner) {
+    refs.canvasBanner.textContent = 'Set default agent';
+    refs.canvasBanner.classList.toggle('is-hidden', !showDefaultAgentBanner);
+    refs.canvasBanner.setAttribute('aria-hidden', String(!showDefaultAgentBanner));
+  }
 
   refs.panLayer.style.transitionDuration = panTransitionDuration;
   refs.panLayer.style.transform =
@@ -2452,7 +2599,7 @@ function computeScene(now = performance.now()) {
         radius: (ORB_BASE_SIZE * 0.8) / 2,
       }
       : null;
-    let processedBubbles = getBubblesConfigForSet(state.activeSetId).map((slot) => {
+    let processedBubbles = getVisibleSlotsForActiveSet(now).map((slot) => {
       const bubble = resolveRenderedBubble(slot);
       let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
       let dx = 0;
