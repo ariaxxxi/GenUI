@@ -291,7 +291,6 @@ export function applyAiCelestialChrome(root = document) {
   ensureSharedAiOrb(root);
   const scope = root?.querySelectorAll ? root : document;
   const selectors = [
-    "#prototype-stage-selection",
     "#siri-orb .g-celestial-orb-selection",
     ".g-stage-selected-host",
   ];
