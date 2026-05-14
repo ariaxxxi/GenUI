@@ -179,11 +179,7 @@ export function createMorphRender(ctx) {
       } else if (index === resolvedSelectedIndex) {
         direction = entering ? 'bottom' : 'bottom';
       }
-      return {
-        ...item,
-        direction,
-        rotStart: entering ? 0 : item.rotStart,
-      };
+      return { ...item, direction };
     });
     state.prototypeListContent = contentData;
     state.prototypeListSelectedIndex = resolvedSelectedIndex;
