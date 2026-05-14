@@ -118,7 +118,7 @@ function applyCanvasSettings() {
   document.body.style.backgroundRepeat = 'no-repeat';
   if (blurBg) {
     blurBg.style.backgroundImage = `url("${encodeURI(backgroundImage)}")`;
-    blurBg.style.opacity = backgroundEnabled ? '1' : '0';
+    blurBg.style.opacity = backgroundEnabled ? '0.8' : '0';
   }
   if (frame) {
     frame.classList.toggle('phone', isPhone);
