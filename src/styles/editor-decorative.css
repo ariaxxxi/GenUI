@@ -331,13 +331,13 @@
   top:0;
   width:100vw;
   height:100vh;
-  background-image:url('../assets/decorative-bg.jpg');
+  background-image: url("../../assets/bg/living room.jpg");
   background-size:cover;
   background-position:center;
-  filter:blur(40px) brightness(0.8);
+  filter:none;
   opacity:1;
-  transform:scale(1.2);
-  z-index:-1;
+  transform:none;
+  z-index:0;
   pointer-events:none;
 }
 body.bg-off .bg-blur-image { opacity: 0; }

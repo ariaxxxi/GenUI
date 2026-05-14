@@ -19,6 +19,8 @@ export const RESPONSE_MODE = Object.freeze({
   AI: 'ai',
 });
 
+const DEFAULT_BACKGROUND_IMAGE = 'assets/bg/living room.jpg';
+
 export const PAGE_MODE_OVERRIDE = (() => {
   const raw = String(document.body?.dataset?.pageMode || '').trim().toLowerCase();
   if (raw === 'ai') return RESPONSE_MODE.AI;
@@ -56,7 +58,10 @@ export function readStoredJson(key, fallback) {
 export function loadCanvasSettings() {
   const stored = readStoredJson(STORAGE_KEYS.settings, null);
   return {
-    backgroundEnabled: stored?.backgroundEnabled === true,
+    backgroundEnabled: stored?.backgroundEnabled !== false,
+    backgroundImage: typeof stored?.backgroundImage === 'string' && stored.backgroundImage.trim()
+      ? stored.backgroundImage
+      : DEFAULT_BACKGROUND_IMAGE,
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',

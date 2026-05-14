@@ -6,6 +6,7 @@ export function buildUiRefs(documentRef = document) {
   return {
     modeToggle: documentRef.getElementById('mode-toggle'),
     bgToggle: documentRef.getElementById('bg-toggle'),
+    bgImageSelect: documentRef.getElementById('bg-image-select'),
     floatToggle: documentRef.getElementById('float-toggle'),
     alignBottomToggle: documentRef.getElementById('align-bottom-toggle'),
     frameGlassesToggle: documentRef.getElementById('frame-glasses-toggle'),

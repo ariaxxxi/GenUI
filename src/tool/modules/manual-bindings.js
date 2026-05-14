@@ -1347,6 +1347,10 @@ export function initManualBindings({
 
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));
+  UI.bgImageSelect?.addEventListener('change', () => updateCanvas({
+    backgroundImage: UI.bgImageSelect.value,
+    backgroundEnabled: true,
+  }));
   UI.floatToggle.addEventListener('change', () => updateCanvas({ floatingEnabled: UI.floatToggle.checked }));
   UI.alignBottomToggle.addEventListener('change', () => {
     updateCanvas({ bottomAlign: UI.alignBottomToggle.checked });

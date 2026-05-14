@@ -41,6 +41,7 @@ body {
   align-items: center; justify-content: center;
   flex: 1; height: 100%;
   overflow-y: auto;
+  position: relative;
 }
 
 /* ── Intent header ── */
@@ -218,11 +219,20 @@ body {
 #ui-frame.phone .drop {
   background: transparent;
 }
-#ui-frame.phone #drop-main {
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+#drop-main {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+  box-shadow: inset 0 0 20px 0 rgba(255,255,255,0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   transition:
+    width         var(--anim-w),
+    height        var(--anim-h),
+    border-radius var(--anim-br),
+    transform     var(--anim-tx),
+    opacity       300ms var(--motion-ease),
+    background    420ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
+    box-shadow    520ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
+    filter        520ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
     backdrop-filter 420ms var(--motion-ease) var(--thinking-shell-delay, 0ms),
     -webkit-backdrop-filter 420ms var(--motion-ease) var(--thinking-shell-delay, 0ms);
 }
@@ -567,10 +577,9 @@ body[data-thinking-debug-minimized="true"] #prototype-thinking-stream-text {
   position: relative; width: 420px;
   animation: float 6s var(--motion-ease) infinite;
   flex-shrink: 0;
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
   transition: height var(--anim-h);
 }
-body.bg-off #stage { mix-blend-mode: normal; }
 body.float-off #stage { animation: none; }
 #stage.flow-active { animation-play-state: paused; }
 

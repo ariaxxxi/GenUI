@@ -23,6 +23,22 @@ detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibil
 document.body.appendChild(detailMeasureEl);
 
 const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: '' });
+const PROTOTYPE_BACKGROUND_OPTIONS = [
+  'assets/bg/living room.jpg',
+  'assets/bg/living room 2.jpg',
+  'assets/bg/desk.jpg',
+  'assets/bg/work.jpg',
+  'assets/bg/park.jpg',
+  'assets/bg/street.jpg',
+  'assets/bg/grocery store.jpg',
+  'assets/bg/kitechen.jpg',
+];
+const DEFAULT_PROTOTYPE_BACKGROUND = PROTOTYPE_BACKGROUND_OPTIONS[0];
+
+function normalizePrototypeBackground(src) {
+  const value = String(src || '').trim();
+  return PROTOTYPE_BACKGROUND_OPTIONS.includes(value) ? value : DEFAULT_PROTOTYPE_BACKGROUND;
+}
 
 let canvasSettings = loadCanvasSettings();
 let responseMode = loadResponseMode();
@@ -87,12 +103,23 @@ function currentScenarioFrameMode() {
 function applyCanvasSettings() {
   const frame = document.getElementById('ui-frame');
   const frameBg = document.getElementById('ui-frame-bg');
+  const blurBg = document.querySelector('.bg-blur-image');
   const frameMode = currentScenarioFrameMode();
   const isPhone = frameMode === 'phone';
   const isGlasses = frameMode === 'glasses';
-  document.body.classList.toggle('bg-off', !canvasSettings.backgroundEnabled);
+  const backgroundImage = normalizePrototypeBackground(canvasSettings.backgroundImage);
+  const backgroundEnabled = canvasSettings.backgroundEnabled !== false;
+  document.body.classList.toggle('bg-off', !backgroundEnabled);
   document.body.classList.toggle('float-off', !canvasSettings.floatingEnabled);
   document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
+  document.body.style.backgroundImage = backgroundEnabled ? `url("${encodeURI(backgroundImage)}")` : 'none';
+  document.body.style.backgroundPosition = 'center';
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundRepeat = 'no-repeat';
+  if (blurBg) {
+    blurBg.style.backgroundImage = `url("${encodeURI(backgroundImage)}")`;
+    blurBg.style.opacity = backgroundEnabled ? '1' : '0';
+  }
   if (frame) {
     frame.classList.toggle('phone', isPhone);
     frame.classList.toggle('glasses', isGlasses);
@@ -104,7 +131,8 @@ function applyCanvasSettings() {
     frame.classList.toggle('has-bg', isPhone && !!canvasSettings.phoneBgEnabled && !!canvasSettings.phoneFrameBackground?.src);
   }
   if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : '';
-  if (UI.bgToggle) UI.bgToggle.checked = !!canvasSettings.backgroundEnabled;
+  if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
+  if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
   if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
   if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
   if (UI.framePhoneToggle) UI.framePhoneToggle.checked = isPhone;
