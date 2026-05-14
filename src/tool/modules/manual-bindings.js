@@ -1176,12 +1176,16 @@ export function initManualBindings({
   document.addEventListener('keydown', (e) => {
     if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
     if (flight.handleKeyDown(e)) return;
-    if (selectedScenario()?.shape === 'list' && e.key === 'ArrowUp') {
+    const activeStageShape = selectedScenario()?.shape;
+    const activeRenderShape = activeStageShape ? stageById(activeStageShape, selectedScenario())?.renderShape : '';
+    const activeStage = activeStageShape ? stageById(activeStageShape, selectedScenario()) : null;
+    const listSelectable = activeStage?.listSelectable !== false;
+    if (activeRenderShape === 'list' && listSelectable && e.key === 'ArrowUp') {
       e.preventDefault();
       movePrototypeListSelection?.(-1);
       return;
     }
-    if (selectedScenario()?.shape === 'list' && e.key === 'ArrowDown') {
+    if (activeRenderShape === 'list' && listSelectable && e.key === 'ArrowDown') {
       e.preventDefault();
       movePrototypeListSelection?.(1);
       return;
@@ -1649,6 +1653,11 @@ export function initManualBindings({
     if (!stage) return;
     commitStageChange(stage.id, (draft) => { draft.listListeningOrb = e.target.checked; });
   });
+  UI.stageListSelectableToggle?.addEventListener('change', (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    commitStageChange(stage.id, (draft) => { draft.listSelectable = e.target.checked; });
+  });
   UI.stageSelectedToggle?.addEventListener('change', (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;
@@ -1758,6 +1767,15 @@ export function initManualBindings({
       });
       return;
     }
+    const selectableToggle = e.target.closest('[data-stage-list-selectable-toggle]');
+    if (selectableToggle) {
+      const stage = stageById(selectedScenario()?.shape);
+      if (!stage || stage.renderShape !== 'list') return;
+      commitStageChange(stage.id, (draft) => {
+        draft.listSelectable = selectableToggle.checked;
+      });
+      return;
+    }
     const checkbox = e.target.closest('[data-stage-comp-toggle]');
     if (!checkbox) return;
     const type = String(checkbox.dataset.stageCompToggle || '');
@@ -1797,13 +1815,24 @@ export function initManualBindings({
   });
   UI.scenarioIconUpload.addEventListener('click', (e) => { e.target.value = ''; });
   UI.scenarioListItemsEditor?.addEventListener('input', (e) => {
-    const labelInput = e.target.closest('[data-list-item-label-index]');
-    if (labelInput) {
-      const index = parseInt(labelInput.dataset.listItemLabelIndex || '-1', 10);
+    const primaryInput = e.target.closest('[data-list-item-primary-index]');
+    if (primaryInput) {
+      const index = parseInt(primaryInput.dataset.listItemPrimaryIndex || '-1', 10);
       if (index >= 0) {
         return commitListItems((items) => {
           if (!items[index]) return items;
-          items[index] = { ...items[index], label: labelInput.value };
+          items[index] = { ...items[index], primary: primaryInput.value };
+          return items;
+        });
+      }
+    }
+    const secondaryInput = e.target.closest('[data-list-item-secondary-index]');
+    if (secondaryInput) {
+      const index = parseInt(secondaryInput.dataset.listItemSecondaryIndex || '-1', 10);
+      if (index >= 0) {
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], secondary: secondaryInput.value };
           return items;
         });
       }

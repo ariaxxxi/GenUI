@@ -282,13 +282,24 @@ export function initEditorBindings({
   });
   UI.scenarioIconUpload?.addEventListener("click", (e) => { e.target.value = ""; });
   UI.scenarioListItemsEditor?.addEventListener("input", (e) => {
-    const labelInput = e.target.closest("[data-list-item-label-index]");
-    if (labelInput) {
-      const index = parseInt(labelInput.dataset.listItemLabelIndex || "-1", 10);
+    const primaryInput = e.target.closest("[data-list-item-primary-index]");
+    if (primaryInput) {
+      const index = parseInt(primaryInput.dataset.listItemPrimaryIndex || "-1", 10);
       if (index >= 0) {
         return commitListItems((items) => {
           if (!items[index]) return items;
-          items[index] = { ...items[index], label: labelInput.value };
+          items[index] = { ...items[index], primary: primaryInput.value };
+          return items;
+        });
+      }
+    }
+    const secondaryInput = e.target.closest("[data-list-item-secondary-index]");
+    if (secondaryInput) {
+      const index = parseInt(secondaryInput.dataset.listItemSecondaryIndex || "-1", 10);
+      if (index >= 0) {
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], secondary: secondaryInput.value };
           return items;
         });
       }

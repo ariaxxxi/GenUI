@@ -63,6 +63,9 @@ export function createSidebarActions(ctx, refs) {
     if (value === 'pill') {
       return { renderShape: 'pill', name: 'Pill Stage', cornerRadius: 60, iconTextGap: 8, iconLeftPadding: 16, components: ['icon', 'primary', 'secondary'] };
     }
+    if (value === 'list-pill') {
+      return { renderShape: 'list', name: 'List-Pill Stage', cornerRadius: 60, iconTextGap: null, iconLeftPadding: null, components: ['icon', 'primary', 'secondary'] };
+    }
     if (value === 'blank') {
       return { renderShape: 'card', name: 'Blank Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: [] };
     }
@@ -83,6 +86,7 @@ export function createSidebarActions(ctx, refs) {
       iconLeftPadding: template.iconLeftPadding,
       phoneBgBlur: false,
       listListeningOrb: false,
+      listSelectable: true,
       selected: false,
       accentColor: '#90acff',
       secondaryAccentColor: '#9761ff',

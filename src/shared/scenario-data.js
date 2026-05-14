@@ -23,18 +23,19 @@ import {
   celestialSelectedMaskBlurDefaultForRenderShape,
 } from './celestial-selected-presets.js';
 
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'list-pill', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
-  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
-  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
-  { id: 'list', name: 'List', preset: true, renderShape: 'list', cornerRadius: 25, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
-  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
+  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
+  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
+  { id: 'list', name: 'List', preset: true, renderShape: 'list', cornerRadius: 25, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail'] },
+  { id: 'list-pill', name: 'List-Pill', preset: true, renderShape: 'list', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
+  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
+  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
 ]);
 
 function selectedBlobDefaultsForRenderShape(renderShape = 'pill') {
@@ -194,13 +195,20 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return [fallback.primary, fallback.secondary, fallback.detail].filter(Boolean);
   }
 
-  function createDefaultListItem(label = '', icon = createIcon('none', '')) {
-    return { label: String(label || ''), icon: normalizeIcon(icon) };
+  function createDefaultListItem(primary = '', secondary = '', icon = createIcon('none', '')) {
+    return {
+      primary: String(primary || ''),
+      secondary: String(secondary || ''),
+      icon: normalizeIcon(icon),
+    };
   }
 
   function normalizeListItem(value = {}, fallback = {}) {
+    const fallbackPrimary = String(fallback?.primary ?? fallback?.label ?? '');
+    const fallbackSecondary = String(fallback?.secondary ?? '');
     return {
-      label: String(value?.label ?? fallback?.label ?? ''),
+      primary: String(value?.primary ?? value?.label ?? fallbackPrimary),
+      secondary: String(value?.secondary ?? fallbackSecondary),
       icon: normalizeIcon(value?.icon ?? fallback?.icon),
     };
   }
@@ -423,9 +431,26 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   function listFallbackItemsForShape(shape, textByShape = {}, listChipIconsByShape = {}) {
     const text = normalizeStageTextEntry(textByShape?.[shape], defaultStageTextFallback(shape));
     const icons = normalizeListChipIconEntry(listChipIconsByShape?.[shape]);
+    if (shape === 'list-pill') {
+      const rows = [];
+      const primary = String(text.primary || '').trim();
+      const secondary = String(text.secondary || '').trim();
+      const detail = String(text.detail || '').trim();
+      if (primary || secondary) {
+        rows.push(createDefaultListItem(primary || 'Primary text', secondary, icons.primary || createIcon('none', '')));
+      }
+      if (detail) {
+        rows.push(createDefaultListItem(detail, '', icons.secondary || createIcon('none', '')));
+      }
+      if (rows.length) return rows;
+    }
     const labels = [text.primary, text.secondary, text.detail].filter((value) => String(value || '').trim());
     const fallbackLabels = labels.length ? labels : defaultListLabelsForShape(shape);
-    return fallbackLabels.map((label, index) => createDefaultListItem(label, [icons.primary, icons.secondary, icons.detail][index] || createIcon('none', '')));
+    return fallbackLabels.map((label, index) => createDefaultListItem(
+      label,
+      '',
+      [icons.primary, icons.secondary, icons.detail][index] || createIcon('none', ''),
+    ));
   }
 
   function normalizeListItemsByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
@@ -533,6 +558,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
 
   function stageListListeningOrbForShape(scenario, shape) {
     return !!stageById(shape, scenario)?.listListeningOrb;
+  }
+
+  function stageListSelectableForShape(scenario, shape) {
+    return stageById(shape, scenario)?.listSelectable !== false;
   }
 
   function stageImagesForShape(scenario, shape) {
@@ -780,6 +809,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageListChipIconsForShape,
     stageListItemsForShape,
     stageListListeningOrbForShape,
+    stageListSelectableForShape,
     stageImagesForShape,
     stageRenderShapeForShape,
     stageSelectedForShape,

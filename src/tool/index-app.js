@@ -60,7 +60,7 @@ let prototypeListeningPromptText = '';
 const prototypeAiDebugState = { active: false, mode: 'thinking' };
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageListSelectableForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -112,12 +112,12 @@ function applyCanvasSettings() {
   document.body.classList.toggle('bg-off', !backgroundEnabled);
   document.body.classList.toggle('float-off', !canvasSettings.floatingEnabled);
   document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
-  document.body.style.backgroundImage = backgroundEnabled ? `url("${encodeURI(backgroundImage)}")` : 'none';
-  document.body.style.backgroundPosition = 'center';
-  document.body.style.backgroundSize = 'cover';
-  document.body.style.backgroundRepeat = 'no-repeat';
+  document.body.style.backgroundImage = 'none';
+  document.body.style.backgroundPosition = '';
+  document.body.style.backgroundSize = '';
+  document.body.style.backgroundRepeat = '';
   if (blurBg) {
-    blurBg.style.backgroundImage = `url("${encodeURI(backgroundImage)}")`;
+    blurBg.style.backgroundImage = backgroundEnabled ? `url("${encodeURI(backgroundImage)}")` : 'none';
     blurBg.style.opacity = backgroundEnabled ? '0.8' : '0';
   }
   if (frame) {
@@ -456,6 +456,7 @@ morphApi = initMorph({
     stageListChipIconsForShape,
     stageListItemsForShape,
     stageListListeningOrbForShape,
+    stageListSelectableForShape,
     stageImagesForShape,
     stageSelectedForShape,
     stageAccentColorForShape,

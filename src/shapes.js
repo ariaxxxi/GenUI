@@ -223,6 +223,9 @@ export function normalizeStage(raw, fallback) {
   const listListeningOrb = raw?.listListeningOrb === undefined
     ? !!fallbackStage.listListeningOrb
     : raw?.listListeningOrb === true;
+  const listSelectable = raw?.listSelectable === undefined
+    ? fallbackStage.listSelectable !== false
+    : raw?.listSelectable !== false;
   const selected = raw?.selected === undefined
     ? !!fallbackStage.selected
     : raw?.selected === true;
@@ -231,7 +234,7 @@ export function normalizeStage(raw, fallback) {
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => stageComponentTypes().includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, listListeningOrb, selected, accentColor, secondaryAccentColor, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, listListeningOrb, listSelectable, selected, accentColor, secondaryAccentColor, components };
 }
 
 export function normalizeStageImage(value) {

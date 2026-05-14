@@ -117,6 +117,11 @@ export function createSidebarRender(ctx, refs) {
       orbRow.className = 'stage-comp-row toggle';
       orbRow.innerHTML = `<span class="stage-comp-label">bottom orb</span><input class="stage-comp-check" type="checkbox" data-stage-list-orb-toggle="1" ${stage?.listListeningOrb ? 'checked' : ''}/>`;
       list.appendChild(orbRow);
+
+      const selectableRow = document.createElement('div');
+      selectableRow.className = 'stage-comp-row toggle';
+      selectableRow.innerHTML = `<span class="stage-comp-label">selectable</span><input class="stage-comp-check" type="checkbox" data-stage-list-selectable-toggle="1" ${stage?.listSelectable !== false ? 'checked' : ''}/>`;
+      list.appendChild(selectableRow);
     }
     ctx.UI.stageComponentControls.appendChild(list);
   }
@@ -220,7 +225,8 @@ export function createSidebarRender(ctx, refs) {
     const items = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(scenario, scenario?.shape) : [];
     if (preview) preview.textContent = `${items.length} chip${items.length === 1 ? '' : 's'}`;
     items.forEach((item, index) => {
-      const labelId = `scenario-list-item-label-${index}`;
+      const primaryId = `scenario-list-item-primary-${index}`;
+      const secondaryId = `scenario-list-item-secondary-${index}`;
       const iconInputId = `scenario-list-item-icon-input-${index}`;
       const iconUploadId = `scenario-list-item-icon-upload-${index}`;
       const icon = item?.icon || ctx.createIcon('none', '');
@@ -233,8 +239,9 @@ export function createSidebarRender(ctx, refs) {
       const row = document.createElement('div');
       row.className = 'sb-row tight';
       row.innerHTML = `
-        <label class="sb-lbl" for="${labelId}">Chip ${index + 1}</label>
-        <input id="${labelId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-label-index="${index}" value="${String(item?.label || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
+        <label class="sb-lbl" for="${primaryId}">Row ${index + 1}</label>
+        <input id="${primaryId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-primary-index="${index}" value="${String(item?.primary || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" placeholder="Primary text"/>
+        <input id="${secondaryId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-secondary-index="${index}" value="${String(item?.secondary || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" placeholder="Secondary text"/>
         <div class="icon-upload-row">
           <input id="${iconInputId}" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph" data-list-item-icon-input-index="${index}" value="${String(iconValue || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
           <label class="sb-mini-btn upload-btn" for="${iconUploadId}">PNG<input id="${iconUploadId}" data-list-item-icon-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>

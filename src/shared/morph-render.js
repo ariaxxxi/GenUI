@@ -86,13 +86,14 @@ export function createMorphRender(ctx) {
     const sourceItems = Array.isArray(contentData?.listItems) && contentData.listItems.length
       ? contentData.listItems
       : [
-        { label: String(contentData?.primary || '').trim(), icon: contentData?.listChipIcons?.primary },
-        { label: String(contentData?.secondary || '').trim(), icon: contentData?.listChipIcons?.secondary },
-        { label: String(contentData?.detail || '').trim(), icon: contentData?.listChipIcons?.detail },
+        { primary: String(contentData?.primary || '').trim(), secondary: '', icon: contentData?.listChipIcons?.primary },
+        { primary: String(contentData?.secondary || '').trim(), secondary: '', icon: contentData?.listChipIcons?.secondary },
+        { primary: String(contentData?.detail || '').trim(), secondary: '', icon: contentData?.listChipIcons?.detail },
       ];
     const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
     return sourceItems.map((entry, index) => {
-      const label = String(entry?.label || '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
+      const primary = String(entry?.primary ?? entry?.label ?? '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
+      const secondary = String(entry?.secondary || '').trim();
       const slotIcon = entry?.icon || { kind: 'none', value: '' };
       const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim() ? slotIcon : icon;
       const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
@@ -101,9 +102,10 @@ export function createMorphRender(ctx) {
         ? { avatar: '', initials: String(resolvedIcon.value).trim() }
         : null;
       return ({
-        name: label,
+        name: primary,
+        subtitle: secondary,
         avatar: baseEntry?.avatar || '',
-        initials: baseEntry?.initials || derivePrototypeListInitials(label),
+        initials: baseEntry?.initials || derivePrototypeListInitials(primary),
         blobTopCore,
         blobTopEdge,
         blobBottomCore,
@@ -138,11 +140,15 @@ export function createMorphRender(ctx) {
     if (!prototypeListRoot) return;
     clearPrototypeListCollapseTimer();
     clearPrototypeListSettleTimer();
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const stageId = String(scenario?.shape || 'list');
+    const pillListStyle = stageId === 'list-pill';
     const frameEl = document.getElementById('ui-frame') || document.getElementById('stage');
     const frameHeight = Math.max(240, Math.round(frameEl?.getBoundingClientRect?.().height || 420));
-    const pillHeight = 56;
+    const pillHeight = pillListStyle ? 100 : 56;
     const bottomInset = 20;
     const hasOrb = listStageShowsOrb(contentData);
+    const listSelectable = listStageAllowsSelection(contentData);
     const orbClearance = 8;
     let bottomY = Math.round((frameHeight / 2) - bottomInset - (pillHeight / 2));
     if (hasOrb) {
@@ -151,23 +157,27 @@ export function createMorphRender(ctx) {
     }
     const orbAnchor = getPrototypeThinkingOrbAnchor();
     const entries = prototypeListEntriesFromContent(contentData);
-    const previousSelectedIndex = clamp(
-      Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
-      0,
-      Math.max(0, entries.length - 1),
-    );
-    const resolvedSelectedIndex = clamp(
-      Number.isFinite(selectedIndex) ? selectedIndex : state.prototypeListSelectedIndex,
-      0,
-      Math.max(0, entries.length - 1),
-    );
+    const previousSelectedIndex = listSelectable
+      ? clamp(
+        Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
+        0,
+        Math.max(0, entries.length - 1),
+      )
+      : -1;
+    const resolvedSelectedIndex = listSelectable
+      ? clamp(
+        Number.isFinite(selectedIndex) ? selectedIndex : state.prototypeListSelectedIndex,
+        0,
+        Math.max(0, entries.length - 1),
+      )
+      : -1;
     const movingDown = resolvedSelectedIndex > previousSelectedIndex;
     const movingUp = resolvedSelectedIndex < previousSelectedIndex;
     const items = layoutDisambiguationPillItems(
       entries,
       resolvedSelectedIndex,
       'stack',
-      { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y }
+      { bottomY, gap: pillListStyle ? 12 : 8, startX: orbAnchor.x, startY: orbAnchor.y, itemHeight: pillHeight }
     ).map((item, index) => {
       let direction = 'bottom';
       if (movingDown) {
@@ -186,11 +196,12 @@ export function createMorphRender(ctx) {
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '1';
     prototypeListRoot.dataset.listListeningOrb = listStageShowsOrb(contentData) ? '1' : '';
+    prototypeListRoot.dataset.listSelectable = listSelectable ? '1' : '';
     prototypeListRoot.innerHTML = renderDisambiguationPills({
       items,
       selectedIndex: resolvedSelectedIndex,
       rowDataAttr: 'data-prototype-list-pill',
-      clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
+      clusterClass: `g-disambiguation-pills prototype-disambiguation-pills${pillListStyle ? ' prototype-disambiguation-pills--list-pill' : ''}`,
     });
     applyPrototypeListSelectedChromePresets(items);
     syncPrototypeListPhase(entering ? 'entering' : 'settled');
@@ -204,6 +215,7 @@ export function createMorphRender(ctx) {
 
   function updatePrototypeListSelectionInPlace(nextIndex) {
     if (!prototypeListRoot || prototypeListRoot.dataset.active !== '1') return false;
+    if (prototypeListRoot.dataset.listSelectable !== '1') return false;
     const cluster = prototypeListRoot.querySelector('.prototype-disambiguation-pills');
     if (!cluster) return false;
     const pills = Array.from(cluster.querySelectorAll('[data-prototype-list-pill]'));
@@ -274,11 +286,13 @@ export function createMorphRender(ctx) {
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '';
     prototypeListRoot.dataset.listListeningOrb = '';
+    prototypeListRoot.dataset.listSelectable = '';
     prototypeListRoot.innerHTML = '';
   }
 
   function movePrototypeListSelection(delta = 0) {
     if (!prototypeListRoot || prototypeListRoot.dataset.active !== '1') return false;
+    if (prototypeListRoot.dataset.listSelectable !== '1') return false;
     const contentData = state.prototypeListContent;
     if (!contentData) return false;
     const entries = prototypeListEntriesFromContent(contentData);
@@ -330,6 +344,12 @@ export function createMorphRender(ctx) {
     const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
     const shape = String(scenario?.shape || 'list');
     return !!callbacks.stageListListeningOrbForShape?.(scenario, shape);
+  }
+
+  function listStageAllowsSelection(contentData = {}) {
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const shape = String(scenario?.shape || 'list');
+    return callbacks.stageListSelectableForShape?.(scenario, shape) !== false;
   }
 
   function inferPrototypeSelectionDirection(fromGeo, toGeo) {
