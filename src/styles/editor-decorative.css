@@ -280,8 +280,8 @@
   gap: 8px;
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-text {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 500;
   color: rgba(255,255,255,0.98);
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-subtitle {
@@ -342,7 +342,7 @@
 }
 .list-pill-primary {
   font-family: 'DM Sans', sans-serif;
-  font-size: 20px; font-weight: 600;
+  font-size: 28px; font-weight: 500;
   color: rgba(255,255,255,0.90);
   white-space: nowrap;
 }

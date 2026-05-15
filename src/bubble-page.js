@@ -145,6 +145,7 @@ const FIGMA_ASSETS = {
 };
 const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt']);
 const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
+const PROMPT_SET_DEFAULT_AGENT_ID = 'chatgpt';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CLAUDE_AGENT_ASSET = 'assets/agents/Claude-ai-icon.png';
 const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
@@ -195,6 +196,36 @@ const TRAVEL_AGENT_THEME = Object.freeze({
   blobTopEdge: 'rgb(90 164 255)',
   blobBottomCore: 'rgb(210 232 255)',
   blobBottomEdge: 'rgb(48 108 226)',
+});
+const RESET_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(171 226 78)',
+  blobTopEdge: 'rgb(97 167 39)',
+  blobBottomCore: 'rgb(234 247 255)',
+  blobBottomEdge: 'rgb(124 174 222)',
+});
+const COFFEE_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(229 199 163)',
+  blobTopEdge: 'rgb(191 150 108)',
+  blobBottomCore: 'rgb(112 74 49)',
+  blobBottomEdge: 'rgb(63 41 27)',
+});
+const MIX_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(153 221 255)',
+  blobTopEdge: 'rgb(89 185 239)',
+  blobBottomCore: 'rgb(244 248 255)',
+  blobBottomEdge: 'rgb(184 209 235)',
+});
+const DAY_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 214 196)',
+  blobTopEdge: 'rgb(255 153 129)',
+  blobBottomCore: 'rgb(225 244 250)',
+  blobBottomEdge: 'rgb(151 205 223)',
+});
+const WRITE_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(231 223 207)',
+  blobTopEdge: 'rgb(194 181 160)',
+  blobBottomCore: 'rgb(135 138 145)',
+  blobBottomEdge: 'rgb(86 92 101)',
 });
 const INTERRUPT_WHITE_THEME = Object.freeze({
   blobTopCore: 'rgb(247 249 255)',
@@ -359,10 +390,6 @@ function resetBubbleHomeOrbCenter(root = refs.orb) {
 
 function syncBubbleHomeOrbVisualStateClasses(visual, content = state.homeOrbContent) {
   if (!visual || !content) return;
-  const isClaudePromotedImage = content.kind !== 'agent-orb'
-    && content.graphicKind !== 'emoji'
-    && content.img === CLAUDE_AGENT_ASSET;
-  visual.classList.toggle('is-promoted-home-claude', isClaudePromotedImage);
   visual.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
 }
 
@@ -531,6 +558,164 @@ const APP_BUBBLES_CONFIG = [
       { id: 'rain', kind: 'umbrella', bg: '#ffffff', fg: '#149cf1' },
       { id: 'radar', kind: 'radar', bg: '#ffffff', fg: '#149cf1' },
     ],
+  },
+].map(enrichBubbleMetrics);
+
+const PROMPT_BUBBLES_CONFIG = [
+  {
+    id: 1,
+    ...getAppSetSlotLayout(1),
+    img: 'src/assets/spotify-album-happiness.jpg',
+    fill: true,
+    isPill: true,
+    pillTitle: 'Happiness',
+    pillSubtitle: '1975',
+    imageOutlineColor: '#1ED760',
+    imageOutlineWidth: 3,
+    pillTrailingIcon: 'pause',
+    pillTrailingIconColor: '#1ED760',
+    subIconKind: 'spotify-badge',
+    subIconSize: 42.167,
+    subIconOffsetX: 67.83,
+    subIconOffsetY: 67.83,
+    disableHoverScale: true,
+    childActions: [
+      { id: 'playlist-1', img: 'src/assets/spotify-liked-songs.jpg', fill: true },
+      { id: 'playlist-2', img: 'src/assets/spotify-album-2.jpg', fill: true },
+      { id: 'playlist-3', img: 'src/assets/spotify-album-blonde.jpg', fill: true },
+    ],
+  },
+  {
+    id: 3,
+    ...getAppSetSlotLayout(3),
+    img: 'assets/profile1.png',
+    fill: true,
+    isPill: true,
+    pillTitle: 'Tony',
+    pillSubtitle: 'I love it!',
+    subIconKind: 'message-badge',
+    subIconSize: 47.949,
+    subIconOffsetX: 62.04,
+    subIconOffsetY: 62.05,
+    childActions: [
+      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
+      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
+      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
+    ],
+  },
+  {
+    id: 9,
+    ...getAppSetSlotLayout(9),
+    img: 'assets/app/write.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Text Draft',
+    pillSubtitle: 'Say no',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: WRITE_APP_THEME,
+    haloColor: WRITE_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 4,
+    ...getAppSetSlotLayout(4),
+    graphicKind: 'emoji',
+    emoji: '🎉',
+    emojiScale: 0.98,
+    hoverExpandsToPill: true,
+    pillTitle: 'Fun Plan',
+    pillSubtitle: 'Tonight ideas',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: GEMINI_AGENT_THEME,
+    haloColor: GEMINI_AGENT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 2,
+    ...getAppSetSlotLayout(2),
+    img: 'assets/app/day.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Day Check',
+    pillSubtitle: 'Morning brief',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: DAY_APP_THEME,
+    haloColor: DAY_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 8,
+    ...getAppSetSlotLayout(8),
+    img: 'assets/app/reset.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Mood Reset',
+    pillSubtitle: 'Feel better',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: RESET_APP_THEME,
+    haloColor: RESET_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 5,
+    ...getAppSetSlotLayout(5),
+    img: 'assets/profile2.png',
+    fill: true,
+    isPill: true,
+    pillTitle: 'Hiro',
+    pillSubtitle: 'Yesterday',
+    subIconKind: 'call-badge',
+    subIconSize: 41.532,
+    subIconOffsetX: 66.5,
+    subIconOffsetY: 66.5,
+    childActions: [
+      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
+      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
+      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
+    ],
+  },
+  {
+    id: 6,
+    ...getAppSetSlotLayout(6),
+    img: 'assets/app/coffee.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Cafe Hunt',
+    pillSubtitle: 'Go somewhere',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: COFFEE_APP_THEME,
+    haloColor: COFFEE_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 10,
+    ...getAppSetSlotLayout(10),
+    img: 'assets/app/mix.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Mix Now',
+    pillSubtitle: 'Soundtrack',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: MIX_APP_THEME,
+    haloColor: MIX_APP_THEME.blobTopCore,
+    childActions: [],
   },
 ].map(enrichBubbleMetrics);
 
@@ -727,18 +912,28 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     id: 'app',
     label: 'App',
     defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
     slots: APP_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: 'prompt',
+    label: 'Prompt',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: PROMPT_BUBBLES_CONFIG,
   }),
   Object.freeze({
     id: 'agent',
     label: 'Agent',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
     slots: AGENT_BUBBLES_CONFIG,
   }),
   Object.freeze({
     id: 'interrupt',
     label: 'Interrupt',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
     slots: INTERRUPT_BUBBLES_CONFIG,
   }),
 ]);
@@ -892,6 +1087,10 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
 
 function getBubbleSetDefinition(setId = DEFAULT_BUBBLE_SET_ID) {
   return BUBBLE_SET_DEFINITIONS.find((setDef) => setDef.id === setId) || BUBBLE_SET_DEFINITIONS[0];
+}
+
+function getDefaultHomeAgentIdForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return getBubbleSetDefinition(setId)?.defaultHomeAgentId || BUBBLE_HOME_DEFAULT_AGENT_ID;
 }
 
 function getBubblesConfigForSet(setId = DEFAULT_BUBBLE_SET_ID) {
@@ -1821,6 +2020,8 @@ function switchBubbleSet(nextSetId) {
   state.viewportPanEnabled = nextDefaults.viewportPanEnabled;
   state.canvaslessEnabled = nextDefaults.canvaslessEnabled;
   resetStateForSetSwitch();
+  state.orbAgentId = getDefaultHomeAgentIdForSet(nextSet.id);
+  state.homeOrbContent = createAgentOrbContent(state.orbAgentId);
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
@@ -2440,9 +2641,12 @@ function render() {
     node.iconWrap.style.top = '0px';
     node.iconWrap.style.setProperty('--bubble-emoji-size', `${bubble.baseSize * 0.6}px`);
     const pillHoverBubbleScale = usesPillInteraction && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
-    node.iconWrap.style.transform = isPromotingDomainPill
-      ? 'scale(1)'
-      : (usesPillInteraction ? 'scale(1)' : `scale(${pillHoverBubbleScale})`);
+    const iconWrapScale = bubble.lockGraphicScaleOnHover && usesPillInteraction
+      ? (1 / Math.max(isPromoting ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale, 0.0001))
+      : (isPromotingDomainPill
+        ? 1
+        : (usesPillInteraction ? 1 : pillHoverBubbleScale));
+    node.iconWrap.style.transform = `scale(${iconWrapScale})`;
     node.surface.classList.toggle('has-surface-shell', Boolean(bubble.usesSurfaceShell));
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
     node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting));
