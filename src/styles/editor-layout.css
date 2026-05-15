@@ -399,7 +399,7 @@ body[data-thinking-debug-minimized="true"] #prototype-thinking-stream-text {
 }
 #c-primary {
   position: absolute; z-index: 3;
-  font-family: 'DM Sans', sans-serif; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
   color: rgba(255,255,255,0.90); white-space: nowrap; line-height: 1.1;
   transition:
     transform var(--content-move-t, var(--anim-t)),

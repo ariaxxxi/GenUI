@@ -271,7 +271,7 @@
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-media {
   width: 60px;
   height: 60px;
-  border-radius: 30px;
+  border-radius: 0;
   font-size: 30px;
   background: transparent;
   color: rgba(255,255,255,0.96);
@@ -327,7 +327,7 @@
   pointer-events: none;
 }
 .list-pill-thumb {
-  width: 60px; height: 60px; border-radius: 30px; flex-shrink: 0;
+  width: 60px; height: 60px; border-radius: 0; flex-shrink: 0;
   margin-left: 20px;
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.12);
