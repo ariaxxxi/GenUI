@@ -143,9 +143,13 @@ export function createMorphRender(ctx) {
     const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
     const stageId = String(scenario?.shape || 'list');
     const pillListStyle = stageId === 'list-pill';
+    const stage = callbacks.stageById?.(stageId, scenario) || null;
+    const pillStageSize = pillListStyle
+      ? (callbacks.stageMainSize?.(stage, scenario) || { width: 300, height: 80 })
+      : null;
     const frameEl = document.getElementById('ui-frame') || document.getElementById('stage');
     const frameHeight = Math.max(240, Math.round(frameEl?.getBoundingClientRect?.().height || 420));
-    const pillHeight = pillListStyle ? 100 : 56;
+    const pillHeight = pillListStyle ? Math.max(40, Math.round(Number(pillStageSize?.height) || 80)) : 56;
     const bottomInset = 20;
     const hasOrb = listStageShowsOrb(contentData);
     const listSelectable = listStageAllowsSelection(contentData);
@@ -177,7 +181,7 @@ export function createMorphRender(ctx) {
       entries,
       resolvedSelectedIndex,
       'stack',
-      { bottomY, gap: pillListStyle ? 12 : 8, startX: orbAnchor.x, startY: orbAnchor.y, itemHeight: pillHeight }
+      { bottomY, gap: pillListStyle ? 10 : 8, startX: orbAnchor.x, startY: orbAnchor.y, itemHeight: pillHeight }
     ).map((item, index) => {
       let direction = 'bottom';
       if (movingDown) {
@@ -197,6 +201,13 @@ export function createMorphRender(ctx) {
     prototypeListRoot.dataset.active = '1';
     prototypeListRoot.dataset.listListeningOrb = listStageShowsOrb(contentData) ? '1' : '';
     prototypeListRoot.dataset.listSelectable = listSelectable ? '1' : '';
+    if (pillListStyle) {
+      prototypeListRoot.style.setProperty('--prototype-list-pill-width', `${Math.max(120, Math.round(Number(pillStageSize?.width) || 300))}px`);
+      prototypeListRoot.style.setProperty('--prototype-list-pill-height', `${pillHeight}px`);
+    } else {
+      prototypeListRoot.style.removeProperty('--prototype-list-pill-width');
+      prototypeListRoot.style.removeProperty('--prototype-list-pill-height');
+    }
     prototypeListRoot.innerHTML = renderDisambiguationPills({
       items,
       selectedIndex: resolvedSelectedIndex,

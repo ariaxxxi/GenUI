@@ -23,7 +23,7 @@ import {
   celestialSelectedMaskBlurDefaultForRenderShape,
 } from './celestial-selected-presets.js';
 
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'list-pill', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'list-pill', 'nudge', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
@@ -32,6 +32,7 @@ const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
   { id: 'list', name: 'List', preset: true, renderShape: 'list', cornerRadius: 25, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail'] },
   { id: 'list-pill', name: 'List-Pill', preset: true, renderShape: 'list', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
+  { id: 'nudge', name: 'Nudge', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary', 'secondary'] },
   { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
   { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
   { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
@@ -177,6 +178,9 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function defaultStageTextFallback(shape) {
+    if (shape === 'nudge') {
+      return { primary: 'Buy milk', secondary: 'Grocery list', detail: '', intentHeader: '' };
+    }
     const renderShape = renderShapeForStageId(shape) || shape;
     if (renderShape === 'pill') {
       return { primary: 'Primary text', secondary: 'Secondary text', detail: '', intentHeader: '' };
@@ -481,6 +485,9 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function stageDefaultMainSize(stageIdValue) {
+    if (stageIdValue === 'list-pill') {
+      return { width: 300, height: 80 };
+    }
     const renderShape = renderShapeForStageId(stageIdValue);
     const base = SHAPES[renderShape] || SHAPES.pill;
     const width = Number(base?.main?.w);

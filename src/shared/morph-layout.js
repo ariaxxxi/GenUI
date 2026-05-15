@@ -51,6 +51,31 @@ export function createMorphLayout(ctx) {
       };
     }
     if (shape === 'pill') {
+      const activeStageId = String(callbacks.selectedScenario?.()?.shape || '');
+      if (activeStageId === 'nudge') {
+        const typography = normalizeTypography(state.contentTypographyState, 'pill');
+        const leftPad = 24;
+        const primaryToDividerGap = 12;
+        const dividerToSecondaryGap = 14;
+        const dividerWidth = 1;
+        const dividerHeight = Math.max(18, Math.round(typography.primary.size * 0.9));
+        const primaryText = String(C.prim.textContent || '').trim();
+        const secondaryText = String(C.sec.textContent || '').trim();
+        const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, typography.primary.size, 500) : 0;
+        const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
+        const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
+        const primaryX = leftPad;
+        const dividerX = primaryX + primaryWidth + primaryToDividerGap;
+        const secondaryX = primaryText && secondaryText ? (dividerX + dividerWidth + dividerToSecondaryGap) : primaryX;
+        const dividerOp = primaryText && secondaryText ? 1 : 0;
+        return {
+          thumb:{ x:leftPad, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 },
+          prim:{ x:primaryX, y:Math.round((h - primaryHeight) / 2), op:primaryText ? 1 : 0, fs:typography.primary.size, cx:false },
+          sec:{ x:secondaryX, y:Math.round((h - secondaryHeight) / 2), op:secondaryText ? 1 : 0, fs:typography.secondary.size, cx:false },
+          div:{ x:dividerX, y:Math.round((h - dividerHeight) / 2), dw:dividerWidth, op:dividerOp, dh:dividerHeight },
+          det:{ x:secondaryX, y:Math.round((h - secondaryHeight) / 2), op:0, fs:typography.detail.size, cx:false },
+        };
+      }
       const isAiHomeContext = document.body?.dataset?.pageMode === 'ai' && document.body?.dataset?.aiHomeState === 'context';
       if (isAiHomeContext) {
         const primarySize = 20;

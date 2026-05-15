@@ -15,6 +15,7 @@
 </head>
 <body class="mode-manual" data-page-mode="manual">
 <div class="bg-blur-image"></div>
+<video class="bg-blur-video" muted playsinline preload="metadata" aria-hidden="true"></video>
 
 <style id="anim-style">
   :root {
@@ -131,6 +132,21 @@
           <option value="assets/bg/grocery store.jpg">Grocery store</option>
           <option value="assets/bg/kitechen.jpg">Kitechen</option>
         </select>
+      </div>
+      <div class="sb-row tight">
+        <label class="sb-lbl" for="bg-video-upload">Background video</label>
+        <div class="media-upload-row">
+          <label class="sb-mini-btn upload-btn" for="bg-video-upload">Upload<input id="bg-video-upload" type="file" accept="video/*"/></label>
+          <button id="bg-video-reset" class="sb-mini-btn" type="button">Reset</button>
+        </div>
+      </div>
+      <div id="bg-video-state" class="icon-mode-badge">empty</div>
+      <div id="bg-video-controls" class="sb-row tight hidden">
+        <div class="sb-btn-row">
+          <button id="bg-video-play-toggle" class="sb-mini-btn" type="button">Play</button>
+        </div>
+        <label class="sb-lbl" for="bg-video-progress">Video progress</label>
+        <input id="bg-video-progress" class="sb-input" type="range" min="0" max="1000" step="1" value="0"/>
       </div>
     </div>
   </div>
@@ -312,6 +328,7 @@
         <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
           <option value="dot">Dot</option>
           <option value="list-pill">List-Pill</option>
+          <option value="nudge">Nudge</option>
           <option value="pill">Pill</option>
           <option value="card" selected>Card</option>
           <option value="blank">Blank</option>

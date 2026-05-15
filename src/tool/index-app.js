@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage, persistDurableJson, readDurableJsonRecord } from '../app-state.js';
+import { STORAGE_KEYS, RESPONSE_MODE, PAGE_MODE_OVERRIDE, AI_STAGE_OVERRIDE, readStoredJson, loadCanvasSettings, loadResponseMode, loadAiStageOverride, persistToStorage, persistDurableJson, readDurableJsonRecord, deleteDurableJsonRecord } from '../app-state.js';
 import { clamp } from '../utils.js';
 import { initMorph } from '../shared/morph.js';
 import { initScenarioData } from '../shared/scenario-data.js';
@@ -41,6 +41,16 @@ function normalizePrototypeBackground(src) {
 }
 
 let canvasSettings = loadCanvasSettings();
+const hadSessionVideoSettings = canvasSettings.backgroundMediaKind === 'video';
+if (hadSessionVideoSettings) {
+  canvasSettings = {
+    ...canvasSettings,
+    backgroundMediaKind: 'image',
+    backgroundVideoPaused: false,
+    backgroundVideoProgress: 0,
+    backgroundVideo: null,
+  };
+}
 let responseMode = loadResponseMode();
 let aiStageOverride = loadAiStageOverride();
 let scenarioRevision = Number(readStoredJson(STORAGE_KEYS.scenarioRevision, 0)) || 0;
@@ -81,7 +91,19 @@ function persistScenarios() {
   scenarioRevision = revision;
   void persistDurableJson(STORAGE_KEYS.scenarios, scenarioLibrary, { revision, label: 'scenarios' });
 }
-function persistCanvasSettings() { persistToStorage(STORAGE_KEYS.settings, canvasSettings, 'canvas settings'); }
+function persistCanvasSettings() {
+  const serializable = {
+    ...canvasSettings,
+    backgroundVideo: canvasSettings?.backgroundVideo
+      ? {
+          name: canvasSettings.backgroundVideo.name || '',
+          type: canvasSettings.backgroundVideo.type || '',
+        }
+      : null,
+  };
+  persistToStorage(STORAGE_KEYS.settings, serializable, 'canvas settings');
+}
+if (hadSessionVideoSettings) persistCanvasSettings();
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
 function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
 
@@ -104,11 +126,14 @@ function applyCanvasSettings() {
   const frame = document.getElementById('ui-frame');
   const frameBg = document.getElementById('ui-frame-bg');
   const blurBg = document.querySelector('.bg-blur-image');
+  const blurVideo = document.querySelector('.bg-blur-video');
   const frameMode = currentScenarioFrameMode();
   const isPhone = frameMode === 'phone';
   const isGlasses = frameMode === 'glasses';
   const backgroundImage = normalizePrototypeBackground(canvasSettings.backgroundImage);
   const backgroundEnabled = canvasSettings.backgroundEnabled !== false;
+  const backgroundVideo = canvasSettings.backgroundVideo?.src ? canvasSettings.backgroundVideo : null;
+  const backgroundMediaKind = backgroundVideo && canvasSettings.backgroundMediaKind === 'video' ? 'video' : 'image';
   document.body.classList.toggle('bg-off', !backgroundEnabled);
   document.body.classList.toggle('float-off', !canvasSettings.floatingEnabled);
   document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
@@ -117,8 +142,39 @@ function applyCanvasSettings() {
   document.body.style.backgroundSize = '';
   document.body.style.backgroundRepeat = '';
   if (blurBg) {
-    blurBg.style.backgroundImage = backgroundEnabled ? `url("${encodeURI(backgroundImage)}")` : 'none';
-    blurBg.style.opacity = backgroundEnabled ? '0.8' : '0';
+    blurBg.style.backgroundImage = backgroundEnabled && backgroundMediaKind === 'image' ? `url("${encodeURI(backgroundImage)}")` : 'none';
+    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image' ? '0.8' : '0';
+  }
+  if (blurVideo) {
+    const nextSrc = backgroundEnabled && backgroundMediaKind === 'video' && backgroundVideo?.src ? backgroundVideo.src : '';
+    if (nextSrc) {
+      const srcChanged = blurVideo.src !== nextSrc;
+      if (srcChanged) {
+        blurVideo.pause();
+        blurVideo.src = nextSrc;
+        blurVideo.load();
+      }
+      blurVideo.style.opacity = '0.8';
+      const desiredTime = Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoProgress) || 0));
+      const syncVideoTime = () => {
+        if (!Number.isFinite(blurVideo.duration) || blurVideo.duration <= 0) return;
+        const targetTime = desiredTime * blurVideo.duration;
+        if (Math.abs(blurVideo.currentTime - targetTime) > 0.1) blurVideo.currentTime = targetTime;
+      };
+      blurVideo.onloadedmetadata = syncVideoTime;
+      if (blurVideo.readyState >= 1) syncVideoTime();
+      if (canvasSettings.backgroundVideoPaused) {
+        blurVideo.pause();
+      } else {
+        const playPromise = blurVideo.play();
+        if (playPromise?.catch) playPromise.catch(() => {});
+      }
+    } else {
+      blurVideo.pause();
+      blurVideo.removeAttribute('src');
+      blurVideo.load?.();
+      blurVideo.style.opacity = '0';
+    }
   }
   if (frame) {
     frame.classList.toggle('phone', isPhone);
@@ -133,6 +189,16 @@ function applyCanvasSettings() {
   if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : '';
   if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
   if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
+  if (UI.bgVideoState) UI.bgVideoState.textContent = backgroundVideo ? 'loaded' : 'empty';
+  if (UI.bgVideoControls) UI.bgVideoControls.classList.toggle('hidden', !backgroundVideo);
+  if (UI.bgVideoPlayToggle) {
+    UI.bgVideoPlayToggle.textContent = canvasSettings.backgroundVideoPaused ? 'Play' : 'Pause';
+    UI.bgVideoPlayToggle.disabled = !backgroundVideo;
+  }
+  if (UI.bgVideoProgress) {
+    UI.bgVideoProgress.value = String(Math.round((Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoProgress) || 0))) * 1000));
+    UI.bgVideoProgress.disabled = !backgroundVideo;
+  }
   if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
   if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
   if (UI.framePhoneToggle) UI.framePhoneToggle.checked = isPhone;
@@ -148,6 +214,21 @@ function applyCanvasSettings() {
   }
   if (UI.phoneSceneVisibleRow) UI.phoneSceneVisibleRow.classList.toggle('hidden', !isPhone);
 }
+
+function syncBackgroundVideoProgressUi() {
+  const blurVideo = document.querySelector('.bg-blur-video');
+  if (!UI.bgVideoProgress || !blurVideo || !Number.isFinite(blurVideo.duration) || blurVideo.duration <= 0) return;
+  if (document.activeElement === UI.bgVideoProgress) return;
+  const ratio = Math.max(0, Math.min(1, blurVideo.currentTime / blurVideo.duration));
+  UI.bgVideoProgress.value = String(Math.round(ratio * 1000));
+}
+
+const prototypeBackgroundVideoEl = document.querySelector('.bg-blur-video');
+prototypeBackgroundVideoEl?.addEventListener('timeupdate', syncBackgroundVideoProgressUi);
+prototypeBackgroundVideoEl?.addEventListener('loadedmetadata', syncBackgroundVideoProgressUi);
+prototypeBackgroundVideoEl?.addEventListener('error', () => {
+  if (UI.bgVideoState) UI.bgVideoState.textContent = 'unsupported';
+});
 
 function applyStagePhoneBlur(shape) {
   const frame = document.getElementById('ui-frame');
@@ -490,6 +571,7 @@ const sidebar = initSidebar({
     }
   },
   persistCanvasSettings,
+  clearBackgroundVideoStorage: () => deleteDurableJsonRecord(STORAGE_KEYS.backgroundVideo, { label: 'background video' }),
   persistResponseMode,
   persistAiStageOverride,
   previewScenario,
@@ -745,3 +827,4 @@ Object.assign(window, {
 });
 
 void hydrateDurableScenarios();
+void deleteDurableJsonRecord(STORAGE_KEYS.backgroundVideo, { label: 'background video' });

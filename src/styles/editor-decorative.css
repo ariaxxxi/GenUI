@@ -255,11 +255,11 @@
   pointer-events: none;
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill {
-  width: 420px;
-  height: 100px;
-  --g-stage-h: 100px;
-  gap: 16px;
-  padding: 20px 24px 20px 20px;
+  width: var(--prototype-list-pill-width, 300px);
+  height: var(--prototype-list-pill-height, 80px);
+  --g-stage-h: var(--prototype-list-pill-height, 80px);
+  gap: 12px;
+  padding: 12px 20px 12px 16px;
   border-radius: 60px;
   background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
   backdrop-filter: blur(5px);
@@ -269,18 +269,18 @@
     inset 0 0 0 1px rgba(129,129,129,0.5);
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-media {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border-radius: 0;
-  font-size: 30px;
+  font-size: 24px;
   background: transparent;
   color: rgba(255,255,255,0.96);
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-copy {
-  gap: 8px;
+  gap: 4px;
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-text {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 500;
   color: rgba(255,255,255,0.98);
 }
@@ -290,7 +290,7 @@
 }
 .list-pill {
   position: absolute;
-  width: 420px; height: 120px;
+  width: var(--prototype-list-pill-width, 300px); height: var(--prototype-list-pill-height, 80px);
   border-radius: 60px;
   background: transparent;
   box-shadow: 0 0 40px rgba(255,255,255,0.02);
@@ -336,19 +336,19 @@
   position: relative; z-index: 3;
 }
 .list-pill-text {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 4px;
   margin-left: 16px;
   position: relative; z-index: 3;
 }
 .list-pill-primary {
   font-family: 'DM Sans', sans-serif;
-  font-size: 28px; font-weight: 500;
+  font-size: 24px; font-weight: 500;
   color: rgba(255,255,255,0.90);
   white-space: nowrap;
 }
 .list-pill-secondary {
   font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 300;
+  font-size: 24px; font-weight: 300;
   color: rgba(255,255,255,0.42);
   white-space: nowrap;
 }
@@ -374,7 +374,21 @@
   z-index:0;
   pointer-events:none;
 }
+.bg-blur-video{
+  position:fixed;
+  left:0;
+  top:0;
+  width:100vw;
+  height:100vh;
+  object-fit:cover;
+  object-position:center;
+  opacity:0;
+  z-index:0;
+  pointer-events:none;
+  background:#000;
+}
 body.bg-off .bg-blur-image { opacity: 0; }
+body.bg-off .bg-blur-video { opacity: 0; }
 
 /* ── Sidebar tab bar ── */
 .sb-tabs {

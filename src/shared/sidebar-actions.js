@@ -66,6 +66,9 @@ export function createSidebarActions(ctx, refs) {
     if (value === 'list-pill') {
       return { renderShape: 'list', name: 'List-Pill Stage', cornerRadius: 60, iconTextGap: null, iconLeftPadding: null, components: ['icon', 'primary', 'secondary'] };
     }
+    if (value === 'nudge') {
+      return { renderShape: 'pill', name: 'Nudge Stage', cornerRadius: 60, iconTextGap: null, iconLeftPadding: null, components: ['primary', 'secondary'] };
+    }
     if (value === 'blank') {
       return { renderShape: 'card', name: 'Blank Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: [] };
     }

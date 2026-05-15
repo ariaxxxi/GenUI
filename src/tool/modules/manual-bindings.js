@@ -28,6 +28,7 @@ export function initManualBindings({
   canvasSettings,
   setCanvasSettings,
   persistCanvasSettings,
+  clearBackgroundVideoStorage,
   persistScenarios,
   responseMode,
   setResponseMode,
@@ -1349,12 +1350,76 @@ export function initManualBindings({
   });
   syncPrototypeAiDebugPanels();
 
+  const revokeBackgroundVideoObjectUrl = (video) => {
+    const objectUrl = typeof video?.objectUrl === 'string' ? video.objectUrl : '';
+    if (!objectUrl || !objectUrl.startsWith('blob:')) return;
+    try {
+      URL.revokeObjectURL(objectUrl);
+    } catch {}
+  };
+
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));
   UI.bgImageSelect?.addEventListener('change', () => updateCanvas({
     backgroundImage: UI.bgImageSelect.value,
     backgroundEnabled: true,
+    backgroundMediaKind: 'image',
   }));
+  UI.bgVideoUpload?.addEventListener('click', (e) => { e.target.value = ''; });
+  UI.bgVideoUpload?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!String(file.type || '').startsWith('video/')) return void (e.target.value = '');
+    const previousVideo = canvasSettings().backgroundVideo;
+    const objectUrl = URL.createObjectURL(file);
+    revokeBackgroundVideoObjectUrl(previousVideo);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundEnabled: true,
+      backgroundMediaKind: 'video',
+      backgroundVideoPaused: false,
+      backgroundVideoProgress: 0,
+      backgroundVideo: {
+        src: objectUrl,
+        objectUrl,
+        name: String(file.name || ''),
+        type: String(file.type || ''),
+      },
+    });
+    persistCanvasSettings();
+    applyCanvasSettings();
+    e.target.value = '';
+  });
+  UI.bgVideoReset?.addEventListener('click', async () => {
+    revokeBackgroundVideoObjectUrl(canvasSettings().backgroundVideo);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'image',
+      backgroundVideoPaused: false,
+      backgroundVideoProgress: 0,
+      backgroundVideo: null,
+    });
+    persistCanvasSettings();
+    await clearBackgroundVideoStorage?.();
+    applyCanvasSettings();
+    if (UI.bgVideoUpload) UI.bgVideoUpload.value = '';
+  });
+  UI.bgVideoPlayToggle?.addEventListener('click', () => {
+    const nextPaused = !canvasSettings().backgroundVideoPaused;
+    setCanvasSettings({ ...canvasSettings(), backgroundVideoPaused: nextPaused, backgroundMediaKind: 'video' });
+    persistCanvasSettings();
+    applyCanvasSettings();
+  });
+  UI.bgVideoProgress?.addEventListener('input', (e) => {
+    const ratio = clamp((Number(e.target.value) || 0) / 1000, 0, 1);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'video',
+      backgroundVideoProgress: ratio,
+    });
+    persistCanvasSettings();
+    applyCanvasSettings();
+  });
   UI.floatToggle.addEventListener('change', () => updateCanvas({ floatingEnabled: UI.floatToggle.checked }));
   UI.alignBottomToggle.addEventListener('change', () => {
     updateCanvas({ bottomAlign: UI.alignBottomToggle.checked });

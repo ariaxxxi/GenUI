@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   aiOrbIcon: 'genui.ai-orb-icon.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
+  backgroundVideo: 'genui.background-video.v1',
 };
 
 const DURABLE_DB_NAME = 'genui-durable.v1';
@@ -62,6 +63,10 @@ export function loadCanvasSettings() {
     backgroundImage: typeof stored?.backgroundImage === 'string' && stored.backgroundImage.trim()
       ? stored.backgroundImage
       : DEFAULT_BACKGROUND_IMAGE,
+    backgroundMediaKind: stored?.backgroundMediaKind === 'video' ? 'video' : 'image',
+    backgroundVideo: null,
+    backgroundVideoPaused: stored?.backgroundVideoPaused === true,
+    backgroundVideoProgress: Math.max(0, Math.min(1, Number(stored?.backgroundVideoProgress) || 0)),
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
@@ -177,6 +182,29 @@ export async function readDurableJsonRecord(key) {
     } catch (err) {
       console.warn('Unable to read durable data', err);
       resolve(null);
+    }
+  });
+}
+
+export async function deleteDurableJsonRecord(key, { label = 'data' } = {}) {
+  const db = await openDurableDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(DURABLE_STORE_NAME, 'readwrite');
+      tx.objectStore(DURABLE_STORE_NAME).delete(key);
+      tx.oncomplete = () => resolve(true);
+      tx.onabort = () => {
+        console.warn(`Unable to delete durable ${label}`, tx.error);
+        resolve(false);
+      };
+      tx.onerror = () => {
+        console.warn(`Unable to delete durable ${label}`, tx.error);
+        resolve(false);
+      };
+    } catch (err) {
+      console.warn(`Unable to delete durable ${label}`, err);
+      resolve(false);
     }
   });
 }
