@@ -889,6 +889,7 @@ export function createMorphRender(ctx) {
     const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
     const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
     state.currentShape = shape;
+    state.currentStageId = stageId || null;
     document.body.dataset.currentShape = shape;
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     const orbVisualShape = (value) => value === 'magic' || value === 'ai' || value === 'agent-circle';
