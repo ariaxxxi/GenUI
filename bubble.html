@@ -12,6 +12,7 @@
 <body class="bubble2-page">
   <main class="bubble2-stage" data-bubble2-stage aria-label="Bubble 2 app cluster demo">
     <div class="bubble2-stage-media" aria-hidden="true">
+      <div class="bubble2-stage-image" data-bubble2-bg-image></div>
       <video class="bubble2-stage-video" data-bubble2-bg-video muted loop playsinline preload="metadata"></video>
     </div>
     <aside class="bubble2-sidebar" aria-label="Bubble content sets">
@@ -38,6 +39,18 @@
             </span>
             <span class="bubble2-toggle-switch">
               <input id="bubble2-canvasless-toggle" type="checkbox" data-bubble2-canvasless-toggle aria-label="Remove the Bubble Home canvas frame and make the viewport black"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Background Image</p>
+          <label class="bubble2-toggle-row" for="bubble2-bg-image-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Use Work Image</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-bg-image-toggle" type="checkbox" data-bubble2-bg-image-toggle aria-label="Use work background image on the bubble page"/>
               <span class="bubble2-toggle-slider" aria-hidden="true"></span>
             </span>
           </label>

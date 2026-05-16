@@ -128,10 +128,14 @@ const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
 const SWAP_DEMOTED_END_SCALE = 0.55;
 const BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS = 1200;
-const BUBBLE_HOME_IDLE_STREAM_TEXTS = Object.freeze(['Reasoning', 'Thinking', 'Taking action']);
-const BUBBLE_HOME_IDLE_STREAM_HOLD_MS = 1600;
 const BUBBLE_HOME_IDLE_STREAM_GAP_MS = 180;
 const BUBBLE_HOME_STREAM_FADE_MS = 180;
+const BUBBLE_HOME_INTERRUPT_THINKING_TEXT = 'Reasoning';
+const BUBBLE_HOME_THINKING_PILL_ICON_SIZE = 52;
+const BUBBLE_HOME_THINKING_PILL_GAP = 10;
+const BUBBLE_HOME_THINKING_PILL_PADDING_X = Object.freeze({ left: 14, right: 20 });
+const BUBBLE_HOME_THINKING_PILL_MIN_WIDTH = 80;
+const BUBBLE_HOME_THINKING_TEXT_FONT = '500 24px "DM Sans", sans-serif';
 const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const textMeasureContext = document.createElement('canvas').getContext('2d');
@@ -238,6 +242,21 @@ const INTERRUPT_RED_THEME = Object.freeze({
   blobTopEdge: 'rgb(255 112 112)',
   blobBottomCore: 'rgb(255 146 111)',
   blobBottomEdge: 'rgb(209 63 63)',
+});
+const INTERRUPT_HOME_ORB_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 255 255)',
+  blobTopEdge: 'rgb(255 255 255)',
+  blobBottomCore: 'rgb(255 255 255)',
+  blobBottomEdge: 'rgb(255 255 255)',
+});
+const HOME_ORB_SHELL_PRESET = Object.freeze({
+  ...CELESTIAL_ORB_PRESET,
+  maskBlur: 10,
+  blobBlur: 38,
+  blobTopX: -17,
+  blobBottomX: 62,
+  highlightScale: 40,
+  innerGlowBlur: 0,
 });
 
 const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
@@ -360,6 +379,7 @@ function sleep(ms) {
 }
 
 function currentBubbleHomeOrbTheme() {
+  if (state.activeSetId === 'interrupt') return INTERRUPT_HOME_ORB_THEME;
   return state.homeOrbContent?.theme || getAiOrbIconOption(state.orbAgentId)?.theme || {};
 }
 
@@ -368,7 +388,7 @@ function applyBubbleHomeOrbShellChrome(hostEl, theme) {
   applyBubbleCelestialChrome(
     hostEl.querySelector('.bubble2-orb-selection'),
     hostEl,
-    CELESTIAL_ORB_PRESET,
+    HOME_ORB_SHELL_PRESET,
     theme || {},
     orbGeometryForSize(ORB_BASE_SIZE),
   );
@@ -419,6 +439,7 @@ const APP_BUBBLES_CONFIG = [
     imageOutlineWidth: 3,
     pillTrailingIcon: 'pause',
     pillTrailingIconColor: '#1ED760',
+    pillActionGap: 2,
     subIconKind: 'spotify-badge',
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
@@ -520,7 +541,7 @@ const APP_BUBBLES_CONFIG = [
     img: 'assets/profile2.png',
     fill: true,
     isPill: true,
-    pillTitle: 'Hiro',
+    pillTitle: 'Lisa',
     pillSubtitle: 'Yesterday',
     subIconKind: 'call-badge',
     subIconSize: 41.532,
@@ -574,6 +595,7 @@ const PROMPT_BUBBLES_CONFIG = [
     imageOutlineWidth: 3,
     pillTrailingIcon: 'pause',
     pillTrailingIconColor: '#1ED760',
+    pillActionGap: 2,
     subIconKind: 'spotify-badge',
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
@@ -1109,9 +1131,7 @@ function isAgentStyleBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
 }
 
 function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
-  return isAgentStyleBubbleSet(setId)
-    ? { viewportPanEnabled: true, canvaslessEnabled: true }
-    : { viewportPanEnabled: false, canvaslessEnabled: false };
+  return { viewportPanEnabled: true, canvaslessEnabled: true };
 }
 
 function getBubbleSetSequence(setId = DEFAULT_BUBBLE_SET_ID) {
@@ -1155,6 +1175,7 @@ function resolveRenderedBubble(slot, setId = state.activeSetId) {
 const state = {
   activeSetId: DEFAULT_BUBBLE_SET_ID,
   ...getBubbleSetControlDefaults(DEFAULT_BUBBLE_SET_ID),
+  backgroundImageEnabled: true,
   backgroundVideo: null,
   backgroundVideoPaused: false,
   backgroundVideoProgress: 0,
@@ -1217,6 +1238,8 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  bgImage: document.querySelector('[data-bubble2-bg-image]'),
+  bgImageToggle: document.querySelector('[data-bubble2-bg-image-toggle]'),
   bgVideo: document.querySelector('[data-bubble2-bg-video]'),
   bgVideoUpload: document.querySelector('[data-bubble2-bg-video-upload]'),
   bgVideoReset: document.querySelector('[data-bubble2-bg-video-reset]'),
@@ -1229,6 +1252,7 @@ const refs = {
   orb: null,
   orbVisual: null,
   orbStream: null,
+  orbStreamIcon: null,
   orbStreamText: null,
   swapLayer: null,
   bubbleNodes: new Map(),
@@ -1243,6 +1267,7 @@ function init() {
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
+  syncBackgroundImageUi();
   syncBackgroundVideoUi();
   buildScene();
   updateMeasuredChildChipWidths();
@@ -1269,6 +1294,7 @@ function buildScene() {
   refs.orb = null;
   refs.orbVisual = null;
   refs.orbStream = null;
+  refs.orbStreamIcon = null;
   refs.orbStreamText = null;
   refs.swapLayer = null;
   syncedChildSelectionParentId = null;
@@ -1292,6 +1318,7 @@ function buildScene() {
   refs.orb = createOrbNode();
   refs.orbVisual = refs.orb.querySelector('.bubble2-orb-visual');
   refs.orbStream = refs.orb.querySelector('.bubble2-orb-stream');
+  refs.orbStreamIcon = refs.orb.querySelector('[data-bubble2-orb-stream-icon]');
   refs.orbStreamText = refs.orb.querySelector('.bubble2-orb-stream-text');
   fragment.appendChild(refs.orb);
   refs.swapLayer = document.createElement('div');
@@ -1571,32 +1598,28 @@ function createChildNode(parentBubble, action) {
 
 function createOrbNode() {
   const button = document.createElement('button');
-  button.className = 'bubble2-orb';
+  button.className = `bubble2-orb${state.activeSetId === 'interrupt' ? ' is-interrupt-home-orb' : ''}`;
   button.type = 'button';
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
+
+  if (state.activeSetId === 'interrupt') {
+    button.insertAdjacentHTML(
+      'beforeend',
+      '<div class="bubble2-orb-stream" aria-hidden="true"><span class="bubble2-orb-stream-icon"><img data-bubble2-orb-stream-icon alt=""></span><span class="bubble2-orb-stream-text"></span></div>',
+    );
+    syncBubbleHomeThinkingPillText(interruptSessionPaused ? 'Session paused' : BUBBLE_HOME_INTERRUPT_THINKING_TEXT, button);
+    syncBubbleHomeThinkingPillIcon(state.homeOrbContent, button);
+    return button;
+  }
 
   const visual = document.createElement('div');
   visual.className = 'bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
 
   visual.innerHTML = renderBubbleOrbShellMarkup();
   button.appendChild(visual);
-  button.insertAdjacentHTML(
-    'beforeend',
-    '<div class="bubble2-orb-stream hidden" aria-hidden="true"><span class="bubble2-orb-stream-text"></span></div>',
-  );
   syncBubbleHomeOrbVisual(button, { animate: false });
 
   return button;
-}
-
-function createBubbleHomePixelCursor() {
-  const px = document.createElement('span');
-  px.className = 'pixel-cursor';
-  for (let i = 0; i < 16; i += 1) {
-    const dot = document.createElement('span');
-    px.appendChild(dot);
-  }
-  return px;
 }
 
 function removeBubbleHomeStreamCursor() {
@@ -1640,7 +1663,7 @@ function stopBubbleHomeStream() {
   setBubbleHomeStreamVisible(false);
 }
 
-async function showPersistentBubbleHomeStreamText(text, { animate = true } = {}) {
+async function showPersistentBubbleHomeStreamText(text) {
   const value = String(text || '').trim();
   if (!value || !refs.orbStreamText) return;
   bubbleHomeStreamState.idleLoopToken += 1;
@@ -1652,18 +1675,9 @@ async function showPersistentBubbleHomeStreamText(text, { animate = true } = {})
   const token = ++bubbleHomeStreamState.streamToken;
   setBubbleHomeStreamVisible(true);
   removeBubbleHomeStreamCursor();
-  if (bubbleHomeStreamState.currentText && bubbleHomeStreamState.currentText !== value) {
-    const cleared = await deleteBubbleHomeStreamText(token);
-    if (!cleared) return;
-    if (!(await waitForBubbleHomeStream(120, token))) return;
-  }
-  if (animate && bubbleHomeStreamState.currentText !== value) {
-    const typed = await typeBubbleHomeStreamText(value, token);
-    if (!typed) return;
-    return;
-  }
+  if (token !== bubbleHomeStreamState.streamToken) return;
   bubbleHomeStreamState.currentText = value;
-  refs.orbStreamText.textContent = value;
+  syncBubbleHomeThinkingPillText(value);
 }
 
 function fadeOutBubbleHomeStream({ clearAfter = true } = {}) {
@@ -1687,59 +1701,6 @@ function fadeOutBubbleHomeStream({ clearAfter = true } = {}) {
 async function waitForBubbleHomeStream(ms, token) {
   await sleep(ms);
   return token === bubbleHomeStreamState.streamToken && Boolean(refs.orbStreamText?.isConnected);
-}
-
-function tokenizeBubbleHomeStreamText(text) {
-  const tokens = [];
-  let idx = 0;
-  while (idx < text.length) {
-    const len = Math.random() < 0.4 ? 1 : Math.random() < 0.6 ? 2 : Math.random() < 0.7 ? 3 : 4;
-    tokens.push(text.slice(idx, idx + len));
-    idx += len;
-  }
-  return tokens;
-}
-
-async function typeBubbleHomeStreamText(text, token) {
-  if (!refs.orbStreamText || token !== bubbleHomeStreamState.streamToken) return false;
-  removeBubbleHomeStreamCursor();
-  const px = createBubbleHomePixelCursor();
-  let settled = '';
-  const tokens = tokenizeBubbleHomeStreamText(text);
-  for (const tokenText of tokens) {
-    const cycles = 2 + Math.floor(Math.random() * 3);
-    for (let cycle = 0; cycle < cycles; cycle += 1) {
-      if (token !== bubbleHomeStreamState.streamToken || !refs.orbStreamText?.isConnected) {
-        removeBubbleHomeStreamCursor();
-        return false;
-      }
-      Array.from(px.children).forEach((dot) => {
-        dot.style.opacity = Math.random() < 0.5 ? '1' : '0.08';
-      });
-      await sleep(21);
-    }
-    settled += tokenText;
-    bubbleHomeStreamState.currentText = settled;
-    refs.orbStreamText.textContent = settled;
-    refs.orbStreamText.appendChild(px);
-    bubbleHomeStreamState.currentCursor = px;
-    await sleep(6);
-  }
-  removeBubbleHomeStreamCursor();
-  return token === bubbleHomeStreamState.streamToken;
-}
-
-async function deleteBubbleHomeStreamText(token) {
-  if (!refs.orbStreamText) return false;
-  let settled = bubbleHomeStreamState.currentText;
-  while (settled.length > 0) {
-    if (token !== bubbleHomeStreamState.streamToken || !refs.orbStreamText?.isConnected) return false;
-    settled = settled.slice(0, -1);
-    bubbleHomeStreamState.currentText = settled;
-    refs.orbStreamText.textContent = settled;
-    await sleep(21 + (Math.random() * 14));
-  }
-  return token === bubbleHomeStreamState.streamToken;
 }
 
 function getBubbleHomeContentLabel(content = state.homeOrbContent) {
@@ -1766,19 +1727,11 @@ async function streamBubbleHomeTransitionText(text) {
   const token = ++bubbleHomeStreamState.streamToken;
   setBubbleHomeStreamVisible(true);
   removeBubbleHomeStreamCursor();
-  if (bubbleHomeStreamState.currentText) {
-    const cleared = await deleteBubbleHomeStreamText(token);
-    if (!cleared) return;
-    if (!(await waitForBubbleHomeStream(200, token))) return;
-  }
-  const typed = await typeBubbleHomeStreamText(value, token);
-  if (!typed) return;
+  bubbleHomeStreamState.currentText = value;
+  syncBubbleHomeThinkingPillText(value);
   if (!(await waitForBubbleHomeStream(BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS, token))) return;
-  const deleted = await deleteBubbleHomeStreamText(token);
-  if (!deleted) return;
   if (token !== bubbleHomeStreamState.streamToken) return;
-  setBubbleHomeStreamVisible(false);
-  scheduleInterruptRestingStream();
+  await showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
 }
 
 function shouldRunInterruptIdleStream() {
@@ -1800,7 +1753,7 @@ function scheduleInterruptRestingStream(delayMs = 0) {
     bubbleHomeStreamState.idleLoopTimer = null;
     if (state.activeSetId !== 'interrupt' || state.isPressed || state.swapTransition?.active) return;
     if (interruptSessionPaused) {
-      void showPersistentBubbleHomeStreamText('Session paused', { animate: false });
+      void showPersistentBubbleHomeStreamText('Session paused');
       return;
     }
     void runInterruptIdleStreamLoop();
@@ -1811,48 +1764,20 @@ async function runInterruptIdleStreamLoop() {
   if (!shouldRunInterruptIdleStream() || bubbleHomeStreamState.idleLoopActive) return;
   const idleToken = ++bubbleHomeStreamState.idleLoopToken;
   bubbleHomeStreamState.idleLoopActive = true;
-  while (idleToken === bubbleHomeStreamState.idleLoopToken && shouldRunInterruptIdleStream()) {
-    for (const text of BUBBLE_HOME_IDLE_STREAM_TEXTS) {
-      if (idleToken !== bubbleHomeStreamState.idleLoopToken || !shouldRunInterruptIdleStream()) break;
-      const token = ++bubbleHomeStreamState.streamToken;
-      setBubbleHomeStreamVisible(true);
-      if (bubbleHomeStreamState.currentText) {
-        const cleared = await deleteBubbleHomeStreamText(token);
-        if (!cleared) {
-          bubbleHomeStreamState.idleLoopActive = false;
-          return;
-        }
-        if (!(await waitForBubbleHomeStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS, token))) {
-          bubbleHomeStreamState.idleLoopActive = false;
-          return;
-        }
-      }
-      const typed = await typeBubbleHomeStreamText(text, token);
-      if (!typed) {
-        bubbleHomeStreamState.idleLoopActive = false;
-        return;
-      }
-      if (!(await waitForBubbleHomeStream(BUBBLE_HOME_IDLE_STREAM_HOLD_MS, token))) {
-        bubbleHomeStreamState.idleLoopActive = false;
-        return;
-      }
-    }
+  if (idleToken === bubbleHomeStreamState.idleLoopToken && shouldRunInterruptIdleStream()) {
+    await showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
   }
   bubbleHomeStreamState.idleLoopActive = false;
-  if (!shouldRunInterruptIdleStream()) return;
-  if (bubbleHomeStreamState.currentText) {
-    const token = ++bubbleHomeStreamState.streamToken;
-    const deleted = await deleteBubbleHomeStreamText(token);
-    if (!deleted) return;
-  }
-  setBubbleHomeStreamVisible(false);
-  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
 }
 
 function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
   if (!root) return;
   const content = state.homeOrbContent;
   if (!content) return;
+  if (state.activeSetId === 'interrupt') {
+    syncBubbleHomeThinkingPillIcon(content, root);
+    return;
+  }
   const visual = root?.querySelector?.('.bubble2-orb-visual');
   syncBubbleHomeOrbVisualStateClasses(visual, content);
   if (content.kind === 'agent-orb') {
@@ -1886,6 +1811,34 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
   });
 }
 
+function syncBubbleHomeThinkingPillIcon(content = state.homeOrbContent, root = refs.orb) {
+  const image = refs.orbStreamIcon || root?.querySelector?.('[data-bubble2-orb-stream-icon]');
+  if (!image || !content) return;
+  const fallback = getAiOrbIconOption(state.orbAgentId);
+  const src = String(content.img || fallback?.src || '').trim();
+  if (src && image.getAttribute('src') !== src) image.src = src;
+  image.alt = String(content.alt || content.label || fallback?.label || '');
+}
+
+function syncBubbleHomeThinkingPillText(text, root = refs.orb) {
+  const value = String(text || '').trim();
+  const stream = refs.orbStream || root?.querySelector?.('.bubble2-orb-stream');
+  const textEl = refs.orbStreamText || root?.querySelector?.('.bubble2-orb-stream-text');
+  if (!value || !stream || !textEl) return;
+  const textWidth = Math.ceil(measureTextWidth(value, BUBBLE_HOME_THINKING_TEXT_FONT)) + 2;
+  const pillWidth = Math.max(
+    BUBBLE_HOME_THINKING_PILL_MIN_WIDTH,
+    BUBBLE_HOME_THINKING_PILL_PADDING_X.left
+      + BUBBLE_HOME_THINKING_PILL_ICON_SIZE
+      + BUBBLE_HOME_THINKING_PILL_GAP
+      + textWidth
+      + BUBBLE_HOME_THINKING_PILL_PADDING_X.right,
+  );
+  textEl.textContent = value;
+  stream.style.setProperty('--bubble2-thinking-pill-width', `${pillWidth}px`);
+  stream.style.setProperty('--bubble2-thinking-text-width', `${textWidth}px`);
+}
+
 bindAiOrbIconStorageSync(document, window);
 
 function syncSetSwitcherUi() {
@@ -1913,6 +1866,15 @@ function syncCanvaslessUi() {
   if (refs.canvaslessToggle) refs.canvaslessToggle.checked = state.canvaslessEnabled;
   document.body.classList.toggle('is-canvasless', state.canvaslessEnabled);
   refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
+}
+
+function syncBackgroundImageUi() {
+  const enabled = state.backgroundImageEnabled === true;
+  if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
+  refs.stage?.classList.toggle('has-bg-image', enabled);
+  if (refs.bgImage) {
+    refs.bgImage.style.backgroundImage = enabled ? 'url("assets/bg/work.jpg")' : 'none';
+  }
 }
 
 function revokeBackgroundVideoObjectUrl(video) {
@@ -2106,6 +2068,7 @@ function bindEvents() {
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
   refs.bgVideoUpload?.addEventListener('click', (event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement) target.value = '';
@@ -2144,6 +2107,13 @@ function handleCanvaslessToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.canvaslessEnabled = target.checked;
   syncCanvaslessUi();
+}
+
+function handleBackgroundImageToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundImageEnabled = target.checked;
+  syncBackgroundImageUi();
 }
 
 function handleBackgroundVideoUpload(event) {
@@ -2272,9 +2242,6 @@ function handlePointerDown(event) {
   if (!shouldStartBubblePress(event)) return;
   if (state.swapTransition?.active) return;
   event.preventDefault();
-  if (state.activeSetId === 'interrupt') {
-    fadeOutBubbleHomeStream();
-  }
   const now = performance.now();
   clearChildHoverTimer();
   if (refs.shell) {
@@ -2503,6 +2470,14 @@ function startBubbleSwap(scene, now) {
     previousHomeOrbContent: { ...state.homeOrbContent },
   };
 
+  if (isPauseAction) {
+    interruptSessionPaused = true;
+    void showPersistentBubbleHomeStreamText('Session paused');
+  } else if (isPlayAction) {
+    interruptSessionPaused = false;
+    void showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
+  }
+
   scheduleMotionPhaseRender(state.closeMotionUntil);
   scheduleRender();
 }
@@ -2524,8 +2499,7 @@ function commitBubbleSwap() {
     state.swapTransition = null;
     state.closeMotionUntil = 0;
     clearSwapLayer();
-    fadeOutBubbleHomeStream();
-    scheduleInterruptRestingStream(BUBBLE_HOME_STREAM_FADE_MS + BUBBLE_HOME_IDLE_STREAM_GAP_MS);
+    void showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
     scheduleRender();
     return;
   }
