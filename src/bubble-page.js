@@ -355,8 +355,7 @@ function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
 function renderBubbleOrbShellMarkup(options = {}) {
   const includeCenter = options.includeCenter !== false;
   return `
-    <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
-    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
+    <div class="bubble2-orb-simple-shell" aria-hidden="true"></div>
     ${includeCenter ? renderAiOrbCenterMarkup() : ''}
   `;
 }
@@ -384,14 +383,7 @@ function currentBubbleHomeOrbTheme() {
 }
 
 function applyBubbleHomeOrbShellChrome(hostEl, theme) {
-  if (!hostEl) return;
-  applyBubbleCelestialChrome(
-    hostEl.querySelector('.bubble2-orb-selection'),
-    hostEl,
-    HOME_ORB_SHELL_PRESET,
-    theme || {},
-    orbGeometryForSize(ORB_BASE_SIZE),
-  );
+  // Home orb shells use the same static glass treatment as the thinking pill.
 }
 
 function resetBubbleHomeOrbCenter(root = refs.orb) {
@@ -414,14 +406,7 @@ function syncBubbleHomeOrbVisualStateClasses(visual, content = state.homeOrbCont
 }
 
 function applyBubbleHoverShellChrome(hostEl, theme, geometryOverride) {
-  if (!hostEl) return;
-  applyBubbleCelestialChrome(
-    hostEl.querySelector('.bubble2-orb-selection'),
-    hostEl,
-    CELESTIAL_ORB_PRESET,
-    theme || {},
-    geometryOverride,
-  );
+  // Bubble shells use the same static glass treatment as the thinking pill.
 }
 
 const APP_BUBBLES_CONFIG = [
@@ -1460,7 +1445,7 @@ function syncBubbleNodeContent(node, bubble) {
 
   if (!bubble.isPill && !bubble.hoverExpandsToPill && !bubble.usesSurfaceShell) {
     const hoverShell = document.createElement('div');
-    hoverShell.className = 'bubble2-hover-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
+    hoverShell.className = 'bubble2-hover-shell';
     hoverShell.setAttribute('aria-hidden', 'true');
     hoverShell.innerHTML = renderBubbleOrbShellMarkup({ includeCenter: false });
     node.inner.appendChild(hoverShell);
@@ -1613,7 +1598,7 @@ function createOrbNode() {
   }
 
   const visual = document.createElement('div');
-  visual.className = 'bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
+  visual.className = 'bubble2-orb-visual';
 
   visual.innerHTML = renderBubbleOrbShellMarkup();
   button.appendChild(visual);
@@ -3276,7 +3261,7 @@ function createSwapPromotedNode() {
   const wrapper = document.createElement('div');
   wrapper.className = 'bubble2-swap-node bubble2-swap-promoted';
   wrapper.innerHTML = `
-    <div class="bubble2-swap-orb bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected">
+    <div class="bubble2-swap-orb bubble2-orb-visual">
       ${renderBubbleOrbShellMarkup()}
     </div>
   `;
@@ -3287,7 +3272,7 @@ function createSwapDemotedNode() {
   const wrapper = document.createElement('div');
   wrapper.className = 'bubble2-swap-node bubble2-swap-demoted';
   wrapper.innerHTML = `
-    <div class="bubble2-swap-demoted-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected">
+    <div class="bubble2-swap-demoted-shell bubble2-orb-visual">
       ${renderBubbleOrbShellMarkup()}
     </div>
   `;
