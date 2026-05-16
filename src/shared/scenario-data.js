@@ -45,6 +45,8 @@ function selectedBlobDefaultsForRenderShape(renderShape = 'pill') {
 
 export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }) {
   const clamp = typeof clampFn === 'function' ? clampFn : ((v, lo, hi) => Math.max(lo, Math.min(hi, v)));
+  const textMeasureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+  const textMeasureContext = textMeasureCanvas?.getContext?.('2d') || null;
 
   function stageLibrary() {
     const value = typeof getStageLibrary === 'function' ? getStageLibrary() : [];
@@ -156,6 +158,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function stageVisibleEditorFields(stage) {
+    if (stage?.id === 'list-pill') return new Set();
     const fields = new Set();
     if (stageHasComponent(stage, 'primary')) fields.add('primary');
     if (stageHasComponent(stage, 'secondary')) fields.add('secondary');
@@ -435,19 +438,6 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   function listFallbackItemsForShape(shape, textByShape = {}, listChipIconsByShape = {}) {
     const text = normalizeStageTextEntry(textByShape?.[shape], defaultStageTextFallback(shape));
     const icons = normalizeListChipIconEntry(listChipIconsByShape?.[shape]);
-    if (shape === 'list-pill') {
-      const rows = [];
-      const primary = String(text.primary || '').trim();
-      const secondary = String(text.secondary || '').trim();
-      const detail = String(text.detail || '').trim();
-      if (primary || secondary) {
-        rows.push(createDefaultListItem(primary || 'Primary text', secondary, icons.primary || createIcon('none', '')));
-      }
-      if (detail) {
-        rows.push(createDefaultListItem(detail, '', icons.secondary || createIcon('none', '')));
-      }
-      if (rows.length) return rows;
-    }
     const labels = [text.primary, text.secondary, text.detail].filter((value) => String(value || '').trim());
     const fallbackLabels = labels.length ? labels : defaultListLabelsForShape(shape);
     return fallbackLabels.map((label, index) => createDefaultListItem(
@@ -480,6 +470,22 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return renderShapeForStageId(shape, scenario);
   }
 
+  function measureSingleLineWidth(text, fontSize, fontWeight = 400) {
+    const value = String(text || '').trim();
+    if (!value) return 0;
+    if (textMeasureContext) {
+      textMeasureContext.font = `${fontWeight} ${fontSize}px "DM Sans", sans-serif`;
+      return Math.ceil(textMeasureContext.measureText(value).width);
+    }
+    return Math.ceil(value.length * fontSize * 0.58);
+  }
+
+  function stageTypographyForShape(stageIdValue, scenario = null) {
+    const renderShape = renderShapeForStageId(stageIdValue, scenario) || stageIdValue || 'pill';
+    const typographyByShape = normalizeTypographyByShape(scenario?.content?.typographyByShape, stageIdValue);
+    return typographyByShape?.[stageIdValue] || defaultTypographyForShape(renderShape);
+  }
+
   function scenarioStageSizeOverride(scenario, shape) {
     return normalizeStageSizeEntry(scenario?.content?.sizeByShape?.[shape]);
   }
@@ -487,6 +493,9 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   function stageDefaultMainSize(stageIdValue) {
     if (stageIdValue === 'list-pill') {
       return { width: 300, height: 80 };
+    }
+    if (stageIdValue === 'nudge') {
+      return { width: 240, height: 80 };
     }
     const renderShape = renderShapeForStageId(stageIdValue);
     const base = SHAPES[renderShape] || SHAPES.pill;
@@ -508,7 +517,28 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     ).frameMode;
     const phoneDefaultWidth = clamp((Number(canvasSettings()?.phoneFrameWidth) || 390) - 20, 40, 1400);
     const usePhoneDefaultWidth = frameMode === 'phone' && ['pill', 'card', 'card-s', 'image'].includes(renderShape);
-    const defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
+    let defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
+    if (stage?.id === 'nudge') {
+      const text = stageTextForShape(scenario, stage.id);
+      const typography = stageTypographyForShape(stage.id, scenario);
+      const primaryText = String(text?.primary || '').trim();
+      const secondaryText = String(text?.secondary || '').trim();
+      const leftPad = 24;
+      const rightPad = 24;
+      const primaryToDividerGap = 12;
+      const dividerToSecondaryGap = 14;
+      const dividerWidth = 1;
+      const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, typography.primary.size, 500) : 0;
+      const secondaryWidth = secondaryText ? measureSingleLineWidth(secondaryText, typography.secondary.size, 400) : 0;
+      const dividerExtra = primaryText && secondaryText
+        ? (primaryToDividerGap + dividerWidth + dividerToSecondaryGap)
+        : 0;
+      defaultWidth = clamp(
+        Math.round(leftPad + primaryWidth + dividerExtra + secondaryWidth + rightPad),
+        120,
+        1400,
+      );
+    }
     return {
       width: Number.isFinite(sizeOverride.widthOverride) ? sizeOverride.widthOverride : defaultWidth,
       height: Number.isFinite(sizeOverride.heightOverride) ? sizeOverride.heightOverride : defaults.height,

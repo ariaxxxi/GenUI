@@ -55,6 +55,7 @@ export function createMorphLayout(ctx) {
       if (activeStageId === 'nudge') {
         const typography = normalizeTypography(state.contentTypographyState, 'pill');
         const leftPad = 24;
+        const rightPad = 24;
         const primaryToDividerGap = 12;
         const dividerToSecondaryGap = 14;
         const dividerWidth = 1;
@@ -62,9 +63,13 @@ export function createMorphLayout(ctx) {
         const primaryText = String(C.prim.textContent || '').trim();
         const secondaryText = String(C.sec.textContent || '').trim();
         const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, typography.primary.size, 500) : 0;
+        const secondaryWidth = secondaryText ? measureSingleLineWidth(secondaryText, typography.secondary.size, 400) : 0;
         const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
         const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
-        const primaryX = leftPad;
+        const rowWidth = primaryWidth
+          + (primaryText && secondaryText ? (primaryToDividerGap + dividerWidth + dividerToSecondaryGap) : 0)
+          + secondaryWidth;
+        const primaryX = Math.max(leftPad, Math.round((w - rightPad - rowWidth) / 2));
         const dividerX = primaryX + primaryWidth + primaryToDividerGap;
         const secondaryX = primaryText && secondaryText ? (dividerX + dividerWidth + dividerToSecondaryGap) : primaryX;
         const dividerOp = primaryText && secondaryText ? 1 : 0;
