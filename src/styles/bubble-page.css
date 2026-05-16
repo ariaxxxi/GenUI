@@ -40,6 +40,31 @@ body.bubble2-page.is-canvasless {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow: hidden;
+}
+
+.bubble2-stage-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #000000;
+  pointer-events: none;
+}
+
+.bubble2-stage-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 260ms ease, transform 1200ms ease;
+}
+
+.bubble2-stage.has-bg-video .bubble2-stage-video {
+  opacity: 0.82;
 }
 
 .bubble2-sidebar {
@@ -49,6 +74,7 @@ body.bubble2-page.is-canvasless {
   transform: translateY(-50%);
   width: 160px;
   flex: 0 0 160px;
+  z-index: 2;
 }
 
 .bubble2-sidebar-card {
@@ -83,6 +109,77 @@ body.bubble2-page.is-canvasless {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.bubble2-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bubble2-upload-btn,
+.bubble2-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.86);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    transform 220ms ease;
+}
+
+.bubble2-upload-btn:hover,
+.bubble2-ghost-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bubble2-upload-btn input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bubble2-upload-state {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.bubble2-video-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bubble2-video-controls.is-hidden {
+  display: none;
+}
+
+.bubble2-video-progress-label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.bubble2-video-progress {
+  width: 100%;
+  accent-color: rgba(157, 195, 255, 0.9);
 }
 
 .bubble2-set-button {
@@ -220,6 +317,7 @@ body.bubble2-page.is-canvasless {
   border: 1px solid var(--bubble2-frame-border);
   background: var(--bubble2-frame-bg);
   box-shadow: var(--bubble2-shadow);
+  z-index: 1;
 }
 
 .bubble2-canvas-banner {

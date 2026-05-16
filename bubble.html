@@ -11,6 +11,9 @@
 </head>
 <body class="bubble2-page">
   <main class="bubble2-stage" data-bubble2-stage aria-label="Bubble 2 app cluster demo">
+    <div class="bubble2-stage-media" aria-hidden="true">
+      <video class="bubble2-stage-video" data-bubble2-bg-video muted loop playsinline preload="metadata"></video>
+    </div>
     <aside class="bubble2-sidebar" aria-label="Bubble content sets">
       <div class="bubble2-sidebar-card" data-bubble2-control-panel>
         <p class="bubble2-sidebar-eyebrow">Content Sets</p>
@@ -38,6 +41,22 @@
               <span class="bubble2-toggle-slider" aria-hidden="true"></span>
             </span>
           </label>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Background Video</p>
+          <div class="bubble2-upload-row">
+            <label class="bubble2-upload-btn" for="bubble2-bg-video-upload">
+              Upload
+              <input id="bubble2-bg-video-upload" type="file" accept="video/*" data-bubble2-bg-video-upload/>
+            </label>
+            <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-video-reset>Reset</button>
+          </div>
+          <div class="bubble2-upload-state" data-bubble2-bg-video-state>empty</div>
+          <div class="bubble2-video-controls is-hidden" data-bubble2-bg-video-controls>
+            <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-video-play-toggle>Play</button>
+            <label class="bubble2-video-progress-label" for="bubble2-bg-video-progress">Video progress</label>
+            <input id="bubble2-bg-video-progress" class="bubble2-video-progress" type="range" min="0" max="1000" step="1" value="0" data-bubble2-bg-video-progress/>
+          </div>
         </div>
       </div>
     </aside>

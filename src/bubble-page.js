@@ -162,10 +162,10 @@ const CLAUDE_AGENT_THEME = Object.freeze({
   blobBottomEdge: 'rgb(187 110 72)',
 });
 const CHATGPT_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(190 255 224)',
-  blobTopEdge: 'rgb(88 206 149)',
-  blobBottomCore: 'rgb(227 255 243)',
-  blobBottomEdge: 'rgb(28 142 95)',
+  blobTopCore: 'rgb(255 255 255)',
+  blobTopEdge: 'rgb(228 235 247)',
+  blobBottomCore: 'rgb(255 255 255)',
+  blobBottomEdge: 'rgb(214 223 238)',
 });
 const GEMINI_AGENT_THEME = Object.freeze({
   blobTopCore: 'rgb(180 214 255)',
@@ -745,7 +745,8 @@ const AGENT_BUBBLES_CONFIG = [
     ...getAppSetSlotLayout(1),
     label: 'Claude',
     img: CLAUDE_AGENT_ASSET,
-    fill: true,
+    fill: false,
+    imageScale: 0.72,
     hoverExpandsToPill: true,
     pillTitle: 'Claude',
     pillSubtitle: 'Reason deeply',
@@ -798,7 +799,8 @@ const AGENT_BUBBLES_CONFIG = [
     ...getAppSetSlotLayout(2),
     label: 'ChatGPT',
     img: FIGMA_ASSETS.chatgpt,
-    fill: true,
+    fill: false,
+    imageScale: 0.72,
     hoverExpandsToPill: true,
     pillTitle: 'ChatGPT',
     pillSubtitle: 'Ask anything',
@@ -814,7 +816,8 @@ const AGENT_BUBBLES_CONFIG = [
     ...getAppSetSlotLayout(8),
     label: 'Gemini',
     img: FIGMA_ASSETS.gemini,
-    fill: true,
+    fill: false,
+    imageScale: 0.72,
     hoverExpandsToPill: true,
     pillTitle: 'Gemini',
     pillSubtitle: 'Search and reason',
@@ -933,7 +936,7 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     id: 'interrupt',
     label: 'Interrupt',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
-    defaultHomeAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
     slots: INTERRUPT_BUBBLES_CONFIG,
   }),
 ]);
@@ -1152,6 +1155,9 @@ function resolveRenderedBubble(slot, setId = state.activeSetId) {
 const state = {
   activeSetId: DEFAULT_BUBBLE_SET_ID,
   ...getBubbleSetControlDefaults(DEFAULT_BUBBLE_SET_ID),
+  backgroundVideo: null,
+  backgroundVideoPaused: false,
+  backgroundVideoProgress: 0,
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -1211,6 +1217,13 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  bgVideo: document.querySelector('[data-bubble2-bg-video]'),
+  bgVideoUpload: document.querySelector('[data-bubble2-bg-video-upload]'),
+  bgVideoReset: document.querySelector('[data-bubble2-bg-video-reset]'),
+  bgVideoState: document.querySelector('[data-bubble2-bg-video-state]'),
+  bgVideoControls: document.querySelector('[data-bubble2-bg-video-controls]'),
+  bgVideoPlayToggle: document.querySelector('[data-bubble2-bg-video-play-toggle]'),
+  bgVideoProgress: document.querySelector('[data-bubble2-bg-video-progress]'),
   canvasBanner: document.querySelector('[data-bubble2-canvas-banner]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
@@ -1230,6 +1243,7 @@ function init() {
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
+  syncBackgroundVideoUi();
   buildScene();
   updateMeasuredChildChipWidths();
   if (document.fonts?.ready) {
@@ -1901,6 +1915,62 @@ function syncCanvaslessUi() {
   refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
 }
 
+function revokeBackgroundVideoObjectUrl(video) {
+  const objectUrl = typeof video?.objectUrl === 'string' ? video.objectUrl : '';
+  if (!objectUrl || !objectUrl.startsWith('blob:')) return;
+  try {
+    URL.revokeObjectURL(objectUrl);
+  } catch (_) {}
+}
+
+function syncBackgroundVideoUi() {
+  const video = state.backgroundVideo;
+  const hasVideo = Boolean(video?.src);
+  if (refs.bgVideoState) refs.bgVideoState.textContent = hasVideo ? (video.name || 'loaded') : 'empty';
+  refs.stage?.classList.toggle('has-bg-video', hasVideo);
+  refs.bgVideoControls?.classList.toggle('is-hidden', !hasVideo);
+  if (refs.bgVideoPlayToggle) {
+    refs.bgVideoPlayToggle.textContent = state.backgroundVideoPaused ? 'Play' : 'Pause';
+    refs.bgVideoPlayToggle.disabled = !hasVideo;
+  }
+  if (refs.bgVideoProgress) {
+    refs.bgVideoProgress.value = String(Math.round(clamp(Number(state.backgroundVideoProgress) || 0, 0, 1) * 1000));
+    refs.bgVideoProgress.disabled = !hasVideo;
+  }
+  if (!refs.bgVideo) return;
+  const nextSrc = hasVideo ? String(video.src) : '';
+  if (refs.bgVideo.dataset.loadedSrc !== nextSrc) {
+    refs.bgVideo.dataset.loadedSrc = nextSrc;
+    refs.bgVideo.pause();
+    if (nextSrc) refs.bgVideo.src = nextSrc;
+    else refs.bgVideo.removeAttribute('src');
+    refs.bgVideo.load();
+  }
+  if (!hasVideo) return;
+  const desiredProgress = clamp(Number(state.backgroundVideoProgress) || 0, 0, 1);
+  const syncVideoTime = () => {
+    if (!Number.isFinite(refs.bgVideo.duration) || refs.bgVideo.duration <= 0) return;
+    const targetTime = desiredProgress * refs.bgVideo.duration;
+    if (Math.abs(refs.bgVideo.currentTime - targetTime) > 0.1) refs.bgVideo.currentTime = targetTime;
+  };
+  refs.bgVideo.onloadedmetadata = syncVideoTime;
+  if (refs.bgVideo.readyState >= 1) syncVideoTime();
+  if (state.backgroundVideoPaused) {
+    refs.bgVideo.pause();
+    return;
+  }
+  const playPromise = refs.bgVideo.play?.();
+  if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+}
+
+function syncBackgroundVideoProgressUi() {
+  if (!refs.bgVideoProgress || !refs.bgVideo || !Number.isFinite(refs.bgVideo.duration) || refs.bgVideo.duration <= 0) return;
+  const ratio = clamp(refs.bgVideo.currentTime / refs.bgVideo.duration, 0, 1);
+  state.backgroundVideoProgress = ratio;
+  if (document.activeElement === refs.bgVideoProgress) return;
+  refs.bgVideoProgress.value = String(Math.round(ratio * 1000));
+}
+
 function resetStateForSetSwitch() {
   stopBubbleHomeStream();
   state.isPressed = false;
@@ -2036,10 +2106,24 @@ function bindEvents() {
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.bgVideoUpload?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) target.value = '';
+  });
+  refs.bgVideoUpload?.addEventListener('change', handleBackgroundVideoUpload);
+  refs.bgVideoReset?.addEventListener('click', resetBackgroundVideo);
+  refs.bgVideoPlayToggle?.addEventListener('click', handleBackgroundVideoPlayToggle);
+  refs.bgVideoProgress?.addEventListener('input', handleBackgroundVideoProgressInput);
+  refs.bgVideo?.addEventListener('timeupdate', syncBackgroundVideoProgressUi);
+  refs.bgVideo?.addEventListener('loadedmetadata', syncBackgroundVideoProgressUi);
+  refs.bgVideo?.addEventListener('error', () => {
+    if (refs.bgVideoState) refs.bgVideoState.textContent = 'unsupported';
+  });
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
+  window.addEventListener('beforeunload', () => revokeBackgroundVideoObjectUrl(state.backgroundVideo), { once: true });
 }
 
 function handleSetPanelClick(event) {
@@ -2060,6 +2144,52 @@ function handleCanvaslessToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.canvaslessEnabled = target.checked;
   syncCanvaslessUi();
+}
+
+function handleBackgroundVideoUpload(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const file = target.files?.[0];
+  if (!file) return;
+  if (!String(file.type || '').startsWith('video/')) {
+    target.value = '';
+    return;
+  }
+  const previousVideo = state.backgroundVideo;
+  const objectUrl = URL.createObjectURL(file);
+  revokeBackgroundVideoObjectUrl(previousVideo);
+  state.backgroundVideo = {
+    src: objectUrl,
+    objectUrl,
+    name: String(file.name || ''),
+    type: String(file.type || ''),
+  };
+  state.backgroundVideoPaused = false;
+  state.backgroundVideoProgress = 0;
+  syncBackgroundVideoUi();
+  target.value = '';
+}
+
+function resetBackgroundVideo() {
+  revokeBackgroundVideoObjectUrl(state.backgroundVideo);
+  state.backgroundVideo = null;
+  state.backgroundVideoPaused = false;
+  state.backgroundVideoProgress = 0;
+  syncBackgroundVideoUi();
+  if (refs.bgVideoUpload) refs.bgVideoUpload.value = '';
+}
+
+function handleBackgroundVideoPlayToggle() {
+  if (!state.backgroundVideo?.src) return;
+  state.backgroundVideoPaused = !state.backgroundVideoPaused;
+  syncBackgroundVideoUi();
+}
+
+function handleBackgroundVideoProgressInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundVideoProgress = clamp((Number(target.value) || 0) / 1000, 0, 1);
+  syncBackgroundVideoUi();
 }
 
 function shouldStartBubblePress(event) {
@@ -2565,13 +2695,18 @@ function render() {
     const anyHovered = scene.hoveredId != null;
     const isHoverDimmed = anyHovered && !isHovered;
     const bubbleOpacity = isDimmed ? CHILD_DIMMED_OPACITY : isHoverDimmed ? 0.6 : 1;
+    const suppressHoveredShadowForVideo = state.activeSetId === 'app'
+      && Boolean(state.backgroundVideo?.src)
+      && isHovered;
     node.root.style.opacity = isPromoting
       ? '1'
       : state.isPressed
       ? String(bubbleOpacity)
       : (isSwapActive ? '0' : '0');
     if (node.shadowEl) {
-      if (isHoverShellActive || isPromoting) {
+      if (suppressHoveredShadowForVideo) {
+        node.shadowEl.style.boxShadow = 'none';
+      } else if (isHoverShellActive || isPromoting) {
         node.shadowEl.style.boxShadow = '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
       } else {
         const isTightHoverShadow = bubble.hoverShadowMode === 'tight';
