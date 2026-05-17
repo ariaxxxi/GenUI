@@ -135,7 +135,12 @@ const BUBBLE_HOME_THINKING_PILL_ICON_SIZE = 52;
 const BUBBLE_HOME_THINKING_PILL_GAP = 10;
 const BUBBLE_HOME_THINKING_PILL_PADDING_X = Object.freeze({ left: 14, right: 20 });
 const BUBBLE_HOME_THINKING_PILL_MIN_WIDTH = 80;
-const BUBBLE_HOME_THINKING_TEXT_FONT = '500 24px "DM Sans", sans-serif';
+const BUBBLE_HOME_PROMPT_THINKING_PILL_ICON_SIZE = ORB_BASE_SIZE;
+const BUBBLE_HOME_PROMPT_THINKING_PILL_GAP = 0;
+const BUBBLE_HOME_PROMPT_THINKING_PILL_PADDING_X = Object.freeze({ left: 0, right: 20 });
+const BUBBLE_HOME_THINKING_TEXT_FONT = '500 20px "DM Sans", sans-serif';
+const BUBBLE_HOME_PROMPT_THINKING_LOOP_MS = 5000;
+const BUBBLE_HOME_PROMPT_TEXT_SWAP_MS = 140;
 const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const textMeasureContext = document.createElement('canvas').getContext('2d');
@@ -150,6 +155,7 @@ const FIGMA_ASSETS = {
 const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt']);
 const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
 const PROMPT_SET_DEFAULT_AGENT_ID = 'chatgpt';
+const BUBBLE_HOME_PROMPT_THINKING_TEXT = 'Thinking';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CLAUDE_AGENT_ASSET = 'assets/agents/Claude-ai-icon.png';
 const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
@@ -202,16 +208,22 @@ const TRAVEL_AGENT_THEME = Object.freeze({
   blobBottomEdge: 'rgb(48 108 226)',
 });
 const RESET_APP_THEME = Object.freeze({
-  blobTopCore: 'rgb(171 226 78)',
-  blobTopEdge: 'rgb(97 167 39)',
-  blobBottomCore: 'rgb(234 247 255)',
-  blobBottomEdge: 'rgb(124 174 222)',
+  blobTopCore: 'rgb(232 221 203)',
+  blobTopEdge: 'rgb(191 173 146)',
+  blobBottomCore: 'rgb(222 238 246)',
+  blobBottomEdge: 'rgb(146 176 198)',
 });
 const COFFEE_APP_THEME = Object.freeze({
   blobTopCore: 'rgb(229 199 163)',
   blobTopEdge: 'rgb(191 150 108)',
   blobBottomCore: 'rgb(112 74 49)',
   blobBottomEdge: 'rgb(63 41 27)',
+});
+const MONSTERA_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(176 199 144)',
+  blobTopEdge: 'rgb(118 149 88)',
+  blobBottomCore: 'rgb(227 233 218)',
+  blobBottomEdge: 'rgb(128 151 106)',
 });
 const MIX_APP_THEME = Object.freeze({
   blobTopCore: 'rgb(153 221 255)',
@@ -230,6 +242,24 @@ const WRITE_APP_THEME = Object.freeze({
   blobTopEdge: 'rgb(194 181 160)',
   blobBottomCore: 'rgb(135 138 145)',
   blobBottomEdge: 'rgb(86 92 101)',
+});
+const MUSIC_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 220 116)',
+  blobTopEdge: 'rgb(255 176 68)',
+  blobBottomCore: 'rgb(255 251 232)',
+  blobBottomEdge: 'rgb(255 244 204)',
+});
+const ANDY_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(224 207 188)',
+  blobTopEdge: 'rgb(186 154 124)',
+  blobBottomCore: 'rgb(97 78 64)',
+  blobBottomEdge: 'rgb(49 37 30)',
+});
+const LAYLA_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(172 236 255)',
+  blobTopEdge: 'rgb(97 205 244)',
+  blobBottomCore: 'rgb(255 190 150)',
+  blobBottomEdge: 'rgb(214 122 78)',
 });
 const INTERRUPT_WHITE_THEME = Object.freeze({
   blobTopCore: 'rgb(247 249 255)',
@@ -382,6 +412,31 @@ function currentBubbleHomeOrbTheme() {
   return state.homeOrbContent?.theme || getAiOrbIconOption(state.orbAgentId)?.theme || {};
 }
 
+function isPromptHomeThinkingActive() {
+  return state.activeSetId === 'prompt'
+    && Boolean(state.promptHomeThinking)
+    && state.homeOrbContent?.kind !== 'agent-orb';
+}
+
+function isHomeOrbThinkingModeActive() {
+  return state.activeSetId === 'interrupt' || isPromptHomeThinkingActive();
+}
+
+function currentBubbleHomeThinkingPillMetrics() {
+  if (isPromptHomeThinkingActive()) {
+    return {
+      iconSize: BUBBLE_HOME_PROMPT_THINKING_PILL_ICON_SIZE,
+      gap: BUBBLE_HOME_PROMPT_THINKING_PILL_GAP,
+      paddingX: BUBBLE_HOME_PROMPT_THINKING_PILL_PADDING_X,
+    };
+  }
+  return {
+    iconSize: BUBBLE_HOME_THINKING_PILL_ICON_SIZE,
+    gap: BUBBLE_HOME_THINKING_PILL_GAP,
+    paddingX: BUBBLE_HOME_THINKING_PILL_PADDING_X,
+  };
+}
+
 function applyBubbleHomeOrbShellChrome(hostEl, theme) {
   // Home orb shells use the same static glass treatment as the thinking pill.
 }
@@ -403,6 +458,14 @@ function resetBubbleHomeOrbCenter(root = refs.orb) {
 function syncBubbleHomeOrbVisualStateClasses(visual, content = state.homeOrbContent) {
   if (!visual || !content) return;
   visual.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
+  const promotedImageSize = Number(content.homePromotedImageSize);
+  const hasPromotedImageSize = Number.isFinite(promotedImageSize) && promotedImageSize > 0;
+  visual.classList.toggle('is-promoted-home-large-image', hasPromotedImageSize);
+  if (hasPromotedImageSize) {
+    visual.style.setProperty('--bubble2-home-promoted-image-size', `${promotedImageSize}px`);
+  } else {
+    visual.style.removeProperty('--bubble2-home-promoted-image-size');
+  }
 }
 
 function applyBubbleHoverShellChrome(hostEl, theme, geometryOverride) {
@@ -418,6 +481,7 @@ const APP_BUBBLES_CONFIG = [
     img: 'src/assets/spotify-album-happiness.jpg',
     fill: true,
     isPill: true,
+    hoverExpandsToPill: true,
     pillTitle: 'Happiness',
     pillSubtitle: '1975',
     imageOutlineColor: '#1ED760',
@@ -429,6 +493,7 @@ const APP_BUBBLES_CONFIG = [
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
     subIconOffsetY: 67.83,
+    theme: INTERRUPT_WHITE_THEME,
     disableHoverScale: true,
     childActions: [
       { id: 'playlist-1', img: 'src/assets/spotify-liked-songs.jpg', fill: true },
@@ -444,8 +509,10 @@ const APP_BUBBLES_CONFIG = [
     img: 'assets/profile1.png',
     fill: true,
     isPill: true,
+    hoverExpandsToPill: true,
     pillTitle: 'Tony',
     pillSubtitle: 'I love it!',
+    theme: INTERRUPT_WHITE_THEME,
     subIconKind: 'message-badge',
     subIconSize: 47.949,
     subIconOffsetX: 62.04,
@@ -526,8 +593,10 @@ const APP_BUBBLES_CONFIG = [
     img: 'assets/profile2.png',
     fill: true,
     isPill: true,
+    hoverExpandsToPill: true,
     pillTitle: 'Lisa',
     pillSubtitle: 'Yesterday',
+    theme: INTERRUPT_WHITE_THEME,
     subIconKind: 'call-badge',
     subIconSize: 41.532,
     subIconOffsetX: 66.5,
@@ -569,91 +638,78 @@ const APP_BUBBLES_CONFIG = [
 
 const PROMPT_BUBBLES_CONFIG = [
   {
-    id: 1,
-    ...getAppSetSlotLayout(1),
-    img: 'src/assets/spotify-album-happiness.jpg',
-    fill: true,
-    isPill: true,
-    pillTitle: 'Happiness',
-    pillSubtitle: '1975',
-    imageOutlineColor: '#1ED760',
-    imageOutlineWidth: 3,
-    pillTrailingIcon: 'pause',
-    pillTrailingIconColor: '#1ED760',
-    pillActionGap: 2,
-    subIconKind: 'spotify-badge',
-    subIconSize: 42.167,
-    subIconOffsetX: 67.83,
-    subIconOffsetY: 67.83,
-    disableHoverScale: true,
-    childActions: [
-      { id: 'playlist-1', img: 'src/assets/spotify-liked-songs.jpg', fill: true },
-      { id: 'playlist-2', img: 'src/assets/spotify-album-2.jpg', fill: true },
-      { id: 'playlist-3', img: 'src/assets/spotify-album-blonde.jpg', fill: true },
-    ],
+    id: 2,
+    ...getAppSetSlotLayout(2),
+    img: 'assets/app/music.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Make a playlist',
+    pillSubtitle: 'Build a focus mix',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    usesSurfaceShell: true,
+    theme: MUSIC_PROMPT_THEME,
+    haloColor: MUSIC_PROMPT_THEME.blobTopCore,
+    childActions: [],
   },
   {
     id: 3,
     ...getAppSetSlotLayout(3),
-    img: 'assets/profile1.png',
-    fill: true,
-    isPill: true,
-    pillTitle: 'Tony',
-    pillSubtitle: 'I love it!',
-    subIconKind: 'message-badge',
-    subIconSize: 47.949,
-    subIconOffsetX: 62.04,
-    subIconOffsetY: 62.05,
-    childActions: [
-      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
-      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
-      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
-    ],
+    img: 'assets/app/Andy.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Andy',
+    pillSubtitle: 'Sent a voice note',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    usesSurfaceShell: true,
+    theme: ANDY_PROMPT_THEME,
+    haloColor: ANDY_PROMPT_THEME.blobTopCore,
+    childActions: [],
   },
   {
     id: 9,
     ...getAppSetSlotLayout(9),
-    img: 'assets/app/write.png',
+    img: 'assets/app/run.png',
     imageScale: 1,
     lockGraphicScaleOnHover: true,
     hoverExpandsToPill: true,
-    pillTitle: 'Text Draft',
-    pillSubtitle: 'Say no',
+    pillTitle: 'Fitness',
+    pillSubtitle: 'Build a workout plan',
     pillCopyOffsetX: -10,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
     theme: WRITE_APP_THEME,
     haloColor: WRITE_APP_THEME.blobTopCore,
     childActions: [],
   },
   {
-    id: 4,
-    ...getAppSetSlotLayout(4),
-    graphicKind: 'emoji',
-    emoji: '🎉',
-    emojiScale: 0.98,
-    hoverExpandsToPill: true,
-    pillTitle: 'Fun Plan',
-    pillSubtitle: 'Tonight ideas',
-    pillCopyOffsetX: -10,
-    pillTextLeftPadding: 2,
-    pillTextRightPadding: 18,
-    theme: GEMINI_AGENT_THEME,
-    haloColor: GEMINI_AGENT_THEME.blobTopCore,
-    childActions: [],
-  },
-  {
-    id: 2,
-    ...getAppSetSlotLayout(2),
+    id: 1,
+    ...getAppSetSlotLayout(1),
     img: 'assets/app/day.png',
     imageScale: 1,
     lockGraphicScaleOnHover: true,
     hoverExpandsToPill: true,
-    pillTitle: 'Day Check',
+    pillTitle: 'Daily brief',
     pillSubtitle: 'Morning brief',
     pillCopyOffsetX: -10,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
     theme: DAY_APP_THEME,
     haloColor: DAY_APP_THEME.blobTopCore,
     childActions: [],
@@ -665,11 +721,13 @@ const PROMPT_BUBBLES_CONFIG = [
     imageScale: 1,
     lockGraphicScaleOnHover: true,
     hoverExpandsToPill: true,
-    pillTitle: 'Mood Reset',
-    pillSubtitle: 'Feel better',
+    pillTitle: 'Book a flight',
+    pillSubtitle: 'Find the best route',
     pillCopyOffsetX: -10,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
     theme: RESET_APP_THEME,
     haloColor: RESET_APP_THEME.blobTopCore,
     childActions: [],
@@ -677,20 +735,22 @@ const PROMPT_BUBBLES_CONFIG = [
   {
     id: 5,
     ...getAppSetSlotLayout(5),
-    img: 'assets/profile2.png',
-    fill: true,
-    isPill: true,
-    pillTitle: 'Hiro',
-    pillSubtitle: 'Yesterday',
-    subIconKind: 'call-badge',
-    subIconSize: 41.532,
-    subIconOffsetX: 66.5,
-    subIconOffsetY: 66.5,
-    childActions: [
-      { id: 'call', kind: 'phone', bg: '#18c964', fg: '#ffffff' },
-      { id: 'message', kind: 'message', bg: '#2b6ff2', fg: '#ffffff' },
-      { id: 'video', kind: 'video', bg: '#111827', fg: '#ffffff' },
-    ],
+    img: 'assets/app/layla.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Layla',
+    pillSubtitle: 'Call her back',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    usesSurfaceShell: true,
+    theme: LAYLA_PROMPT_THEME,
+    haloColor: LAYLA_PROMPT_THEME.blobTopCore,
+    childActions: [],
   },
   {
     id: 6,
@@ -699,29 +759,15 @@ const PROMPT_BUBBLES_CONFIG = [
     imageScale: 1,
     lockGraphicScaleOnHover: true,
     hoverExpandsToPill: true,
-    pillTitle: 'Cafe Hunt',
-    pillSubtitle: 'Go somewhere',
+    pillTitle: 'Monstera care',
+    pillSubtitle: 'Tips to keep it healthy',
     pillCopyOffsetX: -10,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
-    theme: COFFEE_APP_THEME,
-    haloColor: COFFEE_APP_THEME.blobTopCore,
-    childActions: [],
-  },
-  {
-    id: 10,
-    ...getAppSetSlotLayout(10),
-    img: 'assets/app/mix.png',
-    imageScale: 1,
-    lockGraphicScaleOnHover: true,
-    hoverExpandsToPill: true,
-    pillTitle: 'Mix Now',
-    pillSubtitle: 'Soundtrack',
-    pillCopyOffsetX: -10,
-    pillTextLeftPadding: 2,
-    pillTextRightPadding: 18,
-    theme: MIX_APP_THEME,
-    haloColor: MIX_APP_THEME.blobTopCore,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    theme: MONSTERA_PROMPT_THEME,
+    haloColor: MONSTERA_PROMPT_THEME.blobTopCore,
     childActions: [],
   },
 ].map(enrichBubbleMetrics);
@@ -993,6 +1039,12 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     const sourceSlot = findBubbleSlotById(homeOrbContent.sourceSlotId, state.activeSetId);
     if (sourceSlot) return createBaseSlotContent(sourceSlot);
   }
+  const usesSurfaceShell = Boolean(
+    homeOrbContent?.usesSurfaceShell
+    || (state.activeSetId === 'agent'
+      && homeOrbContent?.kind === 'agent-orb'
+      && homeOrbContent?.iconId === 'bixby')
+  );
   return {
     kind: 'demoted-orb-bubble',
     contentId: `demoted:${homeOrbContent.contentId}`,
@@ -1011,7 +1063,7 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     isPill: false,
     hoverExpandsToPill: false,
     controlIcon: homeOrbContent.controlIcon || '',
-    usesSurfaceShell: Boolean(homeOrbContent.usesSurfaceShell),
+    usesSurfaceShell,
     pillTitle: '',
     pillSubtitle: '',
     pillTrailingIcon: '',
@@ -1081,6 +1133,8 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     pillActionGap: slot.pillActionGap,
     imageOutlineColor: slot.imageOutlineColor,
     imageOutlineWidth: slot.imageOutlineWidth,
+    preservePromotedImageScale: Boolean(slot.preservePromotedImageScale),
+    homePromotedImageSize: slot.homePromotedImageSize,
     subIconKind: slot.subIconKind,
     subIcon: slot.subIcon,
     subIconSize: slot.subIconSize,
@@ -1187,7 +1241,11 @@ const state = {
   openMotionUntil: 0,
   closeMotionUntil: 0,
   orbAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
+  homeOrbVisible: true,
   homeOrbContent: createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID),
+  promptHomeThinking: false,
+  promptHomeThinkingAnimating: false,
+  promptHomeThinkingTimer: null,
   slotContentBySetId: createInitialSlotContentMaps(),
   swapTransition: null,
   swapResetPending: false,
@@ -1207,6 +1265,9 @@ const bubbleHomeStreamState = {
   idleLoopToken: 0,
   idleLoopActive: false,
   idleLoopTimer: null,
+  promptLoopTimer: null,
+  textSwapTimer: null,
+  promptPhraseIndex: 0,
   fadeTimer: null,
 };
 
@@ -1223,6 +1284,7 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
   bgImage: document.querySelector('[data-bubble2-bg-image]'),
   bgImageToggle: document.querySelector('[data-bubble2-bg-image-toggle]'),
   bgVideo: document.querySelector('[data-bubble2-bg-video]'),
@@ -1252,6 +1314,7 @@ function init() {
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
+  syncHomeOrbToggleUi();
   syncBackgroundImageUi();
   syncBackgroundVideoUi();
   buildScene();
@@ -1587,11 +1650,16 @@ function createOrbNode() {
   button.type = 'button';
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
 
+  button.insertAdjacentHTML(
+    'beforeend',
+    '<div class="bubble2-orb-stream hidden" aria-hidden="true"><span class="bubble2-orb-stream-icon"><img data-bubble2-orb-stream-icon alt=""></span><span class="bubble2-orb-stream-text"></span></div>',
+  );
+
   if (state.activeSetId === 'interrupt') {
-    button.insertAdjacentHTML(
-      'beforeend',
-      '<div class="bubble2-orb-stream" aria-hidden="true"><span class="bubble2-orb-stream-icon"><img data-bubble2-orb-stream-icon alt=""></span><span class="bubble2-orb-stream-text"></span></div>',
-    );
+    refs.orbStream = button.querySelector('.bubble2-orb-stream');
+    refs.orbStreamIcon = button.querySelector('[data-bubble2-orb-stream-icon]');
+    refs.orbStreamText = button.querySelector('.bubble2-orb-stream-text');
+    refs.orbStream.classList.remove('hidden');
     syncBubbleHomeThinkingPillText(interruptSessionPaused ? 'Session paused' : BUBBLE_HOME_INTERRUPT_THINKING_TEXT, button);
     syncBubbleHomeThinkingPillIcon(state.homeOrbContent, button);
     return button;
@@ -1618,6 +1686,14 @@ function clearBubbleHomeStreamTimers() {
     window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
     bubbleHomeStreamState.idleLoopTimer = null;
   }
+  if (bubbleHomeStreamState.promptLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.promptLoopTimer);
+    bubbleHomeStreamState.promptLoopTimer = null;
+  }
+  if (bubbleHomeStreamState.textSwapTimer) {
+    window.clearTimeout(bubbleHomeStreamState.textSwapTimer);
+    bubbleHomeStreamState.textSwapTimer = null;
+  }
   if (bubbleHomeStreamState.fadeTimer) {
     window.clearTimeout(bubbleHomeStreamState.fadeTimer);
     bubbleHomeStreamState.fadeTimer = null;
@@ -1636,6 +1712,8 @@ function setBubbleHomeStreamVisible(visible) {
 function clearBubbleHomeStream() {
   removeBubbleHomeStreamCursor();
   bubbleHomeStreamState.currentText = '';
+  bubbleHomeStreamState.promptPhraseIndex = 0;
+  refs.orbStream?.classList.remove('is-text-transitioning');
   if (refs.orbStreamText) refs.orbStreamText.textContent = '';
 }
 
@@ -1648,9 +1726,85 @@ function stopBubbleHomeStream() {
   setBubbleHomeStreamVisible(false);
 }
 
-async function showPersistentBubbleHomeStreamText(text) {
+function clearPromptHomeThinkingTimer() {
+  if (state.promptHomeThinkingTimer) {
+    window.clearTimeout(state.promptHomeThinkingTimer);
+    state.promptHomeThinkingTimer = null;
+  }
+}
+
+function stopPromptHomeThinking() {
+  state.promptHomeThinking = false;
+  state.promptHomeThinkingAnimating = false;
+  clearPromptHomeThinkingTimer();
+  if (state.activeSetId !== 'interrupt') stopBubbleHomeStream();
+}
+
+function activatePromptHomeThinking() {
+  const phrases = getPromptThinkingPhrases(state.homeOrbContent);
+  state.promptHomeThinking = true;
+  state.promptHomeThinkingAnimating = true;
+  clearPromptHomeThinkingTimer();
+  syncBubbleHomeThinkingPillIcon(state.homeOrbContent);
+  bubbleHomeStreamState.promptPhraseIndex = 0;
+  void showPersistentBubbleHomeStreamText(phrases[0] || BUBBLE_HOME_PROMPT_THINKING_TEXT, { animate: false });
+  scheduleRender();
+  state.promptHomeThinkingTimer = window.setTimeout(() => {
+    state.promptHomeThinkingTimer = null;
+    if (!isPromptHomeThinkingActive()) return;
+    state.promptHomeThinkingAnimating = false;
+    schedulePromptThinkingLoop(BUBBLE_HOME_PROMPT_THINKING_LOOP_MS);
+    scheduleRender();
+  }, 24);
+}
+
+function getPromptThinkingPhrases(content = state.homeOrbContent) {
+  const title = String(content?.pillTitle || content?.label || '').trim().toLowerCase();
+  if (title.includes('playlist') || title.includes('music')) {
+    return ['Picking songs', 'Balancing energy', 'Saving mix'];
+  }
+  if (title.includes('andy')) {
+    return ['Reading note', 'Pulling details', 'Drafting reply'];
+  }
+  if (title.includes('daily brief')) {
+    return ['Checking calendar', 'Sorting priorities', 'Writing summary'];
+  }
+  if (title.includes('fitness')) {
+    return ['Planning workout', 'Counting reps', 'Tracking progress'];
+  }
+  if (title.includes('mood reset')) {
+    return ['Reading mood', 'Finding calm', 'Shifting energy'];
+  }
+  if (title.includes('layla')) {
+    return ['Reviewing context', 'Drafting reply', 'Setting reminder'];
+  }
+  if (title.includes('monstera')) {
+    return ['Checking light', 'Watching leaves', 'Watering guide'];
+  }
+  return ['Thinking', 'Working through', 'Almost ready'];
+}
+
+function schedulePromptThinkingLoop(delayMs = BUBBLE_HOME_PROMPT_THINKING_LOOP_MS) {
+  if (bubbleHomeStreamState.promptLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.promptLoopTimer);
+    bubbleHomeStreamState.promptLoopTimer = null;
+  }
+  if (!isPromptHomeThinkingActive() || state.isPressed || state.swapTransition?.active || !refs.orbStreamText?.isConnected) return;
+  bubbleHomeStreamState.promptLoopTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.promptLoopTimer = null;
+    if (!isPromptHomeThinkingActive() || state.isPressed || state.swapTransition?.active) return;
+    const phrases = getPromptThinkingPhrases(state.homeOrbContent);
+    if (!phrases.length) return;
+    bubbleHomeStreamState.promptPhraseIndex = (bubbleHomeStreamState.promptPhraseIndex + 1) % phrases.length;
+    void showPersistentBubbleHomeStreamText(phrases[bubbleHomeStreamState.promptPhraseIndex], { animate: true });
+    schedulePromptThinkingLoop(BUBBLE_HOME_PROMPT_THINKING_LOOP_MS);
+  }, delayMs);
+}
+
+async function showPersistentBubbleHomeStreamText(text, options = {}) {
   const value = String(text || '').trim();
   if (!value || !refs.orbStreamText) return;
+  const animate = options.animate === true;
   bubbleHomeStreamState.idleLoopToken += 1;
   bubbleHomeStreamState.idleLoopActive = false;
   if (bubbleHomeStreamState.idleLoopTimer) {
@@ -1661,8 +1815,7 @@ async function showPersistentBubbleHomeStreamText(text) {
   setBubbleHomeStreamVisible(true);
   removeBubbleHomeStreamCursor();
   if (token !== bubbleHomeStreamState.streamToken) return;
-  bubbleHomeStreamState.currentText = value;
-  syncBubbleHomeThinkingPillText(value);
+  syncBubbleHomeThinkingPillText(value, refs.orb, { animate });
 }
 
 function fadeOutBubbleHomeStream({ clearAfter = true } = {}) {
@@ -1805,23 +1958,49 @@ function syncBubbleHomeThinkingPillIcon(content = state.homeOrbContent, root = r
   image.alt = String(content.alt || content.label || fallback?.label || '');
 }
 
-function syncBubbleHomeThinkingPillText(text, root = refs.orb) {
+function syncBubbleHomeThinkingPillText(text, root = refs.orb, options = {}) {
   const value = String(text || '').trim();
   const stream = refs.orbStream || root?.querySelector?.('.bubble2-orb-stream');
   const textEl = refs.orbStreamText || root?.querySelector?.('.bubble2-orb-stream-text');
   if (!value || !stream || !textEl) return;
+  const metrics = currentBubbleHomeThinkingPillMetrics();
   const textWidth = Math.ceil(measureTextWidth(value, BUBBLE_HOME_THINKING_TEXT_FONT)) + 2;
   const pillWidth = Math.max(
     BUBBLE_HOME_THINKING_PILL_MIN_WIDTH,
-    BUBBLE_HOME_THINKING_PILL_PADDING_X.left
-      + BUBBLE_HOME_THINKING_PILL_ICON_SIZE
-      + BUBBLE_HOME_THINKING_PILL_GAP
+    metrics.paddingX.left
+      + metrics.iconSize
+      + metrics.gap
       + textWidth
-      + BUBBLE_HOME_THINKING_PILL_PADDING_X.right,
+      + metrics.paddingX.right,
   );
-  textEl.textContent = value;
+  stream.style.setProperty('--bubble2-thinking-pill-icon-size', `${metrics.iconSize}px`);
+  stream.style.setProperty('--bubble2-thinking-pill-gap', `${metrics.gap}px`);
+  stream.style.setProperty('--bubble2-thinking-pill-padding-left', `${metrics.paddingX.left}px`);
+  stream.style.setProperty('--bubble2-thinking-pill-padding-right', `${metrics.paddingX.right}px`);
   stream.style.setProperty('--bubble2-thinking-pill-width', `${pillWidth}px`);
   stream.style.setProperty('--bubble2-thinking-text-width', `${textWidth}px`);
+  if (!options.animate || !bubbleHomeStreamState.currentText || bubbleHomeStreamState.currentText === value) {
+    bubbleHomeStreamState.currentText = value;
+    textEl.textContent = value;
+    stream.classList.remove('is-text-transitioning');
+    return;
+  }
+  if (bubbleHomeStreamState.textSwapTimer) {
+    window.clearTimeout(bubbleHomeStreamState.textSwapTimer);
+    bubbleHomeStreamState.textSwapTimer = null;
+  }
+  stream.classList.add('is-text-transitioning');
+  const expectedToken = bubbleHomeStreamState.streamToken;
+  bubbleHomeStreamState.textSwapTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.textSwapTimer = null;
+    if (expectedToken !== bubbleHomeStreamState.streamToken) return;
+    bubbleHomeStreamState.currentText = value;
+    textEl.textContent = value;
+    requestAnimationFrame(() => {
+      if (expectedToken !== bubbleHomeStreamState.streamToken) return;
+      stream.classList.remove('is-text-transitioning');
+    });
+  }, BUBBLE_HOME_PROMPT_TEXT_SWAP_MS);
 }
 
 bindAiOrbIconStorageSync(document, window);
@@ -1851,6 +2030,13 @@ function syncCanvaslessUi() {
   if (refs.canvaslessToggle) refs.canvaslessToggle.checked = state.canvaslessEnabled;
   document.body.classList.toggle('is-canvasless', state.canvaslessEnabled);
   refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
+}
+
+function syncHomeOrbToggleUi() {
+  if (!refs.homeOrbToggle) return;
+  const visible = state.homeOrbVisible !== false;
+  refs.homeOrbToggle.textContent = visible ? 'Dismiss orb' : 'Initiate orb';
+  refs.homeOrbToggle.setAttribute('aria-pressed', String(visible));
 }
 
 function syncBackgroundImageUi() {
@@ -1919,6 +2105,9 @@ function syncBackgroundVideoProgressUi() {
 }
 
 function resetStateForSetSwitch() {
+  state.promptHomeThinking = false;
+  state.promptHomeThinkingAnimating = false;
+  clearPromptHomeThinkingTimer();
   stopBubbleHomeStream();
   state.isPressed = false;
   state.hoveredBubble = null;
@@ -1962,6 +2151,9 @@ function clearAgentSetReturnInteraction() {
 }
 
 function resetAgentSetToDefaults() {
+  state.promptHomeThinking = false;
+  state.promptHomeThinkingAnimating = false;
+  clearPromptHomeThinkingTimer();
   state.slotContentBySetId = {
     ...state.slotContentBySetId,
     agent: createInitialSlotContentMap('agent'),
@@ -2053,6 +2245,7 @@ function bindEvents() {
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
   refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
   refs.bgVideoUpload?.addEventListener('click', (event) => {
     const target = event.target;
@@ -2092,6 +2285,12 @@ function handleCanvaslessToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.canvaslessEnabled = target.checked;
   syncCanvaslessUi();
+}
+
+function handleHomeOrbToggleClick() {
+  state.homeOrbVisible = !state.homeOrbVisible;
+  syncHomeOrbToggleUi();
+  scheduleRender();
 }
 
 function handleBackgroundImageToggleChange(event) {
@@ -2178,6 +2377,7 @@ function cycleBubbleHomeSelection(step) {
 
 function cycleBubbleHomeAgent(step) {
   if (!refs.orb || !step || state.swapTransition?.active) return;
+  stopPromptHomeThinking();
   const currentIndex = BUBBLE_HOME_AGENT_SEQUENCE.indexOf(state.orbAgentId);
   const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
   const nextIndex = (safeCurrentIndex + step + BUBBLE_HOME_AGENT_SEQUENCE.length) % BUBBLE_HOME_AGENT_SEQUENCE.length;
@@ -2196,6 +2396,7 @@ function cycleBubbleHomeAgent(step) {
 
 function cycleBubbleHomeSetItem(step, setId = state.activeSetId) {
   if (!refs.orb || !step || state.swapTransition?.active) return;
+  stopPromptHomeThinking();
   const sequence = getBubbleSetSequence(setId);
   if (!sequence.length) return;
 
@@ -2429,6 +2630,9 @@ function startBubbleSwap(scene, now) {
   const promotedImageScaleCompensation = selectedBubble.graphicKind === 'emoji'
     ? 1
     : (selectedBubble.fill ? (1 / Math.max(selectedBubble.imageScale ?? 1, 0.0001)) : 1);
+  const promotedVisualScaleEnd = selectedBubble.graphicKind === 'emoji'
+    ? BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.homeEmojiScale ?? 1)
+    : ((selectedBubble.preservePromotedImageScale ? 1 : BUBBLE_RELEASE_CONTENT_SCALE) * promotedImageScaleCompensation);
   state.swapTransition = {
     active: true,
     specialAction: isPauseAction ? 'pause-session' : (isPlayAction ? 'play-session' : ''),
@@ -2446,9 +2650,7 @@ function startBubbleSwap(scene, now) {
     promotedVisualScaleStart: selectedBubble.hoverExpandsToPill
       ? PILL_HOVER_BUBBLE_SCALE
       : BUBBLE_HOVER_CONTENT_SCALE,
-    promotedVisualScaleEnd: BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.graphicKind === 'emoji'
-      ? (selectedBubble.homeEmojiScale ?? 1)
-      : promotedImageScaleCompensation),
+    promotedVisualScaleEnd,
     releaseBubbles: scene.bubbles.map(snapshotReleaseBubble),
     promotedContent,
     demotedContent,
@@ -2489,6 +2691,11 @@ function commitBubbleSwap() {
     return;
   }
   state.homeOrbContent = transition.promotedContent;
+  if (state.activeSetId === 'prompt') {
+    activatePromptHomeThinking();
+  } else {
+    stopPromptHomeThinking();
+  }
   state.swapTransition = null;
   state.closeMotionUntil = 0;
   state.swapResetPending = true;
@@ -2607,6 +2814,11 @@ function render() {
     const isHovered = scene.hoveredId === bubble.id;
     const isPromoting = bubble.swapState === 'promoting';
     const isPromotingDomainPill = isPromoting && bubble.hoverExpandsToPill;
+    const fixedPromotedImage = isPromoting
+      && bubble.graphicKind !== 'emoji'
+      && bubble.preservePromotedImageScale
+      && Number.isFinite(Number(bubble.homePromotedImageSize))
+      && Number(bubble.homePromotedImageSize) > 0;
     const isHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
     const isRoundVisualScaleActive = (isHovered && !usesPillInteraction) || isPromoting;
     const hoverVisualScale = bubble.usesSurfaceShell
@@ -2704,7 +2916,7 @@ function render() {
     node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
     if (node.visual) {
-      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
+      node.visual.style.transform = `scale(${fixedPromotedImage ? 1 : (isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1)))})`;
     }
     if (node.surfaceChrome) {
       applyBubbleCelestialChrome(
@@ -2734,13 +2946,27 @@ function render() {
     node.iconWrap.style.left = '0px';
     node.iconWrap.style.top = '0px';
     node.iconWrap.style.setProperty('--bubble-emoji-size', `${bubble.baseSize * 0.6}px`);
+    const bubbleGraphicEl = node.iconWrap.querySelector('.bubble2-icon');
     const pillHoverBubbleScale = usesPillInteraction && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
-    const iconWrapScale = bubble.lockGraphicScaleOnHover && usesPillInteraction
+    let iconWrapScale = bubble.lockGraphicScaleOnHover && usesPillInteraction
       ? (1 / Math.max(isPromoting ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale, 0.0001))
       : (isPromotingDomainPill
         ? 1
         : (usesPillInteraction ? 1 : pillHoverBubbleScale));
     node.iconWrap.style.transform = `scale(${iconWrapScale})`;
+    node.iconWrap.classList.toggle('is-force-cropped', fixedPromotedImage);
+    node.iconWrap.style.opacity = fixedPromotedImage
+      ? String(clamp(Number(bubble.promotedImageOpacity) || 0, 0, 1))
+      : '1';
+    if (bubbleGraphicEl instanceof HTMLElement) {
+      if (fixedPromotedImage) {
+        const baseImageScale = Number(bubble.imageScale ?? (bubble.fill ? 1 : 0.72));
+        const rootScale = Math.max(Number(bubble.targetScale) || 1, 0.0001);
+        bubbleGraphicEl.style.transform = `scale(${(baseImageScale / rootScale).toFixed(4)})`;
+      } else {
+        bubbleGraphicEl.style.removeProperty('transform');
+      }
+    }
     node.surface.classList.toggle('has-surface-shell', Boolean(bubble.usesSurfaceShell));
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
     node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting));
@@ -2782,7 +3008,7 @@ function render() {
         node.leadingGroup.style.top = `${format(groupTop)}px`;
         node.leadingGroup.style.width = `${format(groupRight - groupLeft)}px`;
         node.leadingGroup.style.height = `${format(groupBottom - groupTop)}px`;
-        node.leadingGroup.style.transform = `scale(${isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale})`;
+        node.leadingGroup.style.transform = `scale(${fixedPromotedImage ? 1 : (isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale)})`;
         node.iconWrap.style.left = `${format(-groupLeft)}px`;
         node.iconWrap.style.top = `${format(-groupTop)}px`;
         node.subIcon.style.width = `${format(subIconSize)}px`;
@@ -2802,7 +3028,7 @@ function render() {
       node.leadingGroup.style.top = '0px';
       node.leadingGroup.style.width = `${bubble.baseSize}px`;
       node.leadingGroup.style.height = `${bubble.baseSize}px`;
-      node.leadingGroup.style.transform = `scale(${isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale})`;
+      node.leadingGroup.style.transform = `scale(${fixedPromotedImage ? 1 : (isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale)})`;
     }
     if (node.leadingGroup) {
       node.leadingGroup.style.opacity = '1';
@@ -2856,15 +3082,42 @@ function render() {
     node.content.style.transform = isChip ? 'scale(1)' : (node.action.img ? 'scale(1)' : 'scale(0.88)');
   }
 
+  const promptThinkingActive = isPromptHomeThinkingActive();
+  const thinkingHomeOrbActive = isHomeOrbThinkingModeActive();
+  const collapsedThinkingStream = (promptThinkingActive && state.promptHomeThinkingAnimating)
+    || (!thinkingHomeOrbActive && Boolean(refs.orbStream?.classList.contains('hidden')));
+
   if (refs.orb) {
+    const homeOrbVisibilityScale = state.homeOrbVisible === false ? 0 : 1;
     refs.orb.classList.toggle('is-pressed', state.isPressed);
-    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms' : '';
+    refs.orb.classList.toggle('is-interrupt-home-orb', state.activeSetId === 'interrupt');
+    refs.orb.classList.toggle('is-hidden-home-orb', homeOrbVisibilityScale === 0);
+    refs.orb.classList.toggle('is-prompt-thinking-home-orb', promptThinkingActive);
+    refs.orb.classList.toggle('is-thinking-home-orb', thinkingHomeOrbActive);
+    refs.orb.classList.toggle('is-collapsed-stream', collapsedThinkingStream);
+    refs.orb.setAttribute('aria-hidden', String(homeOrbVisibilityScale === 0));
+    refs.orb.tabIndex = homeOrbVisibilityScale === 0 ? -1 : 0;
+    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms, 0ms' : '';
     refs.orb.style.transform = demotedSwapMotion
-      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
-      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0)`;
+      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0) scale(${homeOrbVisibilityScale.toFixed(4)})`
+      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0) scale(${homeOrbVisibilityScale.toFixed(4)})`;
     refs.orb.style.opacity = demotedSwapMotion
-      ? format(demotedSwapMotion.opacity)
-      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : '1');
+      ? format(demotedSwapMotion.opacity * homeOrbVisibilityScale)
+      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : String(homeOrbVisibilityScale));
+  }
+
+  if (refs.orbStream) {
+    if (thinkingHomeOrbActive) {
+      setBubbleHomeStreamVisible(true);
+      syncBubbleHomeThinkingPillIcon(state.homeOrbContent);
+      if (state.activeSetId === 'interrupt' || !refs.orbStream.classList.contains('is-text-transitioning')) {
+        syncBubbleHomeThinkingPillText(
+          state.activeSetId === 'interrupt'
+            ? (interruptSessionPaused ? 'Session paused' : BUBBLE_HOME_INTERRUPT_THINKING_TEXT)
+            : (bubbleHomeStreamState.currentText || BUBBLE_HOME_PROMPT_THINKING_TEXT),
+        );
+      }
+    }
   }
 
   if (refs.orbVisual) {
@@ -3225,6 +3478,7 @@ function computeSwapTransitionScene(now) {
       isExpanded: false,
       expandedExtraSourceWidth: 0,
       promotedVisualScale: bubble.id === transition.selectedBubbleId ? (promotedMotion?.visualScale ?? transition.promotedVisualScaleStart) : 1,
+      promotedImageOpacity: bubble.id === transition.selectedBubbleId ? easeOutQuart(promotedMotion?.progress ?? 0) : 1,
     })),
     children: [],
     childZone: null,
@@ -3286,6 +3540,12 @@ function applySwapOrbTheme(node, theme) {
 
 function syncSwapOrbContent(node, content) {
   if (!node || !content) return;
+  const promotedImageSize = Number(content.homePromotedImageSize);
+  if (Number.isFinite(promotedImageSize) && promotedImageSize > 0) {
+    node.style.setProperty('--swap-icon-size', `${promotedImageSize}px`);
+  } else {
+    node.style.removeProperty('--swap-icon-size');
+  }
   if (content.kind === 'agent-orb') {
     syncAiOrbCenterIcon(node, {
       animate: false,

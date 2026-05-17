@@ -3,7 +3,7 @@
   --bubble2-frame-bg: #000000;
   --bubble2-frame-border: rgba(255, 255, 255, 0.1);
   --bubble2-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
-  --bubble2-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --bubble2-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
   --motion-ease: var(--bubble2-ease);
   --bubble2-pill-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -214,6 +214,10 @@ body.bubble2-page.is-canvasless {
 .bubble2-video-progress {
   width: 100%;
   accent-color: rgba(157, 195, 255, 0.9);
+}
+
+.bubble2-home-orb-btn {
+  width: 100%;
 }
 
 .bubble2-set-button {
@@ -599,6 +603,15 @@ body.bubble2-page.is-canvasless {
   border-radius: 0;
 }
 
+.bubble2-icon-wrap.is-force-cropped {
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.bubble2-icon-wrap.is-force-cropped .bubble2-icon {
+  border-radius: inherit;
+}
+
 .bubble2-icon {
   display: block;
   width: 100%;
@@ -887,7 +900,15 @@ body.bubble2-page.is-canvasless {
   appearance: none;
   cursor: pointer;
   overflow: visible;
-  transition: transform 1000ms var(--bubble2-ease);
+  transform-origin: center center;
+  will-change: transform, opacity;
+  transition:
+    transform 600ms var(--bubble2-ease),
+    opacity 600ms var(--bubble2-ease);
+}
+
+.bubble2-orb.is-hidden-home-orb {
+  pointer-events: none;
 }
 
 .bubble2-orb-stream {
@@ -900,8 +921,8 @@ body.bubble2-page.is-canvasless {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
-  padding: 0 20px 0 14px;
+  gap: var(--bubble2-thinking-pill-gap, 10px);
+  padding: 0 var(--bubble2-thinking-pill-padding-right, 20px) 0 var(--bubble2-thinking-pill-padding-left, 14px);
   border-radius: 999px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
@@ -952,20 +973,22 @@ body.bubble2-page.is-canvasless {
 .bubble2-orb-stream-icon {
   position: relative;
   z-index: 1;
-  width: 52px;
-  height: 52px;
+  width: var(--bubble2-thinking-pill-icon-size, 52px);
+  height: var(--bubble2-thinking-pill-icon-size, 52px);
   display: grid;
   place-items: center;
-  flex: 0 0 52px;
+  flex: 0 0 var(--bubble2-thinking-pill-icon-size, 52px);
   border-radius: 999px;
   overflow: visible;
   background: transparent;
   box-shadow: none;
+  opacity: 1;
+  transition: opacity 20ms ease;
 }
 
 .bubble2-orb-stream-icon img {
-  width: 48px;
-  height: 48px;
+  width: var(--bubble2-thinking-pill-icon-size, 52px);
+  height: var(--bubble2-thinking-pill-icon-size, 52px);
   display: block;
   object-fit: contain;
   object-position: center;
@@ -977,14 +1000,22 @@ body.bubble2-page.is-canvasless {
   transition: opacity 180ms ease, visibility 0ms linear 180ms;
 }
 
+.bubble2-orb.is-collapsed-stream .bubble2-orb-stream {
+  width: 80px;
+  min-width: 80px;
+  padding: 0 14px;
+  gap: 0;
+}
+
 .bubble2-orb-stream-text {
   position: relative;
   z-index: 1;
   font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
-  line-height: 1;
+  font-size: 20px;
+  line-height: 1.15;
   font-weight: 500;
   letter-spacing: 0;
+  padding-bottom: 2px;
   color: transparent;
   background:
     linear-gradient(
@@ -1005,21 +1036,46 @@ body.bubble2-page.is-canvasless {
   overflow: hidden;
   transition:
     max-width 800ms var(--bubble2-ease),
-    opacity 220ms ease,
-    transform 800ms var(--bubble2-ease);
+    opacity 180ms ease;
 }
 
-.bubble2-orb.is-interrupt-home-orb.is-pressed .bubble2-orb-stream {
+.bubble2-orb-stream.is-text-transitioning .bubble2-orb-stream-text {
+  opacity: 0;
+}
+
+.bubble2-orb.is-collapsed-stream .bubble2-orb-stream-text {
+  max-width: 0;
+  opacity: 0;
+}
+
+.bubble2-orb.is-thinking-home-orb.is-pressed .bubble2-orb-stream {
   width: 80px;
   min-width: 80px;
   padding: 0 14px;
   gap: 0;
 }
 
-.bubble2-orb.is-interrupt-home-orb.is-pressed .bubble2-orb-stream-text {
+.bubble2-orb.is-thinking-home-orb.is-pressed .bubble2-orb-stream-text {
   max-width: 0;
   opacity: 0;
-  transform: translateX(-8px);
+}
+
+.bubble2-orb.is-prompt-thinking-home-orb .bubble2-orb-stream {
+  z-index: 3;
+}
+
+.bubble2-orb.is-prompt-thinking-home-orb.is-collapsed-stream .bubble2-orb-stream {
+  padding: 0;
+}
+
+.bubble2-orb.is-prompt-thinking-home-orb.is-collapsed-stream .bubble2-orb-stream-icon {
+  opacity: 0;
+}
+
+.bubble2-orb.is-prompt-thinking-home-orb:not(.is-collapsed-stream) .bubble2-orb-visual {
+  opacity: 0;
+  visibility: hidden;
+  filter: none;
 }
 
 .bubble2-orb-visual {
@@ -1030,7 +1086,7 @@ body.bubble2-page.is-canvasless {
   pointer-events: none;
   transform-origin: center;
   filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.40));
-  transition: transform 500ms var(--motion-ease), filter 400ms ease;
+  transition: transform 500ms var(--motion-ease), filter 400ms ease, opacity 20ms ease;
 }
 
 .bubble2-orb-simple-shell {
@@ -1150,6 +1206,16 @@ body.bubble2-page.is-canvasless {
 .bubble2-orb-visual.is-promoted-home-uncropped .g-celestial-orb-center-image {
   border-radius: 0;
   overflow: visible;
+}
+
+.bubble2-orb-visual.is-promoted-home-large-image .g-celestial-orb-center-shell,
+.bubble2-orb-visual.is-promoted-home-large-image .g-celestial-orb-center-image {
+  width: var(--bubble2-home-promoted-image-size, 36px);
+  height: var(--bubble2-home-promoted-image-size, 36px);
+}
+
+.bubble2-orb-visual.is-promoted-home-large-image .g-celestial-orb-center-shell {
+  flex-basis: var(--bubble2-home-promoted-image-size, 36px);
 }
 
 @media (max-width: 760px) {
