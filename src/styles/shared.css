@@ -24,6 +24,11 @@
   initial-value: 0;
 }
 
+@keyframes bubble2-reasoning-glow {
+  0% { background-position: 120% 50%; }
+  100% { background-position: -120% 50%; }
+}
+
 #drop-main {
   --g-stage-selected-rgb: rgb(144 172 255);
   --g-stage-selected-secondary-rgb: rgb(151 97 255);
@@ -38,6 +43,145 @@
   width: 0;
   height: 0;
   overflow: visible;
+}
+
+.g-thinking-orb-stream {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--g-thinking-pill-width, 190px);
+  min-width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--g-thinking-pill-gap, 10px);
+  padding: 0 var(--g-thinking-pill-padding-right, 20px) 0 var(--g-thinking-pill-padding-left, 14px);
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+  box-shadow: inset 0 0 20px 0 rgba(255,255,255,0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: none;
+  z-index: 16;
+  white-space: nowrap;
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
+  will-change: width, opacity;
+  transition:
+    width 600ms var(--bubble2-ease, var(--motion-ease)),
+    min-width 600ms var(--bubble2-ease, var(--motion-ease)),
+    padding 600ms var(--bubble2-ease, var(--motion-ease)),
+    gap 600ms var(--bubble2-ease, var(--motion-ease)),
+    transform 600ms var(--bubble2-ease, var(--motion-ease)),
+    opacity 180ms ease,
+    visibility 0ms linear 0ms;
+}
+
+.g-thinking-orb-stream::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.62) 0%,
+    rgba(255, 255, 255, 0.18) 44%,
+    rgba(255, 255, 255, 0.04) 72%,
+    rgba(255, 255, 255, 0.16) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.g-thinking-orb-stream-icon {
+  position: relative;
+  z-index: 1;
+  width: var(--g-thinking-pill-icon-size, 52px);
+  height: var(--g-thinking-pill-icon-size, 52px);
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--g-thinking-pill-icon-size, 52px);
+  border-radius: 999px;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  transition: opacity 20ms ease;
+}
+
+.g-thinking-orb-stream-icon img {
+  width: var(--g-thinking-pill-icon-size, 52px);
+  height: var(--g-thinking-pill-icon-size, 52px);
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+.g-thinking-orb-stream.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 0ms linear 180ms;
+}
+
+.g-thinking-orb-stream.is-collapsed-stream,
+.is-collapsed-stream > .g-thinking-orb-stream {
+  width: 80px;
+  min-width: 80px;
+  padding: 0 14px;
+  gap: 0;
+}
+
+.g-thinking-orb-stream-text {
+  position: relative;
+  z-index: 1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 20px;
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: 0;
+  padding-bottom: 2px;
+  color: transparent;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.72) 34%,
+      rgba(255, 255, 255, 1) 48%,
+      rgba(255, 255, 255, 0.72) 62%,
+      rgba(255, 255, 255, 0.42) 100%
+    );
+  background-size: 230% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: bubble2-reasoning-glow 2.4s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.24));
+  max-width: var(--g-thinking-text-width, 170px);
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-width 800ms var(--bubble2-ease, var(--motion-ease)),
+    opacity 180ms ease;
+}
+
+.g-thinking-orb-stream.is-text-transitioning .g-thinking-orb-stream-text {
+  opacity: 0;
+}
+
+.g-thinking-orb-stream.is-collapsed-stream .g-thinking-orb-stream-text,
+.is-collapsed-stream > .g-thinking-orb-stream .g-thinking-orb-stream-text {
+  max-width: 0;
+  opacity: 0;
 }
 
 .prototype-disambiguation-pills .g-disambiguation-pill {

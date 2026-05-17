@@ -1,4 +1,10 @@
 import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon, syncAiOrbCenterImage } from '../../shared/ai-orb-icon.js';
+import {
+  renderThinkingOrbStreamMarkup,
+  setThinkingOrbStreamVisible,
+  syncThinkingOrbStreamIcon,
+  syncThinkingOrbStreamText,
+} from '../../shared/thinking-orb-stream.js';
 
 export function initManualBindings({
   document,
@@ -213,7 +219,19 @@ export function initManualBindings({
   const thinkingCopyRow = document.getElementById('prototype-thinking-copy-row');
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
   const thinkingOrb = document.getElementById('siri-orb');
-  const thinkingStream = document.getElementById('prototype-thinking-stream');
+  const stageThumb = document.getElementById('c-thumb');
+  const stageThumbImg = document.getElementById('c-thumb-img');
+  const stageThumbLabel = document.getElementById('c-thumb-label');
+  let thinkingStream = document.getElementById('prototype-thinking-stream');
+  if (thinkingStream && !thinkingStream.classList.contains('g-thinking-orb-stream')) {
+    thinkingStream.outerHTML = renderThinkingOrbStreamMarkup({
+      id: 'prototype-thinking-stream',
+      textId: 'prototype-thinking-stream-text',
+      hidden: true,
+    });
+    thinkingStream = document.getElementById('prototype-thinking-stream');
+  }
+  const thinkingStreamIcon = thinkingStream?.querySelector?.('[data-thinking-orb-stream-icon]');
   const thinkingStreamText = document.getElementById('prototype-thinking-stream-text');
   const thinkingPauseBtn = document.getElementById('prototype-thinking-pause');
   const thinkingResumeBtn = document.getElementById('prototype-thinking-resume');
@@ -235,6 +253,7 @@ export function initManualBindings({
     pendingAgentVisualSync: null,
     pendingAgentTransitionText: '',
     streamToken: 0,
+    textSwapTimer: null,
     currentText: '',
     currentCursor: null,
     verbIndex: 0,
@@ -371,9 +390,116 @@ export function initManualBindings({
     thinkingDebugState.currentCursor.remove();
     thinkingDebugState.currentCursor = null;
   };
+  const getPrototypeThinkingStreamVisual = () => {
+    if (thinkingDebugState.mode === 'skill') {
+      const skill = getSkillById(thinkingDebugState.activeSkillId);
+      return {
+        src: skill?.src || '',
+        alt: skill?.label ? `${skill.label} icon` : '',
+      };
+    }
+    if (thinkingDebugState.mode === 'app') {
+      const app = getAppById(thinkingDebugState.activeAppId);
+      return {
+        src: app?.src || '',
+        alt: app?.label ? `${app.label} app icon` : '',
+      };
+    }
+    const option = AI_ORB_ICON_OPTIONS[loadAiOrbIconId()] || AI_ORB_ICON_OPTIONS.chatgpt;
+    return {
+      src: option?.src || '',
+      alt: option?.label ? `${option.label} orb icon` : '',
+    };
+  };
+  const syncPrototypeThinkingStreamIcon = ({ animate = false, switchDirection = '', motion = 'crossfade' } = {}) => {
+    const visual = getPrototypeThinkingStreamVisual();
+    syncThinkingOrbStreamIcon(thinkingStreamIcon, {
+      src: visual.src,
+      alt: visual.alt,
+      animate,
+      switchDirection,
+      motion,
+    });
+  };
+  const syncPrototypeStageThinkingIcon = () => {
+    const visual = getPrototypeThinkingStreamVisual();
+    if (!stageThumb || !stageThumbImg) return;
+    const shape = currentPrototypeShape();
+    if (shape !== 'listening' && shape !== 'magic') return;
+    const iconSize = 46;
+    const x = shape === 'listening' ? Math.round((80 - iconSize) / 2) : 14;
+    const y = Math.round((80 - iconSize) / 2);
+    stageThumb.classList.add('thumb-image', 'thumb-plain-icon');
+    stageThumb.classList.remove('thumb-empty');
+    stageThumb.style.width = `${iconSize}px`;
+    stageThumb.style.height = `${iconSize}px`;
+    stageThumb.style.borderRadius = '999px';
+    stageThumb.style.transform = `translate(${x}px,${y}px)`;
+    stageThumb.style.opacity = '1';
+    stageThumb.style.pointerEvents = 'none';
+    if (stageThumbLabel) stageThumbLabel.textContent = '';
+    if (visual.src && stageThumbImg.getAttribute('src') !== visual.src) stageThumbImg.src = visual.src;
+    stageThumbImg.alt = visual.alt || '';
+    stageThumbImg.style.width = `${iconSize}px`;
+    stageThumbImg.style.height = `${iconSize}px`;
+  };
+  const parseTranslateY = (el) => {
+    const transform = getComputedStyle(el).transform;
+    if (!transform || transform === 'none') return -60;
+    const m2d = transform.match(/^matrix\(([^)]+)\)$/);
+    if (m2d) {
+      const parts = m2d[1].split(',').map((v) => parseFloat(v.trim()));
+      return Number.isFinite(parts[5]) ? parts[5] : -60;
+    }
+    const m3d = transform.match(/^matrix3d\(([^)]+)\)$/);
+    if (m3d) {
+      const parts = m3d[1].split(',').map((v) => parseFloat(v.trim()));
+      return Number.isFinite(parts[13]) ? parts[13] : -60;
+    }
+    return -60;
+  };
+  const syncPrototypeThinkingContainerGeometry = (pillWidth = 80) => {
+    const main = document.getElementById('drop-main');
+    const shape = currentPrototypeShape();
+    if (!main || (shape !== 'listening' && shape !== 'magic')) return;
+    const width = shape === 'listening' ? 80 : Math.max(80, Math.round(Number(pillWidth) || 80));
+    const y = parseTranslateY(main);
+    main.style.width = `${width}px`;
+    main.style.height = '80px';
+    main.style.setProperty('--g-stage-h', '80px');
+    main.style.borderRadius = '999px';
+    main.style.transform = `translate(${-width / 2}px, ${y}px)`;
+  };
+  const syncPrototypeThinkingStreamMetrics = (text) => {
+    if (!thinkingStream || !thinkingStreamText) return;
+    const metrics = syncThinkingOrbStreamText(thinkingStream, thinkingStreamText, text || 'Thinking', {
+      metrics: {
+        iconSize: 46,
+        gap: 10,
+        paddingX: { left: 14, right: 20 },
+        minWidth: 80,
+      },
+      font: '500 20px "DM Sans", sans-serif',
+      setText: false,
+    });
+    syncPrototypeThinkingContainerGeometry(metrics.pillWidth || 80);
+    syncPrototypeStageThinkingIcon();
+  };
+  const syncPrototypeThinkingStreamShape = () => {
+    if (!thinkingStream) return;
+    const shape = currentPrototypeShape();
+    const collapsed = shape === 'listening' || thinkingDebugState.minimized;
+    thinkingStream.classList.toggle('is-collapsed-stream', collapsed);
+    if (shape === 'listening') {
+      syncPrototypeThinkingStreamIcon();
+      syncPrototypeThinkingStreamMetrics(thinkingDebugState.currentText || 'Thinking');
+      syncPrototypeStageThinkingIcon();
+      setThinkingOrbStreamVisible(thinkingStream, true);
+    }
+  };
   const setThinkingStreamVisible = (visible) => {
     if (!thinkingStream) return;
-    thinkingStream.classList.toggle('hidden', !visible);
+    setThinkingOrbStreamVisible(thinkingStream, visible);
   };
   const setThinkingStreamPausedStyle = (paused) => {
     if (!thinkingStream) return;
@@ -395,6 +521,7 @@ export function initManualBindings({
     if (!enabled) thinkingDebugState.minimized = false;
     if (thinkingDebugState.minimized) document.body?.setAttribute('data-thinking-debug-minimized', 'true');
     else document.body?.removeAttribute('data-thinking-debug-minimized');
+    syncPrototypeThinkingStreamShape();
     if (!(thinkingOrb instanceof HTMLElement)) return;
     if (!enabled) {
       thinkingOrb.tabIndex = -1;
@@ -462,11 +589,18 @@ export function initManualBindings({
   };
   const cancelThinkingStreamPlayback = () => {
     thinkingDebugState.streamToken += 1;
+    if (thinkingDebugState.textSwapTimer) {
+      clearTimeout(thinkingDebugState.textSwapTimer);
+      thinkingDebugState.textSwapTimer = null;
+    }
+    thinkingStream?.classList.remove('is-text-transitioning');
     removeThinkingCursor();
   };
   const setThinkingStreamText = (text, { pausedStyle = false, visible = true } = {}) => {
     const value = String(text || '');
     thinkingDebugState.currentText = value;
+    syncPrototypeThinkingStreamIcon();
+    syncPrototypeThinkingStreamMetrics(value || 'Thinking');
     if (thinkingStreamText) thinkingStreamText.textContent = value;
     setThinkingStreamVisible(visible && !!value);
     setThinkingStreamPausedStyle(pausedStyle);
@@ -555,55 +689,47 @@ export function initManualBindings({
     await sleep(ms);
     return token === thinkingDebugState.streamToken;
   };
-  const tokenizeThinkingText = (text) => {
-    const tokens = [];
-    let idx = 0;
-    while (idx < text.length) {
-      const len = Math.random() < 0.4 ? 1 : Math.random() < 0.6 ? 2 : Math.random() < 0.7 ? 3 : 4;
-      tokens.push(text.slice(idx, idx + len));
-      idx += len;
+  const showThinkingTextCrossfade = async (text, token, { animate = true } = {}) => {
+    const value = String(text || '').trim();
+    if (!value || !thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
+    if (thinkingDebugState.textSwapTimer) {
+      clearTimeout(thinkingDebugState.textSwapTimer);
+      thinkingDebugState.textSwapTimer = null;
     }
-    return tokens;
+    syncPrototypeThinkingStreamIcon();
+    syncPrototypeThinkingStreamMetrics(value);
+    setThinkingStreamVisible(true);
+    setThinkingStreamPausedStyle(false);
+    removeThinkingCursor();
+    if (!animate || !thinkingDebugState.currentText || thinkingDebugState.currentText === value) {
+      thinkingDebugState.currentText = value;
+      thinkingStreamText.textContent = value;
+      thinkingStream?.classList.remove('is-text-transitioning');
+      return token === thinkingDebugState.streamToken;
+    }
+    thinkingStream?.classList.add('is-text-transitioning');
+    await new Promise((resolve) => {
+      thinkingDebugState.textSwapTimer = setTimeout(resolve, 140);
+    });
+    thinkingDebugState.textSwapTimer = null;
+    if (token !== thinkingDebugState.streamToken) return false;
+    thinkingDebugState.currentText = value;
+    thinkingStreamText.textContent = value;
+    requestAnimationFrame(() => {
+      if (token !== thinkingDebugState.streamToken) return;
+      thinkingStream?.classList.remove('is-text-transitioning');
+    });
+    return token === thinkingDebugState.streamToken;
   };
   const typeThinkingText = async (text, token) => {
     if (!thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
-    setThinkingStreamPausedStyle(false);
-    removeThinkingCursor();
-    const px = createPixelCursor();
-    let settled = '';
-    const tokens = tokenizeThinkingText(text);
-    for (const tokenText of tokens) {
-      const cycles = 2 + Math.floor(Math.random() * 3);
-      for (let cycle = 0; cycle < cycles; cycle += 1) {
-        if (token !== thinkingDebugState.streamToken) {
-          removeThinkingCursor();
-          return false;
-        }
-        Array.from(px.children).forEach((dot) => {
-          dot.style.opacity = Math.random() < 0.5 ? '1' : '0.08';
-        });
-        await sleep(21);
-      }
-      settled += tokenText;
-      thinkingDebugState.currentText = settled;
-      thinkingStreamText.textContent = settled;
-      thinkingStreamText.appendChild(px);
-      thinkingDebugState.currentCursor = px;
-      await sleep(6);
-    }
-    removeThinkingCursor();
-    return token === thinkingDebugState.streamToken;
+    return showThinkingTextCrossfade(text, token);
   };
   const deleteThinkingText = async (token) => {
     if (!thinkingStreamText) return false;
-    let settled = thinkingDebugState.currentText;
-    while (settled.length > 0) {
-      if (token !== thinkingDebugState.streamToken) return false;
-      settled = settled.slice(0, -1);
-      thinkingDebugState.currentText = settled;
-      thinkingStreamText.textContent = settled;
-      await sleep(21 + (Math.random() * 14));
-    }
+    if (token !== thinkingDebugState.streamToken) return false;
+    thinkingDebugState.currentText = '';
+    thinkingStreamText.textContent = '';
     return token === thinkingDebugState.streamToken;
   };
   const playThinkingTextOnce = async (text, { holdMs = 2200, clearAfter = true } = {}) => {
@@ -613,18 +739,11 @@ export function initManualBindings({
     setThinkingStreamVisible(true);
     setThinkingStreamPausedStyle(false);
     removeThinkingCursor();
-    if (thinkingDebugState.currentText) {
-      const deleted = await deleteThinkingText(token);
-      if (!deleted) return false;
-      if (!(await waitForStream(200, token))) return false;
-    }
     const typed = await typeThinkingText(value, token);
     if (!typed) return false;
     if (!clearAfter) return token === thinkingDebugState.streamToken;
     if (!(await waitForStream(holdMs, token))) return false;
-    const cleared = await deleteThinkingText(token);
-    if (!cleared) return false;
-    if (!(await waitForStream(200, token))) return false;
+    setThinkingStreamVisible(false);
     return token === thinkingDebugState.streamToken;
   };
   const runThinkingTextLoop = async ({ initialText = '', items = [], indexKey = null, holdMs = 2200, shouldContinue, nextText = null }) => {
@@ -633,18 +752,10 @@ export function initManualBindings({
     setThinkingStreamVisible(true);
     setThinkingStreamPausedStyle(false);
     removeThinkingCursor();
-    if (thinkingDebugState.currentText) {
-      const cleared = await deleteThinkingText(token);
-      if (!cleared) return;
-      if (!(await waitForStream(200, token))) return;
-    }
     if (initialText) {
-      const initialTyped = await typeThinkingText(initialText, token);
+      const initialTyped = await showThinkingTextCrossfade(initialText, token);
       if (!initialTyped) return;
-      if (!(await waitForStream(3000, token))) return;
-      const initialDeleted = await deleteThinkingText(token);
-      if (!initialDeleted) return;
-      if (!(await waitForStream(200, token))) return;
+      if (!(await waitForStream(1200, token))) return;
     }
     while (token === thinkingDebugState.streamToken && shouldContinue()) {
       const text = typeof nextText === 'function'
@@ -654,12 +765,9 @@ export function initManualBindings({
           : '';
       if (!text) return;
       if (indexKey) thinkingDebugState[indexKey] = (thinkingDebugState[indexKey] || 0) + 1;
-      const typed = await typeThinkingText(text, token);
+      const typed = await showThinkingTextCrossfade(text, token);
       if (!typed) return;
       if (!(await waitForStream(holdMs, token))) return;
-      const deleted = await deleteThinkingText(token);
-      if (!deleted) return;
-      if (!(await waitForStream(200, token))) return;
     }
   };
   const runThinkingVerbLoop = async () => runThinkingTextLoop({
@@ -727,15 +835,7 @@ export function initManualBindings({
     const value = String(text || '').trim();
     if (!value || (thinkingDebugState.paused && !allowWhilePaused)) return false;
     const token = ++thinkingDebugState.streamToken;
-    setThinkingStreamVisible(true);
-    setThinkingStreamPausedStyle(false);
-    removeThinkingCursor();
-    if (thinkingDebugState.currentText) {
-      const deleted = await deleteThinkingText(token);
-      if (!deleted) return false;
-      if (!(await waitForStream(200, token))) return false;
-    }
-    return typeThinkingText(value, token);
+    return showThinkingTextCrossfade(value, token);
   };
   const playPausedThinkingTransition = async (text, { holdMs = 1200 } = {}) => {
     const value = String(text || '').trim();
@@ -861,7 +961,7 @@ export function initManualBindings({
         manualShape('magic');
         return;
       }
-      syncAiOrbCenterIcon(document, { animate: false, id: activeAgentId });
+      syncPrototypeThinkingStreamIcon();
       if (isPaused) {
         renderPausedThinkingStream();
         return;
@@ -879,12 +979,14 @@ export function initManualBindings({
       setThinkingFamilyActive(true);
       setSkillSelectionOverride(nextSkill);
       queuePendingSkillTransitionText(skillTransitionText);
-      if (shape !== 'skill-pill' || reroll || forceRemorph) {
-        morphTo('skill-pill', getSkillRenderContent(nextSkill), getSkillChipGeometry(nextSkill));
+      if (shape !== 'magic') {
+        manualShape('magic');
+        return;
       }
-      if (reroll && shape === 'skill-pill' && !forceRemorph) {
-        playSkillChipSquash();
-      }
+      syncPrototypeThinkingStreamIcon({
+        animate: reroll || forceRemorph,
+        switchDirection: reroll ? 'right' : '',
+      });
       if (isPaused) {
         renderPausedThinkingStream();
         return;
@@ -907,20 +1009,13 @@ export function initManualBindings({
       if (isPaused) cancelThinkingStreamPlayback();
       else stopThinkingStream();
       setSkillSelectionOverride(null);
-      if (shape !== 'agent-circle' || forceRemorph) {
-        queuePendingAppVisualSync(nextApp, switchDirection);
-        queuePendingAppTransitionText(isPaused ? '' : transitionLabel);
-        morphTo('agent-circle', getAppRenderContent(nextApp));
-      } else {
-        queuePendingAppVisualSync(null, '');
-        queuePendingAppTransitionText('');
-        syncAppOrbVisual(nextApp, {
-          animate: true,
-          switchDirection,
-        });
-        if (isPaused) renderPausedThinkingStream();
-        else void transitionThinkingText(transitionLabel);
+      if (shape !== 'magic') {
+        manualShape('magic');
+        return;
       }
+      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
+      if (isPaused) renderPausedThinkingStream();
+      else void transitionThinkingText(transitionLabel);
       return;
     }
     const nextAgentId = explicitAgentId || (
@@ -938,26 +1033,19 @@ export function initManualBindings({
     if (isPaused) cancelThinkingStreamPlayback();
     else stopThinkingStream();
     setSkillSelectionOverride(null);
-    if (shape !== 'agent-circle' || forceRemorph) {
-      queuePendingAgentVisualSync(switchingAgent ? nextAgent.id : null, switchDirection);
-      queuePendingAgentTransitionText(isPaused ? '' : transitionLabel);
-      queuePendingPausedTransitionText(isPaused ? transitionLabel : '');
-      morphTo('agent-circle', getAgentRenderContent(nextAgent.id));
-    } else {
-      queuePendingAgentVisualSync(null, '');
-      queuePendingAgentTransitionText('');
-      syncAiOrbCenterIcon(document, {
-        animate: switchingAgent,
-        id: nextAgent.id,
-        switchDirection,
-        switchMotion: 'swipe',
-      });
-      if (isPaused) {
-        if (transitionLabel) void playPausedThinkingTransition(transitionLabel);
-        else renderPausedThinkingStream();
-      }
-      else if (transitionLabel) void transitionThinkingText(transitionLabel);
+    if (shape !== 'magic') {
+      manualShape('magic');
+      return;
     }
+    syncPrototypeThinkingStreamIcon({
+      animate: switchingAgent || forceRemorph,
+      switchDirection,
+    });
+    if (isPaused) {
+      if (transitionLabel) void playPausedThinkingTransition(transitionLabel);
+      else renderPausedThinkingStream();
+    }
+    else if (transitionLabel) void transitionThinkingText(transitionLabel);
     syncAiOrbIconButtons();
   };
   const switchAgentByStep = (step) => {
@@ -975,19 +1063,20 @@ export function initManualBindings({
     if (shape === 'magic') {
       const switchDirection = step > 0 ? 'right' : 'left';
       persistAiOrbIconId(nextId);
-      syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection, switchMotion: 'swipe' });
+      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
       syncAiOrbIconButtons();
       return true;
     }
     const switchDirection = step > 0 ? 'right' : 'left';
     persistAiOrbIconId(nextId);
-    syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection });
+    syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
     syncAiOrbIconButtons();
     return true;
   };
   const syncPrototypeAiDebugPanels = () => {
     const shape = currentPrototypeShape();
     const inDebugFamily = isDebugFamilyShape(shape);
+    syncPrototypeThinkingStreamShape();
     setThinkingFamilyActive(inDebugFamily);
     multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'agent-circle' && thinkingDebugState.mode === 'agent'));
     thinkingStateRow?.classList.toggle('hidden', !inDebugFamily);
@@ -1007,6 +1096,15 @@ export function initManualBindings({
         return;
       }
       void runThinkingVerbLoop();
+      return;
+    }
+    if (shape === 'listening') {
+      setThinkingDebugPaused(false);
+      removeThinkingCursor();
+      thinkingDebugState.currentText = '';
+      if (thinkingStreamText) thinkingStreamText.textContent = '';
+      syncPrototypeThinkingStreamShape();
+      syncThinkingStateButtons();
       return;
     }
     if (shape === 'skill-pill') {
@@ -1276,7 +1374,13 @@ export function initManualBindings({
       : ((nextIndex - currentIndex + aiAgentSequence.length) % aiAgentSequence.length) <= ((currentIndex - nextIndex + aiAgentSequence.length) % aiAgentSequence.length)
         ? 'right'
         : 'left';
-    syncAiOrbCenterIcon(document, { animate: true, id: iconId, switchDirection });
+    if (currentPrototypeShape() === 'magic') {
+      thinkingDebugState.mode = 'thinking';
+      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
+    } else {
+      syncAiOrbCenterIcon(document, { animate: true, id: iconId, switchDirection });
+      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
+    }
     syncAiOrbIconButtons();
   }));
   syncAiOrbIconButtons();

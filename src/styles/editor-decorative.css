@@ -237,6 +237,135 @@
 #drop-main { z-index: 3; }
 #list-pills { z-index: 2; }
 
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #drop-main {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%) !important;
+  box-shadow: inset 0 0 20px 0 rgba(255,255,255,0.8) !important;
+  backdrop-filter: blur(5px) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+  filter: none !important;
+  overflow: hidden !important;
+}
+
+body.mode-manual[data-current-shape="listening"] #drop-main.listening-orb,
+body.mode-manual[data-current-shape="magic"] #drop-main.magic-glow {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%) !important;
+  box-shadow: inset 0 0 20px 0 rgba(255,255,255,0.8) !important;
+  backdrop-filter: blur(5px) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+  filter: none !important;
+  overflow: hidden !important;
+}
+
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #home-glow-layer,
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #drop-main #siri-orb,
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #drop-main.magic-glow #siri-orb,
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #drop-main.orb-thinking-bridge #siri-orb,
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #drop-main.listening-orb #siri-orb {
+  opacity: 0 !important;
+  transform: scale(0.2) !important;
+  pointer-events: none !important;
+}
+
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #drop-main #siri-orb .g-celestial-orb-visual {
+  display: none;
+}
+
+body.mode-manual[data-current-shape="magic"] #drop-main {
+  width: 80px;
+  min-width: 80px;
+}
+
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #prototype-thinking-stream {
+  width: 100%;
+  min-width: 0;
+  left: 0;
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  filter: none;
+  animation: none;
+  transition:
+    width var(--anim-w),
+    min-width var(--anim-w),
+    padding var(--anim-w),
+    gap var(--anim-w),
+    opacity 180ms ease,
+    visibility 0ms linear 0ms;
+}
+
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #prototype-thinking-stream::before {
+  opacity: 0;
+}
+
+body.mode-manual[data-current-shape="listening"] #prototype-thinking-stream.is-collapsed-stream {
+  justify-content: center;
+  padding: 0;
+}
+
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #prototype-thinking-stream .g-thinking-orb-stream-icon {
+  transition:
+    opacity 20ms ease,
+    width var(--anim-w),
+    height var(--anim-w),
+    flex-basis var(--anim-w);
+}
+
+body.mode-manual:is([data-current-shape="listening"], [data-current-shape="magic"]) #prototype-thinking-stream .g-thinking-orb-stream-icon img {
+  opacity: 0;
+}
+
+@keyframes prototype-thinking-container-shimmer {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 20px 0 rgba(255,255,255,0.68),
+      inset 16px 0 28px -24px rgba(255,255,255,0.10),
+      inset -18px 0 30px -24px rgba(255,255,255,0.04);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 24px 0 rgba(255,255,255,0.92),
+      inset 22px 0 38px -22px rgba(255,255,255,0.22),
+      inset -24px 0 40px -22px rgba(255,255,255,0.12);
+  }
+}
+
+body.mode-manual[data-current-shape="magic"] #drop-main {
+  animation: prototype-thinking-container-shimmer 2.8s cubic-bezier(0.45, 0, 0.2, 1) infinite !important;
+}
+
+@keyframes prototype-thinking-agent-breathe {
+  0%, 100% {
+    transform: translateZ(0) scale(1);
+    filter:
+      drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18))
+      drop-shadow(0 0 2px rgba(255, 255, 255, 0.06));
+  }
+  48% {
+    transform: translateZ(0) scale(1);
+    filter:
+      drop-shadow(0 2px 10px rgba(0, 0, 0, 0.16))
+      drop-shadow(0 0 20px rgba(255, 255, 255, 0.36));
+  }
+}
+
+body.mode-manual[data-current-shape="magic"] #c-thumb {
+  isolation: isolate;
+}
+
+body.mode-manual[data-current-shape="magic"] #c-thumb img {
+  animation: prototype-thinking-agent-breathe 3.2s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.mode-manual[data-current-shape="magic"] #drop-main,
+  body.mode-manual[data-current-shape="magic"] #c-thumb img {
+    animation: none;
+  }
+}
+
 /* ── List pills ── */
 #list-pills {
   position: absolute;

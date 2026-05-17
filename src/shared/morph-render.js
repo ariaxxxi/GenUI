@@ -719,7 +719,9 @@ export function createMorphRender(ctx) {
     const homeLikeShape = fromShape === 'circle' || fromShape === 'listening' || toShape === 'circle' || toShape === 'listening';
     const thinkingLikeShape = fromShape === 'ai' || fromShape === 'magic' || toShape === 'ai' || toShape === 'magic';
     const isHomeThinkingPair = homeLikeShape && thinkingLikeShape;
-    if (isHomeThinkingPair) {
+    if (fromShape === 'listening' && (toShape === 'magic' || toShape === 'ai')) {
+      transitionMs = 450;
+    } else if (isHomeThinkingPair) {
       transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
     }
     const geometryEase = 'var(--motion-ease)';

@@ -316,43 +316,20 @@ body {
   transform: translate(-50%, 0);
 }
 #prototype-thinking-stream {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 12px);
-  transform: translateX(-50%);
-  min-width: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  pointer-events: none;
-  z-index: 16;
-  white-space: nowrap;
-  transition:
-    opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  top: 0;
+  bottom: auto;
 }
 #prototype-thinking-stream.hidden {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
 }
 body[data-current-shape="skill-pill"] #drop-main {
   overflow: visible;
 }
 #prototype-thinking-stream-text {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 20px;
-  line-height: 1.7;
-  font-weight: 500;
-  color: rgba(255,255,255,0.96);
-  letter-spacing: 0.01em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition:
-    color 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 #prototype-thinking-stream .pixel-cursor {
   display: inline-grid;
@@ -378,6 +355,10 @@ body[data-current-shape="skill-pill"] #drop-main {
 }
 body[data-thinking-debug-family-active="true"][data-thinking-debug-mode="thinking"] #prototype-thinking-stream {
   transition:
+    width 600ms var(--motion-ease),
+    min-width 600ms var(--motion-ease),
+    padding 600ms var(--motion-ease),
+    gap 600ms var(--motion-ease),
     opacity 1000ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     transform 1000ms cubic-bezier(0.35, 0.23, 0.13, 0.98);
 }
@@ -386,16 +367,17 @@ body[data-thinking-debug-family-active="true"][data-thinking-debug-mode="thinkin
     color 280ms cubic-bezier(0.22, 1, 0.36, 1),
     background 280ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 600ms var(--motion-ease),
     opacity 1000ms cubic-bezier(0.35, 0.23, 0.13, 0.98),
     transform 1000ms cubic-bezier(0.35, 0.23, 0.13, 0.98);
 }
 body[data-thinking-debug-minimized="true"] #prototype-thinking-stream {
-  opacity: 0;
-  transform: translate(-50%, 18px);
+  opacity: 1;
+  transform: translateX(-50%);
 }
 body[data-thinking-debug-minimized="true"] #prototype-thinking-stream-text {
   opacity: 0;
-  transform: translateY(16px);
+  transform: none;
 }
 #c-primary {
   position: absolute; z-index: 3;

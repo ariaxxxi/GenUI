@@ -451,6 +451,7 @@ body.bubble2-page.is-canvasless {
 .bubble2-surface {
   position: absolute;
   inset: 0;
+  z-index: 1;
   overflow: hidden;
   border-radius: 999px;
   border: 0 solid transparent;
@@ -466,21 +467,17 @@ body.bubble2-page.is-canvasless {
 .bubble2-surface-selection {
   position: absolute;
   inset: 0;
+  z-index: 2;
   opacity: 0;
   pointer-events: none;
   transition: opacity 220ms ease;
 }
 
 .bubble2-hover-shell {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
   overflow: hidden;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
-  box-shadow: inset 0 0 20px 0 rgba(255,255,255,0.8);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  clip-path: inset(0 round 999px);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
   opacity: 0;
   pointer-events: none;
   filter: none;
@@ -495,6 +492,18 @@ body.bubble2-page.is-canvasless {
   transform: scale(1);
 }
 
+.bubble2-surface-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  clip-path: inset(0 round 999px);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  pointer-events: none;
+  filter: none;
+}
+
 .bubble2-item.is-swap-promoting .bubble2-item-visual,
 .bubble2-item.is-swap-promoting .bubble2-hover-shell,
 .bubble2-item.is-swap-promoting .bubble2-subicon {
@@ -503,7 +512,22 @@ body.bubble2-page.is-canvasless {
 
 
 .bubble2-surface.is-pill,
-.bubble2-surface.has-surface-shell,
+.bubble2-surface.has-surface-shell {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.bubble2-surface-shell .bubble2-orb-simple-shell,
+.bubble2-hover-shell .bubble2-orb-simple-shell {
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+  box-shadow: inset 0 0 20px 0 rgba(255,255,255,0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
 .bubble2-child-surface {
   background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
   box-shadow: inset 0 0 5px 0 rgba(255,255,255,0.8);

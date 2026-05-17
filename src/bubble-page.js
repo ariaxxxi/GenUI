@@ -13,6 +13,12 @@ import {
   syncAiOrbCenterIcon,
   syncAiOrbCenterImage,
 } from './shared/ai-orb-icon.js';
+import {
+  renderThinkingOrbStreamMarkup,
+  setThinkingOrbStreamVisible,
+  syncThinkingOrbStreamIcon,
+  syncThinkingOrbStreamText,
+} from './shared/thinking-orb-stream.js';
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
 let _audioCtx = null;
@@ -1368,9 +1374,9 @@ function buildScene() {
 
   refs.orb = createOrbNode();
   refs.orbVisual = refs.orb.querySelector('.bubble2-orb-visual');
-  refs.orbStream = refs.orb.querySelector('.bubble2-orb-stream');
-  refs.orbStreamIcon = refs.orb.querySelector('[data-bubble2-orb-stream-icon]');
-  refs.orbStreamText = refs.orb.querySelector('.bubble2-orb-stream-text');
+  refs.orbStream = refs.orb.querySelector('.g-thinking-orb-stream');
+  refs.orbStreamIcon = refs.orb.querySelector('[data-thinking-orb-stream-icon]');
+  refs.orbStreamText = refs.orb.querySelector('.g-thinking-orb-stream-text');
   fragment.appendChild(refs.orb);
   refs.swapLayer = document.createElement('div');
   refs.swapLayer.className = 'bubble2-swap-layer';
@@ -1508,6 +1514,7 @@ function syncBubbleNodeContent(node, bubble) {
   const surface = document.createElement('div');
   surface.className = `bubble2-surface${(bubble.hoverExpandsToPill || bubble.usesSurfaceShell) ? ' g-stage-selected-host' : ''}`;
   let surfaceChrome = null;
+  let surfaceShell = null;
 
   if (!bubble.isPill && !bubble.hoverExpandsToPill && !bubble.usesSurfaceShell) {
     const hoverShell = document.createElement('div');
@@ -1518,6 +1525,14 @@ function syncBubbleNodeContent(node, bubble) {
     node.hoverShell = hoverShell;
   } else {
     node.hoverShell = null;
+  }
+
+  if (usesPillInteraction || bubble.usesSurfaceShell) {
+    surfaceShell = document.createElement('div');
+    surfaceShell.className = 'bubble2-surface-shell';
+    surfaceShell.setAttribute('aria-hidden', 'true');
+    surfaceShell.innerHTML = renderBubbleOrbShellMarkup({ includeCenter: false });
+    surface.appendChild(surfaceShell);
   }
 
   if (bubble.hoverExpandsToPill || bubble.usesSurfaceShell) {
@@ -1605,6 +1620,7 @@ function syncBubbleNodeContent(node, bubble) {
   node.leadingGroup = leadingGroup;
   node.pillCopy = pillCopy;
   node.subIcon = subIcon;
+  node.surfaceShell = surfaceShell;
   node.surfaceChrome = surfaceChrome;
 }
 
@@ -1653,15 +1669,12 @@ function createOrbNode() {
   button.type = 'button';
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
 
-  button.insertAdjacentHTML(
-    'beforeend',
-    '<div class="bubble2-orb-stream hidden" aria-hidden="true"><span class="bubble2-orb-stream-icon"><img data-bubble2-orb-stream-icon alt=""></span><span class="bubble2-orb-stream-text"></span></div>',
-  );
+  button.insertAdjacentHTML('beforeend', renderThinkingOrbStreamMarkup());
 
   if (state.activeSetId === 'interrupt') {
-    refs.orbStream = button.querySelector('.bubble2-orb-stream');
-    refs.orbStreamIcon = button.querySelector('[data-bubble2-orb-stream-icon]');
-    refs.orbStreamText = button.querySelector('.bubble2-orb-stream-text');
+    refs.orbStream = button.querySelector('.g-thinking-orb-stream');
+    refs.orbStreamIcon = button.querySelector('[data-thinking-orb-stream-icon]');
+    refs.orbStreamText = button.querySelector('.g-thinking-orb-stream-text');
     refs.orbStream.classList.remove('hidden');
     syncBubbleHomeThinkingPillText(interruptSessionPaused ? 'Session paused' : BUBBLE_HOME_INTERRUPT_THINKING_TEXT, button);
     syncBubbleHomeThinkingPillIcon(state.homeOrbContent, button);
@@ -1709,7 +1722,7 @@ function setBubbleHomeStreamVisible(visible) {
     window.clearTimeout(bubbleHomeStreamState.fadeTimer);
     bubbleHomeStreamState.fadeTimer = null;
   }
-  refs.orbStream.classList.toggle('hidden', !visible);
+  setThinkingOrbStreamVisible(refs.orbStream, visible);
 }
 
 function clearBubbleHomeStream() {
@@ -1953,35 +1966,30 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
 }
 
 function syncBubbleHomeThinkingPillIcon(content = state.homeOrbContent, root = refs.orb) {
-  const image = refs.orbStreamIcon || root?.querySelector?.('[data-bubble2-orb-stream-icon]');
+  const image = refs.orbStreamIcon || root?.querySelector?.('[data-thinking-orb-stream-icon]');
   if (!image || !content) return;
   const fallback = getAiOrbIconOption(state.orbAgentId);
   const src = String(content.img || fallback?.src || '').trim();
-  if (src && image.getAttribute('src') !== src) image.src = src;
-  image.alt = String(content.alt || content.label || fallback?.label || '');
+  syncThinkingOrbStreamIcon(image, {
+    src,
+    alt: String(content.alt || content.label || fallback?.label || ''),
+  });
 }
 
 function syncBubbleHomeThinkingPillText(text, root = refs.orb, options = {}) {
   const value = String(text || '').trim();
-  const stream = refs.orbStream || root?.querySelector?.('.bubble2-orb-stream');
-  const textEl = refs.orbStreamText || root?.querySelector?.('.bubble2-orb-stream-text');
+  const stream = refs.orbStream || root?.querySelector?.('.g-thinking-orb-stream');
+  const textEl = refs.orbStreamText || root?.querySelector?.('.g-thinking-orb-stream-text');
   if (!value || !stream || !textEl) return;
   const metrics = currentBubbleHomeThinkingPillMetrics();
-  const textWidth = Math.ceil(measureTextWidth(value, BUBBLE_HOME_THINKING_TEXT_FONT)) + 2;
-  const pillWidth = Math.max(
-    BUBBLE_HOME_THINKING_PILL_MIN_WIDTH,
-    metrics.paddingX.left
-      + metrics.iconSize
-      + metrics.gap
-      + textWidth
-      + metrics.paddingX.right,
-  );
-  stream.style.setProperty('--bubble2-thinking-pill-icon-size', `${metrics.iconSize}px`);
-  stream.style.setProperty('--bubble2-thinking-pill-gap', `${metrics.gap}px`);
-  stream.style.setProperty('--bubble2-thinking-pill-padding-left', `${metrics.paddingX.left}px`);
-  stream.style.setProperty('--bubble2-thinking-pill-padding-right', `${metrics.paddingX.right}px`);
-  stream.style.setProperty('--bubble2-thinking-pill-width', `${pillWidth}px`);
-  stream.style.setProperty('--bubble2-thinking-text-width', `${textWidth}px`);
+  syncThinkingOrbStreamText(stream, textEl, value, {
+    metrics: {
+      ...metrics,
+      minWidth: BUBBLE_HOME_THINKING_PILL_MIN_WIDTH,
+    },
+    font: BUBBLE_HOME_THINKING_TEXT_FONT,
+    setText: false,
+  });
   if (!options.animate || !bubbleHomeStreamState.currentText || bubbleHomeStreamState.currentText === value) {
     bubbleHomeStreamState.currentText = value;
     textEl.textContent = value;
