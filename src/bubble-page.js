@@ -2731,7 +2731,7 @@ function findPromotedReleaseBubble(transition) {
 function computePromotedSwapMotion(transition, promotedBubble, now) {
   if (!transition || !promotedBubble) return null;
   const progress = clamp((now - transition.startedAt) / transition.durationMs, 0, 1);
-  const travel = easeInOutCubic(progress);
+  const travel = easeSmoothConnect(progress);
   const lift = Math.sin(Math.min(progress, 1) * Math.PI) * -8;
   const orbCanvasDestinationX = -transition.panOffset.x;
   const orbCanvasDestinationY = -transition.panOffset.y;
@@ -2748,7 +2748,8 @@ function computePromotedSwapMotion(transition, promotedBubble, now) {
 function computeDemotedSwapMotion(transition, now) {
   if (!transition) return null;
   if (isInterruptPlaybackSwap(transition)) return null;
-  const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
+  const demotedProgress = easeSmoothConnect(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
+  const orbFadeDurationMs = 200;
   return {
     centerX: transition.demotedCenterStartX ?? 0,
     centerY: transition.demotedCenterStartY ?? 0,
@@ -2757,7 +2758,7 @@ function computeDemotedSwapMotion(transition, now) {
       transition.demotedShellScaleEnd ?? SWAP_DEMOTED_END_SCALE,
       demotedProgress,
     ),
-    opacity: 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / 220, 0, 1)),
+    opacity: 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / orbFadeDurationMs, 0, 1)),
   };
 }
 
@@ -3415,7 +3416,7 @@ function computeScene(now = performance.now()) {
 function computeSwapTransitionScene(now) {
   const transition = state.swapTransition;
   if (isInterruptPlaybackSwap(transition)) {
-    const progress = easeInOutCubic(clamp((now - transition.startedAt) / transition.durationMs, 0, 1));
+    const progress = easeSmoothConnect(clamp((now - transition.startedAt) / transition.durationMs, 0, 1));
     return {
       bubbles: transition.releaseBubbles.map((bubble) => ({
         ...bubble,
@@ -3454,7 +3455,7 @@ function computeSwapTransitionScene(now) {
         ? interpolate(
             bubble.targetWidth ?? bubble.baseSize,
             bubble.baseSize,
-            easeInOutCubic(promotedMotion?.progress ?? 0),
+            easeSmoothConnect(promotedMotion?.progress ?? 0),
           )
         : (bubble.targetWidth ?? bubble.baseSize),
       isExpanded: false,
@@ -4311,6 +4312,10 @@ function easeInQuart(value) {
   return value * value * value * value;
 }
 
+function easeSmoothConnect(value) {
+  return cubicBezierAt(clamp(value, 0, 1), 0.645, 0.045, 0.355, 1);
+}
+
 function easeInOutCubic(value) {
   if (value < 0.5) return 4 * value * value * value;
   const inverse = (-2 * value) + 2;
@@ -4322,6 +4327,27 @@ function easeOutBackSoft(value) {
   const c3 = c1 + 1;
   const x = value - 1;
   return 1 + (c3 * x * x * x) + (c1 * x * x);
+}
+
+function cubicBezierAt(x, x1, y1, x2, y2) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let lower = 0;
+  let upper = 1;
+  let t = x;
+  for (let i = 0; i < 8; i += 1) {
+    const currentX = cubicBezierPoint(t, x1, x2);
+    if (Math.abs(currentX - x) < 0.0005) break;
+    if (currentX < x) lower = t;
+    else upper = t;
+    t = (lower + upper) / 2;
+  }
+  return cubicBezierPoint(t, y1, y2);
+}
+
+function cubicBezierPoint(t, p1, p2) {
+  const inverse = 1 - t;
+  return (3 * inverse * inverse * t * p1) + (3 * inverse * t * t * p2) + (t * t * t);
 }
 
 function interpolate(start, end, progress) {
