@@ -5,7 +5,7 @@
   --bubble2-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
   --bubble2-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
   --motion-ease: var(--bubble2-ease);
-  --bubble2-pill-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --bubble2-pill-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
 }
 
 * {
@@ -214,10 +214,6 @@ body.bubble2-page.is-canvasless {
 .bubble2-video-progress {
   width: 100%;
   accent-color: rgba(157, 195, 255, 0.9);
-}
-
-.bubble2-home-orb-btn {
-  width: 100%;
 }
 
 .bubble2-set-button {
@@ -603,15 +599,6 @@ body.bubble2-page.is-canvasless {
   border-radius: 0;
 }
 
-.bubble2-icon-wrap.is-force-cropped {
-  overflow: hidden;
-  border-radius: 999px;
-}
-
-.bubble2-icon-wrap.is-force-cropped .bubble2-icon {
-  border-radius: inherit;
-}
-
 .bubble2-icon {
   display: block;
   width: 100%;
@@ -900,15 +887,7 @@ body.bubble2-page.is-canvasless {
   appearance: none;
   cursor: pointer;
   overflow: visible;
-  transform-origin: center center;
-  will-change: transform, opacity;
-  transition:
-    transform 600ms var(--bubble2-ease),
-    opacity 600ms var(--bubble2-ease);
-}
-
-.bubble2-orb.is-hidden-home-orb {
-  pointer-events: none;
+  transition: transform 520ms var(--bubble2-ease);
 }
 
 .bubble2-orb-stream {

@@ -127,6 +127,8 @@ const SWAP_ORB_BLOOM_OVERSHOOT_MS = 150;
 const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
 const SWAP_DEMOTED_END_SCALE = 0.55;
+const SWAP_PROMOTED_HANDOFF_DELAY_MS = 0;
+const SWAP_PROMOTED_HANDOFF_FADE_MS = 60;
 const BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS = 1200;
 const BUBBLE_HOME_IDLE_STREAM_GAP_MS = 180;
 const BUBBLE_HOME_STREAM_FADE_MS = 180;
@@ -1241,7 +1243,6 @@ const state = {
   openMotionUntil: 0,
   closeMotionUntil: 0,
   orbAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
-  homeOrbVisible: true,
   homeOrbContent: createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID),
   promptHomeThinking: false,
   promptHomeThinkingAnimating: false,
@@ -1251,6 +1252,7 @@ const state = {
   swapResetPending: false,
   panSnapPending: false,
   pendingDemotedSlotSwap: null,
+  promotedHandoffGhost: null,
   agentSetReturnTimer: null,
   agentSetReturnTriggered: false,
   agentSetReturnPhase: '',
@@ -1284,7 +1286,6 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
-  homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
   bgImage: document.querySelector('[data-bubble2-bg-image]'),
   bgImageToggle: document.querySelector('[data-bubble2-bg-image-toggle]'),
   bgVideo: document.querySelector('[data-bubble2-bg-video]'),
@@ -1314,7 +1315,6 @@ function init() {
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
-  syncHomeOrbToggleUi();
   syncBackgroundImageUi();
   syncBackgroundVideoUi();
   buildScene();
@@ -2032,13 +2032,6 @@ function syncCanvaslessUi() {
   refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
 }
 
-function syncHomeOrbToggleUi() {
-  if (!refs.homeOrbToggle) return;
-  const visible = state.homeOrbVisible !== false;
-  refs.homeOrbToggle.textContent = visible ? 'Dismiss orb' : 'Initiate orb';
-  refs.homeOrbToggle.setAttribute('aria-pressed', String(visible));
-}
-
 function syncBackgroundImageUi() {
   const enabled = state.backgroundImageEnabled === true;
   if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
@@ -2245,7 +2238,6 @@ function bindEvents() {
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
-  refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
   refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
   refs.bgVideoUpload?.addEventListener('click', (event) => {
     const target = event.target;
@@ -2285,12 +2277,6 @@ function handleCanvaslessToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.canvaslessEnabled = target.checked;
   syncCanvaslessUi();
-}
-
-function handleHomeOrbToggleClick() {
-  state.homeOrbVisible = !state.homeOrbVisible;
-  syncHomeOrbToggleUi();
-  scheduleRender();
 }
 
 function handleBackgroundImageToggleChange(event) {
@@ -2606,6 +2592,7 @@ function startBubbleSwap(scene, now) {
   if (!selectedBubble) return;
 
   clearAgentSetReturnInteraction();
+  state.promotedHandoffGhost = null;
   state.isPressed = false;
   state.openMotionUntil = 0;
   state.closeMotionUntil = now + SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS;
@@ -2672,6 +2659,7 @@ function startBubbleSwap(scene, now) {
 function commitBubbleSwap() {
   const transition = state.swapTransition;
   if (!transition) return;
+  const promotedBubble = findPromotedReleaseBubble(transition);
   if (isPauseSessionSwap(transition)) {
     interruptSessionPaused = true;
     state.swapTransition = null;
@@ -2691,6 +2679,15 @@ function commitBubbleSwap() {
     return;
   }
   state.homeOrbContent = transition.promotedContent;
+  state.promotedHandoffGhost = promotedBubble
+    ? {
+        startedAt: performance.now(),
+        centerX: 0,
+        centerY: 0,
+        content: { ...transition.promotedContent },
+        theme: promotedBubble.theme || transition.promotedContent?.theme || null,
+      }
+    : null;
   if (state.activeSetId === 'prompt') {
     activatePromptHomeThinking();
   } else {
@@ -2744,6 +2741,7 @@ function computePromotedSwapMotion(transition, promotedBubble, now) {
     currentCenterY: interpolate(promotedBubble.targetY, orbCanvasDestinationY, travel) + lift,
     rootScale: interpolate(promotedBubble.targetScale, transition.promotedRootScaleEnd, travel),
     visualScale: interpolate(transition.promotedVisualScaleStart, transition.promotedVisualScaleEnd, travel),
+    opacity: 1,
   };
 }
 
@@ -2814,11 +2812,6 @@ function render() {
     const isHovered = scene.hoveredId === bubble.id;
     const isPromoting = bubble.swapState === 'promoting';
     const isPromotingDomainPill = isPromoting && bubble.hoverExpandsToPill;
-    const fixedPromotedImage = isPromoting
-      && bubble.graphicKind !== 'emoji'
-      && bubble.preservePromotedImageScale
-      && Number.isFinite(Number(bubble.homePromotedImageSize))
-      && Number(bubble.homePromotedImageSize) > 0;
     const isHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
     const isRoundVisualScaleActive = (isHovered && !usesPillInteraction) || isPromoting;
     const hoverVisualScale = bubble.usesSurfaceShell
@@ -2869,11 +2862,13 @@ function render() {
     const suppressHoveredShadowForVideo = state.activeSetId === 'app'
       && Boolean(state.backgroundVideo?.src)
       && isHovered;
-    node.root.style.opacity = isPromoting
-      ? '1'
-      : state.isPressed
-      ? String(bubbleOpacity)
-      : (isSwapActive ? '0' : '0');
+    if (isPromoting) {
+      node.root.style.opacity = String(clamp(Number(bubble.promotedOpacity) || 0, 0, 1));
+    } else {
+      node.root.style.opacity = state.isPressed
+        ? String(bubbleOpacity)
+        : (isSwapActive ? '0' : '0');
+    }
     if (node.shadowEl) {
       if (suppressHoveredShadowForVideo) {
         node.shadowEl.style.boxShadow = 'none';
@@ -2916,7 +2911,7 @@ function render() {
     node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
     if (node.visual) {
-      node.visual.style.transform = `scale(${fixedPromotedImage ? 1 : (isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1)))})`;
+      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
     }
     if (node.surfaceChrome) {
       applyBubbleCelestialChrome(
@@ -2954,18 +2949,9 @@ function render() {
         ? 1
         : (usesPillInteraction ? 1 : pillHoverBubbleScale));
     node.iconWrap.style.transform = `scale(${iconWrapScale})`;
-    node.iconWrap.classList.toggle('is-force-cropped', fixedPromotedImage);
-    node.iconWrap.style.opacity = fixedPromotedImage
-      ? String(clamp(Number(bubble.promotedImageOpacity) || 0, 0, 1))
-      : '1';
+    node.iconWrap.style.opacity = '1';
     if (bubbleGraphicEl instanceof HTMLElement) {
-      if (fixedPromotedImage) {
-        const baseImageScale = Number(bubble.imageScale ?? (bubble.fill ? 1 : 0.72));
-        const rootScale = Math.max(Number(bubble.targetScale) || 1, 0.0001);
-        bubbleGraphicEl.style.transform = `scale(${(baseImageScale / rootScale).toFixed(4)})`;
-      } else {
-        bubbleGraphicEl.style.removeProperty('transform');
-      }
+      bubbleGraphicEl.style.removeProperty('transform');
     }
     node.surface.classList.toggle('has-surface-shell', Boolean(bubble.usesSurfaceShell));
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
@@ -3008,7 +2994,7 @@ function render() {
         node.leadingGroup.style.top = `${format(groupTop)}px`;
         node.leadingGroup.style.width = `${format(groupRight - groupLeft)}px`;
         node.leadingGroup.style.height = `${format(groupBottom - groupTop)}px`;
-        node.leadingGroup.style.transform = `scale(${fixedPromotedImage ? 1 : (isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale)})`;
+        node.leadingGroup.style.transform = `scale(${isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale})`;
         node.iconWrap.style.left = `${format(-groupLeft)}px`;
         node.iconWrap.style.top = `${format(-groupTop)}px`;
         node.subIcon.style.width = `${format(subIconSize)}px`;
@@ -3028,7 +3014,7 @@ function render() {
       node.leadingGroup.style.top = '0px';
       node.leadingGroup.style.width = `${bubble.baseSize}px`;
       node.leadingGroup.style.height = `${bubble.baseSize}px`;
-      node.leadingGroup.style.transform = `scale(${fixedPromotedImage ? 1 : (isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale)})`;
+      node.leadingGroup.style.transform = `scale(${isPromotingDomainPill ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale})`;
     }
     if (node.leadingGroup) {
       node.leadingGroup.style.opacity = '1';
@@ -3088,22 +3074,18 @@ function render() {
     || (!thinkingHomeOrbActive && Boolean(refs.orbStream?.classList.contains('hidden')));
 
   if (refs.orb) {
-    const homeOrbVisibilityScale = state.homeOrbVisible === false ? 0 : 1;
     refs.orb.classList.toggle('is-pressed', state.isPressed);
     refs.orb.classList.toggle('is-interrupt-home-orb', state.activeSetId === 'interrupt');
-    refs.orb.classList.toggle('is-hidden-home-orb', homeOrbVisibilityScale === 0);
     refs.orb.classList.toggle('is-prompt-thinking-home-orb', promptThinkingActive);
     refs.orb.classList.toggle('is-thinking-home-orb', thinkingHomeOrbActive);
     refs.orb.classList.toggle('is-collapsed-stream', collapsedThinkingStream);
-    refs.orb.setAttribute('aria-hidden', String(homeOrbVisibilityScale === 0));
-    refs.orb.tabIndex = homeOrbVisibilityScale === 0 ? -1 : 0;
-    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms, 0ms' : '';
+    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms' : '';
     refs.orb.style.transform = demotedSwapMotion
-      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0) scale(${homeOrbVisibilityScale.toFixed(4)})`
-      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0) scale(${homeOrbVisibilityScale.toFixed(4)})`;
+      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
+      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0)`;
     refs.orb.style.opacity = demotedSwapMotion
-      ? format(demotedSwapMotion.opacity * homeOrbVisibilityScale)
-      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : String(homeOrbVisibilityScale));
+      ? format(demotedSwapMotion.opacity)
+      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : '1');
   }
 
   if (refs.orbStream) {
@@ -3479,6 +3461,7 @@ function computeSwapTransitionScene(now) {
       expandedExtraSourceWidth: 0,
       promotedVisualScale: bubble.id === transition.selectedBubbleId ? (promotedMotion?.visualScale ?? transition.promotedVisualScaleStart) : 1,
       promotedImageOpacity: bubble.id === transition.selectedBubbleId ? easeOutQuart(promotedMotion?.progress ?? 0) : 1,
+      promotedOpacity: bubble.id === transition.selectedBubbleId ? (promotedMotion?.opacity ?? 1) : 1,
     })),
     children: [],
     childZone: null,
@@ -3499,6 +3482,29 @@ function clearSwapLayer() {
 function syncSwapLayer(now) {
   if (!refs.swapLayer) return;
   clearSwapLayer();
+  const ghost = state.promotedHandoffGhost;
+  if (!ghost) return;
+  const elapsed = now - ghost.startedAt;
+  const fadeProgress = clamp((elapsed - SWAP_PROMOTED_HANDOFF_DELAY_MS) / SWAP_PROMOTED_HANDOFF_FADE_MS, 0, 1);
+  const opacity = 1 - easeInQuart(fadeProgress);
+  if (elapsed >= SWAP_PROMOTED_HANDOFF_DELAY_MS + SWAP_PROMOTED_HANDOFF_FADE_MS) {
+    state.promotedHandoffGhost = null;
+    return;
+  }
+  const node = createSwapPromotedNode();
+  node.style.setProperty('--swap-center-x', `${format(ghost.centerX ?? 0)}px`);
+  node.style.setProperty('--swap-center-y', `${format(ghost.centerY ?? 0)}px`);
+  node.style.setProperty('--swap-rim-drift', '0px');
+  node.style.setProperty('--swap-shell-scale', '1');
+  syncSwapOrbContent(node, ghost.content);
+  const visual = node.querySelector('.bubble2-swap-orb');
+  syncBubbleHomeOrbVisualStateClasses(visual, ghost.content);
+  applySwapOrbTheme(node, ghost.theme || ghost.content?.theme);
+  if (visual) {
+    visual.style.opacity = String(clamp(opacity, 0, 1));
+  }
+  refs.swapLayer.appendChild(node);
+  scheduleRender();
 }
 
 function computeShellBloomScale(elapsedMs, startScale) {
@@ -4299,6 +4305,10 @@ function smoothstep(value) {
 function easeOutQuart(value) {
   const inverse = 1 - value;
   return 1 - (inverse * inverse * inverse * inverse);
+}
+
+function easeInQuart(value) {
+  return value * value * value * value;
 }
 
 function easeInOutCubic(value) {
