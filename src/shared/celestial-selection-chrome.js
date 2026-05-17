@@ -145,7 +145,7 @@ export function applySelectedChromePreset(chromeEl, hostEl, preset, colorOverrid
   const circularityProgress = clamp((circularity - 0.58) / 0.42, 0, 1);
   const renderShape = String(chromeEl.dataset.renderShape || hostEl.dataset.renderShape || "");
   const dotLikePrototypeSelection = chromeEl.id === "prototype-stage-selection"
-    && ["dot", "circle", "agent-circle", "listening"].includes(renderShape);
+    && ["dot", "circle", "listening"].includes(renderShape);
   const topHighlightRatio = dotLikePrototypeSelection
     ? (0.67 + (0.33 * circularityProgress))
     : (0.5 + (0.5 * circularityProgress)) * highlightScale;

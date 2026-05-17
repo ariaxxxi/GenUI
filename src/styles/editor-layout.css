@@ -323,35 +323,13 @@ body {
   opacity: 0;
   visibility: hidden;
 }
-body[data-current-shape="skill-pill"] #drop-main {
-  overflow: visible;
-}
 #prototype-thinking-stream-text {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-#prototype-thinking-stream .pixel-cursor {
-  display: inline-grid;
-  grid-template-columns: repeat(4, 3px);
-  grid-template-rows: repeat(4, 3px);
-  gap: 1px;
-  vertical-align: middle;
-  margin-left: 3px;
-  margin-bottom: 1px;
-  flex-shrink: 0;
-}
-#prototype-thinking-stream .pixel-cursor span {
-  display: block;
-  width: 3px;
-  height: 3px;
-  background: rgba(255,255,255,0.96);
-}
 #prototype-thinking-stream.is-paused-debug {
   transform: translateX(-50%);
-}
-#prototype-thinking-stream.is-paused-debug .pixel-cursor {
-  display: none;
 }
 body[data-thinking-debug-family-active="true"][data-thinking-debug-mode="thinking"] #prototype-thinking-stream {
   transition:

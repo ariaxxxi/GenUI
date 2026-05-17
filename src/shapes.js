@@ -84,11 +84,6 @@ export const SHAPES = {
     left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
-  'agent-circle': {
-    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 1 },
-    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
-    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
-  },
   dot: {
     main: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 1 },
     left: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
@@ -103,11 +98,6 @@ export const SHAPES = {
     main: { w: 420, h: 100, br: '60px', tx: -210, ty: -50, op: 1 },
     left: { w: 100, h: 100, br: '50px', tx: -210, ty: -50, op: 0 },
     right: { w: 100, h: 100, br: '50px', tx: 60, ty: -50, op: 0 },
-  },
-  'skill-pill': {
-    main: { w: 220, h: 68, br: '34px', tx: -110, ty: -54, op: 1 },
-    left: { w: 100, h: 100, br: '50px', tx: -110, ty: -70, op: 0 },
-    right: { w: 100, h: 100, br: '50px', tx: 10, ty: -70, op: 0 },
   },
   split: {
     main: { w: 96, h: 96, br: '48px', tx: -48, ty: -48, op: 0 },

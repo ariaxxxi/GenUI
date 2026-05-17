@@ -1,4 +1,4 @@
-import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon, syncAiOrbCenterImage } from '../../shared/ai-orb-icon.js';
+import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId } from '../../shared/ai-orb-icon.js';
 import {
   renderThinkingOrbStreamMarkup,
   setThinkingOrbStreamVisible,
@@ -237,7 +237,7 @@ export function initManualBindings({
   const thinkingResumeBtn = document.getElementById('prototype-thinking-resume');
   const thinkingCopyInput = document.getElementById('prototype-thinking-copy-input');
   const thinkingCopyFireBtn = document.getElementById('prototype-thinking-copy-fire');
-  const DEBUG_FAMILY_SHAPES = new Set(['magic', 'skill-pill', 'agent-circle']);
+  const DEBUG_FAMILY_SHAPES = new Set(['magic']);
   const thinkingDebugState = {
     mode: 'thinking',
     familyActive: getPrototypeAiDebugState?.()?.active === true,
@@ -246,16 +246,9 @@ export function initManualBindings({
     activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
     activeAppId: PROTOTYPE_APPS[0]?.id || '',
     pendingCustomText: '',
-    pendingPausedTransitionText: '',
-    pendingSkillTransitionText: '',
-    pendingAppVisualSync: null,
-    pendingAppTransitionText: '',
-    pendingAgentVisualSync: null,
-    pendingAgentTransitionText: '',
     streamToken: 0,
     textSwapTimer: null,
     currentText: '',
-    currentCursor: null,
     verbIndex: 0,
     skillPhraseIndexById: Object.create(null),
   };
@@ -263,84 +256,13 @@ export function initManualBindings({
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const currentPrototypeShape = () => String(document.body?.dataset?.currentShape || '').trim().toLowerCase();
   const isDebugFamilyShape = (shape = currentPrototypeShape()) => DEBUG_FAMILY_SHAPES.has(String(shape || '').trim().toLowerCase());
-  const agentDebugTypography = {
-    icon: { size: 40, color: '#ffffff' },
-    primary: { size: 28, color: '#ffffff' },
-    secondary: { size: 24, color: '#d4d4d4' },
-    detail: { size: 24, color: '#a3a3a3' },
-    intentHeader: { size: 18, color: '#a0a0a0' },
-  };
-  const skillChipTypography = {
-    icon: { size: 28, color: '#ffffff' },
-    primary: { size: 20, color: '#ffffff' },
-    secondary: { size: 20, color: '#d4d4d4' },
-    detail: { size: 20, color: '#a3a3a3' },
-    intentHeader: { size: 18, color: '#a0a0a0' },
-  };
-  const skillChipMeasureCanvas = document.createElement('canvas');
-  const skillChipMeasureContext = skillChipMeasureCanvas.getContext('2d');
   const aiAgentSequence = Object.keys(AI_ORB_ICON_OPTIONS);
   const prototypeAppSequence = PROTOTYPE_APPS.map((item) => item.id);
   const getSkillById = (id) => PROTOTYPE_SKILLS.find((item) => item.id === id) || PROTOTYPE_SKILLS[0];
   const getAppById = (id) => PROTOTYPE_APPS.find((item) => item.id === id) || PROTOTYPE_APPS[0];
-  const getAgentOptionById = (id = loadAiOrbIconId()) => {
-    const fallbackId = loadAiOrbIconId();
-    return AI_ORB_ICON_OPTIONS[id] || AI_ORB_ICON_OPTIONS[fallbackId] || Object.values(AI_ORB_ICON_OPTIONS)[0] || null;
-  };
   const getSkillTransitionText = (skill) => {
     const baseLabel = String(skill?.label || 'Domain').replace(/\s+Agent$/i, '').trim() || 'Domain';
     return `Using ${baseLabel} skill`;
-  };
-  const getSkillRenderContent = (skill) => ({
-    icon: createIcon('image', skill?.src || ''),
-    primary: skill?.label || 'Domain Agent',
-    secondary: '',
-    detail: '',
-    typography: skillChipTypography,
-  });
-  const getAgentRenderContent = (agentId = loadAiOrbIconId()) => {
-    const option = AI_ORB_ICON_OPTIONS[agentId] || AI_ORB_ICON_OPTIONS[loadAiOrbIconId()];
-    return {
-      icon: createIcon('image', option?.src || ''),
-      primary: '',
-      secondary: '',
-      detail: '',
-      typography: agentDebugTypography,
-    };
-  };
-  const getAppRenderContent = (app = getAppById()) => ({
-    icon: createIcon('image', app?.src || ''),
-    primary: '',
-    secondary: '',
-    detail: '',
-    typography: agentDebugTypography,
-  });
-  const measureSkillChipLabelWidth = (label) => {
-    const text = String(label || '').trim();
-    if (!text) return 0;
-    if (skillChipMeasureContext) {
-      skillChipMeasureContext.font = "600 20px 'DM Sans', sans-serif";
-      return Math.ceil(skillChipMeasureContext.measureText(text).width);
-    }
-    return text.length * 12;
-  };
-  const getSkillChipGeometry = (skill) => {
-    const labelWidth = measureSkillChipLabelWidth(skill?.label || 'Domain Agent');
-    const chipHeight = 68;
-    const leftPad = 18;
-    const iconSize = 36;
-    const iconGap = 10;
-    const rightPad = 22;
-    const minWidth = 164;
-    const maxWidth = 320;
-    const width = clamp(leftPad + iconSize + iconGap + labelWidth + rightPad, minWidth, maxWidth);
-    const radius = Math.round(chipHeight / 2);
-    const chipCenterY = -20;
-    return {
-      main: { w: width, h: chipHeight, br: `${radius}px`, tx: -(width / 2), ty: chipCenterY - (chipHeight / 2), op: 1 },
-      left: { w: 100, h: 100, br: '50px', tx: -(width / 2), ty: chipCenterY - 50, op: 0 },
-      right: { w: 100, h: 100, br: '50px', tx: (width / 2) - 100, ty: chipCenterY - 50, op: 0 },
-    };
   };
   const getAgentIndex = (id) => Math.max(0, aiAgentSequence.indexOf(String(id || '').trim().toLowerCase()));
   const getAgentSwitchDirection = (fromId, toId) => {
@@ -376,20 +298,6 @@ export function initManualBindings({
     const source = pool.length ? pool : items;
     return source[Math.floor(Math.random() * source.length)] || items[0] || null;
   };
-  const createPixelCursor = () => {
-    const px = document.createElement('span');
-    px.className = 'pixel-cursor';
-    for (let i = 0; i < 16; i += 1) {
-      const dot = document.createElement('span');
-      px.appendChild(dot);
-    }
-    return px;
-  };
-  const removeThinkingCursor = () => {
-    if (!thinkingDebugState.currentCursor) return;
-    thinkingDebugState.currentCursor.remove();
-    thinkingDebugState.currentCursor = null;
-  };
   const getPrototypeThinkingStreamVisual = () => {
     if (thinkingDebugState.mode === 'skill') {
       const skill = getSkillById(thinkingDebugState.activeSkillId);
@@ -420,6 +328,7 @@ export function initManualBindings({
       switchDirection,
       motion,
     });
+    syncPrototypeStageThinkingIcon();
   };
   const syncPrototypeStageThinkingIcon = () => {
     const visual = getPrototypeThinkingStreamVisual();
@@ -506,7 +415,6 @@ export function initManualBindings({
     thinkingStream.classList.toggle('is-paused-debug', !!paused);
   };
   const clearThinkingStream = () => {
-    removeThinkingCursor();
     thinkingDebugState.currentText = '';
     if (thinkingStreamText) thinkingStreamText.textContent = '';
     setThinkingStreamPausedStyle(false);
@@ -594,7 +502,6 @@ export function initManualBindings({
       thinkingDebugState.textSwapTimer = null;
     }
     thinkingStream?.classList.remove('is-text-transitioning');
-    removeThinkingCursor();
   };
   const setThinkingStreamText = (text, { pausedStyle = false, visible = true } = {}) => {
     const value = String(text || '');
@@ -644,42 +551,6 @@ export function initManualBindings({
     }
     void transitionThinkingText(pausedText, { allowWhilePaused: true });
   };
-  const queuePendingPausedTransitionText = (text = '') => {
-    thinkingDebugState.pendingPausedTransitionText = String(text || '').trim();
-  };
-  const flushPendingPausedTransitionText = () => {
-    const text = String(thinkingDebugState.pendingPausedTransitionText || '').trim();
-    thinkingDebugState.pendingPausedTransitionText = '';
-    return text;
-  };
-  const playSkillChipSquash = () => {
-    const main = document.getElementById('drop-main');
-    if (!main) return;
-    if (main._prototypeSkillChipSquashAnim) {
-      main._prototypeSkillChipSquashAnim.cancel();
-      main._prototypeSkillChipSquashAnim = null;
-    }
-    main.style.transformOrigin = '50% 50%';
-    main.style.scale = '1 1';
-    const anim = main.animate([
-      { scale: '1 1', offset: 0 },
-      { scale: '0.965 1', offset: 0.3 },
-      { scale: '1.012 1', offset: 0.68 },
-      { scale: '1 1', offset: 1 },
-    ], {
-      duration: 1180,
-      easing: 'cubic-bezier(0.28, 0.08, 0.18, 1)',
-      fill: 'none',
-    });
-    main._prototypeSkillChipSquashAnim = anim;
-    const clear = () => {
-      if (main._prototypeSkillChipSquashAnim !== anim) return;
-      main._prototypeSkillChipSquashAnim = null;
-      main.style.scale = '1 1';
-    };
-    anim.onfinish = clear;
-    anim.oncancel = clear;
-  };
   const stopThinkingStream = () => {
     cancelThinkingStreamPlayback();
     clearThinkingStream();
@@ -700,7 +571,6 @@ export function initManualBindings({
     syncPrototypeThinkingStreamMetrics(value);
     setThinkingStreamVisible(true);
     setThinkingStreamPausedStyle(false);
-    removeThinkingCursor();
     if (!animate || !thinkingDebugState.currentText || thinkingDebugState.currentText === value) {
       thinkingDebugState.currentText = value;
       thinkingStreamText.textContent = value;
@@ -721,25 +591,13 @@ export function initManualBindings({
     });
     return token === thinkingDebugState.streamToken;
   };
-  const typeThinkingText = async (text, token) => {
-    if (!thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
-    return showThinkingTextCrossfade(text, token);
-  };
-  const deleteThinkingText = async (token) => {
-    if (!thinkingStreamText) return false;
-    if (token !== thinkingDebugState.streamToken) return false;
-    thinkingDebugState.currentText = '';
-    thinkingStreamText.textContent = '';
-    return token === thinkingDebugState.streamToken;
-  };
   const playThinkingTextOnce = async (text, { holdMs = 2200, clearAfter = true } = {}) => {
     const value = String(text || '').trim();
     if (!value || thinkingDebugState.paused) return false;
     const token = ++thinkingDebugState.streamToken;
     setThinkingStreamVisible(true);
     setThinkingStreamPausedStyle(false);
-    removeThinkingCursor();
-    const typed = await typeThinkingText(value, token);
+    const typed = await showThinkingTextCrossfade(value, token);
     if (!typed) return false;
     if (!clearAfter) return token === thinkingDebugState.streamToken;
     if (!(await waitForStream(holdMs, token))) return false;
@@ -751,7 +609,6 @@ export function initManualBindings({
     const token = ++thinkingDebugState.streamToken;
     setThinkingStreamVisible(true);
     setThinkingStreamPausedStyle(false);
-    removeThinkingCursor();
     if (initialText) {
       const initialTyped = await showThinkingTextCrossfade(initialText, token);
       if (!initialTyped) return;
@@ -781,7 +638,7 @@ export function initManualBindings({
     await runThinkingTextLoop({
       initialText: transitionText,
       holdMs: 2200,
-      shouldContinue: () => currentPrototypeShape() === 'skill-pill' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
+      shouldContinue: () => currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
       nextText: () => {
         const phrases = skill.phrases || [];
         if (!phrases.length) return '';
@@ -790,46 +647,6 @@ export function initManualBindings({
         return phrases[nextIndex % phrases.length];
       },
     });
-  };
-  const queuePendingSkillTransitionText = (text = '') => {
-    thinkingDebugState.pendingSkillTransitionText = String(text || '').trim();
-  };
-  const flushPendingSkillTransitionText = () => {
-    const text = String(thinkingDebugState.pendingSkillTransitionText || '').trim();
-    thinkingDebugState.pendingSkillTransitionText = '';
-    return text;
-  };
-  const queuePendingAppVisualSync = (app, switchDirection) => {
-    thinkingDebugState.pendingAppVisualSync = app?.src ? {
-      src: app.src,
-      alt: `${app.label} app icon`,
-      theme: app.theme,
-      switchDirection,
-    } : null;
-  };
-  const queuePendingAppTransitionText = (text = '') => {
-    thinkingDebugState.pendingAppTransitionText = String(text || '').trim();
-  };
-  const flushPendingAppVisualSync = () => {
-    const pending = thinkingDebugState.pendingAppVisualSync;
-    if (!pending?.src) return false;
-    thinkingDebugState.pendingAppVisualSync = null;
-    syncAiOrbCenterImage(document, {
-      animate: true,
-      src: pending.src,
-      alt: pending.alt,
-      theme: pending.theme,
-      switchDirection: pending.switchDirection,
-      switchMotion: 'swipe',
-    });
-    return true;
-  };
-  const flushPendingAppTransitionText = () => {
-    const text = String(thinkingDebugState.pendingAppTransitionText || '').trim();
-    thinkingDebugState.pendingAppTransitionText = '';
-    if (!text || thinkingDebugState.paused) return false;
-    void transitionThinkingText(text);
-    return true;
   };
   const transitionThinkingText = async (text, { allowWhilePaused = false } = {}) => {
     const value = String(text || '').trim();
@@ -862,59 +679,6 @@ export function initManualBindings({
       renderShape: 'pill',
       theme: skill.theme,
     } : null);
-  };
-  const queuePendingAgentVisualSync = (agentId, switchDirection) => {
-    thinkingDebugState.pendingAgentVisualSync = agentId ? { agentId, switchDirection } : null;
-  };
-  const queuePendingAgentTransitionText = (text = '') => {
-    thinkingDebugState.pendingAgentTransitionText = String(text || '').trim();
-  };
-  const flushPendingAgentVisualSync = () => {
-    const pending = thinkingDebugState.pendingAgentVisualSync;
-    if (!pending?.agentId) return false;
-    thinkingDebugState.pendingAgentVisualSync = null;
-    syncAiOrbCenterIcon(document, {
-      animate: true,
-      id: pending.agentId,
-      switchDirection: pending.switchDirection,
-      switchMotion: 'swipe',
-    });
-    return true;
-  };
-  const flushPendingAgentTransitionText = () => {
-    const text = String(thinkingDebugState.pendingAgentTransitionText || '').trim();
-    thinkingDebugState.pendingAgentTransitionText = '';
-    if (!text || thinkingDebugState.paused) return false;
-    void transitionThinkingText(text);
-    return true;
-  };
-  const syncAgentOrbVisual = (agentId, { animate = false, switchDirection = '' } = {}) => {
-    const run = () => syncAiOrbCenterIcon(document, {
-      animate,
-      id: agentId,
-      switchDirection,
-      switchMotion: 'swipe',
-    });
-    if (!animate) {
-      run();
-      return;
-    }
-    requestAnimationFrame(() => requestAnimationFrame(run));
-  };
-  const syncAppOrbVisual = (app, { animate = false, switchDirection = '' } = {}) => {
-    const run = () => syncAiOrbCenterImage(document, {
-      animate,
-      src: app?.src || '',
-      alt: app?.label ? `${app.label} app icon` : '',
-      theme: app?.theme || null,
-      switchDirection,
-      switchMotion: 'swipe',
-    });
-    if (!animate) {
-      run();
-      return;
-    }
-    requestAnimationFrame(() => requestAnimationFrame(run));
   };
   const resumeThinkingPlaybackForCurrentMode = () => {
     if (thinkingDebugState.paused || !isDebugFamilyShape()) return;
@@ -978,7 +742,6 @@ export function initManualBindings({
       thinkingDebugState.activeSkillId = nextSkill.id;
       setThinkingFamilyActive(true);
       setSkillSelectionOverride(nextSkill);
-      queuePendingSkillTransitionText(skillTransitionText);
       if (shape !== 'magic') {
         manualShape('magic');
         return;
@@ -1050,23 +813,11 @@ export function initManualBindings({
   };
   const switchAgentByStep = (step) => {
     const shape = currentPrototypeShape();
-    if (shape !== 'listening' && shape !== 'agent-circle' && shape !== 'magic') return false;
+    if (shape !== 'listening' && shape !== 'magic') return false;
     if (shape === 'magic' && thinkingDebugState.mode !== 'thinking') return false;
     const currentId = loadAiOrbIconId();
     const nextId = cycleAgentId(currentId, step);
     if (!nextId || nextId === currentId) return false;
-    if (shape === 'agent-circle') {
-      thinkingDebugState.mode = 'agent';
-      renderPrototypeDebugMode({ explicitAgentId: nextId });
-      return true;
-    }
-    if (shape === 'magic') {
-      const switchDirection = step > 0 ? 'right' : 'left';
-      persistAiOrbIconId(nextId);
-      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
-      syncAiOrbIconButtons();
-      return true;
-    }
     const switchDirection = step > 0 ? 'right' : 'left';
     persistAiOrbIconId(nextId);
     syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
@@ -1078,7 +829,7 @@ export function initManualBindings({
     const inDebugFamily = isDebugFamilyShape(shape);
     syncPrototypeThinkingStreamShape();
     setThinkingFamilyActive(inDebugFamily);
-    multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'agent-circle' && thinkingDebugState.mode === 'agent'));
+    multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'magic' && thinkingDebugState.mode === 'agent'));
     thinkingStateRow?.classList.toggle('hidden', !inDebugFamily);
     thinkingPauseRow?.classList.toggle('hidden', !inDebugFamily);
     thinkingCopyRow?.classList.toggle('hidden', !inDebugFamily);
@@ -1089,7 +840,7 @@ export function initManualBindings({
         renderPrototypeDebugMode({ forceRemorph: true });
         return;
       }
-      syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
+      syncPrototypeThinkingStreamIcon();
       if (thinkingDebugState.paused) {
         renderPausedThinkingStream();
         syncThinkingStateButtons();
@@ -1100,64 +851,9 @@ export function initManualBindings({
     }
     if (shape === 'listening') {
       setThinkingDebugPaused(false);
-      removeThinkingCursor();
       thinkingDebugState.currentText = '';
       if (thinkingStreamText) thinkingStreamText.textContent = '';
       syncPrototypeThinkingStreamShape();
-      syncThinkingStateButtons();
-      return;
-    }
-    if (shape === 'skill-pill') {
-      const activeSkill = getSkillById(thinkingDebugState.activeSkillId);
-      setSkillSelectionOverride(activeSkill);
-      syncThinkingStateButtons();
-      if (thinkingDebugState.paused) {
-        queuePendingSkillTransitionText('');
-        renderPausedThinkingStream();
-        return;
-      }
-      void runSkillPhraseLoop(activeSkill, {
-        transitionText: flushPendingSkillTransitionText(),
-      });
-      return;
-    }
-    if (shape === 'agent-circle') {
-      setSkillSelectionOverride(null);
-      if (thinkingDebugState.mode === 'app') {
-        const activeApp = getAppById(thinkingDebugState.activeAppId);
-        const flushedVisual = flushPendingAppVisualSync();
-        const flushedText = flushPendingAppTransitionText();
-        if (!flushedVisual) {
-          syncAppOrbVisual(activeApp, { animate: false });
-        }
-        if (thinkingDebugState.paused) {
-          renderPausedThinkingStream();
-          syncThinkingStateButtons();
-          return;
-        }
-        if (!flushedText) {
-          if (thinkingDebugState.currentText) setThinkingStreamVisible(true);
-          else stopThinkingStream();
-        }
-        syncThinkingStateButtons();
-        return;
-      }
-      const flushedVisual = flushPendingAgentVisualSync();
-      const flushedText = flushPendingAgentTransitionText();
-      const pausedTransitionText = flushPendingPausedTransitionText();
-      if (!flushedVisual) {
-        syncAgentOrbVisual(loadAiOrbIconId(), { animate: false });
-      }
-      if (thinkingDebugState.paused) {
-        if (pausedTransitionText) void playPausedThinkingTransition(pausedTransitionText);
-        else renderPausedThinkingStream();
-        syncThinkingStateButtons();
-        return;
-      }
-      if (!flushedText) {
-        if (thinkingDebugState.currentText) setThinkingStreamVisible(true);
-        else stopThinkingStream();
-      }
       syncThinkingStateButtons();
       return;
     }
@@ -1165,14 +861,7 @@ export function initManualBindings({
       setThinkingDebugPaused(false);
       thinkingDebugState.pendingCustomText = '';
       setSkillSelectionOverride(null);
-      queuePendingPausedTransitionText('');
-      queuePendingSkillTransitionText('');
-      queuePendingAppVisualSync(null, '');
-      queuePendingAppTransitionText('');
-      queuePendingAgentVisualSync(null, '');
-      queuePendingAgentTransitionText('');
       stopThinkingStream();
-      syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
       syncThinkingStateButtons();
     }
   };
@@ -1361,11 +1050,6 @@ export function initManualBindings({
     const currentId = loadAiOrbIconId();
     const iconId = String(button.dataset.aiOrbIcon || '').trim().toLowerCase();
     if (!iconId) return;
-    if (currentPrototypeShape() === 'agent-circle') {
-      thinkingDebugState.mode = 'agent';
-      renderPrototypeDebugMode({ explicitAgentId: iconId });
-      return;
-    }
     persistAiOrbIconId(iconId);
     const currentIndex = getAgentIndex(currentId);
     const nextIndex = getAgentIndex(iconId);
@@ -1376,11 +1060,8 @@ export function initManualBindings({
         : 'left';
     if (currentPrototypeShape() === 'magic') {
       thinkingDebugState.mode = 'thinking';
-      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
-    } else {
-      syncAiOrbCenterIcon(document, { animate: true, id: iconId, switchDirection });
-      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
     }
+    syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
     syncAiOrbIconButtons();
   }));
   syncAiOrbIconButtons();

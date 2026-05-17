@@ -102,9 +102,9 @@ function isCardLikeShape(renderShape = 'pill') {
 
 export function celestialSelectedPresetForRenderShape(renderShape = 'pill') {
   const shape = String(renderShape || 'pill');
-  if (shape === 'pill' || shape === 'skill-pill') return CELESTIAL_SELECTED_PRESETS.pill;
+  if (shape === 'pill') return CELESTIAL_SELECTED_PRESETS.pill;
   if (shape === 'orb' || shape === 'listening' || shape === 'magic' || shape === 'ai') return CELESTIAL_SELECTED_PRESETS.orb;
-  if (shape === 'chip' || shape === 'list' || shape === 'dot' || shape === 'circle' || shape === 'agent-circle') return CELESTIAL_SELECTED_PRESETS.list;
+  if (shape === 'chip' || shape === 'list' || shape === 'dot' || shape === 'circle') return CELESTIAL_SELECTED_PRESETS.list;
   if (isCardLikeShape(shape)) return CELESTIAL_SELECTED_PRESETS.card;
   return CELESTIAL_SELECTED_PRESETS.chip;
 }

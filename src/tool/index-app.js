@@ -346,7 +346,7 @@ function syncPrototypeIntentHeader(scenario) {
 
 function syncManualShapeButtonStates(shape = document.body?.dataset?.currentShape || '') {
   const actualShape = String(shape || '').trim();
-  const displayShape = prototypeAiDebugState.active && ['magic', 'skill-pill', 'agent-circle'].includes(actualShape)
+  const displayShape = prototypeAiDebugState.active && actualShape === 'magic'
     ? 'magic'
     : actualShape;
   document.querySelectorAll('.sb-shape-btn').forEach((button) => {

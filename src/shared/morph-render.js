@@ -633,9 +633,9 @@ export function createMorphRender(ctx) {
   }
 
   function isIconOnlyThumb(shape) {
-    if (state.thumbContentState.kind === 'image' && state.thumbContentState.value) return ['circle', 'magic', 'listening', 'agent-circle', 'dot', 'pill', 'skill-pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    if (state.thumbContentState.kind === 'image' && state.thumbContentState.value) return ['circle', 'magic', 'listening', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
     const icon = (C.thumbLabel.textContent || '').trim();
-    return !!icon && icon !== '···' && ['circle', 'magic', 'listening', 'agent-circle', 'dot', 'pill', 'skill-pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    return !!icon && icon !== '···' && ['circle', 'magic', 'listening', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
   }
 
   function applyThumbVisualMode(shape) {
@@ -728,7 +728,7 @@ export function createMorphRender(ctx) {
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
     const collapsingToDot = toShape === 'dot'
-      && ['pill', 'skill-pill', 'card', 'card-s', 'image'].includes(fromShape);
+      && ['pill', 'card', 'card-s', 'image'].includes(fromShape);
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
     let borderRadiusAnimMs = transitionMs;
     if ((fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill')) { primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900); textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820); }
@@ -756,7 +756,6 @@ export function createMorphRender(ctx) {
     else if (shape === 'dot' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     else if (shape === 'dot' && fromShape === 'split') thumbOpacity = 0;
     else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
-    else if (shape === 'agent-circle') thumbOpacity = 0;
     setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
     const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
       el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
@@ -770,7 +769,7 @@ export function createMorphRender(ctx) {
     setEl(C.prim, pos.prim);
     setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.secondaryInAdvanceMs || 0)));
     setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.detailInAdvanceMs || 0)));
-    if (shape === 'ai' || shape === 'magic' || shape === 'agent-circle') {
+    if (shape === 'ai' || shape === 'magic') {
       C.prim.textContent = '';
       C.sec.textContent = '';
       C.det.textContent = '';
@@ -894,15 +893,15 @@ export function createMorphRender(ctx) {
     state.currentStageId = stageId || null;
     document.body.dataset.currentShape = shape;
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
-    const orbVisualShape = (value) => value === 'magic' || value === 'ai' || value === 'agent-circle';
+    const orbVisualShape = (value) => value === 'magic' || value === 'ai';
     const thinkingVisualShape = orbVisualShape(shape);
     const enteringThinking = thinkingVisualShape && !orbVisualShape(fromShape);
     const listeningToThinking = enteringThinking && fromShape === 'listening';
     DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
     DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
-    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic' || shape === 'agent-circle')
-      && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic' || fromShape === 'agent-circle');
+    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic')
+      && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;
     if (goingHome) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
