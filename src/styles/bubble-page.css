@@ -216,6 +216,10 @@ body.bubble2-page.is-canvasless {
   accent-color: rgba(157, 195, 255, 0.9);
 }
 
+.bubble2-home-orb-btn {
+  width: 100%;
+}
+
 .bubble2-set-button {
   width: 100%;
   padding: 12px 14px;
@@ -887,7 +891,13 @@ body.bubble2-page.is-canvasless {
   appearance: none;
   cursor: pointer;
   overflow: visible;
-  transition: transform 520ms var(--bubble2-ease);
+  transition:
+    transform 600ms var(--bubble2-ease),
+    opacity 600ms var(--bubble2-ease);
+}
+
+.bubble2-orb.is-home-orb-hidden {
+  pointer-events: none;
 }
 
 .bubble2-orb-stream {

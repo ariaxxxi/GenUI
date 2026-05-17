@@ -1243,6 +1243,7 @@ const state = {
   openMotionUntil: 0,
   closeMotionUntil: 0,
   orbAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
+  homeOrbVisible: true,
   homeOrbContent: createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID),
   promptHomeThinking: false,
   promptHomeThinkingAnimating: false,
@@ -1286,6 +1287,7 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
   bgImage: document.querySelector('[data-bubble2-bg-image]'),
   bgImageToggle: document.querySelector('[data-bubble2-bg-image-toggle]'),
   bgVideo: document.querySelector('[data-bubble2-bg-video]'),
@@ -1315,6 +1317,7 @@ function init() {
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
+  syncHomeOrbToggleUi();
   syncBackgroundImageUi();
   syncBackgroundVideoUi();
   buildScene();
@@ -2032,6 +2035,13 @@ function syncCanvaslessUi() {
   refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
 }
 
+function syncHomeOrbToggleUi() {
+  if (!refs.homeOrbToggle) return;
+  const visible = state.homeOrbVisible !== false;
+  refs.homeOrbToggle.textContent = visible ? 'Dismiss orb' : 'Invoke orb';
+  refs.homeOrbToggle.setAttribute('aria-pressed', String(visible));
+}
+
 function syncBackgroundImageUi() {
   const enabled = state.backgroundImageEnabled === true;
   if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
@@ -2238,6 +2248,7 @@ function bindEvents() {
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
   refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
   refs.bgVideoUpload?.addEventListener('click', (event) => {
     const target = event.target;
@@ -2277,6 +2288,12 @@ function handleCanvaslessToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.canvaslessEnabled = target.checked;
   syncCanvaslessUi();
+}
+
+function handleHomeOrbToggleClick() {
+  state.homeOrbVisible = !state.homeOrbVisible;
+  syncHomeOrbToggleUi();
+  scheduleRender();
 }
 
 function handleBackgroundImageToggleChange(event) {
@@ -2858,7 +2875,7 @@ function render() {
     const isContextParent = state.childMenuParentId === bubble.id;
     const isDimmed = state.childMenuParentId != null && !isContextParent;
     const anyHovered = scene.hoveredId != null;
-    const isHoverDimmed = anyHovered && !isHovered;
+    const isHoverDimmed = state.activeSetId !== 'prompt' && anyHovered && !isHovered;
     const bubbleOpacity = isDimmed ? CHILD_DIMMED_OPACITY : isHoverDimmed ? 0.6 : 1;
     const suppressHoveredShadowForVideo = state.activeSetId === 'app'
       && Boolean(state.backgroundVideo?.src)
@@ -3075,18 +3092,21 @@ function render() {
     || (!thinkingHomeOrbActive && Boolean(refs.orbStream?.classList.contains('hidden')));
 
   if (refs.orb) {
+    const orbVisibleScale = state.homeOrbVisible === false ? 0.2 : 1;
+    const orbVisibleOpacity = state.homeOrbVisible === false ? 0 : 1;
     refs.orb.classList.toggle('is-pressed', state.isPressed);
+    refs.orb.classList.toggle('is-home-orb-hidden', state.homeOrbVisible === false);
     refs.orb.classList.toggle('is-interrupt-home-orb', state.activeSetId === 'interrupt');
     refs.orb.classList.toggle('is-prompt-thinking-home-orb', promptThinkingActive);
     refs.orb.classList.toggle('is-thinking-home-orb', thinkingHomeOrbActive);
     refs.orb.classList.toggle('is-collapsed-stream', collapsedThinkingStream);
-    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms' : '';
+    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms, 0ms' : '';
     refs.orb.style.transform = demotedSwapMotion
-      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
-      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0)`;
+      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0) scale(${format(orbVisibleScale)})`
+      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0) scale(${format(orbVisibleScale)})`;
     refs.orb.style.opacity = demotedSwapMotion
-      ? format(demotedSwapMotion.opacity)
-      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : '1');
+      ? format(demotedSwapMotion.opacity * orbVisibleOpacity)
+      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : String(orbVisibleOpacity));
   }
 
   if (refs.orbStream) {
