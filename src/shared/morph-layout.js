@@ -295,6 +295,19 @@ export function createMorphLayout(ctx) {
     const rawGeo = customGeo || (showListOrb ? SHAPES.circle : (SHAPES[shape] || SHAPES.card));
     const stageSizeOverride = callbacks.normalizeStageSizeEntry(contentData?.sizeOverride, callbacks.scenarioStageSizeOverride(scenario, stageId));
     const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
+    const resolvedBaseGeo = shape === 'idle'
+      ? {
+        ...baseGeo,
+        main: {
+          ...baseGeo.main,
+          w: 40,
+          h: 40,
+          br: '20px',
+          tx: -20,
+          ty: -20,
+        },
+      }
+      : baseGeo;
     const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
     const withStageRadius = (geo) => {
       if (!stageId) return geo;
@@ -305,7 +318,7 @@ export function createMorphLayout(ctx) {
       return rawGeo;
     }
     if ((shape !== 'card' && shape !== 'card-s' && shape !== 'image') || customGeo) {
-      return withStageRadius(baseGeo);
+      return withStageRadius(resolvedBaseGeo);
     }
 
     const detailText = contentData?.detail !== undefined ? contentData.detail : C.det.textContent;
@@ -318,15 +331,15 @@ export function createMorphLayout(ctx) {
     const iconValue = contentData?.icon !== undefined ? contentData.icon : state.thumbContentState;
 
     if (shape === 'image') {
-      if (hasHeightOverride) return withStageRadius(baseGeo);
+      if (hasHeightOverride) return withStageRadius(resolvedBaseGeo);
       const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image'));
-      if (!mediaHeight) return withStageRadius(baseGeo);
+      if (!mediaHeight) return withStageRadius(resolvedBaseGeo);
       const neededHeight = mediaHeight + CARD_P * 2;
-      if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
+      if (neededHeight === baseGeo.main.h) return withStageRadius(resolvedBaseGeo);
       return withStageRadius({
-        ...baseGeo,
+        ...resolvedBaseGeo,
         main: {
-          ...baseGeo.main,
+          ...resolvedBaseGeo.main,
           h: neededHeight,
           ty: -(neededHeight / 2),
         },
@@ -349,12 +362,12 @@ export function createMorphLayout(ctx) {
         Math.round(baseGeo.main.h + (layoutMetrics.neededHeight - baselineLayout.neededHeight)),
         Math.ceil(layoutMetrics.neededHeight)
       );
-    if (hasHeightOverride) return withStageRadius(baseGeo);
-    if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
+    if (hasHeightOverride) return withStageRadius(resolvedBaseGeo);
+    if (neededHeight === baseGeo.main.h) return withStageRadius(resolvedBaseGeo);
     return withStageRadius({
-      ...baseGeo,
+      ...resolvedBaseGeo,
       main: {
-        ...baseGeo.main,
+        ...resolvedBaseGeo.main,
         h: neededHeight,
         ty: -(neededHeight / 2),
       },

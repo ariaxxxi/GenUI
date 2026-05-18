@@ -570,7 +570,7 @@ export function createMorphRender(ctx) {
     let appliedMainGeo = null;
     ['main', 'left', 'right'].forEach((k) => {
       const el = DROPS[k], s = geo[k];
-      const anchorHeight = (shape === 'idle' && k === 'main') ? SHAPES.dot.main.h : s.h;
+      const anchorHeight = s.h;
       const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
       const appliedTy = s.ty + yOffset;
       el.style.width = `${s.w}px`;
