@@ -70,13 +70,18 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-stage-video {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  right: 0;
+  bottom: auto;
+  left: auto;
+  width: auto;
   height: 100%;
-  object-fit: cover;
+  max-width: none;
+  object-fit: contain;
+  object-position: right center;
   opacity: 0;
-  transform: scale(1.04);
-  transition: opacity 260ms ease, transform 1200ms ease;
+  transform: translateX(var(--bubble2-bg-video-x, 0px));
+  transition: opacity 260ms ease, transform 160ms ease;
 }
 
 .bubble2-stage.has-bg-video .bubble2-stage-video {
@@ -202,6 +207,15 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-video-controls.is-hidden {
+  display: none;
+}
+
+.bubble2-prompt-reset-btn {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.bubble2-prompt-reset-btn.is-hidden {
   display: none;
 }
 

@@ -19,6 +19,7 @@
       <div class="bubble2-sidebar-card" data-bubble2-control-panel>
         <p class="bubble2-sidebar-eyebrow">Content Sets</p>
         <div class="bubble2-set-switcher" data-bubble2-set-panel role="tablist" aria-label="Bubble content set switcher"></div>
+        <button class="bubble2-ghost-btn bubble2-prompt-reset-btn is-hidden" type="button" data-bubble2-prompt-reset aria-hidden="true">Reset prompt</button>
         <div class="bubble2-control-group">
           <p class="bubble2-sidebar-eyebrow">Press Scope</p>
           <label class="bubble2-toggle-row" for="bubble2-viewport-pan-toggle">
@@ -73,6 +74,8 @@
             <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-video-play-toggle>Play</button>
             <label class="bubble2-video-progress-label" for="bubble2-bg-video-progress">Video progress</label>
             <input id="bubble2-bg-video-progress" class="bubble2-video-progress" type="range" min="0" max="1000" step="1" value="0" data-bubble2-bg-video-progress/>
+            <label class="bubble2-video-progress-label" for="bubble2-bg-video-x">Video X position</label>
+            <input id="bubble2-bg-video-x" class="bubble2-video-progress" type="range" min="-1000" max="1000" step="1" value="0" data-bubble2-bg-video-x/>
           </div>
         </div>
       </div>

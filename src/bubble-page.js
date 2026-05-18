@@ -710,7 +710,7 @@ const PROMPT_BUBBLES_CONFIG = [
     imageScale: 1,
     lockGraphicScaleOnHover: true,
     hoverExpandsToPill: true,
-    pillTitle: 'Daily brief',
+    pillTitle: 'Day check',
     pillSubtitle: 'Morning brief',
     pillCopyOffsetX: -10,
     pillTextLeftPadding: 2,
@@ -1226,6 +1226,7 @@ const state = {
   backgroundVideo: null,
   backgroundVideoPaused: false,
   backgroundVideoProgress: 0,
+  backgroundVideoX: 0,
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -1291,6 +1292,7 @@ const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
   controlPanel: document.querySelector('[data-bubble2-control-panel]'),
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
+  promptReset: document.querySelector('[data-bubble2-prompt-reset]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
   homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
@@ -1303,6 +1305,7 @@ const refs = {
   bgVideoControls: document.querySelector('[data-bubble2-bg-video-controls]'),
   bgVideoPlayToggle: document.querySelector('[data-bubble2-bg-video-play-toggle]'),
   bgVideoProgress: document.querySelector('[data-bubble2-bg-video-progress]'),
+  bgVideoX: document.querySelector('[data-bubble2-bg-video-x]'),
   canvasBanner: document.querySelector('[data-bubble2-canvas-banner]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
@@ -1782,7 +1785,7 @@ function getPromptThinkingPhrases(content = state.homeOrbContent) {
   if (title.includes('andy')) {
     return ['Reading note', 'Pulling details', 'Drafting reply'];
   }
-  if (title.includes('daily brief')) {
+  if (title.includes('day check')) {
     return ['Checking calendar', 'Sorting priorities', 'Writing summary'];
   }
   if (title.includes('fitness')) {
@@ -2030,6 +2033,12 @@ function syncSetSwitcherUi() {
       return button;
     }),
   );
+  if (refs.promptReset) {
+    const isPromptSet = state.activeSetId === 'prompt';
+    refs.promptReset.classList.toggle('is-hidden', !isPromptSet);
+    refs.promptReset.disabled = !isPromptSet;
+    refs.promptReset.setAttribute('aria-hidden', String(!isPromptSet));
+  }
 }
 
 function syncViewportPanToggleUi() {
@@ -2081,7 +2090,14 @@ function syncBackgroundVideoUi() {
     refs.bgVideoProgress.value = String(Math.round(clamp(Number(state.backgroundVideoProgress) || 0, 0, 1) * 1000));
     refs.bgVideoProgress.disabled = !hasVideo;
   }
+  const videoX = clamp(Number(state.backgroundVideoX) || 0, -1000, 1000);
+  state.backgroundVideoX = videoX;
+  if (refs.bgVideoX) {
+    refs.bgVideoX.value = String(Math.round(videoX));
+    refs.bgVideoX.disabled = !hasVideo;
+  }
   if (!refs.bgVideo) return;
+  refs.bgVideo.style.setProperty('--bubble2-bg-video-x', `${videoX}px`);
   const nextSrc = hasVideo ? String(video.src) : '';
   if (refs.bgVideo.dataset.loadedSrc !== nextSrc) {
     refs.bgVideo.dataset.loadedSrc = nextSrc;
@@ -2177,6 +2193,23 @@ function resetAgentSetToDefaults() {
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
 }
 
+function resetPromptSetToDefaults() {
+  if (state.activeSetId !== 'prompt') return;
+  resetStateForSetSwitch();
+  clearSwapLayer();
+  state.slotContentBySetId = {
+    ...state.slotContentBySetId,
+    prompt: createInitialSlotContentMap('prompt'),
+  };
+  state.orbAgentId = getDefaultHomeAgentIdForSet('prompt');
+  state.homeOrbContent = createAgentOrbContent(state.orbAgentId);
+  syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+  syncSetSwitcherUi();
+  buildScene();
+  updateMeasuredChildChipWidths();
+  render();
+}
+
 function handleAgentSetReturnLongPress() {
   if (!state.isPressed || state.activeSetId !== 'agent' || state.swapTransition?.active) return;
   const now = performance.now();
@@ -2254,6 +2287,7 @@ function switchBubbleSet(nextSetId) {
 function bindEvents() {
   refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
+  refs.promptReset?.addEventListener('click', resetPromptSetToDefaults);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
   refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
@@ -2266,6 +2300,7 @@ function bindEvents() {
   refs.bgVideoReset?.addEventListener('click', resetBackgroundVideo);
   refs.bgVideoPlayToggle?.addEventListener('click', handleBackgroundVideoPlayToggle);
   refs.bgVideoProgress?.addEventListener('input', handleBackgroundVideoProgressInput);
+  refs.bgVideoX?.addEventListener('input', handleBackgroundVideoXInput);
   refs.bgVideo?.addEventListener('timeupdate', syncBackgroundVideoProgressUi);
   refs.bgVideo?.addEventListener('loadedmetadata', syncBackgroundVideoProgressUi);
   refs.bgVideo?.addEventListener('error', () => {
@@ -2331,6 +2366,7 @@ function handleBackgroundVideoUpload(event) {
   };
   state.backgroundVideoPaused = false;
   state.backgroundVideoProgress = 0;
+  state.backgroundVideoX = 0;
   syncBackgroundVideoUi();
   target.value = '';
 }
@@ -2340,6 +2376,7 @@ function resetBackgroundVideo() {
   state.backgroundVideo = null;
   state.backgroundVideoPaused = false;
   state.backgroundVideoProgress = 0;
+  state.backgroundVideoX = 0;
   syncBackgroundVideoUi();
   if (refs.bgVideoUpload) refs.bgVideoUpload.value = '';
 }
@@ -2354,6 +2391,13 @@ function handleBackgroundVideoProgressInput(event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
   state.backgroundVideoProgress = clamp((Number(target.value) || 0) / 1000, 0, 1);
+  syncBackgroundVideoUi();
+}
+
+function handleBackgroundVideoXInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundVideoX = clamp(Number(target.value) || 0, -1000, 1000);
   syncBackgroundVideoUi();
 }
 
