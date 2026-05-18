@@ -178,6 +178,9 @@
     font-size var(--text-size-anim-ms, var(--anim-t)),
     color 220ms var(--motion-ease);
 }
+body[data-current-shape="pill"] #c-secondary {
+  font-weight: 400;
+}
 #c-detail {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;

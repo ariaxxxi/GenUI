@@ -294,11 +294,35 @@ function positionPrototypeIntentHeaderAboveMain() {
   const main = document.getElementById('drop-main');
   if (!hdr || !wrap || !main) return;
   const wrapRect = wrap.getBoundingClientRect();
-  const mainRect = main.getBoundingClientRect();
+  const activeShape = String(selectedScenario()?.shape || '').trim().toLowerCase();
+  let anchorRect = main.getBoundingClientRect();
+  if (activeShape === 'list' || activeShape === 'list-pill') {
+    const listRoot = document.getElementById('list-pills');
+    const listPills = Array.from(listRoot?.querySelectorAll?.('[data-prototype-list-pill]') || []);
+    if (listPills.length) {
+      const bounds = listPills
+        .map((pill) => pill.getBoundingClientRect())
+        .filter((rect) => Number.isFinite(rect.width) && Number.isFinite(rect.height) && rect.width > 0 && rect.height > 0);
+      if (bounds.length) {
+        const left = Math.min(...bounds.map((rect) => rect.left));
+        const right = Math.max(...bounds.map((rect) => rect.right));
+        const top = Math.min(...bounds.map((rect) => rect.top));
+        const bottom = Math.max(...bounds.map((rect) => rect.bottom));
+        anchorRect = {
+          left,
+          right,
+          top,
+          bottom,
+          width: right - left,
+          height: bottom - top,
+        };
+      }
+    }
+  }
   const hdrRect = hdr.getBoundingClientRect();
   const headerH = Math.ceil(hdrRect.height || hdr.offsetHeight || 0);
-  const centerX = Math.round((mainRect.left + (mainRect.width / 2)) - wrapRect.left);
-  const top = Math.max(8, Math.round(mainRect.top - wrapRect.top - headerH - 12));
+  const centerX = Math.round((anchorRect.left + (anchorRect.width / 2)) - wrapRect.left);
+  const top = Math.max(8, Math.round(anchorRect.top - wrapRect.top - headerH - 12));
   const headerW = Math.ceil(hdrRect.width || hdr.offsetWidth || 0);
   const left = Math.round(centerX - (headerW / 2));
   hdr.style.left = `${left}px`;

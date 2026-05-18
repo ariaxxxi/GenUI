@@ -713,7 +713,14 @@ export function createMorphRender(ctx) {
     return true;
   }
 
-  function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
+  function isNudgePillStagePair(fromStageId = null, toStageId = null, fromShape = '', toShape = '') {
+    if (fromShape !== 'pill' || toShape !== 'pill') return false;
+    const fromId = String(fromStageId || '').trim().toLowerCase();
+    const toId = String(toStageId || '').trim().toLowerCase();
+    return (fromId === 'nudge' && toId === 'pill') || (fromId === 'pill' && toId === 'nudge');
+  }
+
+  function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null, fromStageId = null, toStageId = null) {
     const root = document.documentElement;
     let transitionMs = bridges.transitionAnimMs(fromShape, toShape, callbacks.getAnimDuration(), fromGeo, toGeo);
     const homeLikeShape = fromShape === 'circle' || fromShape === 'listening' || toShape === 'circle' || toShape === 'listening';
@@ -729,6 +736,7 @@ export function createMorphRender(ctx) {
     const toCardLike = toShape === 'card' || toShape === 'card-s';
     const collapsingToDot = toShape === 'dot'
       && ['pill', 'card', 'card-s', 'image'].includes(fromShape);
+    const shouldCrossfadePillContent = isNudgePillStagePair(fromStageId, toStageId, fromShape, toShape);
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
     let borderRadiusAnimMs = transitionMs;
     if ((fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill')) { primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900); textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820); }
@@ -741,6 +749,14 @@ export function createMorphRender(ctx) {
     if (collapsingToDot) {
       borderRadiusAnimMs = Math.min(140, transitionMs);
     }
+    if (shouldCrossfadePillContent) {
+      contentMoveMs = 0;
+      primarySizeAnimMs = 0;
+      textSizeAnimMs = 0;
+      contentFadeMs = 180;
+      detailFadeMs = 180;
+    }
+    state.contentCrossfadeMode = shouldCrossfadePillContent ? 'nudge-pill' : '';
     state.contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
     state.currentContentFadeMs = contentFadeMs; state.currentDetailFadeMs = detailFadeMs; state.currentMediaFadeMs = mediaFadeMs; state.currentTransitionAnimMs = transitionMs;
     [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', borderRadiusAnimMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
@@ -749,6 +765,16 @@ export function createMorphRender(ctx) {
 
   function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
     const pos = layout.contentPos(shape, w, h);
+    const shouldCrossfadeContent = state.contentCrossfadeMode === 'nudge-pill';
+    const targetStageId = String(state.currentStageId || '').trim().toLowerCase();
+    const shouldRestoreThumbAtEnd = shouldCrossfadeContent && targetStageId === 'pill';
+    if (shouldCrossfadeContent) {
+      fadeInDelayMs = Math.max(fadeInDelayMs, 34);
+      [C.thumb, C.prim, C.sec, C.div].forEach((el) => {
+        if (!el) return;
+        el.style.opacity = '0';
+      });
+    }
     C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
     applyThumbVisualMode(shape);
     let thumbOpacity = pos.thumb.op;
@@ -756,7 +782,13 @@ export function createMorphRender(ctx) {
     else if (shape === 'dot' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     else if (shape === 'dot' && fromShape === 'split') thumbOpacity = 0;
     else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
-    setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
+    else if (shouldCrossfadeContent) thumbOpacity = 0;
+    setOpacityWithDelay(
+      C.thumb,
+      shouldRestoreThumbAtEnd ? pos.thumb.op : thumbOpacity,
+      fadeInDelayMs,
+      fadeOutDelayMs,
+    );
     const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
       el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
       setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs);
@@ -826,6 +858,12 @@ export function createMorphRender(ctx) {
     C.div.style.transform = `translate(${pos.div.x}px,${pos.div.y}px)`;
     C.div.style.width = `${pos.div.dw || 0}px`;
     C.div.style.height = `${pos.div.dh || 1}px`;
+    C.div.style.transition = shouldCrossfadeContent
+      ? `transform 0ms linear, width 0ms linear, height 0ms linear, opacity ${state.currentContentFadeMs}ms var(--motion-ease), background 220ms var(--motion-ease)`
+      : '';
+    C.div.style.background = callbacks.selectedScenario?.()?.shape === 'nudge'
+      ? 'rgba(255,255,255,0.6)'
+      : '';
     setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
   }
 
@@ -869,12 +907,13 @@ export function createMorphRender(ctx) {
     clearUiFadeTimers();
     DROPS.main.classList.remove('orb-thinking-bridge');
     const fromShape = state.currentShape;
+    const fromStageId = state.currentStageId;
     const prevStageMedia = Array.isArray(state.stageMediaState) ? state.stageMediaState.map((item) => ({ ...item })) : [];
     const prevCardTypography = fromShape === 'card' ? normalizeTypography(state.contentTypographyState, 'card') : null;
     const prevGeo = bridges.getCurrentMainGeometry();
     const nextGeo = layout.resolveGeometryForContent(shape, contentData, customGeo, stageId);
     state.prototypeSelectionDirection = inferPrototypeSelectionDirection(prevGeo, nextGeo.main);
-    setUiMotionProfile(fromShape, shape, prevGeo, nextGeo);
+    setUiMotionProfile(fromShape, shape, prevGeo, nextGeo, fromStageId, stageId);
     const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
     const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
     const autoInDelay = fromShape === 'dot' && shape === 'pill' ? 180 : (fromShape === 'idle' && shape === 'dot') ? 0 : (fromShape === 'dot' && (shape === 'card' || shape === 'card-s')) ? 200 : (nextArea > prevArea * 1.08 ? 300 : 0);
@@ -914,7 +953,7 @@ export function createMorphRender(ctx) {
     }
     DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
     DROPS.main.classList.toggle('listening-orb', shape === 'listening');
-    if (contentData) applyContent(contentData);
+    if (contentData && shape !== 'list') applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
     if (shape === 'list') {
       hideRich();

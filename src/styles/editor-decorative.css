@@ -398,15 +398,15 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
     inset 0 0 0 1px rgba(129,129,129,0.5);
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-media {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   border-radius: 0;
   font-size: 24px;
   background: transparent;
   color: rgba(255,255,255,0.96);
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-copy {
-  gap: 4px;
+  gap: 8px;
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-text {
   font-size: 24px;
@@ -465,7 +465,7 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
   position: relative; z-index: 3;
 }
 .list-pill-text {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 8px;
   margin-left: 16px;
   position: relative; z-index: 3;
 }
