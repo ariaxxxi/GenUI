@@ -67,6 +67,8 @@ let prototypeOrbChromeSyncRaf = 0;
 let prototypeVoice = null;
 let prototypeSelectionOverride = null;
 let prototypeListeningPromptText = '';
+let prototypeListeningPromptFinalText = '';
+let prototypeListeningPromptInterimText = '';
 const prototypeAiDebugState = { active: false, mode: 'thinking' };
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
@@ -398,7 +400,7 @@ function syncPrototypeOrbChrome() {
 function positionPrototypeListeningPrompt(hasText) {
   const prompt = document.getElementById('prototype-listening-prompt');
   if (!prompt) return;
-  if (document.body?.dataset?.currentShape !== 'listening' || !hasText) {
+  if (!isPrototypeListeningActive() || !hasText) {
     prompt.style.top = '';
     prompt.style.bottom = '';
     return;
@@ -413,12 +415,61 @@ function positionPrototypeListeningPrompt(hasText) {
   prompt.style.bottom = 'auto';
 }
 
+function isPrototypeListeningActive() {
+  return String(document.body?.dataset?.currentShape || '').trim().toLowerCase() === 'listening'
+    || document.getElementById('drop-main')?.classList.contains('listening-orb');
+}
+
+function normalizePrototypeDictationChunk(text = '') {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function joinPrototypeDictationText(baseText = '', nextText = '') {
+  const base = normalizePrototypeDictationChunk(baseText);
+  const next = normalizePrototypeDictationChunk(nextText);
+  if (!next) return base;
+  if (!base) return next;
+  if (base.toLowerCase().endsWith(next.toLowerCase())) return base;
+  const baseWords = base.split(' ');
+  const nextWords = next.split(' ');
+  const maxOverlap = Math.min(baseWords.length, nextWords.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    const baseSlice = baseWords.slice(-overlap).join(' ').toLowerCase();
+    const nextSlice = nextWords.slice(0, overlap).join(' ').toLowerCase();
+    if (baseSlice !== nextSlice) continue;
+    const remainder = nextWords.slice(overlap).join(' ');
+    return remainder ? `${base} ${remainder}` : base;
+  }
+  if (/[([{/"'`-]$/.test(base)) return `${base}${next}`;
+  if (/[.?!,:;]$/.test(base)) return `${base} ${next}`;
+  return `${base} ${next}`;
+}
+
+function ensurePrototypeListeningPromptStructure(prompt) {
+  if (!prompt) return {};
+  let finalEl = prompt.querySelector('[data-listening-prompt-final]');
+  let interimEl = prompt.querySelector('[data-listening-prompt-interim]');
+  if (!finalEl || !interimEl) {
+    prompt.innerHTML = '<span class="prototype-listening-prompt-final" data-listening-prompt-final></span><span class="prototype-listening-prompt-interim" data-listening-prompt-interim></span>';
+    finalEl = prompt.querySelector('[data-listening-prompt-final]');
+    interimEl = prompt.querySelector('[data-listening-prompt-interim]');
+  }
+  return { finalEl, interimEl };
+}
+
 function syncPrototypeListeningPrompt(shape = document.body?.dataset?.currentShape || '') {
   const prompt = document.getElementById('prototype-listening-prompt');
   if (!prompt) return;
-  const listeningShape = String(shape || '').trim().toLowerCase() === 'listening';
+  const listeningShape = String(shape || '').trim().toLowerCase() === 'listening' || isPrototypeListeningActive();
+  const finalText = listeningShape ? normalizePrototypeDictationChunk(prototypeListeningPromptFinalText) : '';
+  const interimText = listeningShape ? normalizePrototypeDictationChunk(prototypeListeningPromptInterimText) : '';
   const text = listeningShape ? String(prototypeListeningPromptText || '').trim() : '';
-  prompt.textContent = text;
+  const { finalEl, interimEl } = ensurePrototypeListeningPromptStructure(prompt);
+  if (finalEl) finalEl.textContent = finalText;
+  if (interimEl) interimEl.textContent = interimText ? ` ${interimText}` : '';
+  prompt.dataset.dictationState = interimText ? 'live' : (finalText ? 'settled' : '');
+  prompt.classList.toggle('has-final', !!finalText);
+  prompt.classList.toggle('has-interim', !!interimText);
   positionPrototypeListeningPrompt(!!text);
   prompt.classList.toggle('visible', listeningShape && !!text);
 }
@@ -428,16 +479,62 @@ function setPrototypeListeningPromptText(text = '') {
   syncPrototypeListeningPrompt();
 }
 
+function resetPrototypeListeningPromptText() {
+  prototypeListeningPromptFinalText = '';
+  prototypeListeningPromptInterimText = '';
+  setPrototypeListeningPromptText('');
+}
+
+function setPrototypeListeningTranscript(text = '', isFinal = false) {
+  const nextText = normalizePrototypeDictationChunk(text);
+  if (!nextText) {
+    if (!isFinal) {
+      prototypeListeningPromptInterimText = '';
+      setPrototypeListeningPromptText(prototypeListeningPromptFinalText);
+    }
+    return;
+  }
+  if (isFinal) {
+    prototypeListeningPromptFinalText = joinPrototypeDictationText(prototypeListeningPromptFinalText, nextText);
+    prototypeListeningPromptInterimText = '';
+    setPrototypeListeningPromptText(prototypeListeningPromptFinalText);
+    return;
+  }
+  prototypeListeningPromptInterimText = nextText;
+  setPrototypeListeningPromptText(joinPrototypeDictationText(prototypeListeningPromptFinalText, nextText));
+}
+
 function syncPrototypeListeningOrb(shape) {
   if (!prototypeVoice?.voiceEngine) return;
   if (shape === 'listening') {
-    prototypeVoice.voiceEngine.start('command');
+    if (prototypeVoice.voiceEngine.supported === false || !prototypeVoice.voiceEngine.recognition) {
+      prototypeListeningPromptFinalText = 'Voice input unavailable in this browser';
+      setPrototypeListeningPromptText(prototypeListeningPromptFinalText);
+      return;
+    }
+    prototypeVoice.voiceEngine.start('dictation');
     return;
   }
-  setPrototypeListeningPromptText('');
+  resetPrototypeListeningPromptText();
   const dropMain = document.getElementById('drop-main');
   const preservingThinkingBridge = shape === 'magic' || shape === 'ai' || dropMain?.classList.contains('orb-thinking-bridge');
   prototypeVoice.voiceEngine.stop({ preserveOrbStyles: preservingThinkingBridge });
+}
+
+function enterPrototypeListening() {
+  resetPrototypeListeningPromptText();
+  syncPrototypeListeningPrompt('listening');
+  if (prototypeVoice?.voiceEngine?.supported === false || !prototypeVoice?.voiceEngine?.recognition) {
+    prototypeListeningPromptFinalText = 'Voice input unavailable in this browser';
+    setPrototypeListeningPromptText(prototypeListeningPromptFinalText);
+    return;
+  }
+  prototypeVoice?.voiceEngine?.start('dictation');
+}
+
+function exitPrototypeListening(nextShape = '') {
+  if (String(nextShape || '').trim().toLowerCase() === 'listening') return;
+  syncPrototypeListeningOrb(nextShape);
 }
 
 const anim = initAnimControls({ document, clamp });
@@ -449,15 +546,19 @@ prototypeVoice = initVoiceEngine({
   getGlassState: () => null,
   shouldKeepCommandListening: () => morphApi?.getCurrentShape?.() === 'listening',
   shouldShowCommandViz: () => (
-    document.body?.dataset?.currentShape === 'listening' ||
-    document.getElementById('drop-main')?.classList.contains('listening-orb')
+    isPrototypeListeningActive()
   ),
-  onTranscriptUpdate: (text) => {
+  shouldFilterTtsEcho: () => false,
+  onTranscriptUpdate: (text, isFinal = false) => {
+    if (isPrototypeListeningActive()) {
+      setPrototypeListeningTranscript(text, isFinal);
+    }
     const transcript = String(text || '');
-    setPrototypeListeningPromptText(transcript);
     const prototypeInput = document.getElementById('user-input');
     if (!prototypeInput) return;
-    prototypeInput.value = transcript;
+    prototypeInput.value = isPrototypeListeningActive()
+      ? String(prototypeListeningPromptText || '')
+      : transcript;
     prototypeInput.dispatchEvent(new Event('input', { bubbles: true }));
   },
 });
@@ -663,6 +764,8 @@ manualDemo = initManualDemo({
   stopSiriOrb: orb.stopSiriOrb,
   startSiriOrb: orb.startSiriOrb,
   showAiIdle: orb.showAiIdle,
+  enterPrototypeListening,
+  exitPrototypeListening,
   renderShapeForStageId,
   clearSplitTimers: morphApi.clearSplitTimers,
   scheduleSplitTimer: morphApi.scheduleSplitTimer,

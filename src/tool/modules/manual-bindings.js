@@ -249,12 +249,24 @@ export function initManualBindings({
     streamToken: 0,
     textSwapTimer: null,
     currentText: '',
+    currentPillWidth: 80,
+    expandedPillWidth: 80,
     verbIndex: 0,
     skillPhraseIndexById: Object.create(null),
   };
+  let thinkingMinimizeExpandTimer = null;
+  let thinkingMinimizePhaseTimer = null;
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const currentPrototypeShape = () => String(document.body?.dataset?.currentShape || '').trim().toLowerCase();
+  const getThinkingMinimizePhase = () => String(document.body?.dataset?.thinkingDebugMinimizePhase || '').trim().toLowerCase();
+  const isThinkingCirclePhase = (shape = currentPrototypeShape()) => {
+    const phase = getThinkingMinimizePhase();
+    return shape === 'listening'
+      || thinkingDebugState.minimized
+      || phase === 'collapsing-circle'
+      || phase === 'expanding-circle';
+  };
   const isDebugFamilyShape = (shape = currentPrototypeShape()) => DEBUG_FAMILY_SHAPES.has(String(shape || '').trim().toLowerCase());
   const aiAgentSequence = Object.keys(AI_ORB_ICON_OPTIONS);
   const prototypeAppSequence = PROTOTYPE_APPS.map((item) => item.id);
@@ -336,7 +348,8 @@ export function initManualBindings({
     const shape = currentPrototypeShape();
     if (shape !== 'listening' && shape !== 'magic') return;
     const iconSize = 46;
-    const x = shape === 'listening' ? Math.round((80 - iconSize) / 2) : 14;
+    const collapsed = isThinkingCirclePhase(shape);
+    const x = collapsed ? Math.round((80 - iconSize) / 2) : 14;
     const y = Math.round((80 - iconSize) / 2);
     stageThumb.classList.add('thumb-image', 'thumb-plain-icon');
     stageThumb.classList.remove('thumb-empty');
@@ -371,13 +384,20 @@ export function initManualBindings({
     const main = document.getElementById('drop-main');
     const shape = currentPrototypeShape();
     if (!main || (shape !== 'listening' && shape !== 'magic')) return;
-    const width = shape === 'listening' ? 80 : Math.max(80, Math.round(Number(pillWidth) || 80));
+    const collapsed = isThinkingCirclePhase(shape);
+    const requestedWidth = Math.max(80, Math.round(Number(pillWidth) || 80));
+    if (!collapsed) thinkingDebugState.expandedPillWidth = requestedWidth;
+    const width = collapsed ? 80 : requestedWidth;
+    thinkingDebugState.currentPillWidth = width;
     const y = parseTranslateY(main);
+    const scale = shape === 'magic' && thinkingDebugState.minimized ? 0.2 : 1;
+    const tx = -width / 2;
     main.style.width = `${width}px`;
     main.style.height = '80px';
     main.style.setProperty('--g-stage-h', '80px');
     main.style.borderRadius = '999px';
-    main.style.transform = `translate(${-width / 2}px, ${y}px)`;
+    main.style.transformOrigin = '50% 100%';
+    main.style.transform = `translate(${tx}px, ${y}px) scale(${scale})`;
   };
   const syncPrototypeThinkingStreamMetrics = (text) => {
     if (!thinkingStream || !thinkingStreamText) return;
@@ -391,14 +411,20 @@ export function initManualBindings({
       font: '500 20px "DM Sans", sans-serif',
       setText: false,
     });
+    thinkingDebugState.expandedPillWidth = metrics.pillWidth || 80;
+    thinkingDebugState.currentPillWidth = metrics.pillWidth || 80;
     syncPrototypeThinkingContainerGeometry(metrics.pillWidth || 80);
     syncPrototypeStageThinkingIcon();
   };
   const syncPrototypeThinkingStreamShape = () => {
     if (!thinkingStream) return;
     const shape = currentPrototypeShape();
-    const collapsed = shape === 'listening' || thinkingDebugState.minimized;
+    const collapsed = isThinkingCirclePhase(shape);
     thinkingStream.classList.toggle('is-collapsed-stream', collapsed);
+    if (shape === 'magic') {
+      syncPrototypeThinkingContainerGeometry(collapsed ? 80 : thinkingDebugState.expandedPillWidth || thinkingDebugState.currentPillWidth || 80);
+      syncPrototypeStageThinkingIcon();
+    }
     if (shape === 'listening') {
       syncPrototypeThinkingStreamIcon();
       syncPrototypeThinkingStreamMetrics(thinkingDebugState.currentText || 'Thinking');
@@ -426,7 +452,18 @@ export function initManualBindings({
   );
   const syncThinkingOrbToggleUi = () => {
     const enabled = isThinkingMinimizable();
-    if (!enabled) thinkingDebugState.minimized = false;
+    if (!enabled) {
+      thinkingDebugState.minimized = false;
+      document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+      if (thinkingMinimizeExpandTimer) {
+        clearTimeout(thinkingMinimizeExpandTimer);
+        thinkingMinimizeExpandTimer = null;
+      }
+      if (thinkingMinimizePhaseTimer) {
+        clearTimeout(thinkingMinimizePhaseTimer);
+        thinkingMinimizePhaseTimer = null;
+      }
+    }
     if (thinkingDebugState.minimized) document.body?.setAttribute('data-thinking-debug-minimized', 'true');
     else document.body?.removeAttribute('data-thinking-debug-minimized');
     syncPrototypeThinkingStreamShape();
@@ -447,13 +484,48 @@ export function initManualBindings({
     thinkingOrb.setAttribute('title', nextLabel);
   };
   const setThinkingDebugMinimized = (minimized) => {
-    const next = Boolean(minimized) && isThinkingMinimizable();
-    if (thinkingDebugState.minimized === next) {
+    const canMinimize = isThinkingMinimizable();
+    const next = Boolean(minimized) && canMinimize;
+    if (thinkingMinimizeExpandTimer) {
+      clearTimeout(thinkingMinimizeExpandTimer);
+      thinkingMinimizeExpandTimer = null;
+    }
+    if (thinkingMinimizePhaseTimer) {
+      clearTimeout(thinkingMinimizePhaseTimer);
+      thinkingMinimizePhaseTimer = null;
+    }
+    if (!canMinimize && !thinkingDebugState.minimized && !getThinkingMinimizePhase()) {
       syncThinkingOrbToggleUi();
       return;
     }
-    thinkingDebugState.minimized = next;
+    if (next) {
+      if (thinkingDebugState.minimized) {
+        syncThinkingOrbToggleUi();
+        return;
+      }
+      thinkingDebugState.minimized = true;
+      document.body?.setAttribute('data-thinking-debug-minimize-phase', 'collapsing-circle');
+      syncThinkingOrbToggleUi();
+      thinkingMinimizePhaseTimer = setTimeout(() => {
+        thinkingMinimizePhaseTimer = null;
+        document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+        syncThinkingOrbToggleUi();
+      }, 1200);
+      return;
+    }
+    if (!thinkingDebugState.minimized && getThinkingMinimizePhase() !== 'collapsing-circle') {
+      document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+      syncThinkingOrbToggleUi();
+      return;
+    }
+    thinkingDebugState.minimized = false;
+    document.body?.setAttribute('data-thinking-debug-minimize-phase', 'expanding-circle');
     syncThinkingOrbToggleUi();
+    thinkingMinimizeExpandTimer = setTimeout(() => {
+      thinkingMinimizeExpandTimer = null;
+      document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+      syncThinkingOrbToggleUi();
+    }, 1000);
   };
   const toggleThinkingDebugMinimized = () => {
     if (!isThinkingMinimizable()) return;

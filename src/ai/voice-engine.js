@@ -1,4 +1,4 @@
-export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz }) {
+export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz, shouldFilterTtsEcho }) {
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
   const VIZ_FADE_IN_MS = 320;
   const VIZ_NOISE_FLOOR = 0.08;
@@ -207,7 +207,8 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function onVoiceResult(transcript, isFinal) {
-    if (shouldIgnoreAsTtsEcho(transcript)) return;
+    const filterTtsEcho = typeof shouldFilterTtsEcho === 'function' ? shouldFilterTtsEcho() !== false : true;
+    if (filterTtsEcho && shouldIgnoreAsTtsEcho(transcript)) return;
     if (input) input.value = transcript;
     onTranscriptUpdate(transcript, isFinal);
   }

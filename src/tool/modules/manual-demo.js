@@ -14,6 +14,8 @@ export function initManualDemo({
   stopSiriOrb,
   startSiriOrb,
   showAiIdle,
+  enterPrototypeListening = null,
+  exitPrototypeListening = null,
   renderShapeForStageId,
   clearSplitTimers,
   scheduleSplitTimer,
@@ -207,6 +209,7 @@ export function initManualDemo({
     if (shape === 'listening') {
       stopSiriOrb();
       morphTo('listening', { icon: '', primary: '', secondary: '', detail: '' });
+      if (typeof enterPrototypeListening === 'function') enterPrototypeListening();
       updateActive('listening');
       return;
     }
@@ -234,6 +237,7 @@ export function initManualDemo({
       morphTo('magic', { icon: '', primary: '', secondary: '', detail: '' }, PROTOTYPE_THINKING_GEO);
       return;
     }
+    if (typeof exitPrototypeListening === 'function') exitPrototypeListening(shape);
     stopSiriOrb();
     if (SCENARIO_SHAPES.includes(shape)) {
       const scenario = selectedScenario();
