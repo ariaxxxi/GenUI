@@ -372,6 +372,50 @@ body.bubble2-page.is-canvasless {
   z-index: 1;
 }
 
+.bubble2-canvas::before {
+  content: "";
+  position: absolute;
+  inset: -32%;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(
+      105deg,
+      transparent 24%,
+      rgba(123, 224, 255, 0) 35%,
+      rgba(123, 224, 255, 0.25) 43%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(174, 255, 221, 0.32) 57%,
+      rgba(174, 255, 221, 0) 66%,
+      transparent 76%
+    );
+  filter: blur(50px);
+  mix-blend-mode: screen;
+  transform: translate3d(-58%, 16%, 0) rotate(-7deg);
+}
+
+.bubble2-canvas.is-lens-firing::before {
+  animation: bubble2-lens-shimmer 3000ms cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.bubble2-canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 74%, rgba(159, 232, 255, 0.26), transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.16), transparent 52%);
+  mix-blend-mode: screen;
+}
+
+.bubble2-canvas.is-lens-firing::after {
+  animation: bubble2-lens-bloom 3000ms ease-out both;
+}
+
 .bubble2-canvas-banner {
   position: absolute;
   top: 20px;
@@ -393,6 +437,68 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-canvas-banner.is-hidden {
   opacity: 0;
+}
+
+.bubble2-lens-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 9;
+  transform: translate3d(-50%, 0, 0);
+  min-width: 128px;
+  max-width: calc(100% - 56px);
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  box-shadow: inset 0 0 20px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 220ms ease, transform 220ms var(--bubble2-ease);
+}
+
+.bubble2-lens-toast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(180, 180, 180, 0.20) 45%,
+    rgba(100, 100, 100, 0.08) 75%,
+    rgba(255, 255, 255, 0.12) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.bubble2-lens-toast::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+
+.bubble2-lens-toast.is-hidden {
+  opacity: 0;
+  transform: translate3d(-50%, 8px, 0);
 }
 
 .bubble2-canvas.is-canvasless {
@@ -421,6 +527,32 @@ body.bubble2-page.is-canvasless {
   transition-property: transform;
   transition-timing-function: ease-out;
   transition-duration: 1000ms;
+}
+
+@keyframes bubble2-lens-shimmer {
+  0% {
+    opacity: 0;
+    transform: translate3d(-70%, 16%, 0) rotate(-7deg);
+  }
+  18% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(66%, -14%, 0) rotate(-7deg);
+  }
+}
+
+@keyframes bubble2-lens-bloom {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .bubble2-item {

@@ -741,6 +741,25 @@ const PROMPT_BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
+const LENS_BUBBLE_COPY = Object.freeze({
+  1: Object.freeze({ title: 'Morning lens', subtitle: 'Briefs, timing, priorities' }),
+  2: Object.freeze({ title: 'Cooking lens', subtitle: 'Recipes, groceries, menus' }),
+  3: Object.freeze({ title: 'Golf lens', subtitle: 'Rounds, gear, swing notes' }),
+  5: Object.freeze({ title: 'Family lens', subtitle: 'Calls, plans, shared moments' }),
+  6: Object.freeze({ title: 'Plant lens', subtitle: 'Care, light, watering' }),
+  8: Object.freeze({ title: 'Travel lens', subtitle: 'Routes, stays, local finds' }),
+  9: Object.freeze({ title: 'Fitness lens', subtitle: 'Workouts, recovery, progress' }),
+});
+const LENS_BUBBLES_CONFIG = PROMPT_BUBBLES_CONFIG.map((bubble) => {
+  const copy = LENS_BUBBLE_COPY[bubble.id] || { title: 'Topic lens', subtitle: 'Curated related content' };
+  return {
+    ...bubble,
+    label: copy.title,
+    pillTitle: copy.title,
+    pillSubtitle: copy.subtitle,
+  };
+});
+
 function getAppSetSlotLayout(slotId) {
   const slot = APP_BUBBLES_CONFIG.find((bubble) => bubble.id === slotId);
   if (!slot) {
@@ -948,6 +967,13 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     slots: PROMPT_BUBBLES_CONFIG,
   }),
   Object.freeze({
+    id: 'lens',
+    label: 'Lens',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
     id: 'agent',
     label: 'Agent',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
@@ -1138,6 +1164,10 @@ function isAgentStyleBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return setId === 'agent' || setId === 'interrupt';
 }
 
+function isPromptLikeBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === 'prompt' || setId === 'lens';
+}
+
 function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
   return { viewportPanEnabled: true, canvaslessEnabled: true };
 }
@@ -1240,6 +1270,7 @@ const bubbleHomeStreamState = {
   textSwapTimer: null,
   promptPhraseIndex: 0,
   fadeTimer: null,
+  lensToastTimer: null,
 };
 
 let previousHoveredId = null;
@@ -1268,6 +1299,7 @@ const refs = {
   bgVideoProgress: document.querySelector('[data-bubble2-bg-video-progress]'),
   bgVideoX: document.querySelector('[data-bubble2-bg-video-x]'),
   canvasBanner: document.querySelector('[data-bubble2-canvas-banner]'),
+  lensToast: document.querySelector('[data-bubble2-lens-toast]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
@@ -1706,6 +1738,28 @@ function stopBubbleHomeStream() {
   setBubbleHomeStreamVisible(false);
 }
 
+function clearLensToast() {
+  if (bubbleHomeStreamState.lensToastTimer) {
+    window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
+    bubbleHomeStreamState.lensToastTimer = null;
+  }
+  refs.lensToast?.classList.add('is-hidden');
+}
+
+function showLensToast(text) {
+  if (!refs.lensToast) return;
+  if (bubbleHomeStreamState.lensToastTimer) {
+    window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
+    bubbleHomeStreamState.lensToastTimer = null;
+  }
+  refs.lensToast.textContent = text || 'Lens on';
+  refs.lensToast.classList.remove('is-hidden');
+  bubbleHomeStreamState.lensToastTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.lensToastTimer = null;
+    refs.lensToast?.classList.add('is-hidden');
+  }, 3000);
+}
+
 function clearPromptHomeThinkingTimer() {
   if (state.promptHomeThinkingTimer) {
     window.clearTimeout(state.promptHomeThinkingTimer);
@@ -2025,7 +2079,7 @@ function syncBackgroundImageUi() {
   if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
   refs.stage?.classList.toggle('has-bg-image', enabled);
   if (refs.bgImage) {
-    refs.bgImage.style.backgroundImage = enabled ? 'url("assets/bg/work.jpg")' : 'none';
+    refs.bgImage.style.backgroundImage = enabled ? 'url("assets/bg/park.jpg")' : 'none';
   }
 }
 
@@ -2097,6 +2151,8 @@ function resetStateForSetSwitch() {
   state.promptHomeThinkingAnimating = false;
   clearPromptHomeThinkingTimer();
   stopBubbleHomeStream();
+  clearLensToast();
+  refs.shell?.classList.remove('is-lens-firing');
   state.isPressed = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -2618,6 +2674,10 @@ function isInterruptPlaybackSwap(transition = state.swapTransition) {
   return isPauseSessionSwap(transition) || isPlaySessionSwap(transition);
 }
 
+function isLensFireSwap(transition = state.swapTransition) {
+  return transition?.swapMode === 'lens-fire';
+}
+
 function startBubbleSwap(scene, now) {
   const selectedBubble = scene.bubbles.find((bubble) => bubble.id === scene.hoveredId);
   if (!selectedBubble) return;
@@ -2646,25 +2706,28 @@ function startBubbleSwap(scene, now) {
   const demotedContent = createDemotedOrbSlotContent(state.homeOrbContent);
   const isPauseAction = selectedBubble.controlAction === 'pause-session';
   const isPlayAction = selectedBubble.controlAction === 'play-session';
+  const isLensFire = state.activeSetId === 'lens';
   const promotedImageScaleCompensation = selectedBubble.graphicKind === 'emoji'
     ? 1
     : (selectedBubble.fill ? (1 / Math.max(selectedBubble.imageScale ?? 1, 0.0001)) : 1);
   const promotedVisualScaleEnd = selectedBubble.graphicKind === 'emoji'
     ? BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.homeEmojiScale ?? 1)
     : ((selectedBubble.preservePromotedImageScale ? 1 : BUBBLE_RELEASE_CONTENT_SCALE) * promotedImageScaleCompensation);
+  const lensName = promotedContent.pillTitle || promotedContent.label || 'Lens';
   state.swapTransition = {
     active: true,
+    swapMode: isLensFire ? 'lens-fire' : 'promote',
     specialAction: isPauseAction ? 'pause-session' : (isPlayAction ? 'play-session' : ''),
     selectedBubbleId: selectedBubble.id,
     startedAt: now,
-    durationMs: (isPauseAction || isPlayAction) ? (SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS) : SWAP_DURATION_MS,
+    durationMs: (isPauseAction || isPlayAction || isLensFire) ? (SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS) : SWAP_DURATION_MS,
     siblingDurationMs: SWAP_SIBLING_DURATION_MS,
     highlightFreezeUntil: now + SWAP_HIGHLIGHT_FREEZE_MS,
     panOffset: { ...scene.panOffset },
     demotedCenterStartX: scene.orb?.targetX ?? 0,
     demotedCenterStartY: scene.orb?.targetY ?? 0,
     demotedShellScaleStart: scene.orb?.targetScale ?? 1,
-    demotedShellScaleEnd: SWAP_DEMOTED_END_SCALE,
+    demotedShellScaleEnd: isLensFire ? 0.2 : SWAP_DEMOTED_END_SCALE,
     promotedRootScaleEnd: ORB_BASE_SIZE / selectedBubble.baseSize,
     promotedVisualScaleStart: selectedBubble.hoverExpandsToPill
       ? PILL_HOVER_BUBBLE_SCALE
@@ -2674,6 +2737,7 @@ function startBubbleSwap(scene, now) {
     promotedContent,
     demotedContent,
     previousHomeOrbContent: { ...state.homeOrbContent },
+    lensToastText: isLensFire ? `${lensName} on` : '',
   };
 
   if (isPauseAction) {
@@ -2707,6 +2771,17 @@ function commitBubbleSwap() {
     state.closeMotionUntil = 0;
     clearSwapLayer();
     void showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
+    scheduleRender();
+    return;
+  }
+  if (isLensFireSwap(transition)) {
+    state.swapTransition = null;
+    state.closeMotionUntil = 0;
+    state.homeOrbVisible = false;
+    refs.shell?.classList.remove('is-lens-firing');
+    clearSwapLayer();
+    syncHomeOrbToggleUi();
+    showLensToast(transition.lensToastText);
     scheduleRender();
     return;
   }
@@ -2780,6 +2855,20 @@ function computePromotedSwapMotion(transition, promotedBubble, now) {
 function computeDemotedSwapMotion(transition, now) {
   if (!transition) return null;
   if (isInterruptPlaybackSwap(transition)) return null;
+  if (isLensFireSwap(transition)) {
+    const duration = transition.siblingDurationMs || SWAP_SIBLING_DURATION_MS;
+    const progress = easeSmoothConnect(clamp((now - transition.startedAt) / duration, 0, 1));
+    return {
+      centerX: transition.demotedCenterStartX ?? 0,
+      centerY: transition.demotedCenterStartY ?? 0,
+      shellScale: interpolate(
+        transition.demotedShellScaleStart ?? 1,
+        transition.demotedShellScaleEnd ?? 0.2,
+        progress,
+      ),
+      opacity: 1 - easeOutQuart(clamp((now - transition.startedAt) / duration, 0, 1)),
+    };
+  }
   const demotedProgress = easeSmoothConnect(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
   const orbFadeDurationMs = 200;
   return {
@@ -2816,6 +2905,7 @@ function render() {
   }
   const isInitialReveal = state.isPressed && now < state.openMotionUntil;
   const isSwapActive = Boolean(state.swapTransition?.active);
+  const isLensFiring = isLensFireSwap(state.swapTransition);
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
@@ -2823,6 +2913,8 @@ function render() {
     && state.agentSetReturnTriggered
     && state.agentSetReturnPhase === 'reopening'
     && state.isPressed;
+
+  refs.shell?.classList.toggle('is-lens-firing', isLensFiring);
 
   if (refs.canvasBanner) {
     refs.canvasBanner.textContent = 'Set default agent';
@@ -2856,7 +2948,7 @@ function render() {
     const isReturning = !isSwapActive && !state.isPressed && now < state.closeMotionUntil;
     const isForcedHiddenReset = isPostSwapReset && !state.isPressed && !isSwapActive;
     const staggerDelay = isSwapFade
-      ? (node.index * BUBBLE_STAGGER_STEP_MS)
+      ? ((bubble.swapStaggerIndex ?? node.index) * BUBBLE_STAGGER_STEP_MS)
       : ((isAppearing || isReturning)
       ? (node.index * BUBBLE_STAGGER_STEP_MS)
       : 0);
@@ -2890,7 +2982,7 @@ function render() {
     const isContextParent = state.childMenuParentId === bubble.id;
     const isDimmed = state.childMenuParentId != null && !isContextParent;
     const anyHovered = scene.hoveredId != null;
-    const isHoverDimmed = state.activeSetId !== 'prompt' && anyHovered && !isHovered;
+    const isHoverDimmed = !isPromptLikeBubbleSet(state.activeSetId) && anyHovered && !isHovered;
     const bubbleOpacity = isDimmed ? CHILD_DIMMED_OPACITY : isHoverDimmed ? 0.6 : 1;
     const suppressHoveredShadowForVideo = state.activeSetId === 'app'
       && Boolean(state.backgroundVideo?.src)
@@ -2947,18 +3039,22 @@ function render() {
       node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
     }
     if (node.surfaceChrome) {
-      applyBubbleCelestialChrome(
-        node.surfaceChrome,
-        node.surface,
-        CELESTIAL_ORB_PRESET,
-        bubble.theme || {},
-        {
-          width: bubble.targetWidth,
-          height: bubble.baseSize,
-          radius: bubble.baseSize / 2,
-        },
-      );
-      node.surfaceChrome.style.opacity = (isHovered || isPromoting) ? '1' : '0';
+      const suppressChromeDuringLensFire = isLensFiring && isSwapFade;
+      if (!suppressChromeDuringLensFire) {
+        applyBubbleCelestialChrome(
+          node.surfaceChrome,
+          node.surface,
+          CELESTIAL_ORB_PRESET,
+          bubble.theme || {},
+          {
+            width: bubble.targetWidth,
+            height: bubble.baseSize,
+            radius: bubble.baseSize / 2,
+          },
+        );
+      }
+      node.surfaceChrome.style.transitionDuration = suppressChromeDuringLensFire ? '0ms' : '';
+      node.surfaceChrome.style.opacity = !suppressChromeDuringLensFire && (isHovered || isPromoting) ? '1' : '0';
     }
     if (node.hoverShell) {
       applyBubbleHoverShellChrome(node.hoverShell, bubble.theme, orbGeometryForSize(bubble.baseSize));
@@ -3475,6 +3571,37 @@ function computeSwapTransitionScene(now) {
         x: interpolate(transition.panOffset.x, 0, progress),
         y: interpolate(transition.panOffset.y, 0, progress),
       },
+    };
+  }
+  if (isLensFireSwap(transition)) {
+    const selectedBubbleId = transition.selectedBubbleId;
+    const nonSelectedBubbles = transition.releaseBubbles.filter((bubble) => bubble.id !== selectedBubbleId);
+    const staggerIndexById = new Map(nonSelectedBubbles.map((bubble, index) => [bubble.id, index]));
+    const selectedStaggerIndex = Math.max(transition.releaseBubbles.length - 1, 0);
+    return {
+      bubbles: transition.releaseBubbles.map((bubble) => ({
+        ...bubble,
+        swapState: 'fade',
+        swapStaggerIndex: bubble.id === selectedBubbleId
+          ? selectedStaggerIndex
+          : (staggerIndexById.get(bubble.id) ?? 0),
+        targetScale: 0.2,
+        targetWidth: bubble.baseSize,
+        isExpanded: false,
+        expandedExtraSourceWidth: 0,
+        promotedVisualScale: 1,
+      })),
+      children: [],
+      childZone: null,
+      hoveredId: null,
+      hoveredChildId: null,
+      orb: {
+        id: 'orb',
+        targetScale: 1,
+        targetX: transition.demotedCenterStartX ?? 0,
+        targetY: transition.demotedCenterStartY ?? 0,
+      },
+      panOffset: transition.panOffset,
     };
   }
   const promotedBubble = findPromotedReleaseBubble(transition);
