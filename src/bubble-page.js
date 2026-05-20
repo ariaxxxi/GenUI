@@ -19,46 +19,7 @@ import {
   syncThinkingOrbStreamIcon,
   syncThinkingOrbStreamText,
 } from './shared/thinking-orb-stream.js';
-
-// ── Audio ─────────────────────────────────────────────────────────────────────
-let _audioCtx = null;
-let _clickBuffer = null;
-let _clickBufferLoading = false;
-
-function getAudioCtx() {
-  if (!_audioCtx) {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) _audioCtx = new AC();
-  }
-  return _audioCtx;
-}
-
-async function loadClickBuffer() {
-  if (_clickBuffer || _clickBufferLoading) return;
-  _clickBufferLoading = true;
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  try {
-    const res = await fetch('src/assets/click.mp3');
-    const arrayBuffer = await res.arrayBuffer();
-    _clickBuffer = await ctx.decodeAudioData(arrayBuffer);
-  } catch (e) {}
-}
-
-function playBubbleHoverSound() {
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  loadClickBuffer();
-  if (!_clickBuffer) return;
-  const src = ctx.createBufferSource();
-  src.buffer = _clickBuffer;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.8, ctx.currentTime);
-  src.connect(gain);
-  gain.connect(ctx.destination);
-  src.start();
-}
-// ─────────────────────────────────────────────────────────────────────────────
+import { playSimEarcon } from './sim-panel.js';
 
 const APP_SET_BUBBLE_BASE_SIZE = 110;
 const AGENT_SET_BUBBLE_BASE_SIZE = 110;
@@ -2483,6 +2444,7 @@ function handlePointerDown(event) {
   if (!shouldStartBubblePress(event)) return;
   if (state.swapTransition?.active) return;
   event.preventDefault();
+  playSimEarcon('disambiguate-reveal');
   const now = performance.now();
   clearChildHoverTimer();
   if (refs.shell) {
@@ -2660,6 +2622,7 @@ function startBubbleSwap(scene, now) {
   const selectedBubble = scene.bubbles.find((bubble) => bubble.id === scene.hoveredId);
   if (!selectedBubble) return;
 
+  playSimEarcon('button');
   clearAgentSetReturnInteraction();
   state.promotedHandoffGhost = null;
   state.isPressed = false;
@@ -2841,7 +2804,7 @@ function render() {
   let scene = computeScene(now);
   const hoverChanged = state.hoveredBubble !== scene.hoveredId || state.hoveredChildBubble !== scene.hoveredChildId;
   if (hoverChanged) {
-    if (scene.hoveredId != null && scene.hoveredId !== state.hoveredBubble) playBubbleHoverSound();
+    if (scene.hoveredId != null && scene.hoveredId !== state.hoveredBubble) playSimEarcon('hover');
     state.hoveredBubble = scene.hoveredId;
     state.hoveredChildBubble = scene.hoveredChildId;
     scene = computeScene(now);
@@ -4045,6 +4008,7 @@ function syncChildMenuState(nextHoveredBubbleId) {
     state.childMenuParentId = nextHoveredBubbleId;
     state.childMenuPointerLock = null;
     state.hoveredChildBubble = null;
+    playSimEarcon('chip-reveal');
     scheduleRender();
   }, CHILD_MENU_HOLD_MS);
 

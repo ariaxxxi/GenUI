@@ -84,8 +84,9 @@ async function loadHoverClickBuffer() {
 export function playSimEarcon(type = 'sent') {
   const ctx = getEarconCtx();
   if (!ctx) return;
+  const resolvedType = type === 'spread' ? 'disambiguate-reveal' : type;
 
-  if (type === 'hover') {
+  if (resolvedType === 'hover') {
     // Apple-like scroll tick — ultra-short sine tap, crisp and neutral
     const t = ctx.currentTime;
     const master = ctx.createGain();
@@ -125,7 +126,7 @@ export function playSimEarcon(type = 'sent') {
 
   const now = ctx.currentTime + 0.01;
 
-  if (type === 'sent') {
+  if (resolvedType === 'sent') {
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
     master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
@@ -150,7 +151,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'disambiguate-reveal') {
+  if (resolvedType === 'disambiguate-reveal') {
     // Magical scatter whoosh — pills flying out from center
     const t = ctx.currentTime;
 
@@ -198,7 +199,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'chip-reveal') {
+  if (resolvedType === 'chip-reveal') {
     // Magical reveal — pure tonal chord bloom, no noise
     const t = ctx.currentTime;
 
@@ -248,7 +249,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'magic-pulse') {
+  if (resolvedType === 'magic-pulse') {
     // Deep resonant bloom — like a spell being cast, soft and weighty
     const t = ctx.currentTime;
 
@@ -299,7 +300,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'chip-reveal-2') {
+  if (resolvedType === 'chip-reveal-2') {
     // Same as chip-reveal but a perfect fourth higher
     const t = ctx.currentTime;
     const notes = [
@@ -343,7 +344,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'chip') {
+  if (resolvedType === 'chip') {
     // Apple-style selection tap — clean sine fundamental + soft harmonic, glassy decay
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
@@ -375,7 +376,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'button') {
+  if (resolvedType === 'button') {
     // Confident two-tone confirm click
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);

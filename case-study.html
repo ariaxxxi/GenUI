@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenUI Case Study</title>
+  <style>
+    :root {
+      --bg: #12100e;
+      --bg-soft: #1a1714;
+      --panel: rgba(246, 236, 220, 0.065);
+      --panel-strong: rgba(246, 236, 220, 0.1);
+      --line: rgba(244, 225, 196, 0.18);
+      --text: #f7efe4;
+      --muted: rgba(247, 239, 228, 0.68);
+      --accent: #f7b35f;
+      --accent-soft: rgba(247, 179, 95, 0.22);
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+      --max: 1240px;
+      --radius-xl: 36px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --chapter-w: 240px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      background:
+        radial-gradient(circle at top left, rgba(247, 179, 95, 0.08), transparent 32%),
+        radial-gradient(circle at 80% 20%, rgba(107, 69, 255, 0.08), transparent 22%),
+        linear-gradient(180deg, #171411 0%, #110f0d 100%);
+      color: var(--text);
+    }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--text);
+      background: transparent;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.18;
+      background-image:
+        radial-gradient(rgba(255,255,255,0.12) 0.7px, transparent 0.7px);
+      background-size: 12px 12px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0));
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .progress {
+      position: fixed;
+      inset: 0 auto auto 0;
+      z-index: 60;
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .progress > span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #f5ddc0 0%, #f7b35f 35%, #ff7f50 100%);
+      box-shadow: 0 0 18px rgba(247, 179, 95, 0.45);
+      transform-origin: left center;
+    }
+
+    .shell {
+      position: relative;
+      width: min(calc(100% - 48px), var(--max));
+      margin: 0 auto;
+    }
+
+    .hero {
+      position: relative;
+      padding: 38px 0 42px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 14px rgba(247, 179, 95, 0.55);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+      gap: 28px;
+      align-items: end;
+      margin-top: 28px;
+    }
+
+    h1, h2, h3, .display {
+      margin: 0;
+      font-family: "Iowan Old Style", "Baskerville", "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: -0.035em;
+    }
+
+    .hero h1 {
+      max-width: 10.2ch;
+      font-size: clamp(56px, 10vw, 128px);
+      line-height: 0.92;
+    }
+
+    .hero-copy {
+      margin-top: 20px;
+      max-width: 60ch;
+      font-size: 18px;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .hero-copy strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .hero-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 32px;
+    }
+
+    .meta-card,
+    .panel,
+    .stat,
+    .chapter-card,
+    .artifact,
+    .timeline-item,
+    .quote,
+    .principle {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .meta-card {
+      padding: 18px 18px 16px;
+      border-radius: 22px;
+      min-height: 132px;
+    }
+
+    .meta-card .kicker {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .meta-card .value {
+      font-size: 32px;
+      line-height: 1;
+      margin-bottom: 10px;
+      font-family: "Iowan Old Style", "Baskerville", serif;
+    }
+
+    .meta-card p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .hero-stage {
+      position: relative;
+      min-height: 720px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+        radial-gradient(circle at 18% 10%, rgba(247,179,95,0.24), transparent 30%),
+        radial-gradient(circle at 82% 14%, rgba(118,103,255,0.24), transparent 26%),
+        rgba(26, 23, 20, 0.78);
+      border: 1px solid rgba(255, 236, 212, 0.15);
+      box-shadow: 0 40px 90px rgba(0,0,0,0.36);
+    }
+
+    .hero-stage::after {
+      content: "";
+      position: absolute;
+      inset: auto -10% -14% auto;
+      width: 58%;
+      aspect-ratio: 1;
+      background: radial-gradient(circle, rgba(247,179,95,0.26), transparent 62%);
+      filter: blur(28px);
+      pointer-events: none;
+    }
+
+    .hero-stage-inner {
+      position: absolute;
+      inset: 0;
+      padding: 26px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+    }
+
+    .hero-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .hero-chip {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      font-size: 12px;
+      color: rgba(255,255,255,0.82);
+      letter-spacing: 0.04em;
+    }
+
+    .floating-shot {
+      position: relative;
+      align-self: center;
+      justify-self: center;
+      width: min(100%, 560px);
+      transform: rotate(-5deg);
+    }
+
+    .floating-shot img {
+      border-radius: 28px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 28px 60px rgba(0,0,0,0.4);
+    }
+
+    .note-card {
+      position: absolute;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(18, 16, 14, 0.7);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 20px 36px rgba(0,0,0,0.24);
+      max-width: 220px;
+    }
+
+    .note-card h3 {
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+
+    .note-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .note-card.top-left {
+      top: 110px;
+      left: 12px;
+      transform: rotate(-3deg);
+    }
+
+    .note-card.bottom-right {
+      right: 20px;
+      bottom: 70px;
+      transform: rotate(2deg);
+    }
+
+    .stage-foot {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .stage-foot strong {
+      display: block;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.84);
+      margin-bottom: 8px;
+    }
+
+    .stage-foot p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--muted);
+      max-width: 35ch;
+    }
+
+    .badge {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap;
+      font-size: 13px;
+      color: rgba(255,255,255,0.86);
+    }
+
+    .divider {
+      width: min(calc(100% - 48px), var(--max));
+      margin: 16px auto 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--line), transparent);
+    }
+
+    .body-grid {
+      width: min(calc(100% - 48px), var(--max));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: var(--chapter-w) minmax(0, 1fr);
+      gap: 32px;
+      padding: 28px 0 120px;
+    }
+
+    .chapters {
+      position: sticky;
+      top: 28px;
+      align-self: start;
+      padding-top: 8px;
+    }
+
+    .chapter-card {
+      border-radius: 26px;
+      padding: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.035));
+    }
+
+    .chapter-card h2 {
+      font-size: 26px;
+      margin-bottom: 6px;
+    }
+
+    .chapter-card p {
+      margin: 0 0 18px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .chapter-card nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .chapter-card a {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      color: rgba(255,255,255,0.78);
+      transition: background 220ms ease, color 220ms ease, transform 220ms ease;
+    }
+
+    .chapter-card a:hover,
+    .chapter-card a.is-active {
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      transform: translateX(4px);
+    }
+
+    .content {
+      display: grid;
+      gap: 64px;
+    }
+
+    section {
+      scroll-margin-top: 48px;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 0.78fr);
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .section-index {
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(36px, 5vw, 64px);
+      line-height: 0.98;
+    }
+
+    .section-summary {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 17px;
+    }
+
+    .panel {
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+
+    .panel h3 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    .panel p,
+    .panel li {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    .panel ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    .problem-grid,
+    .principle-grid,
+    .artifact-grid,
+    .system-grid,
+    .timeline,
+    .closing-grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    .problem-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .principle-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .principle {
+      border-radius: 24px;
+      padding: 24px;
+      min-height: 210px;
+    }
+
+    .principle .tag,
+    .artifact .tag {
+      display: inline-flex;
+      margin-bottom: 16px;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .artifact-grid {
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: start;
+    }
+
+    .artifact {
+      border-radius: 30px;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .artifact-media {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .artifact-media img {
+      width: 100%;
+      height: auto;
+    }
+
+    .artifact-copy {
+      padding: 22px 22px 24px;
+    }
+
+    .artifact-copy h3 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .artifact-copy p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    .artifact-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .mini-artifact {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 16px;
+      padding: 16px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      box-shadow: var(--shadow);
+    }
+
+    .mini-artifact img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 14px;
+    }
+
+    .mini-artifact h4 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-family: "Iowan Old Style", "Baskerville", serif;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .mini-artifact p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .quote {
+      border-radius: 30px;
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quote::before {
+      content: "“";
+      position: absolute;
+      top: -18px;
+      left: 16px;
+      font-family: "Iowan Old Style", serif;
+      font-size: 120px;
+      color: rgba(247, 179, 95, 0.16);
+      line-height: 1;
+    }
+
+    blockquote {
+      margin: 0;
+      position: relative;
+      z-index: 1;
+      font-family: "Iowan Old Style", "Baskerville", serif;
+      font-size: clamp(26px, 3.2vw, 44px);
+      line-height: 1.14;
+      letter-spacing: -0.03em;
+      max-width: 18ch;
+    }
+
+    .quote footer {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .system-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .stat {
+      border-radius: 24px;
+      padding: 20px;
+    }
+
+    .stat strong {
+      display: block;
+      font-family: "Iowan Old Style", serif;
+      font-size: 42px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .timeline {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .timeline-item {
+      border-radius: 24px;
+      padding: 20px;
+      min-height: 210px;
+      position: relative;
+    }
+
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(247, 179, 95, 0.45);
+    }
+
+    .timeline-item .step {
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .timeline-item h3 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .timeline-item p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .closing-grid {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+
+    .footer {
+      width: min(calc(100% - 48px), var(--max));
+      margin: 0 auto 48px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 700ms var(--ease), transform 700ms var(--ease);
+      transition-delay: var(--delay, 0ms);
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1120px) {
+      .hero-grid,
+      .section-head,
+      .artifact-grid,
+      .closing-grid,
+      .body-grid,
+      .system-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .body-grid {
+        gap: 22px;
+      }
+
+      .chapters {
+        position: static;
+      }
+
+      .timeline {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .problem-grid,
+      .hero-meta,
+      .stat-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hero-stage {
+        min-height: 620px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell,
+      .body-grid,
+      .divider,
+      .footer {
+        width: min(calc(100% - 28px), var(--max));
+      }
+
+      .hero {
+        padding-top: 24px;
+      }
+
+      .hero h1 {
+        max-width: none;
+      }
+
+      .problem-grid,
+      .hero-meta,
+      .principle-grid,
+      .timeline,
+      .stat-row {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-artifact {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-artifact img {
+        height: 180px;
+      }
+
+      .hero-stage {
+        min-height: 560px;
+      }
+
+      .floating-shot {
+        width: 100%;
+        transform: none;
+      }
+
+      .note-card {
+        position: static;
+        transform: none;
+        max-width: none;
+      }
+
+      .hero-stage-inner {
+        gap: 14px;
+      }
+
+      .stage-foot {
+        flex-direction: column;
+        align-items: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <header class="hero">
+    <div class="shell">
+      <div class="eyebrow reveal">GenUI Case Study</div>
+      <div class="hero-grid">
+        <div>
+          <h1 class="reveal">Designing interfaces that can think in public.</h1>
+          <p class="hero-copy reveal" style="--delay:120ms;">
+            <strong>GenUI</strong> is a browser-native generative UI project for designers. It treats interface states like living transitions instead of fixed screens: prototype, listening, thinking, pill, list, card, bubble field, and AI flow all become editable behavior.
+          </p>
+          <div class="hero-meta">
+            <article class="meta-card reveal" style="--delay:180ms;">
+              <div class="kicker">Surface Model</div>
+              <div class="value">3</div>
+              <p>Prototype editor, AI interaction shell, and Bubble demo share one motion vocabulary.</p>
+            </article>
+            <article class="meta-card reveal" style="--delay:240ms;">
+              <div class="kicker">Core Thesis</div>
+              <div class="value">State as Material</div>
+              <p>Every mode change should feel sculpted, not routed.</p>
+            </article>
+            <article class="meta-card reveal" style="--delay:300ms;">
+              <div class="kicker">Built With</div>
+              <div class="value">No Build Step</div>
+              <p>Direct ES modules, local assets, and browser-native rendering paths only.</p>
+            </article>
+          </div>
+        </div>
+
+        <aside class="hero-stage reveal" style="--delay:120ms;">
+          <div class="hero-stage-inner">
+            <div class="hero-chip-row">
+              <span class="hero-chip">Prototype</span>
+              <span class="hero-chip">AI Mode</span>
+              <span class="hero-chip">Bubble Demo</span>
+            </div>
+
+            <div class="floating-shot">
+              <img src="tmp-genui-prototype.png" alt="GenUI prototype page screenshot">
+              <div class="note-card top-left">
+                <h3>Thinking as a stage</h3>
+                <p>The system treats reasoning like a visible UI condition with shared geometry, not a hidden loading state.</p>
+              </div>
+              <div class="note-card bottom-right">
+                <h3>One motion language</h3>
+                <p>Pill, orb, list, and bubble transitions are tuned as one family instead of isolated demos.</p>
+              </div>
+            </div>
+
+            <div class="stage-foot">
+              <div>
+                <strong>Current Build</strong>
+                <p>Two-page generative UI tool for designers with a dedicated Bubble field demo layered on top.</p>
+              </div>
+              <div class="badge">Browser-native generative UI system</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </header>
+
+  <div class="divider"></div>
+
+  <main class="body-grid">
+    <aside class="chapters">
+      <div class="chapter-card reveal">
+        <h2>Contents</h2>
+        <p>A compact read through the project intent, structure, interaction system, and current design language.</p>
+        <nav>
+          <a href="#overview">Overview <span>01</span></a>
+          <a href="#problem">Problem <span>02</span></a>
+          <a href="#surfaces">Surfaces <span>03</span></a>
+          <a href="#principles">Principles <span>04</span></a>
+          <a href="#system">System <span>05</span></a>
+          <a href="#roadmap">Roadmap <span>06</span></a>
+        </nav>
+      </div>
+    </aside>
+
+    <div class="content">
+      <section id="overview">
+        <div class="section-head">
+          <div class="reveal">
+            <div class="section-index">01 / Overview</div>
+            <h2 class="section-title">A toolkit for designing responsive interface states instead of static screens.</h2>
+          </div>
+          <p class="section-summary reveal" style="--delay:120ms;">
+            GenUI reframes interface work around transitions, behavioral stages, and editable interaction shells. Rather than shipping one canonical screen, it asks how an interface should compress, listen, think, split, reveal, and return.
+          </p>
+        </div>
+
+        <div class="quote reveal">
+          <blockquote>
+            The project is less about drawing UI and more about giving UI a body language.
+          </blockquote>
+          <footer>Case Study Summary</footer>
+        </div>
+      </section>
+
+      <section id="problem">
+        <div class="section-head">
+          <div class="reveal">
+            <div class="section-index">02 / Problem</div>
+            <h2 class="section-title">Most AI interfaces still treat state changes like hard cuts.</h2>
+          </div>
+          <p class="section-summary reveal" style="--delay:120ms;">
+            Conventional assistants move from idle to loading to result with generic containers and generic timing. GenUI explores what happens when those states become distinct, inspectable interface materials.
+          </p>
+        </div>
+
+        <div class="problem-grid">
+          <article class="panel reveal">
+            <h3>Static shell problem</h3>
+            <p>Listening, thinking, confirming, and acting often reuse one blunt surface. That makes the interface understandable, but rarely expressive.</p>
+          </article>
+          <article class="panel reveal" style="--delay:90ms;">
+            <h3>Motion without semantics</h3>
+            <p>Many transitions animate, but few explain what the system is now doing. GenUI treats motion as information, not just polish.</p>
+          </article>
+          <article class="panel reveal" style="--delay:180ms;">
+            <h3>Fragmented demos</h3>
+            <p>Prototype surfaces, AI shells, and showcase demos usually drift apart. This project deliberately forces them to share geometry and behavior.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="surfaces">
+        <div class="section-head">
+          <div class="reveal">
+            <div class="section-index">03 / Surfaces</div>
+            <h2 class="section-title">Three linked surfaces, one interaction language.</h2>
+          </div>
+          <p class="section-summary reveal" style="--delay:120ms;">
+            The project is organized into three environments. Each one tests a different angle of the same question: how should generative interface states feel when they are visible, interruptible, and designable?
+          </p>
+        </div>
+
+        <div class="artifact-grid">
+          <article class="artifact reveal">
+            <div class="artifact-media">
+              <img src="tmp-genui-prototype.png" alt="Prototype workflow screenshot">
+            </div>
+            <div class="artifact-copy">
+              <span class="tag">Prototype / Editor</span>
+              <h3>Scenario editing as live choreography</h3>
+              <p>The prototype page is where shapes, copy, icons, list states, listening prompts, and thinking behaviors are tuned directly. It makes motion a first-class design parameter, not a final pass.</p>
+            </div>
+          </article>
+
+          <div class="artifact-stack">
+            <article class="mini-artifact reveal" style="--delay:80ms;">
+              <img src="tmp-list-pill-stage.png" alt="List pill screenshot">
+              <div>
+                <h4>List and pill morphs</h4>
+                <p>Stage transitions are tuned down to text crossfades, icon treatment, divider behavior, and shell width interpolation.</p>
+              </div>
+            </article>
+            <article class="mini-artifact reveal" style="--delay:160ms;">
+              <img src="assets/orb.png" alt="Orb visual">
+              <div>
+                <h4>Thinking stream</h4>
+                <p>Reasoning is visible through a shared orb-to-pill stream component that can shift between verbs, agents, domains, and app contexts.</p>
+              </div>
+            </article>
+            <article class="mini-artifact reveal" style="--delay:240ms;">
+              <img src="assets/bg/living room.jpg" alt="Ambient background">
+              <div>
+                <h4>Atmosphere matters</h4>
+                <p>The environment is part of the interaction. Background image, blur, framing, and shell material are all adjustable because context changes perception.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="system-grid" style="margin-top:20px;">
+          <article class="panel reveal">
+            <span class="tag">AI Mode</span>
+            <h3>Conversation as staged UI</h3>
+            <p>AI mode focuses on input routing, voice, TTS, and flow-specific interface states such as compose, disambiguation, confirm, sending, and sent. It is where the interaction model gets pressure-tested as a real assistant shell.</p>
+          </article>
+          <article class="panel reveal" style="--delay:100ms;">
+            <span class="tag">Bubble Demo</span>
+            <h3>Spatial selection as field behavior</h3>
+            <p>The Bubble page extends the same motion language into a radial field. The home orb, promoted bubbles, child chips, and earcons push the system toward a more spatial, tactile selection model.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="principles">
+        <div class="section-head">
+          <div class="reveal">
+            <div class="section-index">04 / Principles</div>
+            <h2 class="section-title">Design rules that shaped the system.</h2>
+          </div>
+          <p class="section-summary reveal" style="--delay:120ms;">
+            The implementation is detailed, but the design stance is simple: state should be legible, shared components should stay shared, and interface motion should carry meaning.
+          </p>
+        </div>
+
+        <div class="principle-grid">
+          <article class="principle reveal">
+            <span class="tag">01 / Shared Source</span>
+            <h3>No duplicate interaction families</h3>
+            <p>When listening and thinking are related, they should share the same structural container. This keeps transitions smooth and prevents visual forks from turning into product forks.</p>
+          </article>
+          <article class="principle reveal" style="--delay:80ms;">
+            <span class="tag">02 / Motion Semantics</span>
+            <h3>Animation should explain behavior</h3>
+            <p>Crossfade versus swipe, pill versus circle, reveal versus confirm: each motion choice signals a different system intention. Timing is treated as language.</p>
+          </article>
+          <article class="principle reveal" style="--delay:160ms;">
+            <span class="tag">03 / State as Material</span>
+            <h3>Thinking is not a spinner</h3>
+            <p>Reasoning appears as a visible interface state with its own icon logic, looping text, minimize behavior, and return path into standard surfaces.</p>
+          </article>
+          <article class="principle reveal" style="--delay:240ms;">
+            <span class="tag">04 / Native First</span>
+            <h3>Minimal stack, maximal immediacy</h3>
+            <p>No framework, no build step, no abstraction maze. The browser remains the primary medium, which keeps motion tuning and asset iteration immediate.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="system">
+        <div class="section-head">
+          <div class="reveal">
+            <div class="section-index">05 / System</div>
+            <h2 class="section-title">A compact architecture with high surface variability.</h2>
+          </div>
+          <p class="section-summary reveal" style="--delay:120ms;">
+            GenUI stays deliberately light at the infrastructure level. The complexity lives in shared morphing logic, surface-specific renderers, scenario data, and local interaction modules.
+          </p>
+        </div>
+
+        <div class="stat-row">
+          <article class="stat reveal">
+            <strong>2</strong>
+            <span>Primary HTML entry points: prototype/editor and AI interaction.</span>
+          </article>
+          <article class="stat reveal" style="--delay:80ms;">
+            <strong>1</strong>
+            <span>Shared morph system coordinating shape geometry, content, and transition bridges.</span>
+          </article>
+          <article class="stat reveal" style="--delay:160ms;">
+            <strong>0</strong>
+            <span>Frontend build step. The app loads ES modules directly in the browser.</span>
+          </article>
+        </div>
+
+        <div class="system-grid" style="margin-top:20px;">
+          <article class="panel reveal">
+            <h3>Core pieces</h3>
+            <ul>
+              <li>`index.html` for prototype and editor workflows</li>
+              <li>`ai.html` for AI interaction workflows</li>
+              <li>`bubble.html` for the Bubble field demo</li>
+              <li>`src/shared/*` for morphing, layout, stage data, and shared presentation logic</li>
+              <li>`src/tool/*` and `src/ai/*` for mode-specific bindings and behavior</li>
+            </ul>
+          </article>
+          <article class="panel reveal" style="--delay:100ms;">
+            <h3>Why this structure works</h3>
+            <p>The project can move fast because the architecture stays narrow. Most of the interesting work happens in surface behavior and design tuning, not in app scaffolding. That is the right trade for a motion-heavy interaction lab.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="roadmap">
+        <div class="section-head">
+          <div class="reveal">
+            <div class="section-index">06 / Roadmap</div>
+            <h2 class="section-title">Where the project can go next.</h2>
+          </div>
+          <p class="section-summary reveal" style="--delay:120ms;">
+            The current build already behaves like a serious interaction prototype. The next layer is less about adding more screens and more about strengthening continuity across behavior, authoring, and evaluation.
+          </p>
+        </div>
+
+        <div class="timeline">
+          <article class="timeline-item reveal">
+            <div class="step">Near Term</div>
+            <h3>Systemize the earcons</h3>
+            <p>Turn interaction sounds like hover, confirm, reveal, and spread into a clean shared asset and trigger model across all surfaces.</p>
+          </article>
+          <article class="timeline-item reveal" style="--delay:70ms;">
+            <div class="step">Near Term</div>
+            <h3>Scenario export</h3>
+            <p>Package scenario states, timing parameters, and asset links in a portable format so motion studies can be shared without hand-transfer.</p>
+          </article>
+          <article class="timeline-item reveal" style="--delay:140ms;">
+            <div class="step">Mid Term</div>
+            <h3>Deeper AI flow coverage</h3>
+            <p>Expand beyond assistant basics into multi-step flows where visible stage changes are more consequential than a static response card.</p>
+          </article>
+          <article class="timeline-item reveal" style="--delay:210ms;">
+            <div class="step">Longer Term</div>
+            <h3>Design tooling bridge</h3>
+            <p>Connect scenario editing more directly to designer workflows so these stateful interactions can move between prototype and production more cleanly.</p>
+          </article>
+        </div>
+
+        <div class="closing-grid" style="margin-top:20px;">
+          <article class="panel reveal">
+            <span class="tag">Outcome</span>
+            <h3>GenUI is already a strong proof that interaction states can be authored with the same care as visual systems.</h3>
+            <p>Its most important contribution is not a single screen. It is the insistence that listening, thinking, revealing, confirming, and collapsing can all be designed as first-class interface moments.</p>
+          </article>
+          <article class="panel reveal" style="--delay:100ms;">
+            <span class="tag">Project</span>
+            <h3>GenUI</h3>
+            <p>Browser-native generative UI tool for designers with prototype, AI, and Bubble surfaces built around shared morphing behavior and editable interaction states.</p>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>GenUI case study page</span>
+    <span>Single-file HTML artifact</span>
+  </footer>
+
+  <script>
+    const progress = document.getElementById('progress-bar');
+    const links = Array.from(document.querySelectorAll('.chapter-card a'));
+    const sections = links
+      .map((link) => document.querySelector(link.getAttribute('href')))
+      .filter(Boolean);
+
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? (window.scrollY / max) : 0;
+      progress.style.width = `${Math.min(Math.max(ratio, 0), 1) * 100}%`;
+
+      let activeId = '';
+      for (const section of sections) {
+        const top = section.getBoundingClientRect().top;
+        if (top <= window.innerHeight * 0.3) activeId = section.id;
+      }
+      links.forEach((link) => {
+        const isActive = link.getAttribute('href') === `#${activeId}`;
+        link.classList.toggle('is-active', isActive);
+      });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) entry.target.classList.add('is-visible');
+      });
+    }, { threshold: 0.14 });
+
+    document.querySelectorAll('.reveal').forEach((node) => observer.observe(node));
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
+</body>
+</html>

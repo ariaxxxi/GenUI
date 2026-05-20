@@ -1,4 +1,5 @@
 import { DEMO_LIST, clearListPills, collapseListStack, demoListRenderContent, selectListItem } from '../../shared/list-demo.js';
+import { playSimEarcon } from '../../sim-panel.js';
 
 export function initManualDemo({
   document,
@@ -45,6 +46,8 @@ export function initManualDemo({
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   };
   const LIST_PILL_W = 420;
+  const isPrototypeNormalStage = (shape) => !['magic', 'listening', 'ai', 'idle', 'split'].includes(String(shape || ''));
+
   function resetSplitState() {
     clearSplitTimers();
     morphApi.setSplitBridgeTimer(null);
@@ -196,8 +199,10 @@ export function initManualDemo({
     document.getElementById('stage').classList.remove('flow-active');
     document.getElementById('input-area')?.classList.remove('hidden');
     const currentShape = getCurrentShape();
+    const shouldPlaySpread = currentShape === 'magic' && isPrototypeNormalStage(shape);
     const leavingSplit = currentShape === 'split' && shape !== 'split';
     const leavingList = currentShape === 'list' && shape !== 'list';
+    if (shouldPlaySpread) playSimEarcon('spread');
     if (!leavingList) clearListPills();
     if (shape === 'split') return void morphTo('split', { icon: '', primary: '', secondary: '', detail: '' });
     if (!leavingSplit && currentShape === 'split') resetSplitState();

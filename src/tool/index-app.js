@@ -13,6 +13,7 @@ import { copyStagePngToClipboard, exportStageSvg as exportStageSvgFile, getCaptu
 import { applyAiCelestialChrome } from '../shared/celestial-selection-chrome.js';
 import { bindAiOrbIconStorageSync } from '../shared/ai-orb-icon.js';
 import { initVoiceEngine } from '../ai/voice-engine.js';
+import { playSimEarcon } from '../sim-panel.js';
 
 const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
 const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
@@ -69,7 +70,12 @@ let prototypeSelectionOverride = null;
 let prototypeListeningPromptText = '';
 let prototypeListeningPromptFinalText = '';
 let prototypeListeningPromptInterimText = '';
+let prototypeListeningPromptDismissTimer = null;
 const prototypeAiDebugState = { active: false, mode: 'thinking' };
+
+function isPrototypeNormalRenderShape(shape) {
+  return !['magic', 'listening', 'ai', 'idle', 'split'].includes(String(shape || '').trim().toLowerCase());
+}
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
 const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageListSelectableForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
@@ -457,6 +463,24 @@ function ensurePrototypeListeningPromptStructure(prompt) {
   return { finalEl, interimEl };
 }
 
+function syncPrototypeListeningPromptWidth(prompt) {
+  if (!prompt) return;
+  const frame = document.getElementById('ui-frame') || document.getElementById('stage');
+  const frameWidth = Math.round(frame?.getBoundingClientRect?.().width || window.innerWidth || 0);
+  const maxWidth = Math.max(280, Math.min(720, frameWidth - 24));
+  prompt.style.maxWidth = `${maxWidth}px`;
+  if (!prompt.classList.contains('visible') && !String(prototypeListeningPromptText || '').trim()) {
+    prompt.style.width = '';
+    return;
+  }
+  const previousWidth = prompt.style.width;
+  prompt.style.width = 'auto';
+  const measuredWidth = Math.ceil(prompt.scrollWidth);
+  prompt.style.width = previousWidth;
+  const nextWidth = Math.max(80, Math.min(maxWidth, measuredWidth));
+  prompt.style.width = `${nextWidth}px`;
+}
+
 function syncPrototypeListeningPrompt(shape = document.body?.dataset?.currentShape || '') {
   const prompt = document.getElementById('prototype-listening-prompt');
   if (!prompt) return;
@@ -470,6 +494,8 @@ function syncPrototypeListeningPrompt(shape = document.body?.dataset?.currentSha
   prompt.dataset.dictationState = interimText ? 'live' : (finalText ? 'settled' : '');
   prompt.classList.toggle('has-final', !!finalText);
   prompt.classList.toggle('has-interim', !!interimText);
+  prompt.classList.toggle('is-settling-out', prompt.dataset.dismissing === 'true');
+  syncPrototypeListeningPromptWidth(prompt);
   positionPrototypeListeningPrompt(!!text);
   prompt.classList.toggle('visible', listeningShape && !!text);
 }
@@ -479,9 +505,42 @@ function setPrototypeListeningPromptText(text = '') {
   syncPrototypeListeningPrompt();
 }
 
+function clearPrototypeListeningPromptDismissTimer() {
+  if (!prototypeListeningPromptDismissTimer) return;
+  clearTimeout(prototypeListeningPromptDismissTimer);
+  prototypeListeningPromptDismissTimer = null;
+}
+
+function schedulePrototypeListeningPromptDismiss() {
+  clearPrototypeListeningPromptDismissTimer();
+  const prompt = document.getElementById('prototype-listening-prompt');
+  if (prompt) {
+    prompt.dataset.dismissing = 'false';
+    syncPrototypeListeningPrompt();
+  }
+  prototypeListeningPromptDismissTimer = setTimeout(() => {
+    prototypeListeningPromptDismissTimer = null;
+    const activePrompt = document.getElementById('prototype-listening-prompt');
+    if (activePrompt) {
+      activePrompt.dataset.dismissing = 'true';
+      syncPrototypeListeningPrompt();
+    }
+    window.setTimeout(() => {
+      if (prototypeListeningPromptInterimText) return;
+      prototypeListeningPromptFinalText = '';
+      prototypeListeningPromptText = '';
+      if (activePrompt) activePrompt.dataset.dismissing = 'false';
+      syncPrototypeListeningPrompt();
+    }, 260);
+  }, 1000);
+}
+
 function resetPrototypeListeningPromptText() {
+  clearPrototypeListeningPromptDismissTimer();
   prototypeListeningPromptFinalText = '';
   prototypeListeningPromptInterimText = '';
+  const prompt = document.getElementById('prototype-listening-prompt');
+  if (prompt) prompt.dataset.dismissing = 'false';
   setPrototypeListeningPromptText('');
 }
 
@@ -489,6 +548,7 @@ function setPrototypeListeningTranscript(text = '', isFinal = false) {
   const nextText = normalizePrototypeDictationChunk(text);
   if (!nextText) {
     if (!isFinal) {
+      clearPrototypeListeningPromptDismissTimer();
       prototypeListeningPromptInterimText = '';
       setPrototypeListeningPromptText(prototypeListeningPromptFinalText);
     }
@@ -498,8 +558,12 @@ function setPrototypeListeningTranscript(text = '', isFinal = false) {
     prototypeListeningPromptFinalText = joinPrototypeDictationText(prototypeListeningPromptFinalText, nextText);
     prototypeListeningPromptInterimText = '';
     setPrototypeListeningPromptText(prototypeListeningPromptFinalText);
+    schedulePrototypeListeningPromptDismiss();
     return;
   }
+  clearPrototypeListeningPromptDismissTimer();
+  const prompt = document.getElementById('prototype-listening-prompt');
+  if (prompt) prompt.dataset.dismissing = 'false';
   prototypeListeningPromptInterimText = nextText;
   setPrototypeListeningPromptText(joinPrototypeDictationText(prototypeListeningPromptFinalText, nextText));
 }
@@ -578,6 +642,11 @@ const orb = initOrbController({
 
 function previewScenario(scenario) {
   if (!scenario) return;
+  const currentShape = String(morphApi?.getCurrentShape?.() || '').trim().toLowerCase();
+  const nextShape = String(renderShapeForStageId(scenario.shape, scenario) || '').trim().toLowerCase();
+  if (currentShape === 'magic' && isPrototypeNormalRenderShape(nextShape)) {
+    playSimEarcon('spread');
+  }
   if (flight?.isActive()) flight.cancelFlightFlow();
   orb.stopSiriOrb();
   morphApi.hideRich();

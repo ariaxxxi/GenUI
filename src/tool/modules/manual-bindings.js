@@ -249,7 +249,6 @@ export function initManualBindings({
     streamToken: 0,
     textSwapTimer: null,
     currentText: '',
-    currentPillWidth: 80,
     expandedPillWidth: 80,
     verbIndex: 0,
     skillPhraseIndexById: Object.create(null),
@@ -388,7 +387,6 @@ export function initManualBindings({
     const requestedWidth = Math.max(80, Math.round(Number(pillWidth) || 80));
     if (!collapsed) thinkingDebugState.expandedPillWidth = requestedWidth;
     const width = collapsed ? 80 : requestedWidth;
-    thinkingDebugState.currentPillWidth = width;
     const y = parseTranslateY(main);
     const scale = shape === 'magic' && thinkingDebugState.minimized ? 0.2 : 1;
     const tx = -width / 2;
@@ -412,7 +410,6 @@ export function initManualBindings({
       setText: false,
     });
     thinkingDebugState.expandedPillWidth = metrics.pillWidth || 80;
-    thinkingDebugState.currentPillWidth = metrics.pillWidth || 80;
     syncPrototypeThinkingContainerGeometry(metrics.pillWidth || 80);
     syncPrototypeStageThinkingIcon();
   };
@@ -422,7 +419,7 @@ export function initManualBindings({
     const collapsed = isThinkingCirclePhase(shape);
     thinkingStream.classList.toggle('is-collapsed-stream', collapsed);
     if (shape === 'magic') {
-      syncPrototypeThinkingContainerGeometry(collapsed ? 80 : thinkingDebugState.expandedPillWidth || thinkingDebugState.currentPillWidth || 80);
+      syncPrototypeThinkingContainerGeometry(collapsed ? 80 : thinkingDebugState.expandedPillWidth || 80);
       syncPrototypeStageThinkingIcon();
     }
     if (shape === 'listening') {
