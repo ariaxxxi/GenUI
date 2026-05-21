@@ -19,6 +19,11 @@ import {
   syncThinkingOrbStreamIcon,
   syncThinkingOrbStreamText,
 } from './shared/thinking-orb-stream.js';
+import {
+  deleteDurableJsonRecord,
+  persistDurableJson,
+  readDurableJsonRecord,
+} from './app-state.js';
 import { playSimEarcon } from './sim-panel.js';
 
 const APP_SET_BUBBLE_BASE_SIZE = 110;
@@ -110,8 +115,15 @@ const BUBBLE_HOME_PROMPT_THINKING_PILL_PADDING_X = Object.freeze({ left: 0, righ
 const BUBBLE_HOME_THINKING_TEXT_FONT = '500 20px "DM Sans", sans-serif';
 const BUBBLE_HOME_PROMPT_THINKING_LOOP_MS = 5000;
 const BUBBLE_HOME_PROMPT_TEXT_SWAP_MS = 140;
+const LENS_SHIMMER_DURATION_MS = 3000;
+const LENS_PUNCTURE_SCALE_DURATION_MS = 860;
+const LENS_PUNCTURE_FADE_DURATION_MS = 360;
+const LENS_PUNCTURE_POP_SCALE = 1.055;
+const LENS_PUNCTURE_END_SCALE = 0.5;
 const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
+const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
+const BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY = 'genui.bubble.background-video.v1';
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -121,6 +133,7 @@ const FIGMA_ASSETS = {
   weather: 'src/assets/figma-weather.png',
   note:    'src/assets/figma-note.png',
 };
+const LENS_HOME_ORB_ASSET = 'assets/app/lens.png';
 const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt']);
 const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
 const PROMPT_SET_DEFAULT_AGENT_ID = 'chatgpt';
@@ -741,22 +754,61 @@ const PROMPT_BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
-const LENS_BUBBLE_COPY = Object.freeze({
-  1: Object.freeze({ title: 'Morning lens', subtitle: 'Briefs, timing, priorities' }),
-  2: Object.freeze({ title: 'Cooking lens', subtitle: 'Recipes, groceries, menus' }),
-  3: Object.freeze({ title: 'Golf lens', subtitle: 'Rounds, gear, swing notes' }),
-  5: Object.freeze({ title: 'Family lens', subtitle: 'Calls, plans, shared moments' }),
-  6: Object.freeze({ title: 'Plant lens', subtitle: 'Care, light, watering' }),
-  8: Object.freeze({ title: 'Travel lens', subtitle: 'Routes, stays, local finds' }),
-  9: Object.freeze({ title: 'Fitness lens', subtitle: 'Workouts, recovery, progress' }),
+const LENS_TITLES_BY_SLOT_ID = Object.freeze({
+  1: 'Photography Lens',
+  2: 'Music Lens',
+  3: 'Golf Lens',
+  5: 'Style Lens',
+  6: 'Nature Lens',
+  8: 'Travel Lens',
+  9: 'Hiking Lens',
 });
+
+const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
+  1: 'Photo ideas',
+  2: 'Fresh mixes',
+  3: 'Better form',
+  5: 'Daily looks',
+  6: 'Nature care',
+  8: 'Local finds',
+  9: 'Trail guides',
+});
+
+const LENS_CAROUSEL_SEQUENCE = Object.freeze([2, 3, 8, 5, 6, 1, 9]);
+
+const LENS_IMAGE_BY_SLOT_ID = Object.freeze({
+  1: 'assets/app/camera.png',
+  3: 'assets/app/golf.png',
+});
+
+const LENS_THEME_BY_SLOT_ID = Object.freeze({
+  1: Object.freeze({
+    blobTopCore: 'rgb(238 244 255)',
+    blobTopEdge: 'rgb(170 190 220)',
+    blobBottomCore: 'rgb(255 255 255)',
+    blobBottomEdge: 'rgb(105 120 145)',
+  }),
+  3: Object.freeze({
+    blobTopCore: 'rgb(96 128 64)',
+    blobTopEdge: 'rgb(64 96 48)',
+    blobBottomCore: 'rgb(80 112 64)',
+    blobBottomEdge: 'rgb(32 48 32)',
+  }),
+});
+
 const LENS_BUBBLES_CONFIG = PROMPT_BUBBLES_CONFIG.map((bubble) => {
-  const copy = LENS_BUBBLE_COPY[bubble.id] || { title: 'Topic lens', subtitle: 'Curated related content' };
+  const title = LENS_TITLES_BY_SLOT_ID[bubble.id] || 'Topic';
+  const subtitle = LENS_SUBTITLES_BY_SLOT_ID[bubble.id] || 'Curated related content';
+  const img = LENS_IMAGE_BY_SLOT_ID[bubble.id] || bubble.img;
+  const theme = LENS_THEME_BY_SLOT_ID[bubble.id] || bubble.theme;
   return {
     ...bubble,
-    label: copy.title,
-    pillTitle: copy.title,
-    pillSubtitle: copy.subtitle,
+    img,
+    label: title,
+    pillTitle: title,
+    pillSubtitle: subtitle,
+    theme,
+    haloColor: haloColorForTheme(theme),
   };
 });
 
@@ -1029,6 +1081,22 @@ function createAgentOrbContent(id) {
   };
 }
 
+function createHomeOrbAgentContentForSet(agentId, setId = state.activeSetId) {
+  const content = createAgentOrbContent(agentId);
+  if (setId !== 'lens' || agentId !== PROMPT_SET_DEFAULT_AGENT_ID) return content;
+  return {
+    ...content,
+    img: LENS_HOME_ORB_ASSET,
+    alt: 'Lens orb icon',
+  };
+}
+
+function hasCustomAgentOrbImage(content) {
+  if (content?.kind !== 'agent-orb') return false;
+  const defaultSrc = getAiOrbIconOption(content.iconId)?.src || '';
+  return Boolean(content.img) && content.img !== defaultSrc;
+}
+
 function createDemotedOrbSlotContent(homeOrbContent) {
   if (Number.isFinite(homeOrbContent?.sourceSlotId)) {
     const sourceSlot = findBubbleSlotById(homeOrbContent.sourceSlotId, state.activeSetId);
@@ -1173,6 +1241,7 @@ function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
 }
 
 function getBubbleSetSequence(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (setId === 'lens') return LENS_CAROUSEL_SEQUENCE;
   return getBubblesConfigForSet(setId).map((bubble) => bubble.id);
 }
 
@@ -1214,10 +1283,17 @@ const state = {
   activeSetId: DEFAULT_BUBBLE_SET_ID,
   ...getBubbleSetControlDefaults(DEFAULT_BUBBLE_SET_ID),
   backgroundImageEnabled: true,
+  backgroundImage: {
+    src: 'assets/bg/park.jpg',
+    objectUrl: '',
+    name: 'park image',
+  },
   backgroundVideo: null,
   backgroundVideoPaused: false,
   backgroundVideoProgress: 0,
+  backgroundVideoAlpha: 0.8,
   backgroundVideoX: 0,
+  canvasY: 0,
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -1255,6 +1331,7 @@ const state = {
   agentSetReturnTimer: null,
   agentSetReturnTriggered: false,
   agentSetReturnPhase: '',
+  lensShimmerUntil: 0,
   lastScene: null,
   renderQueued: false,
 };
@@ -1284,12 +1361,17 @@ const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
   controlPanel: document.querySelector('[data-bubble2-control-panel]'),
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
-  promptReset: document.querySelector('[data-bubble2-prompt-reset]'),
+  orbReset: document.querySelector('[data-bubble2-orb-reset]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  canvasY: document.querySelector('[data-bubble2-canvas-y]'),
+  canvasYState: document.querySelector('[data-bubble2-canvas-y-state]'),
   homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
   bgImage: document.querySelector('[data-bubble2-bg-image]'),
   bgImageToggle: document.querySelector('[data-bubble2-bg-image-toggle]'),
+  bgImageUpload: document.querySelector('[data-bubble2-bg-image-upload]'),
+  bgImageReset: document.querySelector('[data-bubble2-bg-image-reset]'),
+  bgImageState: document.querySelector('[data-bubble2-bg-image-state]'),
   bgVideo: document.querySelector('[data-bubble2-bg-video]'),
   bgVideoUpload: document.querySelector('[data-bubble2-bg-video-upload]'),
   bgVideoReset: document.querySelector('[data-bubble2-bg-video-reset]'),
@@ -1297,6 +1379,7 @@ const refs = {
   bgVideoControls: document.querySelector('[data-bubble2-bg-video-controls]'),
   bgVideoPlayToggle: document.querySelector('[data-bubble2-bg-video-play-toggle]'),
   bgVideoProgress: document.querySelector('[data-bubble2-bg-video-progress]'),
+  bgVideoAlpha: document.querySelector('[data-bubble2-bg-video-alpha]'),
   bgVideoX: document.querySelector('[data-bubble2-bg-video-x]'),
   canvasBanner: document.querySelector('[data-bubble2-canvas-banner]'),
   lensToast: document.querySelector('[data-bubble2-lens-toast]'),
@@ -1311,14 +1394,16 @@ const refs = {
   childNodes: new Map(),
 };
 
-init();
+void init();
 
-function init() {
+async function init() {
   if (!refs.stage || !refs.shell || !refs.panLayer) return;
 
+  await hydrateStoredBackgroundMedia();
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
+  syncCanvasPositionUi();
   syncHomeOrbToggleUi();
   syncBackgroundImageUi();
   syncBackgroundVideoUi();
@@ -1744,20 +1829,46 @@ function clearLensToast() {
     bubbleHomeStreamState.lensToastTimer = null;
   }
   refs.lensToast?.classList.add('is-hidden');
+  refs.lensToast?.classList.remove('is-above-orb');
 }
 
-function showLensToast(text) {
+function showLensToast(text, options = {}) {
   if (!refs.lensToast) return;
   if (bubbleHomeStreamState.lensToastTimer) {
     window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
     bubbleHomeStreamState.lensToastTimer = null;
   }
   refs.lensToast.textContent = text || 'Lens on';
+  refs.lensToast.classList.toggle('is-above-orb', options.placement === 'above-orb');
   refs.lensToast.classList.remove('is-hidden');
   bubbleHomeStreamState.lensToastTimer = window.setTimeout(() => {
     bubbleHomeStreamState.lensToastTimer = null;
     refs.lensToast?.classList.add('is-hidden');
-  }, 3000);
+  }, 2000);
+}
+
+function getLensOnText(content) {
+  const lensName = String(content?.pillTitle || content?.label || 'Lens').trim() || 'Lens';
+  return `${lensName.replace(/\s+lens$/i, ' lens')} on`;
+}
+
+function startLensFeedback(content, now = performance.now(), options = {}) {
+  const lensTheme = content?.theme || {};
+  const lensAccent = content?.haloColor
+    || lensTheme.blobTopCore
+    || lensTheme.blobBottomCore;
+  const lensAccentSecondary = lensTheme.blobBottomCore
+    || lensTheme.blobTopEdge
+    || lensAccent;
+  state.lensShimmerUntil = now + LENS_SHIMMER_DURATION_MS;
+  if (refs.shell) {
+    refs.shell.classList.remove('is-lens-firing');
+    if (lensAccent) refs.shell.style.setProperty('--bubble2-lens-accent', lensAccent);
+    if (lensAccentSecondary) refs.shell.style.setProperty('--bubble2-lens-accent-secondary', lensAccentSecondary);
+    void refs.shell.offsetWidth;
+  }
+  showLensToast(getLensOnText(content), options);
+  scheduleMotionPhaseRender(state.lensShimmerUntil);
 }
 
 function clearPromptHomeThinkingTimer() {
@@ -1802,6 +1913,9 @@ function getPromptThinkingPhrases(content = state.homeOrbContent) {
   }
   if (title.includes('day check')) {
     return ['Checking calendar', 'Sorting priorities', 'Writing summary'];
+  }
+  if (title.includes('hiking')) {
+    return ['Finding trails', 'Checking elevation', 'Packing essentials'];
   }
   if (title.includes('fitness')) {
     return ['Planning workout', 'Counting reps', 'Tracking progress'];
@@ -1952,7 +2066,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
   }
   const visual = root?.querySelector?.('.bubble2-orb-visual');
   syncBubbleHomeOrbVisualStateClasses(visual, content);
-  if (content.kind === 'agent-orb') {
+  if (content.kind === 'agent-orb' && !hasCustomAgentOrbImage(content)) {
     syncAiOrbCenterIcon(root, {
       animate: options.animate,
       id: content.iconId,
@@ -2048,12 +2162,6 @@ function syncSetSwitcherUi() {
       return button;
     }),
   );
-  if (refs.promptReset) {
-    const isPromptSet = state.activeSetId === 'prompt';
-    refs.promptReset.classList.toggle('is-hidden', !isPromptSet);
-    refs.promptReset.disabled = !isPromptSet;
-    refs.promptReset.setAttribute('aria-hidden', String(!isPromptSet));
-  }
 }
 
 function syncViewportPanToggleUi() {
@@ -2067,6 +2175,14 @@ function syncCanvaslessUi() {
   refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
 }
 
+function syncCanvasPositionUi() {
+  const canvasY = clamp(Number(state.canvasY) || 0, -240, 240);
+  state.canvasY = canvasY;
+  if (refs.canvasY) refs.canvasY.value = String(Math.round(canvasY));
+  if (refs.canvasYState) refs.canvasYState.textContent = `${Math.round(canvasY)}px`;
+  refs.shell?.style.setProperty('--bubble2-canvas-y', `${canvasY}px`);
+}
+
 function syncHomeOrbToggleUi() {
   if (!refs.homeOrbToggle) return;
   const visible = state.homeOrbVisible !== false;
@@ -2078,9 +2194,104 @@ function syncBackgroundImageUi() {
   const enabled = state.backgroundImageEnabled === true;
   if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
   refs.stage?.classList.toggle('has-bg-image', enabled);
+  if (refs.bgImageState) refs.bgImageState.textContent = state.backgroundImage?.name || 'park image';
   if (refs.bgImage) {
-    refs.bgImage.style.backgroundImage = enabled ? 'url("assets/bg/park.jpg")' : 'none';
+    const src = state.backgroundImage?.src || 'assets/bg/park.jpg';
+    refs.bgImage.style.backgroundImage = enabled ? `url("${src}")` : 'none';
   }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function hydrateStoredBackgroundMedia() {
+  const [imageRecord, videoRecord] = await Promise.all([
+    readDurableJsonRecord(BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY),
+    readDurableJsonRecord(BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY),
+  ]);
+  const image = imageRecord?.value;
+  if (typeof image?.src === 'string' && image.src) {
+    revokeBackgroundImageObjectUrl(state.backgroundImage);
+    state.backgroundImage = {
+      src: image.src,
+      objectUrl: '',
+      name: String(image.name || 'uploaded image'),
+    };
+    state.backgroundImageEnabled = true;
+  }
+  const video = videoRecord?.value;
+  const videoBlob = video?.blob instanceof Blob ? video.blob : null;
+  const videoSrc = videoBlob
+    ? URL.createObjectURL(videoBlob)
+    : (typeof video?.src === 'string' && video.src && !video.src.startsWith('blob:') ? video.src : '');
+  if (videoSrc) {
+    revokeBackgroundVideoObjectUrl(state.backgroundVideo);
+    state.backgroundVideo = {
+      src: videoSrc,
+      objectUrl: videoBlob ? videoSrc : '',
+      name: String(video.name || 'uploaded video'),
+      type: String(video.type || ''),
+    };
+    state.backgroundVideoPaused = video.paused === true;
+    state.backgroundVideoProgress = clamp(Number(video.progress) || 0, 0, 1);
+    state.backgroundVideoAlpha = clamp(Number(video.alpha ?? 0.8), 0, 1);
+    state.backgroundVideoX = clamp(Number(video.x) || 0, -1000, 1000);
+  }
+}
+
+function persistBackgroundImage() {
+  void persistDurableJson(
+    BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY,
+    {
+      src: state.backgroundImage?.src || '',
+      name: state.backgroundImage?.name || 'uploaded image',
+    },
+    { label: 'bubble background image' },
+  );
+}
+
+async function readStoredBackgroundVideoValue() {
+  const record = await readDurableJsonRecord(BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY);
+  return record?.value && typeof record.value === 'object' ? record.value : null;
+}
+
+function persistBackgroundVideo() {
+  if (!state.backgroundVideo?.src) return;
+  void (async () => {
+    const stored = await readStoredBackgroundVideoValue();
+    const currentSrc = String(state.backgroundVideo?.src || '');
+    const durableSrc = currentSrc && !currentSrc.startsWith('blob:') ? currentSrc : (stored?.src || '');
+    const durableBlob = stored?.blob instanceof Blob ? stored.blob : null;
+    if (!durableSrc && !durableBlob) return;
+    await persistDurableJson(
+      BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY,
+      {
+        src: durableSrc,
+        blob: durableBlob,
+        name: state.backgroundVideo.name || 'uploaded video',
+        type: state.backgroundVideo.type || '',
+        paused: state.backgroundVideoPaused === true,
+        progress: clamp(Number(state.backgroundVideoProgress) || 0, 0, 1),
+        alpha: clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1),
+        x: clamp(Number(state.backgroundVideoX) || 0, -1000, 1000),
+      },
+      { label: 'bubble background video' },
+    );
+  })();
+}
+
+function revokeBackgroundImageObjectUrl(image) {
+  const objectUrl = typeof image?.objectUrl === 'string' ? image.objectUrl : '';
+  if (!objectUrl || !objectUrl.startsWith('blob:')) return;
+  try {
+    URL.revokeObjectURL(objectUrl);
+  } catch (_) {}
 }
 
 function revokeBackgroundVideoObjectUrl(video) {
@@ -2105,6 +2316,12 @@ function syncBackgroundVideoUi() {
     refs.bgVideoProgress.value = String(Math.round(clamp(Number(state.backgroundVideoProgress) || 0, 0, 1) * 1000));
     refs.bgVideoProgress.disabled = !hasVideo;
   }
+  const videoAlpha = clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1);
+  state.backgroundVideoAlpha = videoAlpha;
+  if (refs.bgVideoAlpha) {
+    refs.bgVideoAlpha.value = String(Math.round(videoAlpha * 100));
+    refs.bgVideoAlpha.disabled = !hasVideo;
+  }
   const videoX = clamp(Number(state.backgroundVideoX) || 0, -1000, 1000);
   state.backgroundVideoX = videoX;
   if (refs.bgVideoX) {
@@ -2113,6 +2330,7 @@ function syncBackgroundVideoUi() {
   }
   if (!refs.bgVideo) return;
   refs.bgVideo.style.setProperty('--bubble2-bg-video-x', `${videoX}px`);
+  refs.bgVideo.style.opacity = hasVideo ? String(videoAlpha) : '0';
   const nextSrc = hasVideo ? String(video.src) : '';
   if (refs.bgVideo.dataset.loadedSrc !== nextSrc) {
     refs.bgVideo.dataset.loadedSrc = nextSrc;
@@ -2152,6 +2370,7 @@ function resetStateForSetSwitch() {
   clearPromptHomeThinkingTimer();
   stopBubbleHomeStream();
   clearLensToast();
+  state.lensShimmerUntil = 0;
   refs.shell?.classList.remove('is-lens-firing');
   state.isPressed = false;
   state.hoveredBubble = null;
@@ -2203,25 +2422,29 @@ function resetAgentSetToDefaults() {
     agent: createInitialSlotContentMap('agent'),
   };
   state.orbAgentId = BUBBLE_HOME_DEFAULT_AGENT_ID;
-  state.homeOrbContent = createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(BUBBLE_HOME_DEFAULT_AGENT_ID, 'agent');
   state.pendingDemotedSlotSwap = null;
   state.panSnapPending = false;
   state.swapResetPending = false;
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
 }
 
-function resetPromptSetToDefaults() {
-  if (state.activeSetId !== 'prompt') return;
+function resetActiveSetOrbToDefaults() {
+  const activeSetId = state.activeSetId;
+  if (!getBubbleSetDefinition(activeSetId)) return;
   resetStateForSetSwitch();
   clearSwapLayer();
+  if (activeSetId === 'interrupt') interruptSessionPaused = false;
   state.slotContentBySetId = {
     ...state.slotContentBySetId,
-    prompt: createInitialSlotContentMap('prompt'),
+    [activeSetId]: createInitialSlotContentMap(activeSetId),
   };
-  state.orbAgentId = getDefaultHomeAgentIdForSet('prompt');
-  state.homeOrbContent = createAgentOrbContent(state.orbAgentId);
+  state.orbAgentId = getDefaultHomeAgentIdForSet(activeSetId);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(state.orbAgentId, activeSetId);
+  state.homeOrbVisible = true;
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
   syncSetSwitcherUi();
+  syncHomeOrbToggleUi();
   buildScene();
   updateMeasuredChildChipWidths();
   render();
@@ -2291,10 +2514,11 @@ function switchBubbleSet(nextSetId) {
   state.canvaslessEnabled = nextDefaults.canvaslessEnabled;
   resetStateForSetSwitch();
   state.orbAgentId = getDefaultHomeAgentIdForSet(nextSet.id);
-  state.homeOrbContent = createAgentOrbContent(state.orbAgentId);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(state.orbAgentId, nextSet.id);
   syncSetSwitcherUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
+  syncCanvasPositionUi();
   buildScene();
   updateMeasuredChildChipWidths();
   render();
@@ -2304,11 +2528,18 @@ function switchBubbleSet(nextSetId) {
 function bindEvents() {
   refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
-  refs.promptReset?.addEventListener('click', resetPromptSetToDefaults);
+  refs.orbReset?.addEventListener('click', resetActiveSetOrbToDefaults);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.canvasY?.addEventListener('input', handleCanvasYInput);
   refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
   refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
+  refs.bgImageUpload?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) target.value = '';
+  });
+  refs.bgImageUpload?.addEventListener('change', handleBackgroundImageUpload);
+  refs.bgImageReset?.addEventListener('click', resetBackgroundImage);
   refs.bgVideoUpload?.addEventListener('click', (event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement) target.value = '';
@@ -2317,6 +2548,7 @@ function bindEvents() {
   refs.bgVideoReset?.addEventListener('click', resetBackgroundVideo);
   refs.bgVideoPlayToggle?.addEventListener('click', handleBackgroundVideoPlayToggle);
   refs.bgVideoProgress?.addEventListener('input', handleBackgroundVideoProgressInput);
+  refs.bgVideoAlpha?.addEventListener('input', handleBackgroundVideoAlphaInput);
   refs.bgVideoX?.addEventListener('input', handleBackgroundVideoXInput);
   refs.bgVideo?.addEventListener('timeupdate', syncBackgroundVideoProgressUi);
   refs.bgVideo?.addEventListener('loadedmetadata', syncBackgroundVideoProgressUi);
@@ -2327,7 +2559,10 @@ function bindEvents() {
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
-  window.addEventListener('beforeunload', () => revokeBackgroundVideoObjectUrl(state.backgroundVideo), { once: true });
+  window.addEventListener('beforeunload', () => {
+    revokeBackgroundImageObjectUrl(state.backgroundImage);
+    revokeBackgroundVideoObjectUrl(state.backgroundVideo);
+  }, { once: true });
 }
 
 function handleSetPanelClick(event) {
@@ -2350,6 +2585,13 @@ function handleCanvaslessToggleChange(event) {
   syncCanvaslessUi();
 }
 
+function handleCanvasYInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.canvasY = clamp(Number(target.value) || 0, -240, 240);
+  syncCanvasPositionUi();
+}
+
 function handleHomeOrbToggleClick() {
   state.homeOrbVisible = !state.homeOrbVisible;
   syncHomeOrbToggleUi();
@@ -2363,7 +2605,47 @@ function handleBackgroundImageToggleChange(event) {
   syncBackgroundImageUi();
 }
 
-function handleBackgroundVideoUpload(event) {
+async function handleBackgroundImageUpload(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const file = target.files?.[0];
+  if (!file) return;
+  if (!String(file.type || '').startsWith('image/')) {
+    target.value = '';
+    return;
+  }
+  const previousImage = state.backgroundImage;
+  const dataUrl = await readFileAsDataUrl(file).catch(() => '');
+  if (!dataUrl) {
+    target.value = '';
+    return;
+  }
+  revokeBackgroundImageObjectUrl(previousImage);
+  state.backgroundImage = {
+    src: dataUrl,
+    objectUrl: '',
+    name: String(file.name || 'uploaded image'),
+  };
+  state.backgroundImageEnabled = true;
+  persistBackgroundImage();
+  syncBackgroundImageUi();
+  target.value = '';
+}
+
+function resetBackgroundImage() {
+  revokeBackgroundImageObjectUrl(state.backgroundImage);
+  state.backgroundImage = {
+    src: 'assets/bg/park.jpg',
+    objectUrl: '',
+    name: 'park image',
+  };
+  state.backgroundImageEnabled = true;
+  void deleteDurableJsonRecord(BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY, { label: 'bubble background image' });
+  syncBackgroundImageUi();
+  if (refs.bgImageUpload) refs.bgImageUpload.value = '';
+}
+
+async function handleBackgroundVideoUpload(event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
   const file = target.files?.[0];
@@ -2383,9 +2665,24 @@ function handleBackgroundVideoUpload(event) {
   };
   state.backgroundVideoPaused = false;
   state.backgroundVideoProgress = 0;
+  state.backgroundVideoAlpha = clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1);
   state.backgroundVideoX = 0;
   syncBackgroundVideoUi();
   target.value = '';
+  void persistDurableJson(
+    BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY,
+    {
+      src: '',
+      blob: file,
+      name: state.backgroundVideo.name || 'uploaded video',
+      type: state.backgroundVideo.type || '',
+      paused: state.backgroundVideoPaused === true,
+      progress: clamp(Number(state.backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1),
+      x: clamp(Number(state.backgroundVideoX) || 0, -1000, 1000),
+    },
+    { label: 'bubble background video' },
+  );
 }
 
 function resetBackgroundVideo() {
@@ -2393,7 +2690,9 @@ function resetBackgroundVideo() {
   state.backgroundVideo = null;
   state.backgroundVideoPaused = false;
   state.backgroundVideoProgress = 0;
+  state.backgroundVideoAlpha = 0.8;
   state.backgroundVideoX = 0;
+  void deleteDurableJsonRecord(BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY, { label: 'bubble background video' });
   syncBackgroundVideoUi();
   if (refs.bgVideoUpload) refs.bgVideoUpload.value = '';
 }
@@ -2401,6 +2700,7 @@ function resetBackgroundVideo() {
 function handleBackgroundVideoPlayToggle() {
   if (!state.backgroundVideo?.src) return;
   state.backgroundVideoPaused = !state.backgroundVideoPaused;
+  persistBackgroundVideo();
   syncBackgroundVideoUi();
 }
 
@@ -2408,6 +2708,15 @@ function handleBackgroundVideoProgressInput(event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
   state.backgroundVideoProgress = clamp((Number(target.value) || 0) / 1000, 0, 1);
+  persistBackgroundVideo();
+  syncBackgroundVideoUi();
+}
+
+function handleBackgroundVideoAlphaInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundVideoAlpha = clamp((Number(target.value) || 0) / 100, 0, 1);
+  persistBackgroundVideo();
   syncBackgroundVideoUi();
 }
 
@@ -2415,6 +2724,7 @@ function handleBackgroundVideoXInput(event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
   state.backgroundVideoX = clamp(Number(target.value) || 0, -1000, 1000);
+  persistBackgroundVideo();
   syncBackgroundVideoUi();
 }
 
@@ -2440,7 +2750,7 @@ function handleKeyDown(event) {
 }
 
 function cycleBubbleHomeSelection(step) {
-  if (isAgentStyleBubbleSet(state.activeSetId)) {
+  if (isAgentStyleBubbleSet(state.activeSetId) || state.activeSetId === 'lens') {
     cycleBubbleHomeSetItem(step, state.activeSetId);
     return;
   }
@@ -2456,7 +2766,7 @@ function cycleBubbleHomeAgent(step) {
   const nextId = BUBBLE_HOME_AGENT_SEQUENCE[nextIndex];
   if (nextId === state.orbAgentId) return;
   state.orbAgentId = nextId;
-  state.homeOrbContent = createAgentOrbContent(nextId);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(nextId, state.activeSetId);
   void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(state.homeOrbContent)}`);
   syncBubbleHomeOrbVisual(refs.orb, {
     animate: true,
@@ -2487,7 +2797,11 @@ function cycleBubbleHomeSetItem(step, setId = state.activeSetId) {
   const switchDirection = step > 0 ? 'right' : 'left';
 
   state.homeOrbContent = nextContent;
-  void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
+  if (setId !== 'lens') {
+    void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
+  } else {
+    startLensFeedback(nextContent, performance.now(), { placement: 'above-orb' });
+  }
   syncBubbleHomeOrbVisual(refs.orb, {
     animate: true,
     switchDirection,
@@ -2713,14 +3027,22 @@ function startBubbleSwap(scene, now) {
   const promotedVisualScaleEnd = selectedBubble.graphicKind === 'emoji'
     ? BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.homeEmojiScale ?? 1)
     : ((selectedBubble.preservePromotedImageScale ? 1 : BUBBLE_RELEASE_CONTENT_SCALE) * promotedImageScaleCompensation);
-  const lensName = promotedContent.pillTitle || promotedContent.label || 'Lens';
+  const selectedNode = refs.bubbleNodes.get(selectedBubble.id)?.root;
+  const selectedRenderedWidth = selectedNode
+    ? Number.parseFloat(window.getComputedStyle(selectedNode).width)
+    : NaN;
+  if (isLensFire) {
+    startLensFeedback(promotedContent, now);
+  }
   state.swapTransition = {
     active: true,
     swapMode: isLensFire ? 'lens-fire' : 'promote',
     specialAction: isPauseAction ? 'pause-session' : (isPlayAction ? 'play-session' : ''),
     selectedBubbleId: selectedBubble.id,
     startedAt: now,
-    durationMs: (isPauseAction || isPlayAction || isLensFire) ? (SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS) : SWAP_DURATION_MS,
+    durationMs: isLensFire
+      ? (LENS_PUNCTURE_SCALE_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS)
+      : ((isPauseAction || isPlayAction) ? (SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS) : SWAP_DURATION_MS),
     siblingDurationMs: SWAP_SIBLING_DURATION_MS,
     highlightFreezeUntil: now + SWAP_HIGHLIGHT_FREEZE_MS,
     panOffset: { ...scene.panOffset },
@@ -2737,7 +3059,9 @@ function startBubbleSwap(scene, now) {
     promotedContent,
     demotedContent,
     previousHomeOrbContent: { ...state.homeOrbContent },
-    lensToastText: isLensFire ? `${lensName} on` : '',
+    selectedRenderedWidth: Number.isFinite(selectedRenderedWidth) && selectedRenderedWidth > 0
+      ? selectedRenderedWidth
+      : null,
   };
 
   if (isPauseAction) {
@@ -2778,10 +3102,8 @@ function commitBubbleSwap() {
     state.swapTransition = null;
     state.closeMotionUntil = 0;
     state.homeOrbVisible = false;
-    refs.shell?.classList.remove('is-lens-firing');
     clearSwapLayer();
     syncHomeOrbToggleUi();
-    showLensToast(transition.lensToastText);
     scheduleRender();
     return;
   }
@@ -2852,6 +3174,25 @@ function computePromotedSwapMotion(transition, promotedBubble, now) {
   };
 }
 
+function computeLensFirePunctureScale(bubble, transition, now) {
+  const startScale = bubble.targetScale ?? 1;
+  const progress = clamp((now - transition.startedAt) / LENS_PUNCTURE_SCALE_DURATION_MS, 0, 1);
+  if (progress <= 0) return startScale;
+  const popScale = startScale * LENS_PUNCTURE_POP_SCALE;
+  if (progress < 0.18) {
+    return interpolate(startScale, popScale, easeOutBackSoft(progress / 0.18));
+  }
+  return interpolate(popScale, LENS_PUNCTURE_END_SCALE, easeInOutCubic((progress - 0.18) / 0.82));
+}
+
+function computeLensFirePunctureWidth(bubble, transition, staggerIndex, now) {
+  const startWidth = transition.selectedRenderedWidth ?? bubble.targetWidth ?? bubble.baseSize;
+  const collapseStart = transition.startedAt + (LENS_PUNCTURE_SCALE_DURATION_MS * 0.18);
+  const fadeEnd = transition.startedAt + (staggerIndex * BUBBLE_STAGGER_STEP_MS) + LENS_PUNCTURE_SCALE_DURATION_MS;
+  const progress = clamp((now - collapseStart) / Math.max(fadeEnd - collapseStart, 1), 0, 1);
+  return interpolate(startWidth, bubble.baseSize, easeInOutCubic(progress));
+}
+
 function computeDemotedSwapMotion(transition, now) {
   if (!transition) return null;
   if (isInterruptPlaybackSwap(transition)) return null;
@@ -2906,6 +3247,7 @@ function render() {
   const isInitialReveal = state.isPressed && now < state.openMotionUntil;
   const isSwapActive = Boolean(state.swapTransition?.active);
   const isLensFiring = isLensFireSwap(state.swapTransition);
+  const isLensShimmerActive = isLensFiring || now < state.lensShimmerUntil;
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
@@ -2914,7 +3256,7 @@ function render() {
     && state.agentSetReturnPhase === 'reopening'
     && state.isPressed;
 
-  refs.shell?.classList.toggle('is-lens-firing', isLensFiring);
+  refs.shell?.classList.toggle('is-lens-firing', isLensShimmerActive);
 
   if (refs.canvasBanner) {
     refs.canvasBanner.textContent = 'Set default agent';
@@ -2944,6 +3286,9 @@ function render() {
       : BUBBLE_HOVER_CONTENT_SCALE;
     const isAppearing = isInitialReveal;
     const isSwapFade = bubble.swapState === 'fade';
+    const isSelectedLensFireBubble = isLensFiring
+      && isSwapFade
+      && bubble.id === state.swapTransition?.selectedBubbleId;
     const isSwapHidden = bubble.swapState === 'hidden';
     const isReturning = !isSwapActive && !state.isPressed && now < state.closeMotionUntil;
     const isForcedHiddenReset = isPostSwapReset && !state.isPressed && !isSwapActive;
@@ -2952,17 +3297,23 @@ function render() {
       : ((isAppearing || isReturning)
       ? (node.index * BUBBLE_STAGGER_STEP_MS)
       : 0);
-    const transformDuration = isSwapFade
+    const transformDuration = isSelectedLensFireBubble
+      ? 0
+      : isSwapFade
       ? SWAP_SIBLING_DURATION_MS
       : (isSwapHidden ? 1 : (isAppearing
       ? APPEAR_MOVE_DURATION_MS
       : (isReturning ? DISAPPEAR_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS)));
-    const opacityDuration = isSwapFade
+    const opacityDuration = isSelectedLensFireBubble
+      ? LENS_PUNCTURE_FADE_DURATION_MS
+      : isSwapFade
       ? SWAP_SIBLING_DURATION_MS
       : (isSwapHidden ? 1 : (isAppearing
       ? FADE_IN_DURATION_MS
       : (isReturning ? FADE_OUT_DURATION_MS : DEFAULT_MOVE_DURATION_MS)));
-    const shadowDuration = isSwapFade || isSwapHidden
+    const shadowDuration = isSelectedLensFireBubble
+      ? LENS_PUNCTURE_FADE_DURATION_MS
+      : isSwapFade || isSwapHidden
       ? SWAP_SIBLING_DURATION_MS
       : (isAppearing
       ? FADE_IN_DURATION_MS
@@ -3022,12 +3373,14 @@ function render() {
       ? 'brightness(0.42) saturate(0.68)'
       : 'none';
     node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
-    node.root.style.transitionDelay = `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
+    node.root.style.transitionDelay = isSelectedLensFireBubble
+      ? `0ms, 0ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`
+      : `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
     node.root.style.transitionDuration = isForcedHiddenReset
       ? '0ms, 0ms, 0ms, 0ms, 0ms'
       : isPromoting
       ? '0ms, 0ms, 0ms, 0ms, 0ms'
-      : `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
+      : `${transformDuration}ms, ${isSelectedLensFireBubble ? 0 : 600}ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
     node.root.style.transitionTimingFunction = isForcedHiddenReset
       ? 'linear, linear, linear, linear, linear'
       : isPromoting
@@ -3039,7 +3392,7 @@ function render() {
       node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
     }
     if (node.surfaceChrome) {
-      const suppressChromeDuringLensFire = isLensFiring && isSwapFade;
+      const suppressChromeDuringLensFire = isLensFiring && isSwapFade && !isSelectedLensFireBubble;
       if (!suppressChromeDuringLensFire) {
         applyBubbleCelestialChrome(
           node.surfaceChrome,
@@ -3054,7 +3407,7 @@ function render() {
         );
       }
       node.surfaceChrome.style.transitionDuration = suppressChromeDuringLensFire ? '0ms' : '';
-      node.surfaceChrome.style.opacity = !suppressChromeDuringLensFire && (isHovered || isPromoting) ? '1' : '0';
+      node.surfaceChrome.style.opacity = !suppressChromeDuringLensFire && (isHovered || isPromoting || isSelectedLensFireBubble) ? '1' : '0';
     }
     if (node.hoverShell) {
       applyBubbleHoverShellChrome(node.hoverShell, bubble.theme, orbGeometryForSize(bubble.baseSize));
@@ -3084,7 +3437,7 @@ function render() {
     }
     node.surface.classList.toggle('has-surface-shell', Boolean(bubble.usesSurfaceShell));
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
-    node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting));
+    node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting || isSelectedLensFireBubble));
     if (!usesPillInteraction) {
       node.surface.classList.toggle('is-hovered', isHovered);
     } else {
@@ -3579,18 +3932,27 @@ function computeSwapTransitionScene(now) {
     const staggerIndexById = new Map(nonSelectedBubbles.map((bubble, index) => [bubble.id, index]));
     const selectedStaggerIndex = Math.max(transition.releaseBubbles.length - 1, 0);
     return {
-      bubbles: transition.releaseBubbles.map((bubble) => ({
-        ...bubble,
-        swapState: 'fade',
-        swapStaggerIndex: bubble.id === selectedBubbleId
+      bubbles: transition.releaseBubbles.map((bubble) => {
+        const isSelected = bubble.id === selectedBubbleId;
+        const swapStaggerIndex = isSelected
           ? selectedStaggerIndex
-          : (staggerIndexById.get(bubble.id) ?? 0),
-        targetScale: 0.2,
-        targetWidth: bubble.baseSize,
-        isExpanded: false,
-        expandedExtraSourceWidth: 0,
-        promotedVisualScale: 1,
-      })),
+          : (staggerIndexById.get(bubble.id) ?? 0);
+        return {
+          ...bubble,
+          isLensFireSelectedBubble: isSelected,
+          swapState: 'fade',
+          swapStaggerIndex,
+          targetScale: isSelected
+            ? computeLensFirePunctureScale(bubble, transition, now)
+            : 0.2,
+          targetWidth: isSelected
+            ? computeLensFirePunctureWidth(bubble, transition, swapStaggerIndex, now)
+            : bubble.baseSize,
+          isExpanded: false,
+          expandedExtraSourceWidth: 0,
+          promotedVisualScale: 1,
+        };
+      }),
       children: [],
       childZone: null,
       hoveredId: null,
@@ -3715,7 +4077,7 @@ function syncSwapOrbContent(node, content) {
   } else {
     node.style.removeProperty('--swap-icon-size');
   }
-  if (content.kind === 'agent-orb') {
+  if (content.kind === 'agent-orb' && !hasCustomAgentOrbImage(content)) {
     syncAiOrbCenterIcon(node, {
       animate: false,
       id: content.iconId,

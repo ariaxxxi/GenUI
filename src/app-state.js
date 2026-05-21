@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   aiOrbIcon: 'genui.ai-orb-icon.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
+  backgroundImage: 'genui.background-image.v1',
   backgroundVideo: 'genui.background-video.v1',
 };
 
@@ -67,6 +68,7 @@ export function loadCanvasSettings() {
     backgroundVideo: null,
     backgroundVideoPaused: stored?.backgroundVideoPaused === true,
     backgroundVideoProgress: Math.max(0, Math.min(1, Number(stored?.backgroundVideoProgress) || 0)),
+    backgroundVideoAlpha: Math.max(0, Math.min(1, Number(stored?.backgroundVideoAlpha ?? 0.8))),
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',

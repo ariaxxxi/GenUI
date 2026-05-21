@@ -108,15 +108,22 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-sidebar {
   position: absolute;
-  top: 50%;
+  top: 24px;
+  bottom: 24px;
   left: 24px;
-  transform: translateY(-50%);
   width: 160px;
   flex: 0 0 160px;
   z-index: 2;
+  display: flex;
+  min-height: 0;
+  touch-action: auto;
 }
 
 .bubble2-sidebar-card {
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -127,6 +134,19 @@ body.bubble2-page.is-canvasless {
     0 18px 38px rgba(0, 0, 0, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(12px);
+}
+
+.bubble2-sidebar-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bubble2-sidebar-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bubble2-sidebar-card::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .bubble2-sidebar-eyebrow {
@@ -154,6 +174,10 @@ body.bubble2-page.is-canvasless {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.bubble2-toggle-row + .bubble2-upload-row {
+  margin-top: 10px;
 }
 
 .bubble2-upload-btn,
@@ -210,15 +234,6 @@ body.bubble2-page.is-canvasless {
   display: none;
 }
 
-.bubble2-prompt-reset-btn {
-  width: 100%;
-  margin-top: 10px;
-}
-
-.bubble2-prompt-reset-btn.is-hidden {
-  display: none;
-}
-
 .bubble2-video-progress-label {
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
@@ -232,6 +247,10 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-home-orb-btn {
   width: 100%;
+}
+
+.bubble2-home-orb-btn + .bubble2-home-orb-btn {
+  margin-top: 8px;
 }
 
 .bubble2-set-button {
@@ -364,6 +383,9 @@ body.bubble2-page.is-canvasless {
   position: relative;
   width: 420px;
   height: 420px;
+  transform: translateY(var(--bubble2-canvas-y, 0px));
+  --bubble2-lens-accent: rgb(159, 232, 255);
+  --bubble2-lens-accent-secondary: rgb(174, 255, 221);
   overflow: hidden;
   border-radius: 32px;
   border: 1px solid var(--bubble2-frame-border);
@@ -383,16 +405,16 @@ body.bubble2-page.is-canvasless {
     linear-gradient(
       105deg,
       transparent 24%,
-      rgba(123, 224, 255, 0) 35%,
-      rgba(123, 224, 255, 0.25) 43%,
-      rgba(255, 255, 255, 0.9) 50%,
-      rgba(174, 255, 221, 0.32) 57%,
-      rgba(174, 255, 221, 0) 66%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 0%, transparent) 35%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 35%, transparent) 43%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 72%, white 28%) 50%,
+      color-mix(in srgb, var(--bubble2-lens-accent-secondary) 42%, transparent) 57%,
+      color-mix(in srgb, var(--bubble2-lens-accent-secondary) 0%, transparent) 66%,
       transparent 76%
     );
   filter: blur(50px);
   mix-blend-mode: screen;
-  transform: translate3d(-58%, 16%, 0) rotate(-7deg);
+  transform: translate3d(-58%, calc(16% - 20px), 0) rotate(-7deg);
 }
 
 .bubble2-canvas.is-lens-firing::before {
@@ -407,8 +429,8 @@ body.bubble2-page.is-canvasless {
   pointer-events: none;
   opacity: 0;
   background:
-    radial-gradient(circle at 50% 74%, rgba(159, 232, 255, 0.26), transparent 34%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.16), transparent 52%);
+    radial-gradient(circle at 50% 74%, color-mix(in srgb, var(--bubble2-lens-accent) 34%, transparent), transparent 34%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--bubble2-lens-accent-secondary) 22%, transparent), transparent 52%);
   mix-blend-mode: screen;
 }
 
@@ -445,20 +467,10 @@ body.bubble2-page.is-canvasless {
   bottom: 24px;
   z-index: 9;
   transform: translate3d(-50%, 0, 0);
-  min-width: 128px;
   max-width: calc(100% - 56px);
-  padding: 8px 14px;
-  border: none;
-  border-radius: 999px;
-  overflow: hidden;
-  isolation: isolate;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
-  box-shadow: inset 0 0 20px 0 rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
   color: rgba(255, 255, 255, 0.94);
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 400;
   line-height: 1.2;
   text-align: center;
   white-space: nowrap;
@@ -468,32 +480,15 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-lens-toast::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.75) 0%,
-    rgba(180, 180, 180, 0.20) 45%,
-    rgba(100, 100, 100, 0.08) 75%,
-    rgba(255, 255, 255, 0.12) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
+  content: none;
 }
 
 .bubble2-lens-toast::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.25);
-  pointer-events: none;
+  content: none;
+}
+
+.bubble2-lens-toast.is-above-orb {
+  bottom: 120px;
 }
 
 .bubble2-lens-toast.is-hidden {
@@ -1399,11 +1394,15 @@ body.bubble2-page.is-canvasless {
   .bubble2-sidebar {
     position: static;
     top: auto;
+    bottom: auto;
     left: auto;
-    transform: none;
     width: 100%;
     max-width: 420px;
     flex-basis: auto;
+  }
+
+  .bubble2-sidebar-card {
+    max-height: 38vh;
   }
 
   .bubble2-set-switcher {

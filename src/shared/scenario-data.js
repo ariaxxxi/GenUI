@@ -24,7 +24,7 @@ import {
 } from './celestial-selected-presets.js';
 
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'list-pill', 'nudge', 'pill', 'card', 'card-s', 'image'];
-const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
@@ -77,7 +77,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const legacyStored = Array.isArray(stored) ? stored : readStoredJson('undefined', null);
     if (!Array.isArray(legacyStored)) return defaultStageLibrary();
     const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
-    const normalized = legacyStored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
+    const normalized = legacyStored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean).map((stage) => {
+      if (stage.id !== 'action-card' || stage.components.includes('action-row')) return stage;
+      return { ...stage, components: [...stage.components, 'action-row'] };
+    });
     const ids = new Set(normalized.map((stage) => stage.id));
     BUILTIN_STAGE_DEFS.forEach((builtin) => {
       if (!ids.has(builtin.id)) normalized.unshift(normalizeStage(builtin, builtin));
@@ -296,6 +299,16 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return output;
   }
 
+  function normalizeCardImagePaddingByShape(value = {}, fallbackShape = 'card') {
+    const stageIds = scenarioStageIdsForMap(value, fallbackShape);
+    const output = {};
+    stageIds.forEach((shape) => {
+      const raw = Number(value?.[shape]);
+      output[shape] = Number.isFinite(raw) ? clamp(Math.round(raw), 0, 120) : 24;
+    });
+    return output;
+  }
+
   function scenarioStageIdsForMap(value = {}, fallbackShape = 'pill') {
     return Array.from(new Set([
       ...DEFAULT_SCENARIO_SHAPES,
@@ -490,6 +503,11 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return normalizeStageSizeEntry(scenario?.content?.sizeByShape?.[shape]);
   }
 
+  function stageCardImagePaddingForShape(scenario, shape) {
+    const raw = Number(scenario?.content?.cardImagePaddingByShape?.[shape]);
+    return Number.isFinite(raw) ? clamp(Math.round(raw), 0, 120) : 24;
+  }
+
   function stageDefaultMainSize(stageIdValue) {
     if (stageIdValue === 'list-pill') {
       return { width: 300, height: 80 };
@@ -670,6 +688,26 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       .filter(Boolean);
   }
 
+  function normalizeActionCardActionsByShape(value = {}, fallbackShape = 'action-card') {
+    const output = {};
+    const stageIds = Array.from(new Set([
+      ...DEFAULT_SCENARIO_SHAPES,
+      ...availableScenarioShapes(),
+      ...Object.keys(value || {}),
+      fallbackShape,
+    ].filter(Boolean)));
+    stageIds.forEach((shape) => {
+      const source = value?.[shape] || {};
+      const hasLeft = Object.prototype.hasOwnProperty.call(source, 'left');
+      const hasRight = Object.prototype.hasOwnProperty.call(source, 'right');
+      output[shape] = {
+        left: hasLeft ? String(source.left ?? '') : 'Snooze',
+        right: hasRight ? String(source.right ?? '') : 'Join now →',
+      };
+    });
+    return output;
+  }
+
   function createScenario({
     id = scenarioId(),
     name = 'New Scenario',
@@ -709,7 +747,9 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
           widthOverride: content.widthOverride,
           heightOverride: content.heightOverride,
         }),
+        cardImagePaddingByShape: normalizeCardImagePaddingByShape(content.cardImagePaddingByShape, shape),
         stageRenderShapeById: normalizeStageRenderShapeById(content.stageRenderShapeById),
+        actionCardActionsByShape: normalizeActionCardActionsByShape(content.actionCardActionsByShape, shape),
         hiddenStageIds: normalizeHiddenStageIds(content.hiddenStageIds),
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
@@ -837,6 +877,8 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     normalizeStageSizeEntry,
     normalizeStageSizeByShape,
     scenarioStageSizeOverride,
+    normalizeCardImagePaddingByShape,
+    stageCardImagePaddingForShape,
     stageDefaultMainSize,
     stageMainSize,
     stageIconTextGap,

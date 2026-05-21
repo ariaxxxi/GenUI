@@ -16,7 +16,7 @@ import { initVoiceEngine } from '../ai/voice-engine.js';
 import { playSimEarcon } from '../sim-panel.js';
 
 const DROPS = { main: document.getElementById('drop-main'), left: document.getElementById('drop-left'), right: document.getElementById('drop-right') };
-const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich') };
+const C = { thumb: document.getElementById('c-thumb'), thumbLabel: document.getElementById('c-thumb-label'), thumbImg: document.getElementById('c-thumb-img'), prim: document.getElementById('c-primary'), sec: document.getElementById('c-secondary'), div: document.getElementById('c-divider'), det: document.getElementById('c-detail'), media: document.getElementById('c-media'), rich: document.getElementById('c-rich'), actionCardActions: document.getElementById('action-card-actions') };
 const UI = buildUiRefs(document);
 bindAiOrbIconStorageSync(document, window);
 const detailMeasureEl = document.createElement('div');
@@ -38,7 +38,13 @@ const DEFAULT_PROTOTYPE_BACKGROUND = PROTOTYPE_BACKGROUND_OPTIONS[0];
 
 function normalizePrototypeBackground(src) {
   const value = String(src || '').trim();
+  if (value.startsWith('data:image/') || value.startsWith('blob:')) return value;
   return PROTOTYPE_BACKGROUND_OPTIONS.includes(value) ? value : DEFAULT_PROTOTYPE_BACKGROUND;
+}
+
+function isCustomPrototypeBackground(src) {
+  const value = String(src || '').trim();
+  return value.startsWith('data:image/') || value.startsWith('blob:');
 }
 
 let canvasSettings = loadCanvasSettings();
@@ -46,9 +52,7 @@ const hadSessionVideoSettings = canvasSettings.backgroundMediaKind === 'video';
 if (hadSessionVideoSettings) {
   canvasSettings = {
     ...canvasSettings,
-    backgroundMediaKind: 'image',
-    backgroundVideoPaused: false,
-    backgroundVideoProgress: 0,
+    backgroundMediaKind: 'video',
     backgroundVideo: null,
   };
 }
@@ -78,7 +82,7 @@ function isPrototypeNormalRenderShape(shape) {
 }
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageListSelectableForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageCardImagePaddingForShape, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageListSelectableForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -114,6 +118,36 @@ function persistCanvasSettings() {
 if (hadSessionVideoSettings) persistCanvasSettings();
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
 function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
+
+function persistBackgroundImageStorage(image) {
+  if (!image?.src) return;
+  void persistDurableJson(STORAGE_KEYS.backgroundImage, {
+    src: image.src,
+    name: image.name || 'uploaded image',
+  }, { label: 'background image' });
+}
+
+async function readStoredBackgroundVideoValue() {
+  const record = await readDurableJsonRecord(STORAGE_KEYS.backgroundVideo);
+  return record?.value && typeof record.value === 'object' ? record.value : null;
+}
+
+function persistBackgroundVideoStorage(video) {
+  if (!video?.src && !canvasSettings.backgroundVideo?.src) return;
+  void (async () => {
+    const stored = await readStoredBackgroundVideoValue();
+    const src = String(video?.src || '').startsWith('data:') ? video.src : (stored?.src || '');
+    if (!src) return;
+    await persistDurableJson(STORAGE_KEYS.backgroundVideo, {
+      src,
+      name: video?.name || canvasSettings.backgroundVideo?.name || stored?.name || 'uploaded video',
+      type: video?.type || canvasSettings.backgroundVideo?.type || stored?.type || '',
+      paused: video?.paused === true,
+      progress: Math.max(0, Math.min(1, Number(video?.progress ?? canvasSettings.backgroundVideoProgress) || 0)),
+      alpha: Math.max(0, Math.min(1, Number(video?.alpha ?? canvasSettings.backgroundVideoAlpha ?? 0.8))),
+    }, { label: 'background video' });
+  })();
+}
 
 function selectedScenario() {
   return scenarioLibrary.find((item) => item.id === selectedScenarioId) || scenarioLibrary[0] || null;
@@ -162,7 +196,7 @@ function applyCanvasSettings() {
         blurVideo.src = nextSrc;
         blurVideo.load();
       }
-      blurVideo.style.opacity = '0.8';
+      blurVideo.style.opacity = String(Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoAlpha ?? 0.8))));
       const desiredTime = Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoProgress) || 0));
       const syncVideoTime = () => {
         if (!Number.isFinite(blurVideo.duration) || blurVideo.duration <= 0) return;
@@ -197,6 +231,7 @@ function applyCanvasSettings() {
   if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : '';
   if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
   if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
+  if (UI.bgImageState) UI.bgImageState.textContent = isCustomPrototypeBackground(backgroundImage) ? 'uploaded' : 'preset';
   if (UI.bgVideoState) UI.bgVideoState.textContent = backgroundVideo ? 'loaded' : 'empty';
   if (UI.bgVideoControls) UI.bgVideoControls.classList.toggle('hidden', !backgroundVideo);
   if (UI.bgVideoPlayToggle) {
@@ -206,6 +241,10 @@ function applyCanvasSettings() {
   if (UI.bgVideoProgress) {
     UI.bgVideoProgress.value = String(Math.round((Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoProgress) || 0))) * 1000));
     UI.bgVideoProgress.disabled = !backgroundVideo;
+  }
+  if (UI.bgVideoAlpha) {
+    UI.bgVideoAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoAlpha ?? 0.8))) * 100));
+    UI.bgVideoAlpha.disabled = !backgroundVideo;
   }
   if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
   if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
@@ -720,12 +759,14 @@ morphApi = initMorph({
     animateSplitMetaball: (...args) => manualDemo?.animateSplitMetaball?.(...args),
     normalizeStageSizeEntry,
     scenarioStageSizeOverride,
+    stageCardImagePaddingForShape,
     stageMainSize,
     stageIconTextGap,
     stageIconLeftPadding,
     renderShapeForStageId: (id) => renderShapeForStageId(id, selectedScenario()),
     getCanvasSettings: () => canvasSettings,
     stageComponentCounts,
+    stageHasComponent,
     stageTextForShape,
     stageIconForShape,
     stageListChipIconsForShape,
@@ -765,6 +806,9 @@ const sidebar = initSidebar({
     }
   },
   persistCanvasSettings,
+  persistBackgroundImageStorage,
+  persistBackgroundVideoStorage,
+  clearBackgroundImageStorage: () => deleteDurableJsonRecord(STORAGE_KEYS.backgroundImage, { label: 'background image' }),
   clearBackgroundVideoStorage: () => deleteDurableJsonRecord(STORAGE_KEYS.backgroundVideo, { label: 'background video' }),
   persistResponseMode,
   persistAiStageOverride,
@@ -780,6 +824,7 @@ const sidebar = initSidebar({
   STAGE_COMPONENT_TYPES,
   builtinStageById,
   scenarioStageSizeOverride,
+  stageCardImagePaddingForShape,
   stageVisibleEditorFields,
   stageHasComponent,
   stageTextForShape,
@@ -909,6 +954,41 @@ async function hydrateDurableScenarios() {
   else previewScenario(selectedScenario());
 }
 
+async function hydrateDurableBackgroundMedia() {
+  const [imageRecord, videoRecord] = await Promise.all([
+    readDurableJsonRecord(STORAGE_KEYS.backgroundImage),
+    readDurableJsonRecord(STORAGE_KEYS.backgroundVideo),
+  ]);
+  const image = imageRecord?.value;
+  if (typeof image?.src === 'string' && image.src) {
+    canvasSettings = {
+      ...canvasSettings,
+      backgroundImage: image.src,
+      backgroundEnabled: true,
+      backgroundMediaKind: canvasSettings.backgroundMediaKind === 'video' ? 'video' : 'image',
+    };
+  }
+  const video = videoRecord?.value;
+  if (typeof video?.src === 'string' && video.src) {
+    canvasSettings = {
+      ...canvasSettings,
+      backgroundEnabled: true,
+      backgroundMediaKind: 'video',
+      backgroundVideoPaused: video.paused === true,
+      backgroundVideoProgress: Math.max(0, Math.min(1, Number(video.progress) || 0)),
+      backgroundVideoAlpha: Math.max(0, Math.min(1, Number(video.alpha ?? 0.8))),
+      backgroundVideo: {
+        src: video.src,
+        objectUrl: '',
+        name: String(video.name || 'uploaded video'),
+        type: String(video.type || ''),
+      },
+    };
+  }
+  persistCanvasSettings();
+  applyCanvasSettings();
+}
+
 async function copyStagePng() {
   try {
     const ok = await copyStagePngToClipboard({ root: document.getElementById('stage-wrap'), documentRef: document });
@@ -944,6 +1024,7 @@ initManualBindings({
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageCardImagePaddingForShape,
   stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
@@ -1023,4 +1104,4 @@ Object.assign(window, {
 });
 
 void hydrateDurableScenarios();
-void deleteDurableJsonRecord(STORAGE_KEYS.backgroundVideo, { label: 'background video' });
+void hydrateDurableBackgroundMedia();

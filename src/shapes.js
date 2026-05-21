@@ -1,5 +1,5 @@
 const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
-const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const shapeHelperConfig = {
@@ -139,7 +139,7 @@ export const SHAPES = {
 export function defaultTypographyForShape(shape = 'pill') {
   return {
     icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
+    primary: { size: 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
     intentHeader: { size: 18, color: '#a0a0a0' },
@@ -219,12 +219,15 @@ export function normalizeStage(raw, fallback) {
   const selected = raw?.selected === undefined
     ? !!fallbackStage.selected
     : raw?.selected === true;
+  const hideShell = raw?.hideShell === undefined
+    ? !!fallbackStage.hideShell
+    : raw?.hideShell === true;
   const accentColor = normalizeHexColor(raw?.accentColor, fallbackStage.accentColor || '#90acff');
   const secondaryAccentColor = normalizeHexColor(raw?.secondaryAccentColor, fallbackStage.secondaryAccentColor || '#9761ff');
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => stageComponentTypes().includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, listListeningOrb, listSelectable, selected, accentColor, secondaryAccentColor, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, listListeningOrb, listSelectable, selected, hideShell, accentColor, secondaryAccentColor, components };
 }
 
 export function normalizeStageImage(value) {

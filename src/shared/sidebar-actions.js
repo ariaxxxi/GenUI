@@ -84,7 +84,7 @@ export function createSidebarActions(ctx, refs) {
       renderShape: template.renderShape,
       cornerRadius: template.cornerRadius,
       widthOverride: null,
-      heightOverride: null,
+      heightOverride: template.heightOverride ?? null,
       iconTextGap: template.iconTextGap,
       iconLeftPadding: template.iconLeftPadding,
       phoneBgBlur: false,

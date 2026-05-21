@@ -178,6 +178,14 @@ export function initEditorBindings({
       return draft;
     });
   });
+  UI.stageShellHiddenToggle?.addEventListener("change", (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    sidebar.commitStageChange(stage.id, (draft) => {
+      draft.hideShell = e.target.checked;
+      return draft;
+    });
+  });
   UI.stageAccentColor?.addEventListener("input", (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;

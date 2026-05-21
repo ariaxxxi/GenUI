@@ -17,6 +17,7 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     contentTypographyState: defaultTypographyForShape('pill'),
     contentDelayProfile: { secondaryInAdvanceMs: 0, detailInAdvanceMs: 0 },
     stageMediaState: [],
+    actionCardActionsState: { left: 'Snooze', right: 'Join now →' },
     uiFadeTimers: [],
     currentContentFadeMs: 260,
     currentDetailFadeMs: 260,

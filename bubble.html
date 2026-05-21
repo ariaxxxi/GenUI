@@ -19,7 +19,6 @@
       <div class="bubble2-sidebar-card" data-bubble2-control-panel>
         <p class="bubble2-sidebar-eyebrow">Content Sets</p>
         <div class="bubble2-set-switcher" data-bubble2-set-panel role="tablist" aria-label="Bubble content set switcher"></div>
-        <button class="bubble2-ghost-btn bubble2-prompt-reset-btn is-hidden" type="button" data-bubble2-prompt-reset aria-hidden="true">Reset prompt</button>
         <div class="bubble2-control-group">
           <p class="bubble2-sidebar-eyebrow">Press Scope</p>
           <label class="bubble2-toggle-row" for="bubble2-viewport-pan-toggle">
@@ -43,22 +42,34 @@
               <span class="bubble2-toggle-slider" aria-hidden="true"></span>
             </span>
           </label>
+          <label class="bubble2-video-progress-label" for="bubble2-canvas-y">Canvas Y position</label>
+          <input id="bubble2-canvas-y" class="bubble2-video-progress" type="range" min="-240" max="240" step="1" value="0" data-bubble2-canvas-y/>
+          <div class="bubble2-upload-state" data-bubble2-canvas-y-state>0px</div>
         </div>
         <div class="bubble2-control-group">
           <p class="bubble2-sidebar-eyebrow">Home Orb</p>
           <button class="bubble2-ghost-btn bubble2-home-orb-btn" type="button" data-bubble2-home-orb-toggle>Dismiss orb</button>
+          <button class="bubble2-ghost-btn bubble2-home-orb-btn" type="button" data-bubble2-orb-reset>Reset orb</button>
         </div>
         <div class="bubble2-control-group">
           <p class="bubble2-sidebar-eyebrow">Background Image</p>
           <label class="bubble2-toggle-row" for="bubble2-bg-image-toggle">
             <span class="bubble2-toggle-copy">
-              <span class="bubble2-toggle-title">Use Park Image</span>
+              <span class="bubble2-toggle-title">Use Image</span>
             </span>
             <span class="bubble2-toggle-switch">
-              <input id="bubble2-bg-image-toggle" type="checkbox" data-bubble2-bg-image-toggle aria-label="Use park background image on the bubble page"/>
+              <input id="bubble2-bg-image-toggle" type="checkbox" data-bubble2-bg-image-toggle aria-label="Use background image on the bubble page"/>
               <span class="bubble2-toggle-slider" aria-hidden="true"></span>
             </span>
           </label>
+          <div class="bubble2-upload-row">
+            <label class="bubble2-upload-btn" for="bubble2-bg-image-upload">
+              Upload
+              <input id="bubble2-bg-image-upload" type="file" accept="image/*" data-bubble2-bg-image-upload/>
+            </label>
+            <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-image-reset>Reset</button>
+          </div>
+          <div class="bubble2-upload-state" data-bubble2-bg-image-state>park image</div>
         </div>
         <div class="bubble2-control-group">
           <p class="bubble2-sidebar-eyebrow">Background Video</p>
@@ -74,6 +85,8 @@
             <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-video-play-toggle>Play</button>
             <label class="bubble2-video-progress-label" for="bubble2-bg-video-progress">Video progress</label>
             <input id="bubble2-bg-video-progress" class="bubble2-video-progress" type="range" min="0" max="1000" step="1" value="0" data-bubble2-bg-video-progress/>
+            <label class="bubble2-video-progress-label" for="bubble2-bg-video-alpha">Video alpha</label>
+            <input id="bubble2-bg-video-alpha" class="bubble2-video-progress" type="range" min="0" max="100" step="1" value="80" data-bubble2-bg-video-alpha/>
             <label class="bubble2-video-progress-label" for="bubble2-bg-video-x">Video X position</label>
             <input id="bubble2-bg-video-x" class="bubble2-video-progress" type="range" min="-1000" max="1000" step="1" value="0" data-bubble2-bg-video-x/>
           </div>

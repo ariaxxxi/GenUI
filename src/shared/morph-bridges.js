@@ -12,11 +12,12 @@ export function createMorphBridges(ctx) {
   const listPhaseTwoStartMs = () => 100;
   const thinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.55), 220, 420);
   const homeThinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.48), 180, 320);
-  const cardHeightForTransition = (fromShape, toShape, fromGeo, toGeo) => fromShape === 'card' && Number.isFinite(fromGeo?.h) ? fromGeo.h : toShape === 'card' && Number.isFinite(toGeo?.main?.h) ? toGeo.main.h : SHAPES.card.main.h;
+  const isCardLikeShape = (shape) => shape === 'card' || shape === 'card-s';
+  const cardHeightForTransition = (fromShape, toShape, fromGeo, toGeo) => isCardLikeShape(fromShape) && Number.isFinite(fromGeo?.h) ? fromGeo.h : isCardLikeShape(toShape) && Number.isFinite(toGeo?.main?.h) ? toGeo.main.h : SHAPES.card.main.h;
   const cardDurationBonusMs = (cardHeight) => clamp(Math.round(((Number.isFinite(cardHeight) ? cardHeight : SHAPES.card.main.h) / 580) * 200), 0, 360);
   function transitionAnimMs(fromShape, toShape, baseMs = callbacks.getAnimDuration(), fromGeo = null, toGeo = null) {
-    const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
-    const toCardLike = toShape === 'card' || toShape === 'card-s';
+    const fromCardLike = isCardLikeShape(fromShape);
+    const toCardLike = isCardLikeShape(toShape);
     const isDotPillPair = (fromShape === 'dot' && toShape === 'pill') || (fromShape === 'pill' && toShape === 'dot');
     const isPillCardPair = (fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill');
     const isDotCardPair = (fromShape === 'dot' && toCardLike) || (fromCardLike && toShape === 'dot');
@@ -265,7 +266,7 @@ export function createMorphBridges(ctx) {
   function deformationIntensity(fromShape, toShape, fromMain, toMain) {
     const maxSide = Math.max(fromMain.w, fromMain.h, toMain.w, toMain.h);
     if (shouldUseStrongDeform(fromShape, toShape)) return 1;
-    if (String(fromShape).startsWith('card') || String(toShape).startsWith('card')) return 0.35;
+    if (isCardLikeShape(fromShape) || isCardLikeShape(toShape)) return 0.35;
     if (maxSide >= 320 || fromMain.h >= 220 || toMain.h >= 220) return 0.35;
     if (maxSide <= 160) return 0.9;
     return 0.6;

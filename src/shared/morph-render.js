@@ -7,6 +7,9 @@ import { clamp } from '../utils.js';
 export function createMorphRender(ctx) {
   const { DROPS, C, constants, callbacks, state, layout, bridges } = ctx;
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
+  const ACTION_ROW_HEIGHT = 64;
+  const ACTION_ROW_GAP = 12;
+  const ACTION_ROW_TOTAL_HEIGHT = ACTION_ROW_HEIGHT + ACTION_ROW_GAP;
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
   let thinkingVisualEnterTimer = null;
@@ -565,18 +568,25 @@ export function createMorphRender(ctx) {
     const useBottomAlign = !!callbacks.getCanvasSettings()?.bottomAlign;
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
     const activeStageId = stageId || activeScenario?.shape || null;
+    const activeStage = activeStageId ? callbacks.stageById?.(activeStageId, activeScenario) : null;
     const shouldShowListOrbShell = shape === 'list' && !!callbacks.stageListListeningOrbForShape?.(activeScenario, activeStageId);
-    const alignedStageHeight = useBottomAlign ? Math.max(bottomAlignRef, geo.main.h, SHAPES.dot.main.h) : geo.main.h;
+    const hasActionRow = stageShowsActionRow(stageId, activeScenario);
+    const alignedStageHeight = hasActionRow
+      ? Math.max(bottomAlignRef, SHAPES.dot.main.h)
+      : (useBottomAlign ? Math.max(bottomAlignRef, geo.main.h, SHAPES.dot.main.h) : geo.main.h);
     let appliedMainGeo = null;
     ['main', 'left', 'right'].forEach((k) => {
       const el = DROPS[k], s = geo[k];
       const anchorHeight = s.h;
-      const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
+      const yOffset = hasActionRow && k === 'main'
+        ? ((alignedStageHeight - anchorHeight) / 2) - ACTION_ROW_TOTAL_HEIGHT
+        : (useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0);
       const appliedTy = s.ty + yOffset;
       el.style.width = `${s.w}px`;
       el.style.height = `${s.h}px`;
       if (k === 'main') el.style.setProperty('--g-stage-h', `${s.h}px`);
       el.style.borderRadius = k === 'main' ? mainRadius : s.br;
+      if (k === 'main') el.classList.toggle('stage-shell-hidden', !!activeStage?.hideShell);
       el.style.transform = `translate(${s.tx}px,${appliedTy}px)`;
       const forcedVisible = k === 'main' && shouldShowListOrbShell;
       el.style.opacity = forcedVisible ? '1' : s.op;
@@ -682,33 +692,95 @@ export function createMorphRender(ctx) {
     });
   }
 
+  function stageShowsActionRow(stageId = state.currentStageId, scenario = callbacks.selectedScenario?.()) {
+    const stage = callbacks.stageById?.(stageId, scenario);
+    const renderShape = callbacks.renderShapeForStageId?.(stageId, scenario) || stage?.renderShape || '';
+    return (renderShape === 'card' || renderShape === 'card-s')
+      && (callbacks.stageHasComponent?.(stage, 'action-row') || (stage?.components || []).includes('action-row'));
+  }
+
+  function syncActionCardLayers(shape, fadeInDelayMs = 0, fadeOutDelayMs = 0) {
+    const active = stageShowsActionRow();
+    const el = C.actionCardActions;
+    if (!el) return;
+    let visibleActionCount = el.querySelectorAll('.action-card-button:not([hidden])').length;
+    if (active) {
+      const main = state.lastMainGeo || {};
+      const actionTop = Number.isFinite(main.ty) && Number.isFinite(main.h)
+        ? Math.round(main.ty + main.h + 12)
+        : 142;
+      const buttons = el.querySelectorAll('.action-card-button');
+      const leftLabel = String(state.actionCardActionsState?.left ?? 'Snooze').trim();
+      const rightLabel = String(state.actionCardActionsState?.right ?? 'Join now →').trim();
+      if (buttons[0]) {
+        buttons[0].textContent = leftLabel;
+        buttons[0].hidden = !leftLabel;
+      }
+      if (buttons[1]) {
+        buttons[1].textContent = rightLabel;
+        buttons[1].hidden = !rightLabel;
+      }
+      visibleActionCount = Number(Boolean(leftLabel)) + Number(Boolean(rightLabel));
+      const scenario = callbacks.selectedScenario?.() || null;
+      const stageId = state.currentStageId || scenario?.shape || 'card';
+      const renderShape = callbacks.renderShapeForStageId?.(stageId, scenario) || 'card';
+      const preset = celestialSelectedPresetForRenderShape(renderShape);
+      const accentA = hexToCssColor(
+        callbacks.stageSelectedBlobTopCoreColorForShape?.(scenario, stageId),
+        hexToCssColor(preset.blobTopCore, 'rgb(215 234 255)'),
+      );
+      const accentB = hexToCssColor(
+        callbacks.stageSelectedBlobBottomCoreColorForShape?.(scenario, stageId),
+        hexToCssColor(preset.blobBottomCore, 'rgb(127 184 255)'),
+      );
+      const accentEdgeA = hexToCssColor(
+        callbacks.stageSelectedBlobTopEdgeColorForShape?.(scenario, stageId),
+        hexToCssColor(preset.blobTopEdge, accentA),
+      );
+      const accentEdgeB = hexToCssColor(
+        callbacks.stageSelectedBlobBottomEdgeColorForShape?.(scenario, stageId),
+        hexToCssColor(preset.blobBottomEdge, accentB),
+      );
+      el.style.setProperty('--action-card-accent-a', accentA);
+      el.style.setProperty('--action-card-accent-b', accentB);
+      el.style.setProperty('--action-card-accent-edge-a', accentEdgeA);
+      el.style.setProperty('--action-card-accent-edge-b', accentEdgeB);
+      el.style.setProperty('--action-card-actions-y', `${actionTop}px`);
+      el.classList.toggle('is-single-action', visibleActionCount === 1);
+    }
+    el.classList.toggle('is-active', active && visibleActionCount > 0);
+    setOpacityWithDelay(el, active && visibleActionCount > 0 ? 1 : 0, fadeInDelayMs, fadeOutDelayMs);
+  }
+
   function applyCardMediaLayout(cardWidth, shape = 'card') {
     const images = normalizeStageImages(state.stageMediaState);
-    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape);
+    const mediaPadding = layout.cardImagePadding(shape);
+    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape, mediaPadding);
     const mediaHeight = layout.mediaStackHeight(mediaHeights);
     const typography = normalizeTypography(state.contentTypographyState, shape);
-    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => CARD_P + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
+    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => mediaPadding + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
     if (!images.length || !metrics.mediaHeight) return void hideAllStageMedia();
     ensureStageMediaEls(images.length).forEach((el, idx) => {
       const image = images[idx];
       const mediaHeightValue = metrics.mediaHeights[idx];
       const mediaTop = metrics.mediaTops[idx];
       if (!image || !mediaHeightValue || !Number.isFinite(mediaTop)) { el.style.display = 'none'; el.style.opacity = '0'; return; }
-      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${CARD_P}px,${mediaTop}px)`; el.style.opacity = '1';
+      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape, mediaPadding)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${mediaPadding}px,${mediaTop}px)`; el.style.opacity = '1';
     });
   }
 
   function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
     const images = normalizeStageImages(Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []));
-    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape);
+    const mediaPadding = layout.cardImagePadding(shape);
+    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape, mediaPadding);
     const mediaHeight = layout.mediaStackHeight(mediaHeights);
     const typography = normalizeTypography(state.contentTypographyState, shape);
-    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => CARD_P + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
+    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => mediaPadding + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
     if (!images.length || !metrics.mediaHeight) return false;
     ensureStageMediaEls(images.length).forEach((el, idx) => {
       const image = images[idx], mediaHeightValue = metrics.mediaHeights[idx], mediaTop = metrics.mediaTops[idx];
       if (!image || !mediaHeightValue || !Number.isFinite(mediaTop)) { el.style.display = 'none'; el.style.opacity = '0'; return; }
-      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${CARD_P}px,${mediaTop}px)`; el.style.opacity = '0';
+      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape, mediaPadding)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${mediaPadding}px,${mediaTop}px)`; el.style.opacity = '0';
     });
     return true;
   }
@@ -718,6 +790,11 @@ export function createMorphRender(ctx) {
     const fromId = String(fromStageId || '').trim().toLowerCase();
     const toId = String(toStageId || '').trim().toLowerCase();
     return (fromId === 'nudge' && toId === 'pill') || (fromId === 'pill' && toId === 'nudge');
+  }
+
+  function isNudgeToCardStagePair(fromStageId = null, toShape = '') {
+    const fromId = String(fromStageId || '').trim().toLowerCase();
+    return fromId === 'nudge' && (toShape === 'card' || toShape === 'card-s');
   }
 
   function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null, fromStageId = null, toStageId = null) {
@@ -737,6 +814,8 @@ export function createMorphRender(ctx) {
     const collapsingToDot = toShape === 'dot'
       && ['pill', 'card', 'card-s', 'image'].includes(fromShape);
     const shouldCrossfadePillContent = isNudgePillStagePair(fromStageId, toStageId, fromShape, toShape);
+    const shouldCrossfadeNudgeToCardContent = isNudgeToCardStagePair(fromStageId, toShape);
+    const shouldCrossfadeContent = shouldCrossfadePillContent || shouldCrossfadeNudgeToCardContent;
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
     let borderRadiusAnimMs = transitionMs;
     if ((fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill')) { primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900); textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820); }
@@ -749,14 +828,14 @@ export function createMorphRender(ctx) {
     if (collapsingToDot) {
       borderRadiusAnimMs = Math.min(140, transitionMs);
     }
-    if (shouldCrossfadePillContent) {
+    if (shouldCrossfadeContent) {
       contentMoveMs = 0;
       primarySizeAnimMs = 0;
       textSizeAnimMs = 0;
       contentFadeMs = 180;
       detailFadeMs = 180;
     }
-    state.contentCrossfadeMode = shouldCrossfadePillContent ? 'nudge-pill' : '';
+    state.contentCrossfadeMode = shouldCrossfadeContent ? 'nudge-content' : '';
     state.contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
     state.currentContentFadeMs = contentFadeMs; state.currentDetailFadeMs = detailFadeMs; state.currentMediaFadeMs = mediaFadeMs; state.currentTransitionAnimMs = transitionMs;
     [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', borderRadiusAnimMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
@@ -765,9 +844,9 @@ export function createMorphRender(ctx) {
 
   function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
     const pos = layout.contentPos(shape, w, h);
-    const shouldCrossfadeContent = state.contentCrossfadeMode === 'nudge-pill';
+    const shouldCrossfadeContent = state.contentCrossfadeMode === 'nudge-content';
     const targetStageId = String(state.currentStageId || '').trim().toLowerCase();
-    const shouldRestoreThumbAtEnd = shouldCrossfadeContent && targetStageId === 'pill';
+    const shouldRestoreThumbAtEnd = shouldCrossfadeContent && targetStageId !== 'nudge';
     if (shouldCrossfadeContent) {
       fadeInDelayMs = Math.max(fadeInDelayMs, 34);
       [C.thumb, C.prim, C.sec, C.div].forEach((el) => {
@@ -811,6 +890,7 @@ export function createMorphRender(ctx) {
         el.style.opacity = '0';
       });
       hideAllStageMedia();
+      syncActionCardLayers(shape, 0, 0);
       if (!document.body.classList.contains('glass-flow-active')) {
         hideRich();
       }
@@ -834,6 +914,7 @@ export function createMorphRender(ctx) {
       el.style.textOverflow = mainLineWidth ? 'ellipsis' : '';
       el.style.whiteSpace = mainLineWidth ? 'nowrap' : '';
     });
+    syncActionCardLayers(shape, fadeInDelayMs, fadeOutDelayMs);
     if (shape === 'card' || shape === 'card-s') { applyCardDetailLayout(w); applyCardMediaLayout(w, shape); }
     else if (shape === 'image') { resetDetailInlineLayout(); C.det.style.opacity = '0'; C.div.style.opacity = '0'; C.thumb.style.opacity = '0'; C.prim.style.opacity = '0'; C.sec.style.opacity = '0'; applyCardMediaLayout(w, 'image'); }
     else {
@@ -874,6 +955,12 @@ export function createMorphRender(ctx) {
     if (data.detail !== undefined) C.det.textContent = data.detail;
     if (data.images !== undefined) layout.setStageMedia(data.images);
     else if (data.image !== undefined) layout.setStageMedia(data.image ? [data.image] : []);
+    if (data.actionCardActions && stageShowsActionRow()) {
+      state.actionCardActionsState = {
+        left: String(data.actionCardActions?.left ?? 'Snooze'),
+        right: String(data.actionCardActions?.right ?? 'Join now →'),
+      };
+    }
     if (data.typography !== undefined) layout.setContentTypography(data.typography, state.currentShape);
   }
 

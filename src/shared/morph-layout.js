@@ -164,6 +164,12 @@ export function createMorphLayout(ctx) {
     return normalizeTypography(scenario?.content?.typographyByShape?.[shape], renderShape);
   }
 
+  function cardImagePadding(shape = state.currentShape, scenario = callbacks.selectedScenario?.()) {
+    const stageId = scenario?.shape || callbacks.selectedScenario?.()?.shape || shape;
+    const value = callbacks.stageCardImagePaddingForShape?.(scenario, stageId);
+    return Number.isFinite(Number(value)) ? Math.max(0, Math.min(120, Math.round(Number(value)))) : CARD_P;
+  }
+
   const cardDetailTextWidth = (cardWidth) => Math.max(120, cardWidth - CARD_P * 2);
   function lineTextWidth(shape, width) {
     const hasIcon = hasIconContent(state.thumbContentState);
@@ -179,7 +185,7 @@ export function createMorphLayout(ctx) {
     return null;
   }
 
-  const cardMediaWidth = (cardWidth, shape = 'card') => Math.max(shape === 'image' ? 40 : 120, cardWidth - CARD_P * 2);
+  const cardMediaWidth = (cardWidth, shape = 'card', mediaPadding = cardImagePadding(shape)) => Math.max(shape === 'image' ? 40 : 120, cardWidth - mediaPadding * 2);
   const measureLineHeight = (fontSize, lineHeight = 1.2) => Math.ceil(Number(fontSize || 0) * lineHeight);
   const measureSingleLineWidth = (text, fontSize, fontWeight = 400) => {
     const value = String(text || '').trim();
@@ -193,11 +199,11 @@ export function createMorphLayout(ctx) {
     detailMeasureEl.textContent = value;
     return Math.ceil(detailMeasureEl.getBoundingClientRect().width);
   };
-  const measureCardMediaHeight = (imageValue, cardWidth, shape = 'card') => {
+  const measureCardMediaHeight = (imageValue, cardWidth, shape = 'card', mediaPadding = cardImagePadding(shape)) => {
     const image = normalizeStageImage(imageValue);
-    return image ? Math.ceil(cardMediaWidth(cardWidth, shape) * (image.height / image.width)) : 0;
+    return image ? Math.ceil(cardMediaWidth(cardWidth, shape, mediaPadding) * (image.height / image.width)) : 0;
   };
-  const measureCardMediaHeights = (imagesValue, cardWidth, shape = 'card') => normalizeStageImages(Array.isArray(imagesValue) ? imagesValue : (imagesValue ? [imagesValue] : [])).map((image) => measureCardMediaHeight(image, cardWidth, shape)).filter((height) => height > 0);
+  const measureCardMediaHeights = (imagesValue, cardWidth, shape = 'card', mediaPadding = cardImagePadding(shape)) => normalizeStageImages(Array.isArray(imagesValue) ? imagesValue : (imagesValue ? [imagesValue] : [])).map((image) => measureCardMediaHeight(image, cardWidth, shape, mediaPadding)).filter((height) => height > 0);
   const mediaStackHeight = (mediaHeights) => !Array.isArray(mediaHeights) || !mediaHeights.length ? 0 : mediaHeights.reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * Math.max(0, mediaHeights.length - 1);
 
   function measureCardDetailHeight(detailText, typography, cardWidth) {
@@ -205,7 +211,7 @@ export function createMorphLayout(ctx) {
     if (!text.trim()) return 0;
     detailMeasureEl.style.width = `${cardDetailTextWidth(cardWidth)}px`;
     detailMeasureEl.style.fontSize = `${typography.detail.size}px`;
-    detailMeasureEl.style.lineHeight = '1.2';
+    detailMeasureEl.style.lineHeight = '1.4';
     detailMeasureEl.style.whiteSpace = 'pre-wrap';
     detailMeasureEl.style.wordBreak = 'break-word';
     detailMeasureEl.textContent = text;
@@ -218,6 +224,7 @@ export function createMorphLayout(ctx) {
   };
 
   function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
+    const mediaPadding = cardImagePadding('card');
     const hasPrimary = !!String(primaryText || '').trim();
     const hasSecondary = !!String(secondaryText || '').trim();
     const hasTopRow = hasIconContent(iconValue);
@@ -225,7 +232,7 @@ export function createMorphLayout(ctx) {
     const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
     const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
     const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
-    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth);
+    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card', mediaPadding);
     const mediaHeight = mediaStackHeight(mediaHeights);
     const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
     const bodyStart = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
@@ -235,13 +242,14 @@ export function createMorphLayout(ctx) {
     if (hasPrimary) { primaryTop = cursorY; cursorY += primaryHeight; }
     if (hasSecondary) { if (hasPrimary) cursorY += CARD_PRIMARY_TO_SECONDARY_GAP; secondaryTop = cursorY; cursorY += secondaryHeight; }
     const detailTop = hasDetailText ? ((hasPrimary || hasSecondary) ? (cursorY + CARD_SECONDARY_TO_DETAIL_GAP) : bodyStart) : bodyStart;
-    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : ((hasPrimary || hasSecondary) ? (cursorY + CARD_DETAIL_TO_MEDIA_GAP) : bodyStart);
+    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : ((hasPrimary || hasSecondary) ? (cursorY + CARD_DETAIL_TO_MEDIA_GAP) : mediaPadding);
     const contentBottom = mediaHeight > 0 ? mediaTop + mediaHeight : (detailHeight > 0 ? detailTop + detailHeight : ((hasPrimary || hasSecondary) ? cursorY : bodyStart));
     const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
     return { hasTopRow, dividerY, primaryTop, secondaryTop, detailTop, detailHeight, mediaTop, mediaTops: mediaHeights.map((_, index) => mediaTop + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index), mediaHeights, mediaHeight, neededHeight: contentBottom + bottomPadding };
   }
 
   function getCardSLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
+    const mediaPadding = cardImagePadding('card-s');
     const hasPrimary = !!String(primaryText || '').trim();
     const hasSecondary = !!String(secondaryText || '').trim();
     const hasTopRow = hasIconContent(iconValue) || hasPrimary || hasSecondary;
@@ -262,10 +270,10 @@ export function createMorphLayout(ctx) {
     const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
     const detailTop = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
     const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
-    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card-s');
+    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card-s', mediaPadding);
     const mediaHeight = mediaStackHeight(mediaHeights);
     const hasDetailText = String(detailText || '').trim().length > 0;
-    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : (hasTopRow ? detailTop : CARD_P);
+    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : (hasTopRow ? detailTop : mediaPadding);
     const contentBottom = mediaHeight > 0 ? mediaTop + mediaHeight : (detailHeight > 0 ? detailTop + detailHeight : (hasTopRow ? dividerY : CARD_P));
     const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
     return { hasTopRow, dividerY, primaryTop, secondaryTop, detailTop, detailHeight, mediaTop, mediaTops: mediaHeights.map((_, index) => mediaTop + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index), mediaHeights, mediaHeight, neededHeight: contentBottom + bottomPadding };
@@ -332,9 +340,10 @@ export function createMorphLayout(ctx) {
 
     if (shape === 'image') {
       if (hasHeightOverride) return withStageRadius(resolvedBaseGeo);
-      const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image'));
+      const mediaPadding = cardImagePadding('image', scenario);
+      const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image', mediaPadding));
       if (!mediaHeight) return withStageRadius(resolvedBaseGeo);
-      const neededHeight = mediaHeight + CARD_P * 2;
+      const neededHeight = mediaHeight + mediaPadding * 2;
       if (neededHeight === baseGeo.main.h) return withStageRadius(resolvedBaseGeo);
       return withStageRadius({
         ...resolvedBaseGeo,
@@ -391,6 +400,7 @@ export function createMorphLayout(ctx) {
       secondary: has('secondary') ? text.secondary : '',
       detail: has('detail') ? text.detail : '',
       images: has('image') ? callbacks.stageImagesForShape(scenario, shape) : [],
+      actionCardActions: has('action-row') ? (scenario?.content?.actionCardActionsByShape?.[shape] || { left: 'Snooze', right: 'Join now →' }) : null,
       typography: getScenarioTypography(scenario, shape),
       sizeOverride: callbacks.scenarioStageSizeOverride(scenario, shape),
       scenario,
@@ -404,6 +414,7 @@ export function createMorphLayout(ctx) {
     setStageMedia,
     getScenarioTypography,
     cardDetailTextWidth,
+    cardImagePadding,
     lineTextWidth,
     cardMediaWidth,
     measureLineHeight,

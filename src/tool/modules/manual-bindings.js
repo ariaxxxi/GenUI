@@ -27,6 +27,7 @@ export function initManualBindings({
   normalizeStageSizeByShape,
   normalizeImagesByShape,
   scenarioStageSizeOverride,
+  stageCardImagePaddingForShape,
   stageSelectedMaskBlurForShape,
   stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
@@ -34,6 +35,9 @@ export function initManualBindings({
   canvasSettings,
   setCanvasSettings,
   persistCanvasSettings,
+  persistBackgroundImageStorage,
+  persistBackgroundVideoStorage,
+  clearBackgroundImageStorage,
   clearBackgroundVideoStorage,
   persistScenarios,
   responseMode,
@@ -978,6 +982,19 @@ export function initManualBindings({
     });
   };
 
+  const commitStageImagePadding = (rawValue) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    const value = String(rawValue || '').trim();
+    const parsed = value ? parseInt(value, 10) : 24;
+    if (!Number.isFinite(parsed)) return;
+    const bounded = clamp(parsed, 0, 120);
+    commitScenarioChange((draftScenario) => {
+      draftScenario.content.cardImagePaddingByShape = draftScenario.content.cardImagePaddingByShape || {};
+      draftScenario.content.cardImagePaddingByShape[draftScenario.shape] = bounded;
+    });
+  };
+
   const commitStageGapOverride = (rawValue) => {
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
@@ -1211,6 +1228,12 @@ export function initManualBindings({
       URL.revokeObjectURL(objectUrl);
     } catch {}
   };
+  const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
 
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));
@@ -1219,6 +1242,33 @@ export function initManualBindings({
     backgroundEnabled: true,
     backgroundMediaKind: 'image',
   }));
+  UI.bgImageUpload?.addEventListener('click', (e) => { e.target.value = ''; });
+  UI.bgImageUpload?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) return void (e.target.value = '');
+    const dataUrl = await readFileAsDataUrl(file).catch(() => '');
+    if (!dataUrl) return;
+    updateCanvas({
+      backgroundImage: dataUrl,
+      backgroundEnabled: true,
+      backgroundMediaKind: 'image',
+    });
+    persistBackgroundImageStorage?.({
+      src: dataUrl,
+      name: String(file.name || 'uploaded image'),
+    });
+    e.target.value = '';
+  });
+  UI.bgImageReset?.addEventListener('click', () => {
+    updateCanvas({
+      backgroundImage: UI.bgImageSelect?.value || 'assets/bg/living room.jpg',
+      backgroundEnabled: true,
+      backgroundMediaKind: 'image',
+    });
+    clearBackgroundImageStorage?.();
+    if (UI.bgImageUpload) UI.bgImageUpload.value = '';
+  });
   UI.bgVideoUpload?.addEventListener('click', (e) => { e.target.value = ''; });
   UI.bgVideoUpload?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
@@ -1233,6 +1283,7 @@ export function initManualBindings({
       backgroundMediaKind: 'video',
       backgroundVideoPaused: false,
       backgroundVideoProgress: 0,
+      backgroundVideoAlpha: canvasSettings().backgroundVideoAlpha ?? 0.8,
       backgroundVideo: {
         src: objectUrl,
         objectUrl,
@@ -1243,6 +1294,16 @@ export function initManualBindings({
     persistCanvasSettings();
     applyCanvasSettings();
     e.target.value = '';
+    const dataUrl = await readFileAsDataUrl(file).catch(() => '');
+    if (!dataUrl || canvasSettings().backgroundVideo?.objectUrl !== objectUrl) return;
+    persistBackgroundVideoStorage?.({
+      src: dataUrl,
+      name: String(file.name || 'uploaded video'),
+      type: String(file.type || ''),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+    });
   });
   UI.bgVideoReset?.addEventListener('click', async () => {
     revokeBackgroundVideoObjectUrl(canvasSettings().backgroundVideo);
@@ -1251,6 +1312,7 @@ export function initManualBindings({
       backgroundMediaKind: 'image',
       backgroundVideoPaused: false,
       backgroundVideoProgress: 0,
+      backgroundVideoAlpha: 0.8,
       backgroundVideo: null,
     });
     persistCanvasSettings();
@@ -1262,6 +1324,12 @@ export function initManualBindings({
     const nextPaused = !canvasSettings().backgroundVideoPaused;
     setCanvasSettings({ ...canvasSettings(), backgroundVideoPaused: nextPaused, backgroundMediaKind: 'video' });
     persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: nextPaused,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+    });
     applyCanvasSettings();
   });
   UI.bgVideoProgress?.addEventListener('input', (e) => {
@@ -1272,6 +1340,28 @@ export function initManualBindings({
       backgroundVideoProgress: ratio,
     });
     persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: ratio,
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+    });
+    applyCanvasSettings();
+  });
+  UI.bgVideoAlpha?.addEventListener('input', (e) => {
+    const alpha = clamp((Number(e.target.value) || 0) / 100, 0, 1);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'video',
+      backgroundVideoAlpha: alpha,
+    });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha,
+    });
     applyCanvasSettings();
   });
   UI.floatToggle.addEventListener('change', () => updateCanvas({ floatingEnabled: UI.floatToggle.checked }));
@@ -1396,6 +1486,16 @@ export function initManualBindings({
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
   if (UI.scenarioIntentHeader) commitTextField('intentHeader', UI.scenarioIntentHeader);
+  const commitActionCardField = (field, el) => el?.addEventListener('input', (e) => commitScenarioChange((scenario) => {
+    scenario.content.actionCardActionsByShape = scenario.content.actionCardActionsByShape || {};
+    const current = scenario.content.actionCardActionsByShape[scenario.shape] || { left: 'Snooze', right: 'Join now →' };
+    scenario.content.actionCardActionsByShape[scenario.shape] = {
+      ...current,
+      [field]: e.target.value,
+    };
+  }));
+  commitActionCardField('left', UI.scenarioActionCardLeft);
+  commitActionCardField('right', UI.scenarioActionCardRight);
   const selectScenarioShape = (shape) => {
     if (!availableScenarioShapes().includes(shape)) return;
     if (selectedScenario()?.shape === shape) return;
@@ -1544,6 +1644,13 @@ export function initManualBindings({
     if (!value) return void (e.target.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '');
     commitStageSizeOverride('height', value);
   });
+  UI.stageImagePaddingInput?.addEventListener('change', (e) => commitStageImagePadding(e.target.value));
+  UI.stageImagePaddingInput?.addEventListener('blur', (e) => {
+    const scenario = selectedScenario();
+    const value = String(e.target.value || '').trim();
+    if (!value) return void (e.target.value = String(stageCardImagePaddingForShape?.(scenario, scenario?.shape) ?? 24));
+    commitStageImagePadding(value);
+  });
   UI.stageGapInput.addEventListener('change', (e) => commitStageGapOverride(e.target.value));
   UI.stageGapInput.addEventListener('blur', (e) => {
     const stage = stageById(selectedScenario()?.shape);
@@ -1583,6 +1690,13 @@ export function initManualBindings({
     commitScenarioChange((draft) => {
       draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
       draft.content.selectedByShape[draft.shape] = e.target.checked;
+    });
+  });
+  UI.stageShellHiddenToggle?.addEventListener('change', (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    commitStageChange(stage.id, (draft) => {
+      draft.hideShell = e.target.checked;
     });
   });
   UI.stageBlobTopCoreColor?.addEventListener('input', (e) => {
@@ -1698,7 +1812,7 @@ export function initManualBindings({
     const checkbox = e.target.closest('[data-stage-comp-toggle]');
     if (!checkbox) return;
     const type = String(checkbox.dataset.stageCompToggle || '');
-    if (!['icon', 'primary', 'secondary', 'detail', 'intent-header'].includes(type)) return;
+    if (!['icon', 'primary', 'secondary', 'detail', 'intent-header', 'action-row'].includes(type)) return;
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
     commitStageChange(stage.id, (draft) => {
