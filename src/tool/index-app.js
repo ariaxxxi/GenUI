@@ -177,6 +177,8 @@ function applyCanvasSettings() {
   const backgroundVideo = canvasSettings.backgroundVideo?.src ? canvasSettings.backgroundVideo : null;
   const backgroundMediaKind = backgroundVideo && canvasSettings.backgroundMediaKind === 'video' ? 'video' : 'image';
   document.body.classList.toggle('bg-off', !backgroundEnabled);
+  document.body.classList.toggle('bg-image-on', backgroundEnabled && backgroundMediaKind === 'image');
+  document.body.classList.toggle('bg-video-on', backgroundEnabled && backgroundMediaKind === 'video');
   document.body.classList.toggle('float-off', !canvasSettings.floatingEnabled);
   document.body.classList.toggle('stage-bottom-align', !!canvasSettings.bottomAlign);
   document.body.style.backgroundImage = 'none';
@@ -185,7 +187,7 @@ function applyCanvasSettings() {
   document.body.style.backgroundRepeat = '';
   if (blurBg) {
     blurBg.style.backgroundImage = backgroundEnabled && backgroundMediaKind === 'image' ? `url("${encodeURI(backgroundImage)}")` : 'none';
-    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image' ? '0.8' : '0';
+    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image' ? '0.9' : '0';
   }
   if (blurVideo) {
     const nextSrc = backgroundEnabled && backgroundMediaKind === 'video' && backgroundVideo?.src ? backgroundVideo.src : '';

@@ -534,7 +534,7 @@ body:not([data-current-shape="listening"]):not([data-current-shape="magic"])
 }
 #drop-main.compose-surface {
   overflow: visible !important;
-  background: #000 !important;
+  background: transparent !important;
   box-shadow: none !important;
 }
 #drop-main.compose-surface:not(.compose-await-orb) #siri-orb,

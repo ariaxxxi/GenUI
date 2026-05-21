@@ -4,10 +4,20 @@ html, body { width: 100%; height: 100%; overflow: hidden; user-select: none; }
 body {
   display: flex; flex-direction: row;
   align-items: center; justify-content: center;
-  background: #000; position: relative;
+  background: #d8d2c8; position: relative;
   font-family: 'DM Sans', sans-serif;
   height: 100%;
   --panel-w: 360px;
+  --tool-bg: #f6f3ed;
+  --tool-panel: #fbf8f2;
+  --tool-canvas: #d8d2c8;
+  --tool-ink: #111111;
+  --tool-muted: #7d786f;
+  --tool-quiet: #aaa59b;
+  --tool-line: rgba(17,17,17,0.12);
+}
+body.bg-image-on {
+  background: #050505;
 }
 .entry-point-btn {
   position: fixed;
@@ -42,6 +52,29 @@ body {
   flex: 1; height: 100%;
   overflow-y: auto;
   position: relative;
+  isolation: isolate;
+}
+#main-col::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(135deg, rgba(17,17,17,0.055), transparent 38%),
+    linear-gradient(rgba(17,17,17,0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17,17,17,0.055) 1px, transparent 1px),
+    rgba(216, 210, 200, 0.84);
+  background-size: auto, 32px 32px, 32px 32px, auto;
+  transition: opacity 220ms var(--motion-ease);
+}
+body.bg-off #main-col::before {
+  opacity: 1;
+}
+#main-col > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Intent header ── */
@@ -325,9 +358,7 @@ body {
   border: 0;
   border-radius: 32px;
   background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0));
-  box-shadow:
-    inset 0 0 20px rgba(255,255,255,0.76),
-    0 18px 38px rgba(0,0,0,0.32);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.76);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   color: rgba(255,255,255,0.94);
@@ -358,8 +389,7 @@ body {
   box-shadow:
     inset 14px 0 18px -10px color-mix(in srgb, var(--action-card-accent-edge-a) 82%, white 18%),
     inset -14px 0 18px -10px color-mix(in srgb, var(--action-card-accent-edge-b) 82%, white 18%),
-    inset 0 0 22px rgba(255,255,255,0.78),
-    0 18px 38px rgba(0,0,0,0.32);
+    inset 0 0 22px rgba(255,255,255,0.78);
 }
 
 .action-card-button-primary::before,
