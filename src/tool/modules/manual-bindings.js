@@ -1251,23 +1251,41 @@ export function initManualBindings({
     if (!dataUrl) return;
     updateCanvas({
       backgroundImage: dataUrl,
+      backgroundImageAlpha: canvasSettings().backgroundImageAlpha ?? 0.9,
       backgroundEnabled: true,
       backgroundMediaKind: 'image',
     });
     persistBackgroundImageStorage?.({
       src: dataUrl,
       name: String(file.name || 'uploaded image'),
+      alpha: clamp(Number(canvasSettings().backgroundImageAlpha ?? 0.9), 0, 1),
     });
     e.target.value = '';
   });
   UI.bgImageReset?.addEventListener('click', () => {
     updateCanvas({
       backgroundImage: UI.bgImageSelect?.value || 'assets/bg/living room.jpg',
+      backgroundImageAlpha: canvasSettings().backgroundImageAlpha ?? 0.9,
       backgroundEnabled: true,
       backgroundMediaKind: 'image',
     });
     clearBackgroundImageStorage?.();
     if (UI.bgImageUpload) UI.bgImageUpload.value = '';
+  });
+  UI.bgImageAlpha?.addEventListener('input', (e) => {
+    const alpha = clamp((Number(e.target.value) || 0) / 100, 0, 1);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundImageAlpha: alpha,
+      backgroundMediaKind: canvasSettings().backgroundMediaKind === 'video' ? 'video' : 'image',
+    });
+    persistCanvasSettings();
+    if (String(canvasSettings().backgroundImage || '').startsWith('data:')) {
+      persistBackgroundImageStorage?.({
+        alpha,
+      });
+    }
+    applyCanvasSettings();
   });
   UI.bgVideoUpload?.addEventListener('click', (e) => { e.target.value = ''; });
   UI.bgVideoUpload?.addEventListener('change', async (e) => {

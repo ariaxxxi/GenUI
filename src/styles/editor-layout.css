@@ -16,7 +16,8 @@ body {
   --tool-quiet: #aaa59b;
   --tool-line: rgba(17,17,17,0.12);
 }
-body.bg-image-on {
+body.bg-image-on,
+body.bg-video-on {
   background: #050505;
 }
 .entry-point-btn {

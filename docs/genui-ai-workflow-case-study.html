@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Designing With AI - GenUI Workflow Case Study</title>
+<style>
+:root {
+  --bg: #f6f3ed;
+  --ink: #111;
+  --muted: #77736b;
+  --quiet: #aaa59b;
+  --line: rgba(17,17,17,.12);
+  --panel: rgba(255,255,255,.52);
+  --warm: #d8a24c;
+  --blue: #5577d8;
+  --green: #5d8b63;
+  --max: 1180px;
+  --narrow: 760px;
+  --pad: 56px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--bg); }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 80% 0%, rgba(85,119,216,.12), transparent 34%),
+    radial-gradient(circle at 8% 18%, rgba(216,162,76,.14), transparent 30%),
+    var(--bg);
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: -.01em;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+.page {
+  width: min(100%, var(--max));
+  margin: 0 auto;
+  padding: 0 var(--pad) 96px;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  background: rgba(246,243,237,.78);
+  border-bottom: 1px solid var(--line);
+}
+.nav-inner {
+  width: min(100%, var(--max));
+  margin: 0 auto;
+  padding: 0 var(--pad);
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.nav-title { font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
+.nav-links { display: flex; gap: 24px; }
+.nav-links a {
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+.hero {
+  min-height: calc(100vh - 54px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 64px;
+  align-items: center;
+  padding: 88px 0 72px;
+}
+.eyebrow {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+h1, h2, h3, p { margin: 0; }
+h1 {
+  max-width: 10ch;
+  font-size: clamp(58px, 9vw, 112px);
+  line-height: .92;
+  font-weight: 430;
+  letter-spacing: -.055em;
+}
+.hero-copy {
+  max-width: 620px;
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.38;
+}
+.hero-copy strong { color: var(--ink); font-weight: 520; }
+.meta {
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.meta-item {
+  min-height: 116px;
+  padding: 18px;
+  background: rgba(246,243,237,.88);
+}
+.meta-label {
+  color: var(--quiet);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.meta-value { font-size: 18px; line-height: 1.35; }
+.hero-visual {
+  grid-column: 1 / -1;
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.42);
+  padding: 14px;
+}
+.hero-visual-stage {
+  position: relative;
+  height: 250px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 34% 22%, rgba(216,162,76,.22), transparent 28%),
+    radial-gradient(circle at 74% 36%, rgba(85,119,216,.2), transparent 32%),
+    #d9d2c8;
+}
+.code-card,
+.design-card {
+  position: absolute;
+  border: 1px solid rgba(17,17,17,.14);
+  background: rgba(246,243,237,.72);
+  box-shadow: 0 22px 50px rgba(0,0,0,.12);
+}
+.code-card {
+  left: 20px;
+  top: 24px;
+  width: 54%;
+  height: 126px;
+  padding: 16px;
+}
+.code-line {
+  height: 7px;
+  margin-bottom: 10px;
+  background: rgba(17,17,17,.14);
+}
+.code-line:nth-child(1) { width: 72%; }
+.code-line:nth-child(2) { width: 44%; }
+.code-line:nth-child(3) { width: 62%; }
+.code-line:nth-child(4) { width: 34%; }
+.design-card {
+  right: 20px;
+  bottom: 22px;
+  width: 58%;
+  height: 118px;
+  border-radius: 28px;
+  background: rgba(255,255,255,.2);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 20px rgba(255,255,255,.72), 0 22px 50px rgba(0,0,0,.14);
+}
+.cursor-dot {
+  position: absolute;
+  left: 48%;
+  top: 48%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 0 8px rgba(85,119,216,.18);
+}
+section {
+  padding: 92px 0;
+  border-top: 1px solid var(--line);
+}
+.section-kicker {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.section-head {
+  max-width: var(--narrow);
+  margin-bottom: 36px;
+}
+h2 {
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.02;
+  font-weight: 520;
+  letter-spacing: -.045em;
+}
+.body {
+  max-width: var(--narrow);
+  display: grid;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 19px;
+  line-height: 1.58;
+}
+.body strong { color: var(--ink); font-weight: 560; }
+.quote {
+  max-width: 880px;
+  margin: 48px 0 0;
+  padding-left: 24px;
+  border-left: 2px solid var(--ink);
+  color: var(--ink);
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.18;
+  letter-spacing: -.035em;
+}
+.loop {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-top: 44px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.loop-card {
+  min-height: 260px;
+  padding: 24px;
+  background: rgba(255,255,255,.44);
+  display: flex;
+  flex-direction: column;
+}
+.loop-num {
+  color: var(--quiet);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  margin-bottom: auto;
+}
+.loop-title {
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: -.025em;
+  margin-bottom: 14px;
+}
+.loop-text { color: var(--muted); font-size: 14px; line-height: 1.45; }
+.tool-demo {
+  margin-top: 44px;
+  min-height: 580px;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.42);
+}
+.panel {
+  border-right: 1px solid var(--line);
+  padding: 20px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.panel-title {
+  color: var(--quiet);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.control {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+.switch {
+  width: 38px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--ink);
+  position: relative;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+.slider {
+  width: 88px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ink) 64%, rgba(17,17,17,.18) 64%);
+}
+.canvas {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(17,17,17,.06), transparent),
+    radial-gradient(circle at 50% 45%, rgba(85,119,216,.16), transparent 34%),
+    #d8d2c8;
+}
+.canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .3;
+  background-image: linear-gradient(rgba(17,17,17,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(17,17,17,.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.glass-stage {
+  position: relative;
+  width: min(74%, 420px);
+  aspect-ratio: 1;
+  border-radius: 38px;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,.16);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.34), 0 40px 80px rgba(0,0,0,.18);
+  backdrop-filter: blur(14px);
+}
+.bubble {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255,255,255,.22);
+  box-shadow: inset 0 0 24px rgba(255,255,255,.8), 0 18px 40px rgba(0,0,0,.16);
+}
+.bubble.a { width: 88px; height: 88px; left: 62px; top: 88px; }
+.bubble.b { width: 132px; height: 72px; right: 42px; top: 126px; }
+.bubble.c { width: 108px; height: 108px; right: 98px; bottom: 72px; }
+.orb {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 22%, #fff, transparent 34%),
+    radial-gradient(circle at 68% 76%, rgba(85,119,216,.7), transparent 42%),
+    rgba(255,255,255,.32);
+  box-shadow: inset 0 0 30px rgba(255,255,255,.86), 0 20px 48px rgba(0,0,0,.18);
+}
+.caption {
+  margin-top: 14px;
+  color: var(--quiet);
+  font-size: 13px;
+}
+.visual-board {
+  margin-top: 52px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.board-panel {
+  min-height: 360px;
+  padding: 22px;
+  background: rgba(255,255,255,.42);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.board-label {
+  color: var(--quiet);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.mini-canvas {
+  position: relative;
+  min-height: 230px;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 72% 20%, rgba(85,119,216,.14), transparent 32%),
+    linear-gradient(135deg, rgba(17,17,17,.05), transparent),
+    #ded8ce;
+}
+.mini-canvas.dark {
+  background:
+    radial-gradient(circle at 70% 18%, rgba(255,255,255,.12), transparent 30%),
+    #171717;
+}
+.wire-card {
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  top: 48px;
+  height: 116px;
+  border: 1px solid rgba(17,17,17,.22);
+  background: rgba(246,243,237,.62);
+}
+.wire-line {
+  position: absolute;
+  left: 54px;
+  right: 54px;
+  height: 8px;
+  background: rgba(17,17,17,.12);
+}
+.wire-line.a { top: 76px; width: 46%; }
+.wire-line.b { top: 102px; width: 64%; }
+.wire-line.c { top: 128px; width: 34%; }
+.knob-stack {
+  position: absolute;
+  inset: 28px 24px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.knob-row {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border: 1px solid rgba(17,17,17,.12);
+  background: rgba(246,243,237,.66);
+  color: var(--muted);
+  font-size: 12px;
+}
+.knob-row::after {
+  content: "";
+  width: 42px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ink) 58%, rgba(17,17,17,.16) 58%);
+}
+.judgement-stage {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 168px;
+  height: 168px;
+  transform: translate(-50%, -50%);
+  border-radius: 30px;
+  background: rgba(255,255,255,.13);
+  box-shadow: inset 0 0 22px rgba(255,255,255,.7);
+}
+.judgement-stage::before,
+.judgement-stage::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255,255,255,.2);
+  box-shadow: inset 0 0 18px rgba(255,255,255,.8);
+}
+.judgement-stage::before { width: 78px; height: 78px; left: 22px; top: 28px; }
+.judgement-stage::after { width: 112px; height: 54px; right: -18px; bottom: 36px; }
+.annotation {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.example-gallery {
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.example-card {
+  min-height: 330px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.42);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.example-stage {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  overflow: hidden;
+  background: #d7d0c5;
+  border: 1px solid var(--line);
+}
+.example-stage.dark { background: #20201f; }
+.glass-card {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 34px;
+  height: 126px;
+  border-radius: 28px;
+  background: rgba(255,255,255,.18);
+  box-shadow: inset 0 0 24px rgba(255,255,255,.84), 0 18px 38px rgba(0,0,0,.16);
+}
+.action-pill {
+  position: absolute;
+  bottom: 30px;
+  height: 48px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 18px rgba(255,255,255,.72);
+  background: rgba(255,255,255,.25);
+}
+.action-pill.left { left: 30px; width: 88px; }
+.action-pill.right { right: 30px; width: 124px; background: radial-gradient(circle at 70% 18%, rgba(85,119,216,.48), transparent 48%), rgba(255,255,255,.28); }
+.lens-orb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 24%, #fff, transparent 34%), rgba(255,255,255,.3);
+  box-shadow: inset 0 0 24px rgba(255,255,255,.9), 0 18px 42px rgba(0,0,0,.18);
+}
+.lens-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 38px;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,.88);
+  font-size: 16px;
+  white-space: nowrap;
+}
+.shellless-text {
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  top: 72px;
+  color: rgba(255,255,255,.9);
+  font-size: 30px;
+  line-height: 1.05;
+}
+.alpha-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(17,17,17,.1), rgba(17,17,17,.4)),
+    repeating-linear-gradient(135deg, rgba(93,139,99,.45) 0 12px, rgba(216,162,76,.36) 12px 24px);
+  opacity: .45;
+}
+.example-title {
+  font-size: 18px;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+.example-copy {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.motion-strip {
+  margin-top: 44px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.38);
+  padding: 18px;
+}
+.motion-frames {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.motion-frame {
+  position: relative;
+  min-height: 170px;
+  overflow: hidden;
+  background: #d8d2c8;
+  border: 1px solid var(--line);
+}
+.motion-frame::before {
+  content: attr(data-t);
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .1em;
+}
+.motion-bubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,.24);
+  box-shadow: inset 0 0 20px rgba(255,255,255,.85);
+}
+.motion-frame.f1 .motion-bubble { width: 112px; height: 74px; }
+.motion-frame.f2 .motion-bubble { width: 132px; height: 84px; }
+.motion-frame.f3 .motion-bubble { width: 92px; height: 92px; opacity: .78; }
+.motion-frame.f4 .motion-bubble { width: 64px; height: 64px; opacity: .38; }
+.motion-frame.f5 .motion-bubble { width: 42px; height: 42px; opacity: .12; }
+.motion-caption {
+  margin-top: 12px;
+  color: var(--quiet);
+  font-size: 13px;
+}
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 44px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.split-card {
+  min-height: 360px;
+  padding: 28px;
+  background: rgba(255,255,255,.44);
+}
+.split-visual {
+  position: relative;
+  height: 220px;
+  margin-bottom: 24px;
+  border: 1px solid var(--line);
+  background: #ddd7cd;
+  overflow: hidden;
+}
+.screen-stack {
+  position: absolute;
+  inset: 26px;
+}
+.screen-sheet {
+  position: absolute;
+  width: 64%;
+  height: 72%;
+  border: 1px solid rgba(17,17,17,.2);
+  background: rgba(246,243,237,.68);
+}
+.screen-sheet:nth-child(1) { left: 0; top: 0; }
+.screen-sheet:nth-child(2) { right: 0; bottom: 0; }
+.behavior-node {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255,255,255,.24);
+  box-shadow: inset 0 0 20px rgba(255,255,255,.8);
+}
+.behavior-node.a { width: 82px; height: 82px; left: 34px; top: 70px; }
+.behavior-node.b { width: 150px; height: 66px; right: 26px; top: 44px; }
+.behavior-node.c { width: 118px; height: 118px; right: 62px; bottom: 24px; }
+.behavior-link {
+  position: absolute;
+  height: 1px;
+  background: rgba(17,17,17,.26);
+  transform-origin: left center;
+}
+.behavior-link.one { width: 130px; left: 106px; top: 108px; transform: rotate(-13deg); }
+.behavior-link.two { width: 104px; right: 90px; top: 132px; transform: rotate(56deg); }
+.split-card h3 {
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  font-weight: 520;
+  margin-bottom: 18px;
+}
+.split-card p {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.trace {
+  margin-top: 28px;
+  display: grid;
+  gap: 10px;
+}
+.trace-line {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.trace-label { color: var(--quiet); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
+.trace-copy { color: var(--muted); }
+.matrix {
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.principle {
+  padding: 24px;
+  min-height: 220px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.42);
+}
+.principle b {
+  display: block;
+  margin-bottom: 18px;
+  font-size: 13px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.principle p { color: var(--muted); line-height: 1.5; }
+.outcome {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap: 56px;
+  align-items: start;
+}
+.ledger {
+  border-top: 1px solid var(--line);
+}
+.ledger-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ledger-key {
+  color: var(--quiet);
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.ledger-val { color: var(--muted); }
+footer {
+  padding-top: 56px;
+  border-top: 1px solid var(--line);
+  color: var(--quiet);
+  font-size: 13px;
+}
+@media (max-width: 900px) {
+  :root { --pad: 24px; }
+  .hero, .tool-demo, .split, .outcome { grid-template-columns: 1fr; }
+  .hero { min-height: auto; }
+  .loop, .matrix, .visual-board, .example-gallery, .motion-frames { grid-template-columns: 1fr; }
+  .panel { border-right: 0; border-bottom: 1px solid var(--line); }
+  .nav-links { display: none; }
+}
+@media (max-width: 560px) {
+  :root { --pad: 18px; }
+  .page { border: 0; }
+  h1 { font-size: 56px; }
+  .tool-demo { min-height: auto; }
+  .canvas { min-height: 420px; }
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <div class="nav-title">GenUI Workflow Case Study</div>
+    <div class="nav-links">
+      <a href="#context">Context</a>
+      <a href="#tool">Tool</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#takeaways">Takeaways</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+  <header class="hero">
+    <div>
+      <div class="eyebrow">AI as design material</div>
+      <h1>Designing with a prototype that could change itself</h1>
+      <p class="hero-copy">This case study looks at GenUI from the process side: how I used vibe coding with AI to turn a design question into a working prototype tool, then used that tool to make the final design decisions.</p>
+    </div>
+    <aside class="meta" aria-label="Project metadata">
+      <div class="meta-item"><div class="meta-label">Role</div><div class="meta-value">Designer, prototyper, system thinker</div></div>
+      <div class="meta-item"><div class="meta-label">Collaborator</div><div class="meta-value">AI coding partner for implementation and iteration</div></div>
+      <div class="meta-item"><div class="meta-label">Method</div><div class="meta-value">Vibe coding, live tuning, visual critique loops</div></div>
+      <div class="meta-item"><div class="meta-label">Output</div><div class="meta-value">A prototype tool plus a design system direction</div></div>
+    </aside>
+    <div class="hero-visual" aria-label="AI-assisted design workflow illustration">
+      <div class="hero-visual-stage">
+        <div class="code-card">
+          <div class="code-line"></div>
+          <div class="code-line"></div>
+          <div class="code-line"></div>
+          <div class="code-line"></div>
+        </div>
+        <div class="design-card"></div>
+        <div class="cursor-dot"></div>
+      </div>
+    </div>
+  </header>
+
+  <section id="context">
+    <div class="section-kicker">01 · Context</div>
+    <div class="section-head">
+      <h2>The prototype was not only a deliverable. It became the design environment.</h2>
+    </div>
+    <div class="body">
+      <p>The original challenge was to explore generative UI on a constrained glass canvas. Static mockups were too slow for the number of questions the work raised: What happens when a card becomes a pill? How should a bubble collapse? Where should an action row live? How much shimmer is too much?</p>
+      <p>Instead of treating code as a handoff step, I used AI to build a tool around the design problem. The tool let me edit stages, components, shell visibility, action rows, background media, lens states, and motion behavior directly in the browser.</p>
+      <p><strong>The shift was subtle but important:</strong> I was no longer asking AI to make a final screen. I was asking AI to help me create a space where I could repeatedly judge, tune, and reframe the screen.</p>
+    </div>
+    <p class="quote">The design process moved from "make me an option" to "make me an instrument I can play."</p>
+
+    <div class="visual-board" aria-label="Process transformation diagram">
+      <div class="board-panel">
+        <div class="board-label">Static mockup</div>
+        <div class="mini-canvas">
+          <div class="wire-card"></div>
+          <div class="wire-line a"></div>
+          <div class="wire-line b"></div>
+          <div class="wire-line c"></div>
+        </div>
+        <p class="annotation">A screen can show the intended composition, but the motion assumptions stay hidden.</p>
+      </div>
+      <div class="board-panel">
+        <div class="board-label">Editable variables</div>
+        <div class="mini-canvas">
+          <div class="knob-stack">
+            <div class="knob-row">shimmer duration</div>
+            <div class="knob-row">canvas y</div>
+            <div class="knob-row">button height</div>
+            <div class="knob-row">shell visibility</div>
+            <div class="knob-row">fade timing</div>
+          </div>
+        </div>
+        <p class="annotation">The prototype tool exposed visual feel as a set of adjustable properties.</p>
+      </div>
+      <div class="board-panel">
+        <div class="board-label">Live judgement</div>
+        <div class="mini-canvas dark">
+          <div class="judgement-stage"></div>
+        </div>
+        <p class="annotation">Design decisions were made by watching behavior, not by guessing from still frames.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="tool">
+    <div class="section-kicker">02 · Prototype Tool</div>
+    <div class="section-head">
+      <h2>A control surface for design decisions that usually stay implicit.</h2>
+    </div>
+    <div class="body">
+      <p>The tool exposed the small variables that make spatial UI feel right: canvas position, media alpha, shell visibility, action-row structure, timing, shimmer duration, bubble puncture behavior, and stage-specific content. Each control turned a subjective critique into something adjustable.</p>
+    </div>
+
+    <div class="tool-demo" aria-label="Prototype tool illustration">
+      <div class="panel">
+        <div class="panel-title">Stage controls</div>
+        <div class="control"><span>Hide shell</span><span class="switch"></span></div>
+        <div class="control"><span>Action row</span><span class="switch"></span></div>
+        <div class="control"><span>Video alpha</span><span class="slider"></span></div>
+        <div class="control"><span>Canvas Y</span><span class="slider"></span></div>
+        <div class="control"><span>Lens shimmer</span><span>3s</span></div>
+        <div class="control"><span>Fade timing</span><span>500ms</span></div>
+      </div>
+      <div class="canvas">
+        <div class="glass-stage">
+          <div class="bubble a"></div>
+          <div class="bubble b"></div>
+          <div class="bubble c"></div>
+          <div class="orb"></div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">A simplified reconstruction of the tool behavior: a live canvas on the right, design variables on the left.</p>
+
+    <div class="example-gallery" aria-label="Prototype output examples">
+      <div class="example-card">
+        <div class="example-stage">
+          <div class="glass-card"></div>
+          <div class="action-pill left"></div>
+          <div class="action-pill right"></div>
+        </div>
+        <h3 class="example-title">Action row</h3>
+        <p class="example-copy">A card component could add one or two actions, align them below the card, and keep the row inside the canvas.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-stage dark">
+          <div class="lens-orb"></div>
+          <div class="lens-toast">Photography lens on</div>
+        </div>
+        <h3 class="example-title">Lens feedback</h3>
+        <p class="example-copy">Lens switching became a combined visual behavior: carousel, shimmer, and temporary text feedback.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-stage dark">
+          <div class="shellless-text">Weekly<br>Standup</div>
+        </div>
+        <h3 class="example-title">Shell hidden</h3>
+        <p class="example-copy">The same stage could remove its container and only show content when the shell felt too heavy.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-stage">
+          <div class="alpha-bg"></div>
+          <div class="glass-card" style="top:62px;height:104px"></div>
+        </div>
+        <h3 class="example-title">Media tuning</h3>
+        <p class="example-copy">Background video and image controls made it possible to evaluate legibility against real visual context.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow">
+    <div class="section-kicker">03 · Workflow</div>
+    <div class="section-head">
+      <h2>The loop became faster, but also more critical.</h2>
+    </div>
+    <div class="body">
+      <p>AI changed the speed of implementation, but the design work did not disappear. The harder task became judging the output precisely: naming what felt wrong, turning that feeling into a constraint, then asking for a narrower change.</p>
+    </div>
+
+    <div class="motion-strip" aria-label="Bubble puncture motion strip">
+      <div class="motion-frames">
+        <div class="motion-frame f1" data-t="0ms"><div class="motion-bubble"></div></div>
+        <div class="motion-frame f2" data-t="80ms"><div class="motion-bubble"></div></div>
+        <div class="motion-frame f3" data-t="240ms"><div class="motion-bubble"></div></div>
+        <div class="motion-frame f4" data-t="500ms"><div class="motion-bubble"></div></div>
+        <div class="motion-frame f5" data-t="860ms"><div class="motion-bubble"></div></div>
+      </div>
+      <p class="motion-caption">Example of the kind of motion detail that became editable: a fired bubble scales up, collapses toward center, fades faster than the geometry, and disappears in sequence.</p>
+    </div>
+
+    <div class="loop">
+      <div class="loop-card">
+        <div class="loop-num">01</div>
+        <h3 class="loop-title">Feel the problem</h3>
+        <p class="loop-text">I watched the prototype in motion and described the mismatch: too jumpy, too fast, overlapping, not centered, wrong visual weight.</p>
+      </div>
+      <div class="loop-card">
+        <div class="loop-num">02</div>
+        <h3 class="loop-title">Make it concrete</h3>
+        <p class="loop-text">The critique became a measurable instruction: 3s shimmer, 50px blur, 64px buttons, bottom aligned action row, 2s toast.</p>
+      </div>
+      <div class="loop-card">
+        <div class="loop-num">03</div>
+        <h3 class="loop-title">Patch the tool</h3>
+        <p class="loop-text">AI helped implement the change directly in HTML, CSS, and JavaScript while preserving the existing system behavior.</p>
+      </div>
+      <div class="loop-card">
+        <div class="loop-num">04</div>
+        <h3 class="loop-title">Judge again</h3>
+        <p class="loop-text">The next pass was not a review of a static comp. It was a live evaluation of timing, hierarchy, and interaction feel.</p>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="split-card">
+        <div class="split-visual">
+          <div class="screen-stack">
+            <div class="screen-sheet"></div>
+            <div class="screen-sheet"></div>
+          </div>
+        </div>
+        <h3>Before: design as screens</h3>
+        <p>Most design artifacts hide their assumptions. A Figma screen can show a card, but it does not naturally reveal how that card collapses, how content fades, or what happens when the same component needs an action row.</p>
+        <div class="trace">
+          <div class="trace-line"><span class="trace-label">Output</span><span class="trace-copy">Static states</span></div>
+          <div class="trace-line"><span class="trace-label">Review</span><span class="trace-copy">Visual comparison</span></div>
+          <div class="trace-line"><span class="trace-label">Risk</span><span class="trace-copy">Motion and edge cases are deferred</span></div>
+        </div>
+      </div>
+      <div class="split-card">
+        <div class="split-visual">
+          <div class="behavior-node a"></div>
+          <div class="behavior-node b"></div>
+          <div class="behavior-node c"></div>
+          <div class="behavior-link one"></div>
+          <div class="behavior-link two"></div>
+        </div>
+        <h3>After: design as behavior</h3>
+        <p>The prototype tool made behavior editable. The design system could be tested as a set of relationships: stage to stage, shell to content, bubble to home orb, lens to feedback.</p>
+        <div class="trace">
+          <div class="trace-line"><span class="trace-label">Output</span><span class="trace-copy">Live rules and adjustable parameters</span></div>
+          <div class="trace-line"><span class="trace-label">Review</span><span class="trace-copy">Interaction feel and system consistency</span></div>
+          <div class="trace-line"><span class="trace-label">Benefit</span><span class="trace-copy">The edge cases become the design material</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="takeaways">
+    <div class="section-kicker">04 · Takeaways</div>
+    <div class="outcome">
+      <div>
+        <div class="section-head">
+          <h2>AI did not replace the designer. It changed where design judgment happens.</h2>
+        </div>
+        <div class="body">
+          <p>The most useful AI collaboration was not a single impressive generation. It was the accumulation of small, specific adjustments that let the prototype become more sensitive to the design intent.</p>
+          <p>In this workflow, the designer's role shifts toward framing, taste, constraints, and critique. The AI accelerates execution, but the designer still decides what is worth making, what feels wrong, and when a behavior is finally coherent.</p>
+        </div>
+      </div>
+      <div class="ledger">
+        <div class="ledger-row"><div class="ledger-key">Speed</div><div class="ledger-val">Implementation became conversational, so I could test ideas before they hardened into documentation.</div></div>
+        <div class="ledger-row"><div class="ledger-key">Fidelity</div><div class="ledger-val">Motion, timing, media, and interaction states were judged in the same artifact.</div></div>
+        <div class="ledger-row"><div class="ledger-key">Control</div><div class="ledger-val">The tool turned subjective critique into adjustable design parameters.</div></div>
+        <div class="ledger-row"><div class="ledger-key">Learning</div><div class="ledger-val">Every iteration exposed which parts of the design system needed clearer rules.</div></div>
+      </div>
+    </div>
+
+    <div class="matrix">
+      <div class="principle">
+        <b>Prototype the process</b>
+        <p>When the design space is uncertain, build controls before polishing screens. The right tool can reveal the right design.</p>
+      </div>
+      <div class="principle">
+        <b>Use AI for iteration density</b>
+        <p>The advantage is not that AI makes one perfect answer. It makes it practical to evaluate many small behavioral changes.</p>
+      </div>
+      <div class="principle">
+        <b>Keep taste in the loop</b>
+        <p>Vibe coding works when the designer can name what the vibe is, what violates it, and what constraint should guide the next patch.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    GenUI prototype tool · AI-assisted design workflow · Built through iterative vibe coding
+  </footer>
+</main>
+</body>
+</html>

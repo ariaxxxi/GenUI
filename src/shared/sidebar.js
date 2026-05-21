@@ -10,6 +10,7 @@ export function buildUiRefs(documentRef = document) {
     bgImageUpload: documentRef.getElementById('bg-image-upload'),
     bgImageReset: documentRef.getElementById('bg-image-reset'),
     bgImageState: documentRef.getElementById('bg-image-state'),
+    bgImageAlpha: documentRef.getElementById('bg-image-alpha'),
     bgVideoUpload: documentRef.getElementById('bg-video-upload'),
     bgVideoReset: documentRef.getElementById('bg-video-reset'),
     bgVideoState: documentRef.getElementById('bg-video-state'),

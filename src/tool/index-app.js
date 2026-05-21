@@ -119,12 +119,19 @@ if (hadSessionVideoSettings) persistCanvasSettings();
 function persistResponseMode() { if (!PAGE_MODE_OVERRIDE) persistToStorage(STORAGE_KEYS.mode, responseMode, 'response mode'); }
 function persistAiStageOverride() { persistToStorage(STORAGE_KEYS.aiStage, aiStageOverride, 'AI stage override'); }
 
-function persistBackgroundImageStorage(image) {
-  if (!image?.src) return;
-  void persistDurableJson(STORAGE_KEYS.backgroundImage, {
-    src: image.src,
-    name: image.name || 'uploaded image',
-  }, { label: 'background image' });
+function persistBackgroundImageStorage(image = {}) {
+  if (!image?.src && !canvasSettings.backgroundImage) return;
+  void (async () => {
+    const record = await readDurableJsonRecord(STORAGE_KEYS.backgroundImage);
+    const stored = record?.value && typeof record.value === 'object' ? record.value : null;
+    const src = String(image?.src || '').startsWith('data:') ? image.src : (stored?.src || '');
+    if (!src) return;
+    await persistDurableJson(STORAGE_KEYS.backgroundImage, {
+      src,
+      name: image.name || stored?.name || 'uploaded image',
+      alpha: Math.max(0, Math.min(1, Number(image?.alpha ?? canvasSettings.backgroundImageAlpha ?? 0.9))),
+    }, { label: 'background image' });
+  })();
 }
 
 async function readStoredBackgroundVideoValue() {
@@ -187,7 +194,9 @@ function applyCanvasSettings() {
   document.body.style.backgroundRepeat = '';
   if (blurBg) {
     blurBg.style.backgroundImage = backgroundEnabled && backgroundMediaKind === 'image' ? `url("${encodeURI(backgroundImage)}")` : 'none';
-    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image' ? '0.9' : '0';
+    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image'
+      ? String(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))))
+      : '0';
   }
   if (blurVideo) {
     const nextSrc = backgroundEnabled && backgroundMediaKind === 'video' && backgroundVideo?.src ? backgroundVideo.src : '';
@@ -234,6 +243,7 @@ function applyCanvasSettings() {
   if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
   if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
   if (UI.bgImageState) UI.bgImageState.textContent = isCustomPrototypeBackground(backgroundImage) ? 'uploaded' : 'preset';
+  if (UI.bgImageAlpha) UI.bgImageAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))) * 100));
   if (UI.bgVideoState) UI.bgVideoState.textContent = backgroundVideo ? 'loaded' : 'empty';
   if (UI.bgVideoControls) UI.bgVideoControls.classList.toggle('hidden', !backgroundVideo);
   if (UI.bgVideoPlayToggle) {
@@ -966,6 +976,7 @@ async function hydrateDurableBackgroundMedia() {
     canvasSettings = {
       ...canvasSettings,
       backgroundImage: image.src,
+      backgroundImageAlpha: Math.max(0, Math.min(1, Number(image.alpha ?? canvasSettings.backgroundImageAlpha ?? 0.9))),
       backgroundEnabled: true,
       backgroundMediaKind: canvasSettings.backgroundMediaKind === 'video' ? 'video' : 'image',
     };

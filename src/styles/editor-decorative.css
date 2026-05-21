@@ -498,7 +498,7 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
   background-size:cover;
   background-position:center;
   filter:none;
-  opacity:0.8;
+  opacity:0.9;
   transform:none;
   z-index:0;
   pointer-events:none;

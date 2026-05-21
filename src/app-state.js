@@ -64,6 +64,7 @@ export function loadCanvasSettings() {
     backgroundImage: typeof stored?.backgroundImage === 'string' && stored.backgroundImage.trim()
       ? stored.backgroundImage
       : DEFAULT_BACKGROUND_IMAGE,
+    backgroundImageAlpha: Math.max(0, Math.min(1, Number(stored?.backgroundImageAlpha ?? 0.9))),
     backgroundMediaKind: stored?.backgroundMediaKind === 'video' ? 'video' : 'image',
     backgroundVideo: null,
     backgroundVideoPaused: stored?.backgroundVideoPaused === true,
