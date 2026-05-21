@@ -427,7 +427,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       const renderShape = stageById(shape)?.renderShape || shape;
       const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
       const raw = Number(value?.[shape]);
-      output[shape] = Number.isFinite(raw) ? clamp(raw, 0, 120) : fallback;
+      output[shape] = Number.isFinite(raw) ? clamp(raw, 0, 30) : fallback;
     });
     return output;
   }
@@ -677,7 +677,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const renderShape = stageById(shape, scenario)?.renderShape || shape;
     const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
     const raw = Number(scenario?.content?.selectedMaskBlurByShape?.[shape]);
-    return Number.isFinite(raw) ? clamp(raw, 0, 120) : fallback;
+    return Number.isFinite(raw) ? clamp(raw, 0, 30) : fallback;
   }
 
   function normalizeTriggers(value) {

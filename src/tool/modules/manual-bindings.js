@@ -26,9 +26,6 @@ export function initManualBindings({
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
-  scenarioStageSizeOverride,
-  stageCardImagePaddingForShape,
-  stageSelectedMaskBlurForShape,
   stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
@@ -83,6 +80,19 @@ export function initManualBindings({
   setPrototypeAiDebugState,
   getPrototypeAiDebugState,
 }) {
+  const syncRangeProgress = (rangeInput) => {
+    if (!rangeInput || rangeInput.type !== 'range') return;
+    const min = Number(rangeInput.min || 0);
+    const max = Number(rangeInput.max || 100);
+    const value = Number(rangeInput.value || 0);
+    const progress = max > min ? clamp(((value - min) / (max - min)) * 100, 0, 100) : 0;
+    rangeInput.style.setProperty('--range-progress', `${progress}%`);
+  };
+  Array.from(document.querySelectorAll('#left-sidebar input[type="range"], #sidebar input[type="range"]')).forEach((rangeInput) => {
+    syncRangeProgress(rangeInput);
+    rangeInput.addEventListener('input', () => syncRangeProgress(rangeInput));
+  });
+
   const isEditableTarget = (target) => {
     const el = target instanceof Element ? target : null;
     if (!el) return false;
@@ -957,7 +967,7 @@ export function initManualBindings({
     if (!stage) return;
     const parsed = parseInt(String(rawValue || '').trim(), 10);
     if (!Number.isFinite(parsed)) return;
-    const nextRadius = clamp(parsed, 0, 120);
+    const nextRadius = clamp(Math.round(parsed / 10) * 10, 0, 100);
     commitStageChange(stage.id, (draft) => { draft.cornerRadius = nextRadius; });
   };
 
@@ -975,7 +985,7 @@ export function initManualBindings({
     }
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
-    const bounded = clamp(parsed, 40, 1400);
+    const bounded = clamp(Math.round(parsed / 10) * 10, 40, 420);
     commitScenarioChange((draftScenario) => {
       draftScenario.content.sizeByShape = normalizeStageSizeByShape(draftScenario.content.sizeByShape, draftScenario.shape, draftScenario.content);
       draftScenario.content.sizeByShape[draftScenario.shape][key] = bounded;
@@ -988,7 +998,7 @@ export function initManualBindings({
     const value = String(rawValue || '').trim();
     const parsed = value ? parseInt(value, 10) : 24;
     if (!Number.isFinite(parsed)) return;
-    const bounded = clamp(parsed, 0, 120);
+    const bounded = clamp(parsed, 0, 30);
     commitScenarioChange((draftScenario) => {
       draftScenario.content.cardImagePaddingByShape = draftScenario.content.cardImagePaddingByShape || {};
       draftScenario.content.cardImagePaddingByShape[draftScenario.shape] = bounded;
@@ -1002,7 +1012,7 @@ export function initManualBindings({
     if (!value) return void commitStageChange(stage.id, (draft) => { draft.iconTextGap = null; });
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
-    commitStageChange(stage.id, (draft) => { draft.iconTextGap = clamp(parsed, 0, 80); });
+    commitStageChange(stage.id, (draft) => { draft.iconTextGap = clamp(parsed, 0, 30); });
   };
 
   const commitStageIconPadOverride = (rawValue) => {
@@ -1012,23 +1022,15 @@ export function initManualBindings({
     if (!value) return void commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = null; });
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
-    commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = clamp(parsed, 0, 120); });
+    commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = clamp(parsed, 0, 30); });
   };
 
   const commitStageSelectedMaskBlur = (rawValue) => {
     const scenario = selectedScenario();
     if (!scenario) return;
-    const value = String(rawValue || '').trim();
-    if (!value) {
-      commitScenarioChange((draft) => {
-        draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
-        delete draft.content.selectedMaskBlurByShape[draft.shape];
-      });
-      return;
-    }
-    const parsed = Number.parseFloat(value);
+    const parsed = Number.parseFloat(String(rawValue || '').trim());
     if (!Number.isFinite(parsed)) return;
-    const bounded = clamp(parsed, 0, 120);
+    const bounded = clamp(parsed, 0, 30);
     commitScenarioChange((draft) => {
       draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
       draft.content.selectedMaskBlurByShape[draft.shape] = bounded;
@@ -1636,53 +1638,12 @@ export function initManualBindings({
   });
   UI.stageDuplicate?.addEventListener('click', () => duplicateCurrentStage());
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());
-  UI.stageRadiusInput.addEventListener('change', (e) => commitStageRadius(e.target.value));
-  UI.stageRadiusInput.addEventListener('blur', (e) => {
-    const value = String(e.target.value || '').trim();
-    if (!value) {
-      const stage = stageById(selectedScenario()?.shape);
-      e.target.value = stage ? String(stage.cornerRadius) : '';
-      return;
-    }
-    commitStageRadius(value);
-  });
-  UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
-  UI.stageWidthInput.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '');
-    commitStageSizeOverride('width', value);
-  });
-  UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
-  UI.stageHeightInput.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '');
-    commitStageSizeOverride('height', value);
-  });
-  UI.stageImagePaddingInput?.addEventListener('change', (e) => commitStageImagePadding(e.target.value));
-  UI.stageImagePaddingInput?.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = String(stageCardImagePaddingForShape?.(scenario, scenario?.shape) ?? 24));
-    commitStageImagePadding(value);
-  });
-  UI.stageGapInput.addEventListener('change', (e) => commitStageGapOverride(e.target.value));
-  UI.stageGapInput.addEventListener('blur', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '');
-    commitStageGapOverride(value);
-  });
-  UI.stageIconPadInput.addEventListener('change', (e) => commitStageIconPadOverride(e.target.value));
-  UI.stageIconPadInput.addEventListener('blur', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '');
-    commitStageIconPadOverride(value);
-  });
+  UI.stageRadiusInput.addEventListener('input', (e) => commitStageRadius(e.target.value));
+  UI.stageWidthInput.addEventListener('input', (e) => commitStageSizeOverride('width', e.target.value));
+  UI.stageHeightInput.addEventListener('input', (e) => commitStageSizeOverride('height', e.target.value));
+  UI.stageImagePaddingInput?.addEventListener('input', (e) => commitStageImagePadding(e.target.value));
+  UI.stageGapInput.addEventListener('input', (e) => commitStageGapOverride(e.target.value));
+  UI.stageIconPadInput.addEventListener('input', (e) => commitStageIconPadOverride(e.target.value));
   UI.stageCardSToggle?.addEventListener('change', (e) => {
     const scenario = selectedScenario();
     const stage = stageById(scenario?.shape, scenario);
@@ -1749,16 +1710,7 @@ export function initManualBindings({
       draft.content.selectedBlobBottomEdgeColorByShape[draft.shape] = String(e.target.value || '#9761ff');
     });
   });
-  UI.stageMaskBlurInput?.addEventListener('change', (e) => commitStageSelectedMaskBlur(e.target.value));
-  UI.stageMaskBlurInput?.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const value = String(e.target.value || '').trim();
-    if (!value) {
-      e.target.value = scenario ? String(stageSelectedMaskBlurForShape(scenario, scenario.shape)) : '';
-      return;
-    }
-    commitStageSelectedMaskBlur(value);
-  });
+  UI.stageMaskBlurInput?.addEventListener('input', (e) => commitStageSelectedMaskBlur(e.target.value));
   UI.stageListCountDec?.addEventListener('click', () => {
     const scenario = selectedScenario();
     if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== 'list') return;

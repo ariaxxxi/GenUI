@@ -584,37 +584,54 @@
       </label>
     </div>
 
-    <div id="stage-geometry-section" class="layer-row">
-      <button class="layer-row-header" type="button">
-        <span class="layer-row-label">Geometry</span>
-        <span class="layer-row-preview"></span>
-        <span class="layer-row-chevron">▾</span>
+    <div id="stage-geometry-section" class="sb-section" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Geometry</div>
+        <span class="sb-chevron">▾</span>
       </button>
-      <div class="layer-row-body">
-        <div class="sb-stage-grid">
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
-            <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0–120"/>
+      <div class="sb-section-body">
+        <div class="sb-geometry-controls">
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
+              <span class="sb-val" id="stage-radius-val">30px</span>
+            </div>
+            <input id="stage-radius-input" type="range" min="0" max="100" step="10" value="30"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-width-input">Width override</label>
-            <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-width-input">Width</label>
+              <span class="sb-val" id="stage-width-val">420px</span>
+            </div>
+            <input id="stage-width-input" type="range" min="40" max="420" step="10" value="420"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-height-input">Height override</label>
-            <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-height-input">Height</label>
+              <span class="sb-val" id="stage-height-val">120px</span>
+            </div>
+            <input id="stage-height-input" type="range" min="40" max="420" step="10" value="120"/>
           </div>
-          <div id="stage-image-padding-field" class="sb-stage-field hidden">
-            <label class="sb-lbl" for="stage-image-padding-input">Image padding</label>
-            <input id="stage-image-padding-input" class="sb-input" type="text" inputmode="numeric" placeholder="24"/>
+          <div id="stage-image-padding-field" class="sb-row hidden">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-image-padding-input">Image padding</label>
+              <span class="sb-val" id="stage-image-padding-val">24px</span>
+            </div>
+            <input id="stage-image-padding-input" type="range" min="0" max="30" step="1" value="24"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
-            <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
+              <span class="sb-val" id="stage-icon-pad-val">16px</span>
+            </div>
+            <input id="stage-icon-pad-input" type="range" min="0" max="30" step="1" value="16"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
-            <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
+              <span class="sb-val" id="stage-gap-val">8px</span>
+            </div>
+            <input id="stage-gap-input" type="range" min="0" max="30" step="1" value="8"/>
           </div>
         </div>
         <div id="stage-card-s-row" class="sb-row tight hidden">
@@ -640,38 +657,49 @@
       </div>
     </div>
 
-    <div class="sb-stage-group">
-      <div class="sb-stage-group-head">
-        <span class="sb-lbl">Accent blobs</span>
-      </div>
-      <div class="sb-stage-grid sb-style-color-grid">
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-top-core-color">Top-left core</label>
-          <input id="stage-blob-top-core-color" class="typo-color" type="color" value="#90acff"/>
+    <div id="stage-celestial-style-section" class="sb-section hidden" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Celestial Style</div>
+        <span class="sb-chevron">▾</span>
+      </button>
+      <div class="sb-section-body">
+        <div class="sb-stage-group">
+          <div class="sb-stage-group-head">
+            <span class="sb-lbl">Accent blobs</span>
+          </div>
+          <div class="sb-stage-grid sb-style-color-grid">
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-top-core-color">Top-left core</label>
+              <input id="stage-blob-top-core-color" class="typo-color" type="color" value="#90acff"/>
+            </div>
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-top-edge-color">Top-left edge</label>
+              <input id="stage-blob-top-edge-color" class="typo-color" type="color" value="#9761ff"/>
+            </div>
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-bottom-core-color">Bottom-right core</label>
+              <input id="stage-blob-bottom-core-color" class="typo-color" type="color" value="#90acff"/>
+            </div>
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-bottom-edge-color">Bottom-right edge</label>
+              <input id="stage-blob-bottom-edge-color" class="typo-color" type="color" value="#9761ff"/>
+            </div>
+          </div>
         </div>
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-top-edge-color">Top-left edge</label>
-          <input id="stage-blob-top-edge-color" class="typo-color" type="color" value="#9761ff"/>
-        </div>
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-bottom-core-color">Bottom-right core</label>
-          <input id="stage-blob-bottom-core-color" class="typo-color" type="color" value="#90acff"/>
-        </div>
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-bottom-edge-color">Bottom-right edge</label>
-          <input id="stage-blob-bottom-edge-color" class="typo-color" type="color" value="#9761ff"/>
-        </div>
-      </div>
-    </div>
 
-    <div class="sb-stage-group">
-      <div class="sb-stage-group-head">
-        <span class="sb-lbl">Refraction mask</span>
-      </div>
-      <div class="sb-stage-grid">
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-mask-blur-input">Mask blur</label>
-          <input id="stage-mask-blur-input" class="sb-input" type="text" inputmode="decimal" placeholder="Auto"/>
+        <div class="sb-stage-group">
+          <div class="sb-stage-group-head">
+            <span class="sb-lbl">Refraction mask</span>
+          </div>
+          <div class="sb-geometry-controls">
+            <div class="sb-row">
+              <div class="sb-range-head">
+                <label class="sb-lbl" for="stage-mask-blur-input">Mask blur</label>
+                <span class="sb-val" id="stage-mask-blur-val">30px</span>
+              </div>
+              <input id="stage-mask-blur-input" type="range" min="0" max="30" step="0.5" value="30"/>
+            </div>
+          </div>
         </div>
       </div>
     </div>

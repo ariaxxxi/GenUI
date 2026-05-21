@@ -34,6 +34,30 @@ export function createSidebarRender(ctx, refs) {
     return type === 'intent-header' ? 'intent header' : type;
   }
 
+  function syncRangeProgress(input) {
+    if (!input || input.type !== 'range') return;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const value = Number(input.value || 0);
+    const progress = max > min ? ctx.clamp(((value - min) / (max - min)) * 100, 0, 100) : 0;
+    input.style.setProperty('--range-progress', `${progress}%`);
+  }
+
+  function setSlider(input, value, valueEl, suffix = 'px') {
+    if (!input) return;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const step = Number(input.step || 1);
+    let numeric = Number.isFinite(Number(value)) ? Number(value) : min;
+    if (Number.isFinite(step) && step > 0) numeric = Math.round(numeric / step) * step;
+    const bounded = ctx.clamp(numeric, min, max);
+    input.value = String(bounded);
+    input.disabled = false;
+    const displayValue = Number.isInteger(bounded) ? String(bounded) : String(Number(bounded.toFixed(1)));
+    if (valueEl) valueEl.textContent = suffix ? `${displayValue}${suffix}` : displayValue;
+    syncRangeProgress(input);
+  }
+
   function renderScenarioList() {
     const scenario = ctx.selectedScenario();
     if (!ctx.UI.scenarioList) return;
@@ -153,13 +177,18 @@ export function createSidebarRender(ctx, refs) {
     const isCardLike = renderShape === 'card' || renderShape === 'card-s';
     const hasCardMediaPadding = isCardLike || renderShape === 'image';
     const cardImagePadding = ctx.stageCardImagePaddingForShape ? ctx.stageCardImagePaddingForShape(scenario, scenario?.shape) : 24;
-    if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
-    if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
-    if (ctx.UI.stageHeightInput) ctx.UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
-    if (ctx.UI.stageImagePaddingInput) ctx.UI.stageImagePaddingInput.value = hasCardMediaPadding ? String(cardImagePadding) : '';
+    const mainSize = ctx.stageMainSize ? ctx.stageMainSize(stage, scenario) : {};
+    const effectiveWidth = Number.isFinite(sizeOverride?.widthOverride) ? sizeOverride.widthOverride : mainSize.width;
+    const effectiveHeight = Number.isFinite(sizeOverride?.heightOverride) ? sizeOverride.heightOverride : mainSize.height;
+    const effectiveIconGap = ctx.stageIconTextGap ? ctx.stageIconTextGap(stage?.id, renderShape) : stage?.iconTextGap;
+    const effectiveIconPad = ctx.stageIconLeftPadding ? ctx.stageIconLeftPadding(stage?.id, renderShape) : stage?.iconLeftPadding;
+    setSlider(ctx.UI.stageRadiusInput, Number.isFinite(stage?.cornerRadius) ? stage.cornerRadius : 0, ctx.UI.stageRadiusVal);
+    setSlider(ctx.UI.stageWidthInput, effectiveWidth, ctx.UI.stageWidthVal);
+    setSlider(ctx.UI.stageHeightInput, effectiveHeight, ctx.UI.stageHeightVal);
+    setSlider(ctx.UI.stageImagePaddingInput, cardImagePadding, ctx.UI.stageImagePaddingVal);
     if (ctx.UI.stageImagePaddingField) ctx.UI.stageImagePaddingField.classList.toggle('hidden', !hasCardMediaPadding);
-    if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
-    if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
+    setSlider(ctx.UI.stageGapInput, Number.isFinite(effectiveIconGap) ? effectiveIconGap : 8, ctx.UI.stageGapVal);
+    setSlider(ctx.UI.stageIconPadInput, Number.isFinite(effectiveIconPad) ? effectiveIconPad : 16, ctx.UI.stageIconPadVal);
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
     if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.add('hidden');
     if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.add('hidden');
@@ -178,6 +207,7 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
     }
     if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
+    if (ctx.UI.stageCelestialStyleSection) ctx.UI.stageCelestialStyleSection.classList.toggle('hidden', !stageSelected);
     if (ctx.UI.stageShellHiddenToggle) {
       ctx.UI.stageShellHiddenToggle.checked = !!stage?.hideShell;
       ctx.UI.stageShellHiddenToggle.disabled = !stage;
@@ -198,10 +228,8 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageBlobBottomEdgeColor.value = String(stageBlobBottomEdgeColor || '#9761ff');
       ctx.UI.stageBlobBottomEdgeColor.disabled = !stage;
     }
-    if (ctx.UI.stageMaskBlurInput) {
-      ctx.UI.stageMaskBlurInput.value = Number.isFinite(stageMaskBlur) ? String(stageMaskBlur) : '';
-      ctx.UI.stageMaskBlurInput.disabled = !stage;
-    }
+    setSlider(ctx.UI.stageMaskBlurInput, Number.isFinite(stageMaskBlur) ? stageMaskBlur : 30, ctx.UI.stageMaskBlurVal);
+    if (ctx.UI.stageMaskBlurInput) ctx.UI.stageMaskBlurInput.disabled = !stage;
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
     if (ctx.UI.stageDuplicate) ctx.UI.stageDuplicate.disabled = !stage;
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage;

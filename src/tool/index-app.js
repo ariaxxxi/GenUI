@@ -171,6 +171,15 @@ function currentScenarioFrameMode() {
   return normalizeScenarioCanvas(selectedScenario()?.content?.canvas, { frameMode: canvasSettings.frameMode }).frameMode;
 }
 
+function syncRangeProgress(input) {
+  if (!input || input.type !== 'range') return;
+  const min = Number(input.min || 0);
+  const max = Number(input.max || 100);
+  const value = Number(input.value || 0);
+  const progress = max > min ? Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100)) : 0;
+  input.style.setProperty('--range-progress', `${progress}%`);
+}
+
 function applyCanvasSettings() {
   const frame = document.getElementById('ui-frame');
   const frameBg = document.getElementById('ui-frame-bg');
@@ -243,7 +252,10 @@ function applyCanvasSettings() {
   if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
   if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
   if (UI.bgImageState) UI.bgImageState.textContent = isCustomPrototypeBackground(backgroundImage) ? 'uploaded' : 'preset';
-  if (UI.bgImageAlpha) UI.bgImageAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))) * 100));
+  if (UI.bgImageAlpha) {
+    UI.bgImageAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))) * 100));
+    syncRangeProgress(UI.bgImageAlpha);
+  }
   if (UI.bgVideoState) UI.bgVideoState.textContent = backgroundVideo ? 'loaded' : 'empty';
   if (UI.bgVideoControls) UI.bgVideoControls.classList.toggle('hidden', !backgroundVideo);
   if (UI.bgVideoPlayToggle) {
@@ -252,10 +264,12 @@ function applyCanvasSettings() {
   }
   if (UI.bgVideoProgress) {
     UI.bgVideoProgress.value = String(Math.round((Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoProgress) || 0))) * 1000));
+    syncRangeProgress(UI.bgVideoProgress);
     UI.bgVideoProgress.disabled = !backgroundVideo;
   }
   if (UI.bgVideoAlpha) {
     UI.bgVideoAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoAlpha ?? 0.8))) * 100));
+    syncRangeProgress(UI.bgVideoAlpha);
     UI.bgVideoAlpha.disabled = !backgroundVideo;
   }
   if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
@@ -837,6 +851,9 @@ const sidebar = initSidebar({
   builtinStageById,
   scenarioStageSizeOverride,
   stageCardImagePaddingForShape,
+  stageMainSize,
+  stageIconTextGap,
+  stageIconLeftPadding,
   stageVisibleEditorFields,
   stageHasComponent,
   stageTextForShape,
