@@ -7,6 +7,11 @@ import {
   normalizeIcon,
 } from '../shapes.js';
 
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 export function createMorphLayout(ctx) {
   const { C, detailMeasureEl, constants, callbacks, state } = ctx;
   const {
@@ -31,7 +36,7 @@ export function createMorphLayout(ctx) {
     if (['circle', 'magic', 'listening', 'dot'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (shape === 'pill') {
       const activeStageId = String(callbacks.selectedScenario?.()?.shape || '');
-      if (activeStageId === 'nudge') {
+      if (isNudgeStageId(activeStageId)) {
         const typography = normalizeTypography(state.contentTypographyState, 'pill');
         const leftPad = 24;
         const rightPad = 24;

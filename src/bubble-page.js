@@ -116,10 +116,13 @@ const BUBBLE_HOME_THINKING_TEXT_FONT = '500 20px "DM Sans", sans-serif';
 const BUBBLE_HOME_PROMPT_THINKING_LOOP_MS = 5000;
 const BUBBLE_HOME_PROMPT_TEXT_SWAP_MS = 140;
 const LENS_SHIMMER_DURATION_MS = 3000;
+const LENS_EXPAND_SHIMMER_DURATION_MS = 2000;
 const LENS_PUNCTURE_SCALE_DURATION_MS = 860;
 const LENS_PUNCTURE_FADE_DURATION_MS = 360;
 const LENS_PUNCTURE_POP_SCALE = 1.055;
 const LENS_PUNCTURE_END_SCALE = 0.5;
+const LENS_SET_ID = 'lens';
+const LENS_EXPAND_SET_ID = 'lens-expand';
 const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
@@ -1019,8 +1022,15 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     slots: PROMPT_BUBBLES_CONFIG,
   }),
   Object.freeze({
-    id: 'lens',
+    id: LENS_SET_ID,
     label: 'Lens',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: LENS_EXPAND_SET_ID,
+    label: 'Lens - Expand',
     defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
     defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
     slots: LENS_BUBBLES_CONFIG,
@@ -1081,9 +1091,17 @@ function createAgentOrbContent(id) {
   };
 }
 
+function isLensBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_SET_ID || setId === LENS_EXPAND_SET_ID;
+}
+
+function isLensExpandBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_EXPAND_SET_ID;
+}
+
 function createHomeOrbAgentContentForSet(agentId, setId = state.activeSetId) {
   const content = createAgentOrbContent(agentId);
-  if (setId !== 'lens' || agentId !== PROMPT_SET_DEFAULT_AGENT_ID) return content;
+  if (!isLensBubbleSet(setId) || agentId !== PROMPT_SET_DEFAULT_AGENT_ID) return content;
   return {
     ...content,
     img: LENS_HOME_ORB_ASSET,
@@ -1233,7 +1251,7 @@ function isAgentStyleBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
 }
 
 function isPromptLikeBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
-  return setId === 'prompt' || setId === 'lens';
+  return setId === 'prompt' || isLensBubbleSet(setId);
 }
 
 function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
@@ -1241,7 +1259,7 @@ function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
 }
 
 function getBubbleSetSequence(setId = DEFAULT_BUBBLE_SET_ID) {
-  if (setId === 'lens') return LENS_CAROUSEL_SEQUENCE;
+  if (isLensBubbleSet(setId)) return LENS_CAROUSEL_SEQUENCE;
   return getBubblesConfigForSet(setId).map((bubble) => bubble.id);
 }
 
@@ -1288,6 +1306,7 @@ const state = {
     objectUrl: '',
     name: 'park image',
   },
+  backgroundImageAlpha: 0.8,
   backgroundVideo: null,
   backgroundVideoPaused: false,
   backgroundVideoProgress: 0,
@@ -1332,6 +1351,7 @@ const state = {
   agentSetReturnTriggered: false,
   agentSetReturnPhase: '',
   lensShimmerUntil: 0,
+  lensShimmerMode: 'slice',
   lastScene: null,
   renderQueued: false,
 };
@@ -1372,6 +1392,7 @@ const refs = {
   bgImageUpload: document.querySelector('[data-bubble2-bg-image-upload]'),
   bgImageReset: document.querySelector('[data-bubble2-bg-image-reset]'),
   bgImageState: document.querySelector('[data-bubble2-bg-image-state]'),
+  bgImageAlpha: document.querySelector('[data-bubble2-bg-image-alpha]'),
   bgVideo: document.querySelector('[data-bubble2-bg-video]'),
   bgVideoUpload: document.querySelector('[data-bubble2-bg-video-upload]'),
   bgVideoReset: document.querySelector('[data-bubble2-bg-video-reset]'),
@@ -1860,9 +1881,12 @@ function startLensFeedback(content, now = performance.now(), options = {}) {
   const lensAccentSecondary = lensTheme.blobBottomCore
     || lensTheme.blobTopEdge
     || lensAccent;
-  state.lensShimmerUntil = now + LENS_SHIMMER_DURATION_MS;
+  const shimmerMode = options.mode === 'expand' ? 'expand' : 'slice';
+  state.lensShimmerMode = shimmerMode;
+  state.lensShimmerUntil = now + (shimmerMode === 'expand' ? LENS_EXPAND_SHIMMER_DURATION_MS : LENS_SHIMMER_DURATION_MS);
   if (refs.shell) {
     refs.shell.classList.remove('is-lens-firing');
+    refs.shell.classList.remove('is-lens-expand-firing');
     if (lensAccent) refs.shell.style.setProperty('--bubble2-lens-accent', lensAccent);
     if (lensAccentSecondary) refs.shell.style.setProperty('--bubble2-lens-accent-secondary', lensAccentSecondary);
     void refs.shell.offsetWidth;
@@ -2192,12 +2216,19 @@ function syncHomeOrbToggleUi() {
 
 function syncBackgroundImageUi() {
   const enabled = state.backgroundImageEnabled === true;
+  const imageAlpha = clamp(Number(state.backgroundImageAlpha ?? 0.8), 0, 1);
+  state.backgroundImageAlpha = imageAlpha;
   if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
   refs.stage?.classList.toggle('has-bg-image', enabled);
   if (refs.bgImageState) refs.bgImageState.textContent = state.backgroundImage?.name || 'park image';
+  if (refs.bgImageAlpha) {
+    refs.bgImageAlpha.value = String(Math.round(imageAlpha * 100));
+    refs.bgImageAlpha.disabled = !enabled;
+  }
   if (refs.bgImage) {
     const src = state.backgroundImage?.src || 'assets/bg/park.jpg';
     refs.bgImage.style.backgroundImage = enabled ? `url("${src}")` : 'none';
+    refs.bgImage.style.opacity = enabled ? String(imageAlpha) : '0';
   }
 }
 
@@ -2223,6 +2254,7 @@ async function hydrateStoredBackgroundMedia() {
       objectUrl: '',
       name: String(image.name || 'uploaded image'),
     };
+    state.backgroundImageAlpha = clamp(Number(image.alpha ?? 0.8), 0, 1);
     state.backgroundImageEnabled = true;
   }
   const video = videoRecord?.value;
@@ -2251,6 +2283,7 @@ function persistBackgroundImage() {
     {
       src: state.backgroundImage?.src || '',
       name: state.backgroundImage?.name || 'uploaded image',
+      alpha: clamp(Number(state.backgroundImageAlpha ?? 0.8), 0, 1),
     },
     { label: 'bubble background image' },
   );
@@ -2371,7 +2404,9 @@ function resetStateForSetSwitch() {
   stopBubbleHomeStream();
   clearLensToast();
   state.lensShimmerUntil = 0;
+  state.lensShimmerMode = 'slice';
   refs.shell?.classList.remove('is-lens-firing');
+  refs.shell?.classList.remove('is-lens-expand-firing');
   state.isPressed = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -2540,6 +2575,7 @@ function bindEvents() {
   });
   refs.bgImageUpload?.addEventListener('change', handleBackgroundImageUpload);
   refs.bgImageReset?.addEventListener('click', resetBackgroundImage);
+  refs.bgImageAlpha?.addEventListener('input', handleBackgroundImageAlphaInput);
   refs.bgVideoUpload?.addEventListener('click', (event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement) target.value = '';
@@ -2602,6 +2638,15 @@ function handleBackgroundImageToggleChange(event) {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
   state.backgroundImageEnabled = target.checked;
+  persistBackgroundImage();
+  syncBackgroundImageUi();
+}
+
+function handleBackgroundImageAlphaInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundImageAlpha = clamp((Number(target.value) || 0) / 100, 0, 1);
+  persistBackgroundImage();
   syncBackgroundImageUi();
 }
 
@@ -2626,6 +2671,7 @@ async function handleBackgroundImageUpload(event) {
     objectUrl: '',
     name: String(file.name || 'uploaded image'),
   };
+  state.backgroundImageAlpha = clamp(Number(state.backgroundImageAlpha ?? 0.8), 0, 1);
   state.backgroundImageEnabled = true;
   persistBackgroundImage();
   syncBackgroundImageUi();
@@ -2639,6 +2685,7 @@ function resetBackgroundImage() {
     objectUrl: '',
     name: 'park image',
   };
+  state.backgroundImageAlpha = 0.8;
   state.backgroundImageEnabled = true;
   void deleteDurableJsonRecord(BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY, { label: 'bubble background image' });
   syncBackgroundImageUi();
@@ -2750,7 +2797,7 @@ function handleKeyDown(event) {
 }
 
 function cycleBubbleHomeSelection(step) {
-  if (isAgentStyleBubbleSet(state.activeSetId) || state.activeSetId === 'lens') {
+  if (isAgentStyleBubbleSet(state.activeSetId) || isLensBubbleSet(state.activeSetId)) {
     cycleBubbleHomeSetItem(step, state.activeSetId);
     return;
   }
@@ -2797,10 +2844,13 @@ function cycleBubbleHomeSetItem(step, setId = state.activeSetId) {
   const switchDirection = step > 0 ? 'right' : 'left';
 
   state.homeOrbContent = nextContent;
-  if (setId !== 'lens') {
-    void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
+  if (isLensBubbleSet(setId)) {
+    startLensFeedback(nextContent, performance.now(), {
+      placement: 'above-orb',
+      mode: isLensExpandBubbleSet(setId) ? 'expand' : 'slice',
+    });
   } else {
-    startLensFeedback(nextContent, performance.now(), { placement: 'above-orb' });
+    void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
   }
   syncBubbleHomeOrbVisual(refs.orb, {
     animate: true,
@@ -3020,7 +3070,7 @@ function startBubbleSwap(scene, now) {
   const demotedContent = createDemotedOrbSlotContent(state.homeOrbContent);
   const isPauseAction = selectedBubble.controlAction === 'pause-session';
   const isPlayAction = selectedBubble.controlAction === 'play-session';
-  const isLensFire = state.activeSetId === 'lens';
+  const isLensFire = isLensBubbleSet(state.activeSetId);
   const promotedImageScaleCompensation = selectedBubble.graphicKind === 'emoji'
     ? 1
     : (selectedBubble.fill ? (1 / Math.max(selectedBubble.imageScale ?? 1, 0.0001)) : 1);
@@ -3032,7 +3082,7 @@ function startBubbleSwap(scene, now) {
     ? Number.parseFloat(window.getComputedStyle(selectedNode).width)
     : NaN;
   if (isLensFire) {
-    startLensFeedback(promotedContent, now);
+    startLensFeedback(promotedContent, now, { mode: isLensExpandBubbleSet(state.activeSetId) ? 'expand' : 'slice' });
   }
   state.swapTransition = {
     active: true,
@@ -3248,6 +3298,7 @@ function render() {
   const isSwapActive = Boolean(state.swapTransition?.active);
   const isLensFiring = isLensFireSwap(state.swapTransition);
   const isLensShimmerActive = isLensFiring || now < state.lensShimmerUntil;
+  const isLensExpandShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'expand';
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
@@ -3257,6 +3308,7 @@ function render() {
     && state.isPressed;
 
   refs.shell?.classList.toggle('is-lens-firing', isLensShimmerActive);
+  refs.shell?.classList.toggle('is-lens-expand-firing', isLensExpandShimmerActive);
 
   if (refs.canvasBanner) {
     refs.canvasBanner.textContent = 'Set default agent';

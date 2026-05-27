@@ -82,7 +82,7 @@ function isPrototypeNormalRenderShape(shape) {
 }
 
 const scenarioData = initScenarioData({ getStageLibrary: () => stageLibrary, getCanvasSettings: () => canvasSettings, clampFn: clamp });
-const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageCardImagePaddingForShape, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageListSelectableForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
+const { SCENARIO_SHAPES, STAGE_COMPONENT_TYPES, SHAPES, defaultTypographyForShape, normalizeTypographyByShape, normalizeStage, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, normalizeImagesByShape, stageId, loadStageLibrary, stageById, builtinStageById, renderShapeForStageId, availableScenarioShapes, visibleScenarioStages, stageComponentCounts, stageHasComponent, stageVisibleEditorFields, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeScenarioCanvas, normalizeStageSizeEntry, normalizeStageSizeByShape, scenarioStageSizeOverride, stageCardImagePaddingForShape, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageListListeningOrbForShape, stageListSelectableForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, stageNudgeDividerColorForShape, stageSelectedBlobTopCoreColorForShape, stageSelectedBlobTopEdgeColorForShape, stageSelectedBlobBottomCoreColorForShape, stageSelectedBlobBottomEdgeColorForShape, createScenario, normalizeTriggers, normalizeScenario, defaultScenarioLibrary } = scenarioData;
 
 function normalizeScenarioLibrarySet(source) {
   const scenarios = Array.isArray(source) ? source.map(normalizeScenario).filter(Boolean) : defaultScenarioLibrary();
@@ -803,6 +803,7 @@ morphApi = initMorph({
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    stageNudgeDividerColorForShape,
     stageSelectedBlobTopCoreColorForShape,
     stageSelectedBlobTopEdgeColorForShape,
     stageSelectedBlobBottomCoreColorForShape,
@@ -866,6 +867,7 @@ const sidebar = initSidebar({
   stageSelectedForShape,
   stageAccentColorForShape,
   stageSecondaryAccentColorForShape,
+  stageNudgeDividerColorForShape,
   stageSelectedBlobTopCoreColorForShape,
   stageSelectedBlobTopEdgeColorForShape,
   stageSelectedBlobBottomCoreColorForShape,

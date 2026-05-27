@@ -39,6 +39,11 @@ const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
 ]);
 
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 function selectedBlobDefaultsForRenderShape(renderShape = 'pill') {
   return celestialSelectedBlobColorDefaultsForRenderShape(renderShape);
 }
@@ -184,7 +189,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function defaultStageTextFallback(shape) {
-    if (shape === 'nudge') {
+    if (isNudgeStageId(shape)) {
       return { primary: 'Buy milk', secondary: 'Grocery list', detail: '', intentHeader: '' };
     }
     const renderShape = renderShapeForStageId(shape) || shape;
@@ -421,6 +426,14 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return output;
   }
 
+  function normalizeDividerColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      output[shape] = normalizeHexColor(value?.[shape], '#ffffff');
+    });
+    return output;
+  }
+
   function normalizeSelectedMaskBlurByShape(value = {}, fallbackShape = 'pill') {
     const output = {};
     scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
@@ -512,7 +525,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     if (stageIdValue === 'list-pill') {
       return { width: 300, height: 80 };
     }
-    if (stageIdValue === 'nudge') {
+    if (isNudgeStageId(stageIdValue)) {
       return { width: 240, height: 80 };
     }
     const renderShape = renderShapeForStageId(stageIdValue);
@@ -536,7 +549,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const phoneDefaultWidth = clamp((Number(canvasSettings()?.phoneFrameWidth) || 390) - 20, 40, 1400);
     const usePhoneDefaultWidth = frameMode === 'phone' && ['pill', 'card', 'card-s', 'image'].includes(renderShape);
     let defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
-    if (stage?.id === 'nudge') {
+    if (isNudgeStageId(stage?.id)) {
       const text = stageTextForShape(scenario, stage.id);
       const typography = stageTypographyForShape(stage.id, scenario);
       const primaryText = String(text?.primary || '').trim();
@@ -673,6 +686,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     );
   }
 
+  function stageNudgeDividerColorForShape(scenario, shape) {
+    return normalizeHexColor(scenario?.content?.dividerColorByShape?.[shape], '#ffffff');
+  }
+
   function stageSelectedMaskBlurForShape(scenario, shape) {
     const renderShape = stageById(shape, scenario)?.renderShape || shape;
     const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
@@ -754,6 +771,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
         accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
         secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
+        dividerColorByShape: normalizeDividerColorByShape(content.dividerColorByShape, shape),
         selectedBlobTopCoreColorByShape: normalizeSelectedBlobTopCoreColorByShape(content.selectedBlobTopCoreColorByShape, shape),
         selectedBlobTopEdgeColorByShape: normalizeSelectedBlobTopEdgeColorByShape(content.selectedBlobTopEdgeColorByShape, shape),
         selectedBlobBottomCoreColorByShape: normalizeSelectedBlobBottomCoreColorByShape(content.selectedBlobBottomCoreColorByShape, shape),
@@ -894,6 +912,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    stageNudgeDividerColorForShape,
     stageSelectedBlobTopCoreColorForShape,
     stageSelectedBlobTopEdgeColorForShape,
     stageSelectedBlobBottomCoreColorForShape,

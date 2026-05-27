@@ -63,6 +63,8 @@ export function buildUiRefs(documentRef = document) {
     stageListListeningOrbToggle: documentRef.getElementById('stage-list-listening-orb-toggle'),
     stageSelectedToggle: documentRef.getElementById('stage-selected-toggle'),
     stageShellHiddenToggle: documentRef.getElementById('stage-shell-hidden-toggle'),
+    stageNudgeStyleSection: documentRef.getElementById('stage-nudge-style-section'),
+    stageNudgeDividerColor: documentRef.getElementById('stage-nudge-divider-color'),
     stageCelestialStyleSection: documentRef.getElementById('stage-celestial-style-section'),
     stageBlobTopCoreColor: documentRef.getElementById('stage-blob-top-core-color'),
     stageBlobTopEdgeColor: documentRef.getElementById('stage-blob-top-edge-color'),

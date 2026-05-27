@@ -1678,6 +1678,14 @@ export function initManualBindings({
       draft.hideShell = e.target.checked;
     });
   });
+  UI.stageNudgeDividerColor?.addEventListener('input', (e) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    commitScenarioChange((draft) => {
+      draft.content.dividerColorByShape = { ...(draft.content.dividerColorByShape || {}) };
+      draft.content.dividerColorByShape[draft.shape] = String(e.target.value || '#ffffff');
+    });
+  });
   UI.stageBlobTopCoreColor?.addEventListener('input', (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;

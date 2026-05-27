@@ -76,9 +76,10 @@ export function createSidebarActions(ctx, refs) {
   }
 
   function addStage(kind = 'card') {
+    const stageKind = String(kind || '').toLowerCase();
     const template = stageTemplateFromKind(kind);
     const newStage = ctx.normalizeStage({
-      id: ctx.stageId(),
+      id: stageKind === 'nudge' ? `nudge-${ctx.stageId()}` : ctx.stageId(),
       name: template.name,
       preset: false,
       renderShape: template.renderShape,
@@ -157,6 +158,11 @@ export function createSidebarActions(ctx, refs) {
       draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
       if (draft.content.secondaryAccentColorByShape[sourceShape]) {
         draft.content.secondaryAccentColorByShape[newStage.id] = draft.content.secondaryAccentColorByShape[sourceShape];
+      }
+
+      draft.content.dividerColorByShape = { ...(draft.content.dividerColorByShape || {}) };
+      if (draft.content.dividerColorByShape[sourceShape]) {
+        draft.content.dividerColorByShape[newStage.id] = draft.content.dividerColorByShape[sourceShape];
       }
 
       draft.content.selectedBlobTopCoreColorByShape = { ...(draft.content.selectedBlobTopCoreColorByShape || {}) };

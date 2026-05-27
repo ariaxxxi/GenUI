@@ -4,6 +4,11 @@ import { celestialSelectedPresetForRenderShape } from './celestial-selected-pres
 import { applySelectedChromePreset, hexToCssColor } from './celestial-selection-chrome.js';
 import { clamp } from '../utils.js';
 
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 export function createMorphRender(ctx) {
   const { DROPS, C, constants, callbacks, state, layout, bridges } = ctx;
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
@@ -789,12 +794,12 @@ export function createMorphRender(ctx) {
     if (fromShape !== 'pill' || toShape !== 'pill') return false;
     const fromId = String(fromStageId || '').trim().toLowerCase();
     const toId = String(toStageId || '').trim().toLowerCase();
-    return (fromId === 'nudge' && toId === 'pill') || (fromId === 'pill' && toId === 'nudge');
+    return (isNudgeStageId(fromId) && toId === 'pill') || (fromId === 'pill' && isNudgeStageId(toId));
   }
 
   function isNudgeToCardStagePair(fromStageId = null, toShape = '') {
     const fromId = String(fromStageId || '').trim().toLowerCase();
-    return fromId === 'nudge' && (toShape === 'card' || toShape === 'card-s');
+    return isNudgeStageId(fromId) && (toShape === 'card' || toShape === 'card-s');
   }
 
   function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null, fromStageId = null, toStageId = null) {
@@ -846,7 +851,7 @@ export function createMorphRender(ctx) {
     const pos = layout.contentPos(shape, w, h);
     const shouldCrossfadeContent = state.contentCrossfadeMode === 'nudge-content';
     const targetStageId = String(state.currentStageId || '').trim().toLowerCase();
-    const shouldRestoreThumbAtEnd = shouldCrossfadeContent && targetStageId !== 'nudge';
+    const shouldRestoreThumbAtEnd = shouldCrossfadeContent && !isNudgeStageId(targetStageId);
     if (shouldCrossfadeContent) {
       fadeInDelayMs = Math.max(fadeInDelayMs, 34);
       [C.thumb, C.prim, C.sec, C.div].forEach((el) => {
@@ -942,8 +947,9 @@ export function createMorphRender(ctx) {
     C.div.style.transition = shouldCrossfadeContent
       ? `transform 0ms linear, width 0ms linear, height 0ms linear, opacity ${state.currentContentFadeMs}ms var(--motion-ease), background 220ms var(--motion-ease)`
       : '';
-    C.div.style.background = callbacks.selectedScenario?.()?.shape === 'nudge'
-      ? 'rgba(255,255,255,0.6)'
+    const currentScenario = callbacks.selectedScenario?.();
+    C.div.style.background = isNudgeStageId(currentScenario?.shape)
+      ? (callbacks.stageNudgeDividerColorForShape?.(currentScenario, currentScenario.shape) || '#ffffff')
       : '';
     setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
   }

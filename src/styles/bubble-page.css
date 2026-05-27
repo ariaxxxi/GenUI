@@ -108,53 +108,49 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-sidebar {
   position: absolute;
-  top: 24px;
-  bottom: 24px;
-  left: 24px;
-  width: 160px;
-  flex: 0 0 160px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 360px;
+  height: 100%;
+  flex: 0 0 360px;
   z-index: 2;
   display: flex;
+  flex-direction: column;
   min-height: 0;
+  padding: 32px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #0b0b0b;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   touch-action: auto;
+}
+
+.bubble2-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bubble2-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bubble2-sidebar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .bubble2-sidebar-card {
   width: 100%;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 16px;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
-    rgba(10, 10, 10, 0.78);
-  box-shadow:
-    0 18px 38px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-}
-
-.bubble2-sidebar-card::-webkit-scrollbar {
-  width: 6px;
-}
-
-.bubble2-sidebar-card::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.bubble2-sidebar-card::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  padding: 0;
 }
 
 .bubble2-sidebar-eyebrow {
   margin: 0 0 12px;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
 }
 
@@ -165,9 +161,9 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-control-group {
-  margin-top: 18px;
+  margin-top: 24px;
   padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .bubble2-upload-row {
@@ -187,25 +183,26 @@ body.bubble2-page.is-canvasless {
   justify-content: center;
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.62);
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
   transition:
     background-color 220ms ease,
     border-color 220ms ease,
+    color 220ms ease,
     transform 220ms ease;
 }
 
 .bubble2-upload-btn:hover,
 .bubble2-ghost-btn:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .bubble2-upload-btn input {
@@ -218,7 +215,7 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-upload-state {
   margin-top: 10px;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.46);
   font-size: 12px;
   line-height: 1.3;
 }
@@ -235,9 +232,12 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-video-progress-label {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .bubble2-video-progress {
@@ -255,14 +255,14 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-set-button {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.62);
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
   transition:
@@ -274,20 +274,16 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-set-button:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.80);
 }
 
 .bubble2-set-button.is-active {
-  border-color: rgba(157, 195, 255, 0.42);
-  background:
-    linear-gradient(135deg, rgba(129, 188, 255, 0.22), rgba(132, 105, 255, 0.18)),
-    rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 12px 24px rgba(12, 24, 58, 0.28);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
 }
 
 .bubble2-set-button:focus-visible {
@@ -300,6 +296,10 @@ body.bubble2-page.is-canvasless {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
 }
 
@@ -311,14 +311,14 @@ body.bubble2-page.is-canvasless {
 }
 
 .bubble2-toggle-title {
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.15;
 }
 
 .bubble2-toggle-description {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.46);
   font-size: 12px;
   line-height: 1.3;
 }
@@ -338,12 +338,11 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-toggle-slider {
   position: relative;
-  width: 48px;
-  height: 28px;
+  width: 44px;
+  height: 24px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
@@ -352,26 +351,23 @@ body.bubble2-page.is-canvasless {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
   transition: transform 220ms ease;
 }
 
 .bubble2-toggle-switch input:checked + .bubble2-toggle-slider {
-  background:
-    linear-gradient(135deg, rgba(129, 188, 255, 0.36), rgba(132, 105, 255, 0.28)),
-    rgba(255, 255, 255, 0.12);
-  border-color: rgba(157, 195, 255, 0.42);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 18px rgba(12, 24, 58, 0.18);
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.82);
+  box-shadow: none;
 }
 
 .bubble2-toggle-switch input:checked + .bubble2-toggle-slider::after {
   transform: translateX(20px);
+  background: #0b0b0b;
 }
 
 .bubble2-toggle-switch input:focus-visible + .bubble2-toggle-slider {
@@ -436,6 +432,38 @@ body.bubble2-page.is-canvasless {
 
 .bubble2-canvas.is-lens-firing::after {
   animation: bubble2-lens-bloom 3000ms ease-out both;
+}
+
+.bubble2-canvas.is-lens-expand-firing::before {
+  inset: -18%;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, white 74%, var(--bubble2-lens-accent) 26%) 0%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 78%, transparent) 16%,
+      color-mix(in srgb, var(--bubble2-lens-accent-secondary) 48%, transparent) 34%,
+      transparent 66%);
+  filter: blur(34px) saturate(1.22);
+  mix-blend-mode: screen;
+  transform: translate3d(0, 0, 0) scale(0.08);
+  animation: bubble2-lens-expand-blob 2000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.bubble2-canvas.is-lens-expand-firing::after {
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--bubble2-lens-accent-secondary) 28%, transparent) 0%,
+      transparent 42%),
+    radial-gradient(circle at 50% 50%,
+      transparent 0%,
+      transparent 27%,
+      color-mix(in srgb, white 22%, var(--bubble2-lens-accent) 24%) 38%,
+      transparent 60%);
+  filter: blur(18px);
+  mix-blend-mode: screen;
+  transform: scale(0.2);
+  animation: bubble2-lens-expand-haze 2000ms cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 
 .bubble2-canvas-banner {
@@ -547,6 +575,38 @@ body.bubble2-page.is-canvasless {
   }
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes bubble2-lens-expand-blob {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.08);
+  }
+  14% {
+    opacity: 0.9;
+  }
+  48% {
+    opacity: 0.78;
+    transform: translate3d(0, 0, 0) scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(2.45);
+  }
+}
+
+@keyframes bubble2-lens-expand-haze {
+  0% {
+    opacity: 0;
+    transform: scale(0.16);
+  }
+  24% {
+    opacity: 0.62;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
   }
 }
 
@@ -1399,10 +1459,15 @@ body.bubble2-page.is-canvasless {
     width: 100%;
     max-width: 420px;
     flex-basis: auto;
+    height: auto;
+    max-height: 38vh;
+    padding: 20px;
+    border-right: none;
+    border-radius: 12px;
   }
 
   .bubble2-sidebar-card {
-    max-height: 38vh;
+    max-height: none;
   }
 
   .bubble2-set-switcher {

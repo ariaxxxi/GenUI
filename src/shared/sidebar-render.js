@@ -1,3 +1,8 @@
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 export function createSidebarRender(ctx, refs) {
   let scenarioClickTimer = null;
 
@@ -174,6 +179,10 @@ export function createSidebarRender(ctx, refs) {
       ? ctx.stageSelectedMaskBlurForShape(scenario, scenario?.shape)
       : '';
     const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
+    const isNudgeStage = isNudgeStageId(stage?.id);
+    const nudgeDividerColor = ctx.stageNudgeDividerColorForShape
+      ? ctx.stageNudgeDividerColorForShape(scenario, scenario?.shape)
+      : '#ffffff';
     const isCardLike = renderShape === 'card' || renderShape === 'card-s';
     const hasCardMediaPadding = isCardLike || renderShape === 'image';
     const cardImagePadding = ctx.stageCardImagePaddingForShape ? ctx.stageCardImagePaddingForShape(scenario, scenario?.shape) : 24;
@@ -211,6 +220,11 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.stageShellHiddenToggle) {
       ctx.UI.stageShellHiddenToggle.checked = !!stage?.hideShell;
       ctx.UI.stageShellHiddenToggle.disabled = !stage;
+    }
+    if (ctx.UI.stageNudgeStyleSection) ctx.UI.stageNudgeStyleSection.classList.toggle('hidden', !isNudgeStage);
+    if (ctx.UI.stageNudgeDividerColor) {
+      ctx.UI.stageNudgeDividerColor.value = String(nudgeDividerColor || '#ffffff');
+      ctx.UI.stageNudgeDividerColor.disabled = !stage || !isNudgeStage;
     }
     if (ctx.UI.stageBlobTopCoreColor) {
       ctx.UI.stageBlobTopCoreColor.value = String(stageBlobTopCoreColor || '#90acff');
