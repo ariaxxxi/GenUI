@@ -466,6 +466,42 @@ body.bubble2-page.is-canvasless {
   animation: bubble2-lens-expand-haze 2000ms cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 
+.bubble2-canvas.is-lens-focus-firing::before {
+  inset: -12%;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%,
+      transparent 0 21%,
+      color-mix(in srgb, white 64%, var(--bubble2-lens-accent) 36%) 22%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 54%, transparent) 27%,
+      transparent 34%),
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, var(--bubble2-lens-accent-secondary) 18%, transparent) 0%,
+      transparent 48%);
+  filter: blur(12px) saturate(1.1);
+  mix-blend-mode: screen;
+  transform: scale(0.42);
+  animation:
+    bubble2-lens-focus-ring-scale 1800ms cubic-bezier(0.18, 0.82, 0.2, 1) both,
+    bubble2-lens-focus-ring-opacity 1800ms linear both;
+}
+
+.bubble2-canvas.is-lens-focus-firing::after {
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, white 34%, var(--bubble2-lens-accent-secondary) 22%) 0%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 22%, transparent) 18%,
+      transparent 42%);
+  filter: blur(24px);
+  mix-blend-mode: screen;
+  transform: scale(0.38);
+  animation:
+    bubble2-lens-focus-core-scale 1800ms cubic-bezier(0.18, 0.82, 0.2, 1) both,
+    bubble2-lens-focus-core-opacity 1800ms linear both;
+}
+
 .bubble2-canvas-banner {
   position: absolute;
   top: 20px;
@@ -607,6 +643,54 @@ body.bubble2-page.is-canvasless {
   100% {
     opacity: 0;
     transform: scale(1.9);
+  }
+}
+
+@keyframes bubble2-lens-focus-ring-scale {
+  0% {
+    transform: scale(0.42);
+  }
+  100% {
+    transform: scale(1.72);
+  }
+}
+
+@keyframes bubble2-lens-focus-ring-opacity {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.92;
+  }
+  56% {
+    opacity: 0.76;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes bubble2-lens-focus-core-scale {
+  0% {
+    transform: scale(0.38);
+  }
+  100% {
+    transform: scale(1.24);
+  }
+}
+
+@keyframes bubble2-lens-focus-core-opacity {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.64;
+  }
+  46% {
+    opacity: 0.38;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

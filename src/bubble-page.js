@@ -117,12 +117,14 @@ const BUBBLE_HOME_PROMPT_THINKING_LOOP_MS = 5000;
 const BUBBLE_HOME_PROMPT_TEXT_SWAP_MS = 140;
 const LENS_SHIMMER_DURATION_MS = 3000;
 const LENS_EXPAND_SHIMMER_DURATION_MS = 2000;
+const LENS_FOCUS_SHIMMER_DURATION_MS = 1800;
 const LENS_PUNCTURE_SCALE_DURATION_MS = 860;
 const LENS_PUNCTURE_FADE_DURATION_MS = 360;
 const LENS_PUNCTURE_POP_SCALE = 1.055;
 const LENS_PUNCTURE_END_SCALE = 0.5;
 const LENS_SET_ID = 'lens';
 const LENS_EXPAND_SET_ID = 'lens-expand';
+const LENS_FOCUS_SET_ID = 'lens-focus';
 const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
@@ -1036,6 +1038,13 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     slots: LENS_BUBBLES_CONFIG,
   }),
   Object.freeze({
+    id: LENS_FOCUS_SET_ID,
+    label: 'Lens - Focus',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
     id: 'agent',
     label: 'Agent',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
@@ -1092,11 +1101,27 @@ function createAgentOrbContent(id) {
 }
 
 function isLensBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
-  return setId === LENS_SET_ID || setId === LENS_EXPAND_SET_ID;
+  return setId === LENS_SET_ID || setId === LENS_EXPAND_SET_ID || setId === LENS_FOCUS_SET_ID;
 }
 
 function isLensExpandBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return setId === LENS_EXPAND_SET_ID;
+}
+
+function isLensFocusBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_FOCUS_SET_ID;
+}
+
+function lensShimmerModeForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (isLensExpandBubbleSet(setId)) return 'expand';
+  if (isLensFocusBubbleSet(setId)) return 'focus';
+  return 'slice';
+}
+
+function lensShimmerDurationForMode(mode = 'slice') {
+  if (mode === 'expand') return LENS_EXPAND_SHIMMER_DURATION_MS;
+  if (mode === 'focus') return LENS_FOCUS_SHIMMER_DURATION_MS;
+  return LENS_SHIMMER_DURATION_MS;
 }
 
 function createHomeOrbAgentContentForSet(agentId, setId = state.activeSetId) {
@@ -1881,12 +1906,13 @@ function startLensFeedback(content, now = performance.now(), options = {}) {
   const lensAccentSecondary = lensTheme.blobBottomCore
     || lensTheme.blobTopEdge
     || lensAccent;
-  const shimmerMode = options.mode === 'expand' ? 'expand' : 'slice';
+  const shimmerMode = ['expand', 'focus'].includes(options.mode) ? options.mode : 'slice';
   state.lensShimmerMode = shimmerMode;
-  state.lensShimmerUntil = now + (shimmerMode === 'expand' ? LENS_EXPAND_SHIMMER_DURATION_MS : LENS_SHIMMER_DURATION_MS);
+  state.lensShimmerUntil = now + lensShimmerDurationForMode(shimmerMode);
   if (refs.shell) {
     refs.shell.classList.remove('is-lens-firing');
     refs.shell.classList.remove('is-lens-expand-firing');
+    refs.shell.classList.remove('is-lens-focus-firing');
     if (lensAccent) refs.shell.style.setProperty('--bubble2-lens-accent', lensAccent);
     if (lensAccentSecondary) refs.shell.style.setProperty('--bubble2-lens-accent-secondary', lensAccentSecondary);
     void refs.shell.offsetWidth;
@@ -2407,6 +2433,7 @@ function resetStateForSetSwitch() {
   state.lensShimmerMode = 'slice';
   refs.shell?.classList.remove('is-lens-firing');
   refs.shell?.classList.remove('is-lens-expand-firing');
+  refs.shell?.classList.remove('is-lens-focus-firing');
   state.isPressed = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -2847,7 +2874,7 @@ function cycleBubbleHomeSetItem(step, setId = state.activeSetId) {
   if (isLensBubbleSet(setId)) {
     startLensFeedback(nextContent, performance.now(), {
       placement: 'above-orb',
-      mode: isLensExpandBubbleSet(setId) ? 'expand' : 'slice',
+      mode: lensShimmerModeForSet(setId),
     });
   } else {
     void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
@@ -3082,7 +3109,7 @@ function startBubbleSwap(scene, now) {
     ? Number.parseFloat(window.getComputedStyle(selectedNode).width)
     : NaN;
   if (isLensFire) {
-    startLensFeedback(promotedContent, now, { mode: isLensExpandBubbleSet(state.activeSetId) ? 'expand' : 'slice' });
+    startLensFeedback(promotedContent, now, { mode: lensShimmerModeForSet(state.activeSetId) });
   }
   state.swapTransition = {
     active: true,
@@ -3299,6 +3326,7 @@ function render() {
   const isLensFiring = isLensFireSwap(state.swapTransition);
   const isLensShimmerActive = isLensFiring || now < state.lensShimmerUntil;
   const isLensExpandShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'expand';
+  const isLensFocusShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'focus';
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
@@ -3309,6 +3337,7 @@ function render() {
 
   refs.shell?.classList.toggle('is-lens-firing', isLensShimmerActive);
   refs.shell?.classList.toggle('is-lens-expand-firing', isLensExpandShimmerActive);
+  refs.shell?.classList.toggle('is-lens-focus-firing', isLensFocusShimmerActive);
 
   if (refs.canvasBanner) {
     refs.canvasBanner.textContent = 'Set default agent';
