@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI × Design — 3 min</title>
+<style>
+/* ── Reset ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:        #000;
+  --text:      #fff;
+  --muted:     rgba(255,255,255,0.44);
+  --dim:       rgba(255,255,255,0.14);
+  --blue:      #0a84ff;
+  --blue-soft: rgba(10,132,255,0.16);
+  --warm:      #ff9f0a;
+  --warm-soft: rgba(255,159,10,0.14);
+  --ease:      cubic-bezier(0.4, 0, 0.2, 1);
+  --spring:    cubic-bezier(0.35, 0.23, 0.13, 0.98);
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+
+/* ── Deck ── */
+.deck { position: relative; width: 100%; height: 100%; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 72px 96px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 520ms var(--ease);
+  background: var(--bg);
+}
+
+.slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* staggered content reveal when slide goes active */
+.slide.active .reveal {
+  animation: up 640ms var(--spring) both;
+}
+.slide.active .reveal:nth-child(1) { animation-delay:  40ms; }
+.slide.active .reveal:nth-child(2) { animation-delay: 110ms; }
+.slide.active .reveal:nth-child(3) { animation-delay: 200ms; }
+.slide.active .reveal:nth-child(4) { animation-delay: 290ms; }
+
+@keyframes up {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Global type ── */
+.eyebrow {
+  font-family: -apple-system, "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 22px;
+}
+
+h1 {
+  font-family: -apple-system, "Helvetica Neue", sans-serif;
+  font-size: clamp(56px, 7.5vw, 104px);
+  font-weight: 700;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  color: var(--text);
+}
+
+h1 em {
+  font-style: normal;
+  color: var(--muted);
+}
+
+.sub {
+  margin-top: 32px;
+  font-family: -apple-system, "Helvetica Neue", sans-serif;
+  font-size: clamp(16px, 1.9vw, 22px);
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 38ch;
+}
+
+/* ── Nav ── */
+.nav {
+  position: fixed;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 9px;
+  z-index: 200;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--dim);
+  cursor: pointer;
+  transition: background 300ms, transform 300ms;
+  border: none;
+  outline: none;
+}
+
+.dot.on {
+  background: #fff;
+  transform: scale(1.5);
+}
+
+.counter {
+  position: fixed;
+  top: 34px;
+  right: 52px;
+  font-family: -apple-system, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.22);
+  z-index: 200;
+}
+
+.hint {
+  position: fixed;
+  bottom: 60px;
+  right: 52px;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.18);
+  z-index: 200;
+  transition: opacity 600ms;
+}
+
+/* ════════════════════════════════
+   SLIDE 1 — HOOK
+   ════════════════════════════════ */
+#s1 { justify-content: flex-end; padding-bottom: 108px; }
+
+.vs-row {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  margin-top: 52px;
+}
+
+.vs-col { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+
+.vs-label {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Figma static mock */
+.figma-row { display: flex; align-items: center; gap: 8px; }
+
+.f-screen {
+  width: 38px;
+  height: 54px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.03);
+}
+
+.f-arr { color: rgba(255,255,255,0.22); font-size: 14px; }
+
+/* GenUI morph preview */
+.morph-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.m-shape { background: #fff; transition: all 600ms var(--spring); }
+.m-dot   { width: 16px; height: 16px; border-radius: 50%; }
+.m-pill  { width: 72px;  height: 26px; border-radius: 13px; }
+.m-card  { width: 116px; height: 66px; border-radius: 16px; }
+
+.m-arr { color: rgba(255,255,255,0.2); font-size: 12px; }
+
+.vs-divider {
+  width: 1px;
+  height: 80px;
+  background: rgba(255,255,255,0.1);
+  align-self: center;
+}
+
+.vs-vs {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+}
+
+/* ════════════════════════════════
+   SLIDE 2 — SHIFT
+   ════════════════════════════════ */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 52px;
+  max-width: 760px;
+}
+
+.role-card {
+  padding: 28px 30px 32px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.role-card.new {
+  border-color: rgba(10,132,255,0.28);
+  background: rgba(10,132,255,0.06);
+}
+
+.rc-era {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.role-card.new .rc-era { color: rgba(10,132,255,0.7); }
+
+.rc-flow { display: flex; flex-direction: column; gap: 0; }
+
+.rc-node {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  font-family: -apple-system, sans-serif;
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  width: fit-content;
+}
+
+.role-card.new .rc-node.hi {
+  background: rgba(10,132,255,0.22);
+  color: rgba(100,180,255,0.95);
+}
+
+.rc-arrow {
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+  margin: 6px 0 6px 14px;
+}
+
+/* ════════════════════════════════
+   SLIDE 3 — TOOL
+   ════════════════════════════════ */
+#s3 { justify-content: center; }
+
+.states-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  margin-top: 56px;
+  flex-wrap: wrap;
+}
+
+.state-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.st-shape { background: #fff; }
+.st-dot   { width: 18px;  height: 18px;  border-radius: 50%; }
+.st-pill  { width: 96px;  height: 34px;  border-radius: 17px; }
+.st-card  { width: 180px; height: 108px; border-radius: 22px; }
+.st-full  { width: 240px; height: 158px; border-radius: 28px; }
+
+.st-lbl {
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.st-arr {
+  color: rgba(255,255,255,0.15);
+  font-size: 20px;
+  align-self: center;
+  margin-bottom: 18px;
+}
+
+.notes-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 40px;
+  max-width: 760px;
+}
+
+.note {
+  flex: 1;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+}
+
+.note-title {
+  font-family: -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 6px;
+}
+
+.note-body {
+  font-family: -apple-system, sans-serif;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ════════════════════════════════
+   SLIDE 4 — META-LOOP
+   ════════════════════════════════ */
+#s4 { justify-content: center; }
+
+.loop-wrap {
+  margin-top: 44px;
+  width: 100%;
+  max-width: 700px;
+}
+
+/* SVG path draw-on animation */
+.draw-path {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+}
+
+#s4.active .draw-path {
+  animation: draw 900ms var(--ease) forwards;
+}
+
+#s4.active .draw-1 { animation-delay: 350ms; }
+#s4.active .draw-2 { animation-delay: 560ms; }
+#s4.active .draw-3 { animation-delay: 770ms; }
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* node fade-in stagger */
+.svg-node {
+  opacity: 0;
+  transition: opacity 450ms var(--ease);
+}
+
+#s4.active .svg-node { opacity: 1; }
+#s4.active .n1 { transition-delay: 200ms; }
+#s4.active .n2 { transition-delay: 280ms; }
+#s4.active .n3 { transition-delay: 360ms; }
+#s4.active .n4 { transition-delay: 860ms; }
+
+/* ════════════════════════════════
+   SLIDE 5 — LANDING
+   ════════════════════════════════ */
+#s5 { align-items: center; text-align: center; padding: 72px; }
+#s5 h1 {
+  font-size: clamp(52px, 8vw, 110px);
+  max-width: 13ch;
+  margin: 0 auto;
+}
+#s5 .sub { text-align: center; margin: 32px auto 0; }
+.byline {
+  margin-top: 52px;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+}
+</style>
+</head>
+<body>
+
+<!-- Counter + hint -->
+<div class="counter"><span id="cur">1</span> / 5</div>
+<div class="hint" id="hint">Click or → to advance</div>
+
+<!-- Deck -->
+<div class="deck" id="deck">
+
+  <!-- ══ SLIDE 1: HOOK ══ -->
+  <div class="slide active" id="s1">
+    <div class="eyebrow reveal">Context</div>
+    <h1 class="reveal">Shape morphing<br><em>wasn't prototypable.</em></h1>
+    <div class="vs-row reveal">
+      <!-- Figma -->
+      <div class="vs-col">
+        <div class="figma-row">
+          <div class="f-screen"></div>
+          <span class="f-arr">→</span>
+          <div class="f-screen"></div>
+          <span class="f-arr">→</span>
+          <div class="f-screen"></div>
+        </div>
+        <div class="vs-label">Screen-to-screen</div>
+      </div>
+
+      <div class="vs-divider"></div>
+      <div class="vs-vs">vs</div>
+      <div class="vs-divider"></div>
+
+      <!-- GenUI -->
+      <div class="vs-col">
+        <div class="morph-row">
+          <div class="m-shape m-dot"></div>
+          <span class="m-arr">→</span>
+          <div class="m-shape m-pill"></div>
+          <span class="m-arr">→</span>
+          <div class="m-shape m-card"></div>
+        </div>
+        <div class="vs-label">State-to-state</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 2: SHIFT ══ -->
+  <div class="slide" id="s2">
+    <div class="eyebrow reveal">What changed</div>
+    <h1 class="reveal">Design, build, test.<br><em>One loop.</em></h1>
+    <div class="compare-grid reveal">
+      <div class="role-card">
+        <div class="rc-era">Before</div>
+        <div class="rc-flow">
+          <div class="rc-node">Design intent</div>
+          <div class="rc-arrow">↓ hand off</div>
+          <div class="rc-node">Engineering build</div>
+          <div class="rc-arrow">↓ hand off</div>
+          <div class="rc-node">Testing &amp; feedback</div>
+          <div class="rc-arrow" style="margin-top:10px; font-size:10px; letter-spacing:0.06em; color:rgba(255,255,255,0.18);">Three phases · Two handoffs · Translation loss</div>
+        </div>
+      </div>
+      <div class="role-card new">
+        <div class="rc-era">With AI</div>
+        <div class="rc-flow">
+          <div class="rc-node hi">Design intent</div>
+          <div class="rc-arrow">↕ same session</div>
+          <div class="rc-node hi">Working prototype</div>
+          <div class="rc-arrow">↕ same session</div>
+          <div class="rc-node hi">Direct iteration</div>
+          <div class="rc-arrow" style="margin-top:10px; font-size:10px; letter-spacing:0.06em; color:rgba(10,132,255,0.5);">One actor · One loop · Real behavior</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 3: TOOL ══ -->
+  <div class="slide" id="s3">
+    <div class="eyebrow reveal">How it works</div>
+    <h1 class="reveal">State,<br><em>not screens.</em></h1>
+    <div class="states-row reveal">
+      <div class="state-col">
+        <div class="st-shape st-dot"></div>
+        <div class="st-lbl">Idle</div>
+      </div>
+      <div class="st-arr">→</div>
+      <div class="state-col">
+        <div class="st-shape st-pill"></div>
+        <div class="st-lbl">Listening</div>
+      </div>
+      <div class="st-arr">→</div>
+      <div class="state-col">
+        <div class="st-shape st-card"></div>
+        <div class="st-lbl">Thinking</div>
+      </div>
+      <div class="st-arr">→</div>
+      <div class="state-col">
+        <div class="st-shape st-full"></div>
+        <div class="st-lbl">Responding</div>
+      </div>
+    </div>
+    <div class="notes-row reveal">
+      <div class="note">
+        <div class="note-title">Procedural transitions</div>
+        <div class="note-body">States change by condition, not by manually connecting screens. Scenarios are data, not wiring.</div>
+      </div>
+      <div class="note">
+        <div class="note-title">Shared easing</div>
+        <div class="note-body">One cubic-bezier across all shapes. Motion consistency is structural, not enforced by convention.</div>
+      </div>
+      <div class="note">
+        <div class="note-title">Implicit design system</div>
+        <div class="note-body">CSS custom properties carry the visual language. Consistency is a side effect of the architecture.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 4: META-LOOP ══ -->
+  <div class="slide" id="s4">
+    <div class="eyebrow reveal">Observation</div>
+    <h1 class="reveal" style="font-size: clamp(40px, 5.5vw, 76px); max-width: 22ch;">
+      Built with AI.<br><em>Used to design AI behavior.</em>
+    </h1>
+    <div class="loop-wrap reveal">
+      <!--
+        Triangle layout (viewBox = "0 -30 700 310"):
+          AI node      center (148, 58)   — top-left   blue
+          GenUI node   center (352, 242)  — bottom     white
+          AI Interface center (558, 58)   — top-right  warm
+      -->
+      <svg viewBox="0 -30 700 310" width="100%" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+        <defs>
+          <marker id="mBlue" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="rgba(10,132,255,0.75)"/>
+          </marker>
+          <marker id="mWhite" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="rgba(255,255,255,0.35)"/>
+          </marker>
+          <marker id="mWarm" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+            <path d="M0,0.5 L6,3.5 L0,6.5 Z" fill="rgba(255,159,10,0.75)"/>
+          </marker>
+        </defs>
+
+        <!-- ── Arrow 1: AI → GenUI  (built with) ── -->
+        <path class="draw-path draw-1"
+          d="M 175 88 C 185 148 245 198 252 212"
+          stroke="rgba(10,132,255,0.55)" stroke-width="1.5"
+          stroke-dasharray="6 5" fill="none"
+          marker-end="url(#mBlue)"/>
+        <text x="178" y="165"
+          fill="rgba(10,132,255,0.65)"
+          font-family="-apple-system,sans-serif" font-size="11"
+          letter-spacing="0.06em" class="svg-node n4">built with</text>
+
+        <!-- ── Arrow 2: GenUI → AI Interfaces  (designs for) ── -->
+        <path class="draw-path draw-2"
+          d="M 458 212 C 500 175 520 130 526 88"
+          stroke="rgba(255,255,255,0.22)" stroke-width="1.5"
+          stroke-dasharray="6 5" fill="none"
+          marker-end="url(#mWhite)"/>
+        <text x="498" y="165"
+          fill="rgba(255,255,255,0.32)"
+          font-family="-apple-system,sans-serif" font-size="11"
+          letter-spacing="0.06em" class="svg-node n4">designs for</text>
+
+        <!-- ── Arrow 3: AI Interfaces → AI  (models behavior of) ── -->
+        <path class="draw-path draw-3"
+          d="M 452 34 Q 352 -16 246 34"
+          stroke="rgba(255,159,10,0.55)" stroke-width="1.5"
+          stroke-dasharray="6 5" fill="none"
+          marker-end="url(#mWarm)"/>
+        <text x="352" y="-8"
+          fill="rgba(255,159,10,0.6)"
+          font-family="-apple-system,sans-serif" font-size="11"
+          letter-spacing="0.06em" text-anchor="middle"
+          class="svg-node n4">models behavior of</text>
+
+        <!-- ── Node: AI (top-left, blue) ── -->
+        <g class="svg-node n1">
+          <rect x="55" y="22" width="186" height="72" rx="18"
+            fill="rgba(10,132,255,0.1)"
+            stroke="rgba(10,132,255,0.45)" stroke-width="1.5"/>
+          <text x="148" y="52" text-anchor="middle"
+            fill="white" font-family="-apple-system,sans-serif"
+            font-size="17" font-weight="600">AI</text>
+          <text x="148" y="73" text-anchor="middle"
+            fill="rgba(255,255,255,0.4)" font-family="-apple-system,sans-serif"
+            font-size="11" letter-spacing="0.1em">collaborator</text>
+        </g>
+
+        <!-- ── Node: AI Interfaces (top-right, warm) ── -->
+        <g class="svg-node n2">
+          <rect x="458" y="22" width="198" height="72" rx="18"
+            fill="rgba(255,159,10,0.1)"
+            stroke="rgba(255,159,10,0.42)" stroke-width="1.5"/>
+          <text x="557" y="52" text-anchor="middle"
+            fill="white" font-family="-apple-system,sans-serif"
+            font-size="17" font-weight="600">AI Interfaces</text>
+          <text x="557" y="73" text-anchor="middle"
+            fill="rgba(255,255,255,0.4)" font-family="-apple-system,sans-serif"
+            font-size="11" letter-spacing="0.1em">thinking · listening · morphing</text>
+        </g>
+
+        <!-- ── Node: GenUI (bottom-center, white) ── -->
+        <g class="svg-node n3">
+          <rect x="238" y="210" width="228" height="72" rx="18"
+            fill="rgba(255,255,255,0.04)"
+            stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+          <text x="352" y="250" text-anchor="middle"
+            fill="white" font-family="-apple-system,sans-serif"
+            font-size="17" font-weight="600">GenUI</text>
+          <text x="352" y="270" text-anchor="middle"
+            fill="rgba(255,255,255,0.4)" font-family="-apple-system,sans-serif"
+            font-size="11" letter-spacing="0.1em">the design tool</text>
+        </g>
+
+        <!-- ── Center label ── -->
+        <text x="352" y="148" text-anchor="middle"
+          fill="rgba(255,255,255,0.16)"
+          font-family="-apple-system,sans-serif"
+          font-size="13" font-style="italic"
+          class="svg-node n4">collaborator and subject overlap</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 5: LANDING ══ -->
+  <div class="slide" id="s5">
+    <div class="eyebrow reveal" style="display:block; text-align:center;">Implication</div>
+    <h1 class="reveal">Designer<br>as toolmaker.</h1>
+    <div class="sub reveal">AI lowered the engineering cost of building custom tooling. A designer can now own the full stack — from design intent to working prototype — without an engineering dependency.</div>
+    <div class="byline reveal">GenUI — 2025</div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- Nav dots -->
+<div class="nav">
+  <button class="dot on"  data-i="0" aria-label="Slide 1"></button>
+  <button class="dot"     data-i="1" aria-label="Slide 2"></button>
+  <button class="dot"     data-i="2" aria-label="Slide 3"></button>
+  <button class="dot"     data-i="3" aria-label="Slide 4"></button>
+  <button class="dot"     data-i="4" aria-label="Slide 5"></button>
+</div>
+
+<script>
+const slides = [...document.querySelectorAll('.slide')];
+const dots   = [...document.querySelectorAll('.dot')];
+const cur    = document.getElementById('cur');
+const hint   = document.getElementById('hint');
+let idx = 0;
+
+function go(n) {
+  if (n === idx) return;
+  slides[idx].classList.remove('active');
+  dots[idx].classList.remove('on');
+  idx = Math.max(0, Math.min(n, slides.length - 1));
+  slides[idx].classList.add('active');
+  dots[idx].classList.add('on');
+  cur.textContent = idx + 1;
+  if (idx > 0) hint.style.opacity = '0';
+}
+
+document.getElementById('deck').addEventListener('click', () => go(idx + 1));
+
+dots.forEach(d => d.addEventListener('click', e => {
+  e.stopPropagation();
+  go(+d.dataset.i);
+}));
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); go(idx + 1); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key))        { e.preventDefault(); go(idx - 1); }
+});
+</script>
+</body>
+</html>

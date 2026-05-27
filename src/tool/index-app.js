@@ -103,8 +103,8 @@ function persistScenarios() {
   scenarioRevision = revision;
   void persistDurableJson(STORAGE_KEYS.scenarios, scenarioLibrary, { revision, label: 'scenarios' });
 }
-function persistCanvasSettings() {
-  const serializable = {
+function serializableCanvasSettings() {
+  return {
     ...canvasSettings,
     backgroundVideo: canvasSettings?.backgroundVideo
       ? {
@@ -113,6 +113,9 @@ function persistCanvasSettings() {
         }
       : null,
   };
+}
+function persistCanvasSettings() {
+  const serializable = serializableCanvasSettings();
   persistToStorage(STORAGE_KEYS.settings, serializable, 'canvas settings');
 }
 if (hadSessionVideoSettings) persistCanvasSettings();
@@ -1035,6 +1038,111 @@ async function exportStageSvg() {
   if (!ok) console.warn('[stage-capture] SVG export did not complete.');
 }
 
+function fileSafeTimestamp() {
+  return new Date().toISOString().replace(/[:.]/g, '-');
+}
+
+function downloadJsonFile(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+}
+
+function normalizeImportedStages(value) {
+  if (!Array.isArray(value)) return null;
+  const normalized = value.map((stage) => normalizeStage(stage, builtinStageById(stage?.id))).filter(Boolean);
+  return normalized.length ? normalized : null;
+}
+
+async function exportPrototypeSetup() {
+  const [backgroundImageRecord, backgroundVideoRecord] = await Promise.all([
+    readDurableJsonRecord(STORAGE_KEYS.backgroundImage),
+    readDurableJsonRecord(STORAGE_KEYS.backgroundVideo),
+  ]);
+  downloadJsonFile(`genui-prototype-setup-${fileSafeTimestamp()}.json`, {
+    app: 'genui-prototype',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    selectedScenarioId,
+    responseMode,
+    aiStageOverride,
+    aiOrbIcon: readStoredJson(STORAGE_KEYS.aiOrbIcon, null),
+    scenarios: scenarioLibrary,
+    stages: stageLibrary,
+    settings: serializableCanvasSettings(),
+    backgroundImage: backgroundImageRecord?.value || null,
+    backgroundVideo: backgroundVideoRecord?.value || null,
+  });
+}
+
+async function importPrototypeSetup(file) {
+  if (!file) return;
+  const text = await readFileText(file);
+  const payload = JSON.parse(text);
+  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.scenarios)) {
+    throw new Error('This is not a GenUI prototype setup file.');
+  }
+  const importedStages = normalizeImportedStages(payload.stages);
+  if (importedStages) {
+    localStorage.setItem(STORAGE_KEYS.stages, JSON.stringify(importedStages));
+    stageLibrary = loadStageLibrary();
+  }
+  if (payload.settings && typeof payload.settings === 'object') {
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(payload.settings));
+    canvasSettings = loadCanvasSettings();
+  }
+  if (!PAGE_MODE_OVERRIDE && [RESPONSE_MODE.MANUAL, RESPONSE_MODE.AI].includes(payload.responseMode)) {
+    responseMode = payload.responseMode;
+    persistResponseMode();
+  }
+  if (Object.values(AI_STAGE_OVERRIDE).includes(payload.aiStageOverride)) {
+    aiStageOverride = payload.aiStageOverride;
+    persistAiStageOverride();
+  }
+  if (typeof payload.aiOrbIcon === 'string') {
+    persistToStorage(STORAGE_KEYS.aiOrbIcon, payload.aiOrbIcon, 'AI orb icon');
+  }
+  setScenarioLibraryState(normalizeScenarioLibrarySet(payload.scenarios));
+  if (scenarioLibrary.some((scenario) => scenario.id === payload.selectedScenarioId)) {
+    selectedScenarioId = payload.selectedScenarioId;
+  }
+  persistScenarios();
+  if (payload.backgroundImage && typeof payload.backgroundImage === 'object' && payload.backgroundImage.src) {
+    await persistDurableJson(STORAGE_KEYS.backgroundImage, payload.backgroundImage, { label: 'background image' });
+  } else {
+    await deleteDurableJsonRecord(STORAGE_KEYS.backgroundImage, { label: 'background image' });
+  }
+  if (payload.backgroundVideo && typeof payload.backgroundVideo === 'object' && payload.backgroundVideo.src) {
+    await persistDurableJson(STORAGE_KEYS.backgroundVideo, payload.backgroundVideo, { label: 'background video' });
+  } else {
+    await deleteDurableJsonRecord(STORAGE_KEYS.backgroundVideo, { label: 'background video' });
+  }
+  renderScenarioUi();
+  applyResponseModeUi();
+  renderAiStageOverrideUi();
+  await hydrateDurableBackgroundMedia();
+  applyCanvasSettings();
+  applyStagePhoneBlur(selectedScenario()?.shape);
+  if (document.getElementById('stage')?.classList.contains('flow-active')) return;
+  if (responseMode === RESPONSE_MODE.AI) previewAiStageOverride();
+  else previewScenario(selectedScenario());
+}
+
 initManualBindings({
   document,
   UI,
@@ -1116,6 +1224,25 @@ initManualBindings({
   getPrototypeAiDebugState: () => ({ ...prototypeAiDebugState }),
 });
 
+UI.prototypeSetupExport?.addEventListener('click', () => {
+  void exportPrototypeSetup().catch((err) => console.warn('[prototype-setup] Export failed:', err));
+});
+UI.prototypeSetupImport?.addEventListener('click', (event) => { event.target.value = ''; });
+UI.prototypeSetupImport?.addEventListener('change', (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!window.confirm('Import this setup and replace the current prototype stages?')) {
+    event.target.value = '';
+    return;
+  }
+  void importPrototypeSetup(file)
+    .catch((err) => {
+      console.warn('[prototype-setup] Import failed:', err);
+      window.alert(err?.message || 'Import failed.');
+    })
+    .finally(() => { event.target.value = ''; });
+});
+
 document.addEventListener('keydown', (event) => {
   const action = getCaptureHotkeyAction(event);
   if (!action) return;
@@ -1133,6 +1260,8 @@ Object.assign(window, {
   selectListItem: manualDemo.selectListItem,
   copyStagePng,
   exportStageSvg,
+  exportPrototypeSetup,
+  importPrototypeSetup,
 });
 
 void hydrateDurableScenarios();

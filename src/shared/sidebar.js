@@ -40,6 +40,8 @@ export function buildUiRefs(documentRef = document) {
     stageAddKind: documentRef.getElementById('stage-add-kind'),
     stageDuplicate: documentRef.getElementById('stage-duplicate'),
     stageDelete: documentRef.getElementById('stage-delete'),
+    prototypeSetupExport: documentRef.getElementById('prototype-setup-export'),
+    prototypeSetupImport: documentRef.getElementById('prototype-setup-import'),
     stageRadiusInput: documentRef.getElementById('stage-radius-input'),
     stageRadiusVal: documentRef.getElementById('stage-radius-val'),
     stageWidthInput: documentRef.getElementById('stage-width-input'),

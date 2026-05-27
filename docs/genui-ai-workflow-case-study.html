@@ -100,6 +100,37 @@ h1 {
   line-height: 1.38;
 }
 .hero-copy strong { color: var(--ink); font-weight: 520; }
+.problem-stack {
+  max-width: 680px;
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.problem-card {
+  min-height: 138px;
+  padding: 18px;
+  background: rgba(255,255,255,.42);
+}
+.problem-label {
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.problem-card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.42;
+}
+.problem-card strong {
+  color: var(--ink);
+  font-weight: 560;
+}
 .meta {
   display: grid;
   gap: 1px;
@@ -737,7 +768,7 @@ footer {
   :root { --pad: 24px; }
   .hero, .tool-demo, .split, .outcome { grid-template-columns: 1fr; }
   .hero { min-height: auto; }
-  .loop, .matrix, .visual-board, .example-gallery, .motion-frames { grid-template-columns: 1fr; }
+  .loop, .matrix, .visual-board, .example-gallery, .motion-frames, .problem-stack { grid-template-columns: 1fr; }
   .panel { border-right: 0; border-bottom: 1px solid var(--line); }
   .nav-links { display: none; }
 }
@@ -766,9 +797,23 @@ footer {
 <main class="page">
   <header class="hero">
     <div>
-      <div class="eyebrow">AI as design material</div>
-      <h1>Designing with a prototype that could change itself</h1>
-      <p class="hero-copy">This case study looks at GenUI from the process side: how I used vibe coding with AI to turn a design question into a working prototype tool, then used that tool to make the final design decisions.</p>
+      <div class="eyebrow">A design tool for behavior</div>
+      <h1>Designing beyond the static screen</h1>
+      <p class="hero-copy">Designers are being asked to shape adaptive AI interfaces, but most design tools still make behavior feel like a handoff note. GenUI turns motion, state, content, and surface treatment into live controls, so designers can explore the system directly instead of waiting for implementation to reveal what works.</p>
+      <div class="problem-stack" aria-label="Designer problems this tool addresses">
+        <div class="problem-card">
+          <div class="problem-label">The gap</div>
+          <p><strong>Screens freeze the idea.</strong> They do not show how a card collapses, how an orb listens, or how a surface should react across states.</p>
+        </div>
+        <div class="problem-card">
+          <div class="problem-label">The friction</div>
+          <p><strong>Iteration becomes translation.</strong> Designers describe motion and edge cases, then wait for someone else to make them testable.</p>
+        </div>
+        <div class="problem-card">
+          <div class="problem-label">The shift</div>
+          <p><strong>GenUI makes behavior editable.</strong> The designer can tune the living interface through controls, critique, and immediate feedback.</p>
+        </div>
+      </div>
     </div>
     <aside class="meta" aria-label="Project metadata">
       <div class="meta-item"><div class="meta-label">Role</div><div class="meta-value">Designer, prototyper, system thinker</div></div>
@@ -793,12 +838,13 @@ footer {
   <section id="context">
     <div class="section-kicker">01 · Context</div>
     <div class="section-head">
-      <h2>The prototype was not only a deliverable. It became the design environment.</h2>
+      <h2>Design tools are excellent at composition. They are still limited at behavioral judgment.</h2>
     </div>
     <div class="body">
-      <p>The original challenge was to explore generative UI on a constrained glass canvas. Static mockups were too slow for the number of questions the work raised: What happens when a card becomes a pill? How should a bubble collapse? Where should an action row live? How much shimmer is too much?</p>
+      <p>When the interface is generative, the design problem is no longer just layout. Designers need to decide how a system responds: what changes, what stays stable, how a transition feels, how much visual treatment is enough, and where the next action should appear.</p>
+      <p>Traditional artifacts make those decisions hard to evaluate. Static mockups can show the intended composition, but they flatten the questions that matter most: What happens when a card becomes a pill? How should a bubble collapse? Where should an action row live? How much shimmer is too much?</p>
       <p>Instead of treating code as a handoff step, I used AI to build a tool around the design problem. The tool let me edit stages, components, shell visibility, action rows, background media, lens states, and motion behavior directly in the browser.</p>
-      <p><strong>The shift was subtle but important:</strong> I was no longer asking AI to make a final screen. I was asking AI to help me create a space where I could repeatedly judge, tune, and reframe the screen.</p>
+      <p><strong>The empowerment is practical:</strong> the designer gets a control surface for taste, constraints, and critique. AI accelerates the implementation loop, but the designer keeps authorship over the behavior.</p>
     </div>
     <p class="quote">The design process moved from "make me an option" to "make me an instrument I can play."</p>
 
