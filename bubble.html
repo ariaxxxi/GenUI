@@ -32,6 +32,24 @@
           </label>
         </div>
         <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Gesture Control</p>
+          <label class="bubble2-toggle-row" for="bubble2-hand-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Webcam Pinch</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-hand-toggle" type="checkbox" data-bubble2-hand-toggle aria-label="Use webcam hand pinch as pointer control"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+          <div class="bubble2-hand-status" data-bubble2-hand-state>off</div>
+          <div class="bubble2-hand-ratio-head">
+            <label class="bubble2-video-progress-label" for="bubble2-hand-ratio">Movement ratio</label>
+            <span class="bubble2-hand-ratio-value" data-bubble2-hand-ratio-state>1.00x</span>
+          </div>
+          <input id="bubble2-hand-ratio" class="bubble2-video-progress" type="range" min="25" max="200" step="5" value="100" data-bubble2-hand-ratio/>
+        </div>
+        <div class="bubble2-control-group">
           <p class="bubble2-sidebar-eyebrow">Canvas</p>
           <label class="bubble2-toggle-row" for="bubble2-canvasless-toggle">
             <span class="bubble2-toggle-copy">

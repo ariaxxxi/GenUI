@@ -155,6 +155,7 @@ function persistBackgroundVideoStorage(video) {
       paused: video?.paused === true,
       progress: Math.max(0, Math.min(1, Number(video?.progress ?? canvasSettings.backgroundVideoProgress) || 0)),
       alpha: Math.max(0, Math.min(1, Number(video?.alpha ?? canvasSettings.backgroundVideoAlpha ?? 0.8))),
+      y: Math.max(-500, Math.min(500, Number(video?.y ?? canvasSettings.backgroundVideoY) || 0)),
     }, { label: 'background video' });
   })();
 }
@@ -220,6 +221,7 @@ function applyCanvasSettings() {
         blurVideo.load();
       }
       blurVideo.style.opacity = String(Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoAlpha ?? 0.8))));
+      blurVideo.style.setProperty('--prototype-bg-video-y', `${Math.max(-500, Math.min(500, Number(canvasSettings.backgroundVideoY) || 0))}px`);
       const desiredTime = Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoProgress) || 0));
       const syncVideoTime = () => {
         if (!Number.isFinite(blurVideo.duration) || blurVideo.duration <= 0) return;
@@ -239,6 +241,7 @@ function applyCanvasSettings() {
       blurVideo.removeAttribute('src');
       blurVideo.load?.();
       blurVideo.style.opacity = '0';
+      blurVideo.style.setProperty('--prototype-bg-video-y', '0px');
     }
   }
   if (frame) {
@@ -274,6 +277,11 @@ function applyCanvasSettings() {
     UI.bgVideoAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundVideoAlpha ?? 0.8))) * 100));
     syncRangeProgress(UI.bgVideoAlpha);
     UI.bgVideoAlpha.disabled = !backgroundVideo;
+  }
+  if (UI.bgVideoY) {
+    UI.bgVideoY.value = String(Math.round(Math.max(-500, Math.min(500, Number(canvasSettings.backgroundVideoY) || 0))));
+    syncRangeProgress(UI.bgVideoY);
+    UI.bgVideoY.disabled = !backgroundVideo;
   }
   if (UI.floatToggle) UI.floatToggle.checked = !!canvasSettings.floatingEnabled;
   if (UI.alignBottomToggle) UI.alignBottomToggle.checked = !!canvasSettings.bottomAlign;
@@ -1012,6 +1020,7 @@ async function hydrateDurableBackgroundMedia() {
       backgroundVideoPaused: video.paused === true,
       backgroundVideoProgress: Math.max(0, Math.min(1, Number(video.progress) || 0)),
       backgroundVideoAlpha: Math.max(0, Math.min(1, Number(video.alpha ?? 0.8))),
+      backgroundVideoY: Math.max(-500, Math.min(500, Number(video.y) || 0)),
       backgroundVideo: {
         src: video.src,
         objectUrl: '',

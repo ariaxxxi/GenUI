@@ -1,4 +1,4 @@
-// import { initHandTracking } from './hand-tracking.js';
+import { initHandTracking } from './hand-tracking.js';
 import {
   applySelectedChromePreset,
   clearDirectionalSelectionTimers,
@@ -129,6 +129,7 @@ const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
 const BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY = 'genui.bubble.background-video.v1';
+const UI_CHROME_HOTKEY = 'h';
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -1379,6 +1380,7 @@ const state = {
   lensShimmerMode: 'slice',
   lastScene: null,
   renderQueued: false,
+  uiChromeHidden: false,
 };
 
 const bubbleHomeStreamState = {
@@ -1408,6 +1410,10 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   orbReset: document.querySelector('[data-bubble2-orb-reset]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
+  handToggle: document.querySelector('[data-bubble2-hand-toggle]'),
+  handState: document.querySelector('[data-bubble2-hand-state]'),
+  handRatio: document.querySelector('[data-bubble2-hand-ratio]'),
+  handRatioState: document.querySelector('[data-bubble2-hand-ratio-state]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
   canvasY: document.querySelector('[data-bubble2-canvas-y]'),
   canvasYState: document.querySelector('[data-bubble2-canvas-y-state]'),
@@ -1466,8 +1472,16 @@ async function init() {
   }
   bindEvents();
   render();
+  initHandTracking({
+    toggle: refs.handToggle,
+    status: refs.handState,
+    stage: refs.stage,
+    shell: refs.shell,
+    controlPanel: refs.controlPanel,
+    movementRatioInput: refs.handRatio,
+    movementRatioState: refs.handRatioState,
+  });
   scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
-  // initHandTracking();
 }
 
 function buildScene() {
@@ -2812,6 +2826,11 @@ function shouldStartBubblePress(event) {
 
 function handleKeyDown(event) {
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (shouldToggleUiChrome(event)) {
+    event.preventDefault();
+    toggleUiChrome();
+    return;
+  }
   if (event.key === 'ArrowRight') {
     event.preventDefault();
     cycleBubbleHomeSelection(1);
@@ -2821,6 +2840,21 @@ function handleKeyDown(event) {
     event.preventDefault();
     cycleBubbleHomeSelection(-1);
   }
+}
+
+function shouldToggleUiChrome(event) {
+  if (event.key?.toLowerCase() !== UI_CHROME_HOTKEY) return false;
+  if (state.uiChromeHidden) return true;
+  const target = event.target;
+  if (!(target instanceof Element)) return true;
+  const tagName = target.tagName.toLowerCase();
+  return !['input', 'textarea', 'select', 'button'].includes(tagName) && !target.closest('[contenteditable="true"]');
+}
+
+function toggleUiChrome() {
+  state.uiChromeHidden = !state.uiChromeHidden;
+  document.body.classList.toggle('is-bubble-ui-hidden', state.uiChromeHidden);
+  if (state.uiChromeHidden && document.activeElement instanceof HTMLElement) document.activeElement.blur();
 }
 
 function cycleBubbleHomeSelection(step) {

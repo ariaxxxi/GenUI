@@ -505,12 +505,13 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
 }
 .bg-blur-video{
   position:fixed;
-  left:0;
+  left:var(--panel-w, 360px);
   top:0;
-  width:100vw;
+  width:calc(100vw - (var(--panel-w, 360px) * 2));
   height:100vh;
-  object-fit:cover;
+  object-fit:contain;
   object-position:center;
+  transform:translateY(var(--prototype-bg-video-y, 0px));
   opacity:0;
   z-index:0;
   pointer-events:none;

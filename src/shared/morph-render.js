@@ -794,7 +794,7 @@ export function createMorphRender(ctx) {
     if (fromShape !== 'pill' || toShape !== 'pill') return false;
     const fromId = String(fromStageId || '').trim().toLowerCase();
     const toId = String(toStageId || '').trim().toLowerCase();
-    return (isNudgeStageId(fromId) && toId === 'pill') || (fromId === 'pill' && isNudgeStageId(toId));
+    return isNudgeStageId(fromId) !== isNudgeStageId(toId);
   }
 
   function isNudgeToCardStagePair(fromStageId = null, toShape = '') {

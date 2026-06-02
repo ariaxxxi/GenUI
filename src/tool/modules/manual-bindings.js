@@ -1304,6 +1304,7 @@ export function initManualBindings({
       backgroundVideoPaused: false,
       backgroundVideoProgress: 0,
       backgroundVideoAlpha: canvasSettings().backgroundVideoAlpha ?? 0.8,
+      backgroundVideoY: canvasSettings().backgroundVideoY ?? 0,
       backgroundVideo: {
         src: objectUrl,
         objectUrl,
@@ -1323,6 +1324,7 @@ export function initManualBindings({
       paused: canvasSettings().backgroundVideoPaused === true,
       progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
       alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
     });
   });
   UI.bgVideoReset?.addEventListener('click', async () => {
@@ -1333,6 +1335,7 @@ export function initManualBindings({
       backgroundVideoPaused: false,
       backgroundVideoProgress: 0,
       backgroundVideoAlpha: 0.8,
+      backgroundVideoY: 0,
       backgroundVideo: null,
     });
     persistCanvasSettings();
@@ -1349,6 +1352,7 @@ export function initManualBindings({
       paused: nextPaused,
       progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
       alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
     });
     applyCanvasSettings();
   });
@@ -1365,6 +1369,7 @@ export function initManualBindings({
       paused: canvasSettings().backgroundVideoPaused === true,
       progress: ratio,
       alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
     });
     applyCanvasSettings();
   });
@@ -1381,6 +1386,24 @@ export function initManualBindings({
       paused: canvasSettings().backgroundVideoPaused === true,
       progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
       alpha,
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
+    });
+    applyCanvasSettings();
+  });
+  UI.bgVideoY?.addEventListener('input', (e) => {
+    const y = clamp(Number(e.target.value) || 0, -500, 500);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'video',
+      backgroundVideoY: y,
+    });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y,
     });
     applyCanvasSettings();
   });

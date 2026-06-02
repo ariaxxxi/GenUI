@@ -70,6 +70,7 @@ export function loadCanvasSettings() {
     backgroundVideoPaused: stored?.backgroundVideoPaused === true,
     backgroundVideoProgress: Math.max(0, Math.min(1, Number(stored?.backgroundVideoProgress) || 0)),
     backgroundVideoAlpha: Math.max(0, Math.min(1, Number(stored?.backgroundVideoAlpha ?? 0.8))),
+    backgroundVideoY: Math.max(-500, Math.min(500, Number(stored?.backgroundVideoY) || 0)),
     floatingEnabled: stored?.floatingEnabled !== false,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',

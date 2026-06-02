@@ -18,6 +18,7 @@ export function buildUiRefs(documentRef = document) {
     bgVideoPlayToggle: documentRef.getElementById('bg-video-play-toggle'),
     bgVideoProgress: documentRef.getElementById('bg-video-progress'),
     bgVideoAlpha: documentRef.getElementById('bg-video-alpha'),
+    bgVideoY: documentRef.getElementById('bg-video-y'),
     floatToggle: documentRef.getElementById('float-toggle'),
     alignBottomToggle: documentRef.getElementById('align-bottom-toggle'),
     frameGlassesToggle: documentRef.getElementById('frame-glasses-toggle'),

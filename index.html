@@ -145,23 +145,6 @@
         <label class="sb-lbl" for="bg-image-alpha">Image alpha</label>
         <input id="bg-image-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="90"/>
       </div>
-      <div class="sb-row tight">
-        <label class="sb-lbl" for="bg-video-upload">Background video</label>
-        <div class="media-upload-row">
-          <label class="sb-mini-btn upload-btn" for="bg-video-upload">Upload<input id="bg-video-upload" type="file" accept="video/*"/></label>
-          <button id="bg-video-reset" class="sb-mini-btn" type="button">Reset</button>
-        </div>
-      </div>
-      <div id="bg-video-state" class="icon-mode-badge">empty</div>
-      <div id="bg-video-controls" class="sb-row tight hidden">
-        <div class="sb-btn-row">
-          <button id="bg-video-play-toggle" class="sb-mini-btn" type="button">Play</button>
-        </div>
-        <label class="sb-lbl" for="bg-video-progress">Video progress</label>
-        <input id="bg-video-progress" class="sb-input" type="range" min="0" max="1000" step="1" value="0"/>
-        <label class="sb-lbl" for="bg-video-alpha">Video alpha</label>
-        <input id="bg-video-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="80"/>
-      </div>
     </div>
   </div>
 
@@ -425,6 +408,34 @@
             <input id="prototype-thinking-copy-input" class="sb-input prototype-thinking-copy-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type custom thinking text"/>
             <button id="prototype-thinking-copy-fire" class="sb-mini-btn prototype-thinking-copy-fire" type="button" disabled>Fire</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-section" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Background Video</div>
+        <span class="sb-chevron">▾</span>
+      </button>
+      <div class="sb-section-body">
+        <div class="sb-row tight">
+          <label class="sb-lbl" for="bg-video-upload">Background video</label>
+          <div class="media-upload-row">
+            <label class="sb-mini-btn upload-btn" for="bg-video-upload">Upload<input id="bg-video-upload" type="file" accept="video/*"/></label>
+            <button id="bg-video-reset" class="sb-mini-btn" type="button">Reset</button>
+          </div>
+        </div>
+        <div id="bg-video-state" class="icon-mode-badge">empty</div>
+        <div id="bg-video-controls" class="sb-row tight hidden">
+          <div class="sb-btn-row">
+            <button id="bg-video-play-toggle" class="sb-mini-btn" type="button">Play</button>
+          </div>
+          <label class="sb-lbl" for="bg-video-progress">Video progress</label>
+          <input id="bg-video-progress" class="sb-input" type="range" min="0" max="1000" step="1" value="0"/>
+          <label class="sb-lbl" for="bg-video-alpha">Video alpha</label>
+          <input id="bg-video-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="80"/>
+          <label class="sb-lbl" for="bg-video-y">Video Y position</label>
+          <input id="bg-video-y" class="sb-input" type="range" min="-500" max="500" step="1" value="0"/>
         </div>
       </div>
     </div>
