@@ -125,6 +125,18 @@ const LENS_PUNCTURE_END_SCALE = 0.5;
 const LENS_SET_ID = 'lens';
 const LENS_EXPAND_SET_ID = 'lens-expand';
 const LENS_FOCUS_SET_ID = 'lens-focus';
+const ROW_SET_ID = 'row';
+const ROW_AGENT_SEQUENCE = Object.freeze(['stars', 'gemini', 'bixby', 'perplexity']);
+const ROW_SET_DEFAULT_AGENT_ID = 'stars';
+const ROW_CAROUSEL_MOVE_DURATION_MS = 760;
+const ROW_CAROUSEL_FADE_OUT_DELAY_MS = 760;
+const ROW_CAROUSEL_FADE_OUT_DURATION_MS = 320;
+const ROW_CAROUSEL_SPACING = 76;
+const ROW_CAROUSEL_STAGGER_MS = 70;
+const ROW_CAROUSEL_DURATION_MS = ROW_CAROUSEL_FADE_OUT_DELAY_MS
+  + ROW_CAROUSEL_FADE_OUT_DURATION_MS
+  + (ROW_CAROUSEL_STAGGER_MS * 2);
+const ROW_CAROUSEL_HANDOFF_MS = 140;
 const AGENT_SET_RETURN_HOLD_MS = 10000;
 const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
@@ -146,6 +158,8 @@ const PROMPT_SET_DEFAULT_AGENT_ID = 'chatgpt';
 const BUBBLE_HOME_PROMPT_THINKING_TEXT = 'Thinking';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CLAUDE_AGENT_ASSET = 'assets/agents/Claude-ai-icon.png';
+const PERPLEXITY_AGENT_ASSET = 'assets/agents/perplexity.png';
+const STARS_AGENT_ASSET = 'assets/agents/stars.png';
 const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
 const GREEN_AGENT_ASSET = 'assets/agents/green.png';
 const ORANGE_AGENT_ASSET = 'assets/agents/orange.png';
@@ -158,6 +172,18 @@ const CLAUDE_AGENT_THEME = Object.freeze({
   blobTopEdge: 'rgb(226 142 92)',
   blobBottomCore: 'rgb(255 230 208)',
   blobBottomEdge: 'rgb(187 110 72)',
+});
+const PERPLEXITY_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(180 255 246)',
+  blobTopEdge: 'rgb(47 173 164)',
+  blobBottomCore: 'rgb(230 255 252)',
+  blobBottomEdge: 'rgb(21 116 122)',
+});
+const STARS_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(116 184 255)',
+  blobTopEdge: 'rgb(56 124 255)',
+  blobBottomCore: 'rgb(206 173 255)',
+  blobBottomEdge: 'rgb(126 92 234)',
 });
 const CHATGPT_AGENT_THEME = Object.freeze({
   blobTopCore: 'rgb(255 255 255)',
@@ -445,6 +471,8 @@ function resetBubbleHomeOrbCenter(root = refs.orb) {
 
 function syncBubbleHomeOrbVisualStateClasses(visual, content = state.homeOrbContent) {
   if (!visual || !content) return;
+  visual.classList.toggle('is-promoted-home-claude', content.iconId === 'claude');
+  visual.classList.toggle('is-promoted-home-perplexity', content.iconId === 'perplexity');
   visual.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
   const promotedImageSize = Number(content.homePromotedImageSize);
   const hasPromotedImageSize = Number.isFinite(promotedImageSize) && promotedImageSize > 0;
@@ -818,6 +846,23 @@ const LENS_BUBBLES_CONFIG = PROMPT_BUBBLES_CONFIG.map((bubble) => {
   };
 });
 
+const ROW_AGENT_OPTIONS = Object.freeze({
+  stars: Object.freeze({
+    id: 'stars',
+    label: 'Stars',
+    src: STARS_AGENT_ASSET,
+    theme: STARS_AGENT_THEME,
+  }),
+  gemini: getAiOrbIconOption('gemini'),
+  bixby: getAiOrbIconOption('bixby'),
+  perplexity: Object.freeze({
+    id: 'perplexity',
+    label: 'Perplexity',
+    src: PERPLEXITY_AGENT_ASSET,
+    theme: PERPLEXITY_AGENT_THEME,
+  }),
+});
+
 function getAppSetSlotLayout(slotId) {
   const slot = APP_BUBBLES_CONFIG.find((bubble) => bubble.id === slotId);
   if (!slot) {
@@ -1046,6 +1091,13 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     slots: LENS_BUBBLES_CONFIG,
   }),
   Object.freeze({
+    id: ROW_SET_ID,
+    label: 'Row',
+    defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: ROW_SET_DEFAULT_AGENT_ID,
+    slots: [],
+  }),
+  Object.freeze({
     id: 'agent',
     label: 'Agent',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
@@ -1101,8 +1153,37 @@ function createAgentOrbContent(id) {
   };
 }
 
+function getRowAgentOption(id) {
+  const key = ROW_AGENT_SEQUENCE.includes(id) ? id : ROW_SET_DEFAULT_AGENT_ID;
+  return ROW_AGENT_OPTIONS[key] || ROW_AGENT_OPTIONS[ROW_SET_DEFAULT_AGENT_ID];
+}
+
+function createRowAgentOrbContent(id) {
+  const option = getRowAgentOption(id);
+  return {
+    kind: 'agent-orb',
+    contentId: `row-agent:${option.id}`,
+    sourceSlotId: null,
+    label: option.label,
+    iconId: option.id,
+    img: option.src,
+    alt: `${option.label} orb icon`,
+    fill: false,
+    imageScale: 0.72,
+    fieldImageScale: 0.96,
+    theme: option.theme,
+    haloColor: fieldHaloColorForAgent(option.id, option.theme),
+    orbPromotionEnabled: false,
+    childActions: [],
+  };
+}
+
 function isLensBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return setId === LENS_SET_ID || setId === LENS_EXPAND_SET_ID || setId === LENS_FOCUS_SET_ID;
+}
+
+function isRowBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === ROW_SET_ID;
 }
 
 function isLensExpandBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
@@ -1126,6 +1207,7 @@ function lensShimmerDurationForMode(mode = 'slice') {
 }
 
 function createHomeOrbAgentContentForSet(agentId, setId = state.activeSetId) {
+  if (isRowBubbleSet(setId)) return createRowAgentOrbContent(agentId);
   const content = createAgentOrbContent(agentId);
   if (!isLensBubbleSet(setId) || agentId !== PROMPT_SET_DEFAULT_AGENT_ID) return content;
   return {
@@ -1373,6 +1455,8 @@ const state = {
   panSnapPending: false,
   pendingDemotedSlotSwap: null,
   promotedHandoffGhost: null,
+  rowTransition: null,
+  rowHandoffUntil: 0,
   agentSetReturnTimer: null,
   agentSetReturnTriggered: false,
   agentSetReturnPhase: '',
@@ -1441,6 +1525,8 @@ const refs = {
   orbStream: null,
   orbStreamIcon: null,
   orbStreamText: null,
+  rowLayer: null,
+  rowAgentNodes: new Map(),
   swapLayer: null,
   bubbleNodes: new Map(),
   childNodes: new Map(),
@@ -1494,6 +1580,8 @@ function buildScene() {
   refs.orbStream = null;
   refs.orbStreamIcon = null;
   refs.orbStreamText = null;
+  refs.rowLayer = null;
+  refs.rowAgentNodes.clear();
   refs.swapLayer = null;
   syncedChildSelectionParentId = null;
   syncedChildSelectionId = null;
@@ -1519,6 +1607,10 @@ function buildScene() {
   refs.orbStreamIcon = refs.orb.querySelector('[data-thinking-orb-stream-icon]');
   refs.orbStreamText = refs.orb.querySelector('.g-thinking-orb-stream-text');
   fragment.appendChild(refs.orb);
+  if (isRowBubbleSet(state.activeSetId)) {
+    refs.rowLayer = createRowCarouselLayer();
+    fragment.appendChild(refs.rowLayer);
+  }
   refs.swapLayer = document.createElement('div');
   refs.swapLayer.className = 'bubble2-swap-layer';
   refs.panLayer.appendChild(fragment);
@@ -1830,6 +1922,27 @@ function createOrbNode() {
   syncBubbleHomeOrbVisual(button, { animate: false });
 
   return button;
+}
+
+function createRowCarouselLayer() {
+  const layer = document.createElement('div');
+  layer.className = 'bubble2-row-carousel';
+  layer.setAttribute('aria-hidden', 'true');
+  ROW_AGENT_SEQUENCE.forEach((agentId) => {
+    const option = getRowAgentOption(agentId);
+    const item = document.createElement('div');
+    item.className = `bubble2-row-agent${option.id === 'perplexity' ? ' is-perplexity' : ''}`;
+    item.dataset.rowAgentId = option.id;
+    const image = document.createElement('img');
+    image.className = 'bubble2-row-agent-image';
+    image.src = option.src;
+    image.alt = `${option.label} orb icon`;
+    image.draggable = false;
+    item.appendChild(image);
+    layer.appendChild(item);
+    refs.rowAgentNodes.set(option.id, { root: item, image });
+  });
+  return layer;
 }
 
 function removeBubbleHomeStreamCursor() {
@@ -2467,6 +2580,8 @@ function resetStateForSetSwitch() {
   state.swapResetPending = false;
   state.panSnapPending = false;
   state.pendingDemotedSlotSwap = null;
+  state.rowTransition = null;
+  state.rowHandoffUntil = 0;
   clearAgentSetReturnInteraction();
   state.lastScene = null;
   previousHoveredId = null;
@@ -2817,6 +2932,7 @@ function handleBackgroundVideoXInput(event) {
 }
 
 function shouldStartBubblePress(event) {
+  if (isRowBubbleSet(state.activeSetId)) return false;
   const target = event.target instanceof Element ? event.target : null;
   if (!target) return false;
   if (refs.controlPanel?.contains(target)) return false;
@@ -2858,11 +2974,39 @@ function toggleUiChrome() {
 }
 
 function cycleBubbleHomeSelection(step) {
+  if (isRowBubbleSet(state.activeSetId)) {
+    cycleRowAgent(step);
+    return;
+  }
   if (isAgentStyleBubbleSet(state.activeSetId) || isLensBubbleSet(state.activeSetId)) {
     cycleBubbleHomeSetItem(step, state.activeSetId);
     return;
   }
   cycleBubbleHomeAgent(step);
+}
+
+function cycleRowAgent(step) {
+  if (!refs.orb || !step || state.rowTransition?.active || state.swapTransition?.active) return;
+  stopPromptHomeThinking();
+  const currentIndex = ROW_AGENT_SEQUENCE.indexOf(state.orbAgentId);
+  const fromIndex = currentIndex >= 0 ? currentIndex : ROW_AGENT_SEQUENCE.indexOf(ROW_SET_DEFAULT_AGENT_ID);
+  const direction = step > 0 ? 1 : -1;
+  const toIndex = (fromIndex + direction + ROW_AGENT_SEQUENCE.length) % ROW_AGENT_SEQUENCE.length;
+  const nextId = ROW_AGENT_SEQUENCE[toIndex];
+  if (!nextId || nextId === state.orbAgentId) return;
+  const now = performance.now();
+  state.rowTransition = {
+    active: true,
+    direction,
+    fromIndex,
+    toIndex,
+    nextId,
+    startedAt: now,
+    durationMs: ROW_CAROUSEL_DURATION_MS,
+  };
+  playSimEarcon('button');
+  scheduleMotionPhaseRender(now + ROW_CAROUSEL_DURATION_MS);
+  scheduleRender();
 }
 
 function cycleBubbleHomeAgent(step) {
@@ -3335,6 +3479,144 @@ function computeDemotedSwapMotion(transition, now) {
   };
 }
 
+function isRowTransitionRunning(now = performance.now()) {
+  const transition = state.rowTransition;
+  if (!transition?.active) return false;
+  if (now < transition.startedAt + transition.durationMs) return true;
+  commitRowTransition(transition);
+  return false;
+}
+
+function commitRowTransition(transition) {
+  const nextId = transition?.nextId || rowSequenceIdAt(transition?.toIndex ?? 0);
+  state.orbAgentId = nextId;
+  state.homeOrbContent = createHomeOrbAgentContentForSet(nextId, ROW_SET_ID);
+  state.rowTransition = null;
+  state.rowHandoffUntil = performance.now() + ROW_CAROUSEL_HANDOFF_MS;
+  syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+}
+
+function rowSequenceIdAt(index) {
+  const length = ROW_AGENT_SEQUENCE.length;
+  return ROW_AGENT_SEQUENCE[(index + length) % length];
+}
+
+function rowAgentDepthForCenterX(centerX) {
+  const distance = clamp(Math.abs(centerX) / ROW_CAROUSEL_SPACING, 0, 2);
+  if (distance <= 1) {
+    return {
+      opacity: interpolate(1, 0.8, distance),
+      blur: interpolate(0, 1, distance),
+    };
+  }
+  const farProgress = distance - 1;
+  return {
+    opacity: interpolate(0.8, 0.6, farProgress),
+    blur: interpolate(1, 6, farProgress),
+  };
+}
+
+function rowStaggerRank(slotIndex, direction, phase) {
+  if (slotIndex === 0) return 0;
+  const forwardDistance = direction > 0 ? slotIndex : -slotIndex;
+  if (forwardDistance > 0) return Math.max(0, forwardDistance - 1);
+  return 2;
+}
+
+function rowFadeOutStaggerRank(slotIndex, direction, visibleSlotIndexes) {
+  const finalSlotIndex = slotIndex - direction;
+  const finalRightToLeft = visibleSlotIndexes
+    .filter((entry) => entry !== direction)
+    .map((entry) => entry - direction)
+    .sort((a, b) => b - a);
+  return Math.max(0, finalRightToLeft.indexOf(finalSlotIndex));
+}
+
+function syncRowCarousel(now = performance.now()) {
+  if (!refs.rowLayer) return;
+  if (state.homeOrbVisible === false) {
+    refs.rowLayer.classList.remove('is-active');
+    refs.rowAgentNodes.forEach((node) => {
+      node.root.style.opacity = '0';
+      node.root.style.zIndex = '20';
+      node.root.style.transform = 'translate3d(-50%, -50%, 0) scale(0.72)';
+      if (node.image) node.image.style.filter = 'blur(6px)';
+    });
+    return;
+  }
+  const transition = state.rowTransition;
+  const handoffProgress = clamp(
+    (state.rowHandoffUntil - now) / ROW_CAROUSEL_HANDOFF_MS,
+    0,
+    1,
+  );
+  const isHandoffActive = handoffProgress > 0;
+  const isActive = Boolean(transition?.active);
+  refs.rowLayer.classList.toggle('is-active', isActive || isHandoffActive);
+  if (!isActive) {
+    const activeId = ROW_AGENT_SEQUENCE.includes(state.orbAgentId) ? state.orbAgentId : ROW_SET_DEFAULT_AGENT_ID;
+    refs.rowAgentNodes.forEach((node, agentId) => {
+      const isCurrent = agentId === activeId;
+      node.root.style.opacity = isCurrent && isHandoffActive ? String(easeOutQuart(handoffProgress)) : '0';
+      node.root.style.zIndex = isCurrent ? '40' : '20';
+      node.root.style.transform = isCurrent
+        ? 'translate3d(-50%, -50%, 0) scale(1)'
+        : 'translate3d(-50%, -50%, 0) scale(0.72)';
+      if (node.image) node.image.style.filter = isCurrent ? 'blur(0px)' : 'blur(6px)';
+    });
+    return;
+  }
+
+  const elapsed = now - transition.startedAt;
+  const moveLinearProgress = clamp(elapsed / ROW_CAROUSEL_MOVE_DURATION_MS, 0, 1);
+  const moveProgress = easeSmoothConnect(clamp((moveLinearProgress - 0.12) / 0.66, 0, 1));
+  const shiftX = -transition.direction * ROW_CAROUSEL_SPACING * moveProgress;
+  const slotIndexes = transition.direction > 0
+    ? [-1, 0, 1, 2]
+    : [-2, -1, 0, 1];
+  const visibleIds = new Set();
+
+  slotIndexes.forEach((slotIndex) => {
+    const agentId = rowSequenceIdAt(transition.fromIndex + slotIndex);
+    visibleIds.add(agentId);
+    const node = refs.rowAgentNodes.get(agentId);
+    if (!node) return;
+    const centerX = (slotIndex * ROW_CAROUSEL_SPACING) + shiftX;
+    const centerWeight = 1 - clamp(Math.abs(centerX) / ROW_CAROUSEL_SPACING, 0, 1);
+    const scale = interpolate(0.72, 1, easeOutQuart(centerWeight));
+    const isDestination = agentId === rowSequenceIdAt(transition.toIndex);
+    const isOrigin = agentId === rowSequenceIdAt(transition.fromIndex);
+    const depth = rowAgentDepthForCenterX(centerX);
+    const fadeInDelay = rowStaggerRank(slotIndex, transition.direction, 'in') * ROW_CAROUSEL_STAGGER_MS;
+    const fadeOutDelay = rowFadeOutStaggerRank(slotIndex, transition.direction, slotIndexes) * ROW_CAROUSEL_STAGGER_MS;
+    const revealOpacity = isOrigin
+      ? 1
+      : easeInOutCubic(clamp((elapsed - fadeInDelay) / (ROW_CAROUSEL_MOVE_DURATION_MS * 0.68), 0, 1));
+    const hideOpacity = isDestination
+      ? 1
+      : 1 - easeInOutCubic(clamp(
+        (elapsed - ROW_CAROUSEL_FADE_OUT_DELAY_MS - fadeOutDelay) / ROW_CAROUSEL_FADE_OUT_DURATION_MS,
+        0,
+        1,
+      ));
+    const sideOpacity = Math.min(revealOpacity, hideOpacity);
+    const opacity = isDestination
+      ? revealOpacity
+      : (isOrigin ? hideOpacity : sideOpacity);
+    node.root.style.opacity = String(clamp(opacity * depth.opacity, 0, 1));
+    node.root.style.zIndex = String(20 + Math.round(centerWeight * 20));
+    node.root.style.transform = `translate3d(calc(-50% + ${format(centerX)}px), -50%, 0) scale(${format(scale)})`;
+    if (node.image) node.image.style.filter = `blur(${format(depth.blur)}px)`;
+  });
+
+  refs.rowAgentNodes.forEach((node, agentId) => {
+    if (visibleIds.has(agentId)) return;
+    node.root.style.opacity = '0';
+    node.root.style.transform = 'translate3d(-50%, -50%, 0) scale(0.72)';
+    if (node.image) node.image.style.filter = 'blur(6px)';
+  });
+}
+
 function render() {
   const now = performance.now();
   const swapShouldCommit = Boolean(
@@ -3361,6 +3643,8 @@ function render() {
   const isLensShimmerActive = isLensFiring || now < state.lensShimmerUntil;
   const isLensExpandShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'expand';
   const isLensFocusShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'focus';
+  const isRowTransitionActive = isRowTransitionRunning(now);
+  const isRowHandoffActive = now < state.rowHandoffUntil;
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
@@ -3372,6 +3656,7 @@ function render() {
   refs.shell?.classList.toggle('is-lens-firing', isLensShimmerActive);
   refs.shell?.classList.toggle('is-lens-expand-firing', isLensExpandShimmerActive);
   refs.shell?.classList.toggle('is-lens-focus-firing', isLensFocusShimmerActive);
+  refs.shell?.classList.toggle('is-row-set', isRowBubbleSet(state.activeSetId));
 
   if (refs.canvasBanner) {
     refs.canvasBanner.textContent = 'Set default agent';
@@ -3679,6 +3964,8 @@ function render() {
     refs.orb.classList.toggle('is-prompt-thinking-home-orb', promptThinkingActive);
     refs.orb.classList.toggle('is-thinking-home-orb', thinkingHomeOrbActive);
     refs.orb.classList.toggle('is-collapsed-stream', collapsedThinkingStream);
+    refs.orb.classList.toggle('is-row-home-orb', isRowBubbleSet(state.activeSetId));
+    refs.orb.classList.toggle('is-row-transitioning', isRowBubbleSet(state.activeSetId) && isRowTransitionActive);
     refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms, 0ms' : '';
     refs.orb.style.transform = demotedSwapMotion
       ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0) scale(${format(orbVisibleScale)})`
@@ -3716,10 +4003,11 @@ function render() {
     applyBubbleHomeOrbShellChrome(refs.orbVisual, currentBubbleHomeOrbTheme());
   }
 
+  syncRowCarousel(now);
   syncSwapLayer(now);
   state.lastScene = scene;
 
-  if (state.swapTransition?.active) {
+  if (state.swapTransition?.active || state.rowTransition?.active || isRowHandoffActive) {
     scheduleRender();
   }
   if (state.panSnapPending) {
