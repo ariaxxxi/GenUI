@@ -142,6 +142,7 @@ const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
 const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
 const BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY = 'genui.bubble.background-video.v1';
 const UI_CHROME_HOTKEY = 'h';
+const HOME_ORB_HOTKEY = 'd';
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -2801,6 +2802,10 @@ function handleCanvasYInput(event) {
 }
 
 function handleHomeOrbToggleClick() {
+  toggleHomeOrbVisibility();
+}
+
+function toggleHomeOrbVisibility() {
   state.homeOrbVisible = !state.homeOrbVisible;
   syncHomeOrbToggleUi();
   scheduleRender();
@@ -2963,6 +2968,11 @@ function handleKeyDown(event) {
     toggleUiChrome();
     return;
   }
+  if (shouldToggleHomeOrb(event)) {
+    event.preventDefault();
+    toggleHomeOrbVisibility();
+    return;
+  }
   if (event.key === 'ArrowRight') {
     event.preventDefault();
     cycleBubbleHomeSelection(1);
@@ -2977,10 +2987,19 @@ function handleKeyDown(event) {
 function shouldToggleUiChrome(event) {
   if (event.key?.toLowerCase() !== UI_CHROME_HOTKEY) return false;
   if (state.uiChromeHidden) return true;
+  return !isEditableHotkeyTarget(event);
+}
+
+function shouldToggleHomeOrb(event) {
+  if (event.key?.toLowerCase() !== HOME_ORB_HOTKEY) return false;
+  return !isEditableHotkeyTarget(event);
+}
+
+function isEditableHotkeyTarget(event) {
   const target = event.target;
-  if (!(target instanceof Element)) return true;
+  if (!(target instanceof Element)) return false;
   const tagName = target.tagName.toLowerCase();
-  return !['input', 'textarea', 'select', 'button'].includes(tagName) && !target.closest('[contenteditable="true"]');
+  return ['input', 'textarea', 'select', 'button'].includes(tagName) || Boolean(target.closest('[contenteditable="true"]'));
 }
 
 function toggleUiChrome() {
