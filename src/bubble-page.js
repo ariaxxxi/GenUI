@@ -127,7 +127,9 @@ const LENS_EXPAND_SET_ID = 'lens-expand';
 const LENS_FOCUS_SET_ID = 'lens-focus';
 const ROW_SET_ID = 'row';
 const ROW_AGENT_SEQUENCE = Object.freeze(['stars', 'gemini', 'bixby', 'perplexity']);
+const ROW_AGENT_SEQUENCE_WITHOUT_STARS = Object.freeze(['gemini', 'bixby', 'perplexity']);
 const ROW_SET_DEFAULT_AGENT_ID = 'stars';
+const ROW_SET_DEFAULT_AGENT_ID_WITHOUT_STARS = 'gemini';
 const ROW_CAROUSEL_MOVE_DURATION_MS = 760;
 const ROW_CAROUSEL_FADE_OUT_DELAY_MS = 760;
 const ROW_CAROUSEL_FADE_OUT_DURATION_MS = 320;
@@ -143,6 +145,7 @@ const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
 const BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY = 'genui.bubble.background-video.v1';
 const UI_CHROME_HOTKEY = 'h';
 const HOME_ORB_HOTKEY = 'd';
+const BACKGROUND_VIDEO_HOTKEY = 'p';
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -1155,8 +1158,19 @@ function createAgentOrbContent(id) {
 }
 
 function getRowAgentOption(id) {
-  const key = ROW_AGENT_SEQUENCE.includes(id) ? id : ROW_SET_DEFAULT_AGENT_ID;
+  const key = Object.prototype.hasOwnProperty.call(ROW_AGENT_OPTIONS, id)
+    ? id
+    : getDefaultHomeAgentIdForSet(ROW_SET_ID);
   return ROW_AGENT_OPTIONS[key] || ROW_AGENT_OPTIONS[ROW_SET_DEFAULT_AGENT_ID];
+}
+
+function getActiveRowAgentSequence() {
+  return state.rowStarsHidden ? ROW_AGENT_SEQUENCE_WITHOUT_STARS : ROW_AGENT_SEQUENCE;
+}
+
+function getSafeRowAgentId(id = state.orbAgentId) {
+  const sequence = getActiveRowAgentSequence();
+  return sequence.includes(id) ? id : sequence[0];
 }
 
 function createRowAgentOrbContent(id) {
@@ -1344,6 +1358,7 @@ function getBubbleSetDefinition(setId = DEFAULT_BUBBLE_SET_ID) {
 }
 
 function getDefaultHomeAgentIdForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (isRowBubbleSet(setId) && state?.rowStarsHidden) return ROW_SET_DEFAULT_AGENT_ID_WITHOUT_STARS;
   return getBubbleSetDefinition(setId)?.defaultHomeAgentId || BUBBLE_HOME_DEFAULT_AGENT_ID;
 }
 
@@ -1451,6 +1466,7 @@ const state = {
   promptHomeThinking: false,
   promptHomeThinkingAnimating: false,
   promptHomeThinkingTimer: null,
+  rowStarsHidden: false,
   slotContentBySetId: createInitialSlotContentMaps(),
   swapTransition: null,
   swapResetPending: false,
@@ -1494,6 +1510,8 @@ const refs = {
   shell: document.querySelector('[data-bubble2-shell]'),
   controlPanel: document.querySelector('[data-bubble2-control-panel]'),
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
+  rowSettings: document.querySelector('[data-bubble2-row-settings]'),
+  rowHideStarsToggle: document.querySelector('[data-bubble2-row-hide-stars-toggle]'),
   orbReset: document.querySelector('[data-bubble2-orb-reset]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   handToggle: document.querySelector('[data-bubble2-hand-toggle]'),
@@ -1543,6 +1561,7 @@ async function init() {
 
   await hydrateStoredBackgroundMedia();
   syncSetSwitcherUi();
+  syncRowSettingsUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
   syncCanvasPositionUi();
@@ -2345,6 +2364,11 @@ function syncSetSwitcherUi() {
   );
 }
 
+function syncRowSettingsUi() {
+  if (refs.rowSettings) refs.rowSettings.hidden = !isRowBubbleSet(state.activeSetId);
+  if (refs.rowHideStarsToggle) refs.rowHideStarsToggle.checked = state.rowStarsHidden;
+}
+
 function syncViewportPanToggleUi() {
   if (!refs.viewportPanToggle) return;
   refs.viewportPanToggle.checked = state.viewportPanEnabled;
@@ -2644,6 +2668,7 @@ function resetActiveSetOrbToDefaults() {
   state.homeOrbVisible = true;
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
   syncSetSwitcherUi();
+  syncRowSettingsUi();
   syncHomeOrbToggleUi();
   buildScene();
   updateMeasuredChildChipWidths();
@@ -2716,6 +2741,7 @@ function switchBubbleSet(nextSetId) {
   state.orbAgentId = getDefaultHomeAgentIdForSet(nextSet.id);
   state.homeOrbContent = createHomeOrbAgentContentForSet(state.orbAgentId, nextSet.id);
   syncSetSwitcherUi();
+  syncRowSettingsUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
   syncCanvasPositionUi();
@@ -2728,6 +2754,7 @@ function switchBubbleSet(nextSetId) {
 function bindEvents() {
   refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
+  refs.rowHideStarsToggle?.addEventListener('change', handleRowHideStarsToggleChange);
   refs.orbReset?.addEventListener('click', resetActiveSetOrbToDefaults);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
@@ -2771,6 +2798,22 @@ function handleSetPanelClick(event) {
   const target = event.target instanceof Element ? event.target.closest('[data-bubble-set-id]') : null;
   if (!target) return;
   switchBubbleSet(target.dataset.bubbleSetId || '');
+}
+
+function handleRowHideStarsToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.rowStarsHidden = target.checked;
+  state.rowTransition = null;
+  state.rowHandoffUntil = 0;
+  if (isRowBubbleSet(state.activeSetId)) {
+    const nextId = getSafeRowAgentId();
+    state.orbAgentId = nextId;
+    state.homeOrbContent = createHomeOrbAgentContentForSet(nextId, ROW_SET_ID);
+    syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+  }
+  syncRowSettingsUi();
+  scheduleRender();
 }
 
 function handleViewportPanToggleChange(event) {
@@ -2922,6 +2965,10 @@ function resetBackgroundVideo() {
 }
 
 function handleBackgroundVideoPlayToggle() {
+  toggleBackgroundVideoPlayback();
+}
+
+function toggleBackgroundVideoPlayback() {
   if (!state.backgroundVideo?.src) return;
   state.backgroundVideoPaused = !state.backgroundVideoPaused;
   persistBackgroundVideo();
@@ -2973,6 +3020,11 @@ function handleKeyDown(event) {
     toggleHomeOrbVisibility();
     return;
   }
+  if (shouldToggleBackgroundVideo(event)) {
+    event.preventDefault();
+    toggleBackgroundVideoPlayback();
+    return;
+  }
   if (event.key === 'ArrowRight') {
     event.preventDefault();
     cycleBubbleHomeSelection(1);
@@ -2992,6 +3044,11 @@ function shouldToggleUiChrome(event) {
 
 function shouldToggleHomeOrb(event) {
   if (event.key?.toLowerCase() !== HOME_ORB_HOTKEY) return false;
+  return !isEditableHotkeyTarget(event);
+}
+
+function shouldToggleBackgroundVideo(event) {
+  if (event.key?.toLowerCase() !== BACKGROUND_VIDEO_HOTKEY) return false;
   return !isEditableHotkeyTarget(event);
 }
 
@@ -3023,11 +3080,12 @@ function cycleBubbleHomeSelection(step) {
 function cycleRowAgent(step) {
   if (!refs.orb || !step || state.rowTransition?.active || state.swapTransition?.active) return;
   stopPromptHomeThinking();
-  const currentIndex = ROW_AGENT_SEQUENCE.indexOf(state.orbAgentId);
-  const fromIndex = currentIndex >= 0 ? currentIndex : ROW_AGENT_SEQUENCE.indexOf(ROW_SET_DEFAULT_AGENT_ID);
+  const sequence = getActiveRowAgentSequence();
+  const currentIndex = sequence.indexOf(state.orbAgentId);
+  const fromIndex = currentIndex >= 0 ? currentIndex : sequence.indexOf(getSafeRowAgentId());
   const direction = step > 0 ? 1 : -1;
-  const toIndex = (fromIndex + direction + ROW_AGENT_SEQUENCE.length) % ROW_AGENT_SEQUENCE.length;
-  const nextId = ROW_AGENT_SEQUENCE[toIndex];
+  const toIndex = (fromIndex + direction + sequence.length) % sequence.length;
+  const nextId = sequence[toIndex];
   if (!nextId || nextId === state.orbAgentId) return;
   const now = performance.now();
   state.rowTransition = {
@@ -3532,8 +3590,9 @@ function commitRowTransition(transition) {
 }
 
 function rowSequenceIdAt(index) {
-  const length = ROW_AGENT_SEQUENCE.length;
-  return ROW_AGENT_SEQUENCE[(index + length) % length];
+  const sequence = getActiveRowAgentSequence();
+  const length = sequence.length;
+  return sequence[(index + length) % length];
 }
 
 function rowAgentDepthForCenterX(centerX) {
@@ -3589,7 +3648,7 @@ function syncRowCarousel(now = performance.now()) {
   const isActive = Boolean(transition?.active);
   refs.rowLayer.classList.toggle('is-active', isActive || isHandoffActive);
   if (!isActive) {
-    const activeId = ROW_AGENT_SEQUENCE.includes(state.orbAgentId) ? state.orbAgentId : ROW_SET_DEFAULT_AGENT_ID;
+    const activeId = getSafeRowAgentId();
     refs.rowAgentNodes.forEach((node, agentId) => {
       const isCurrent = agentId === activeId;
       node.root.style.opacity = isCurrent && isHandoffActive ? String(easeOutQuart(handoffProgress)) : '0';
@@ -3606,9 +3665,10 @@ function syncRowCarousel(now = performance.now()) {
   const moveLinearProgress = clamp(elapsed / ROW_CAROUSEL_MOVE_DURATION_MS, 0, 1);
   const moveProgress = easeSmoothConnect(clamp((moveLinearProgress - 0.12) / 0.66, 0, 1));
   const shiftX = -transition.direction * ROW_CAROUSEL_SPACING * moveProgress;
-  const slotIndexes = transition.direction > 0
-    ? [-1, 0, 1, 2]
-    : [-2, -1, 0, 1];
+  const activeSequence = getActiveRowAgentSequence();
+  const slotIndexes = activeSequence.length <= 3
+    ? [-1, 0, 1]
+    : (transition.direction > 0 ? [-1, 0, 1, 2] : [-2, -1, 0, 1]);
   const visibleIds = new Set();
 
   slotIndexes.forEach((slotIndex) => {
