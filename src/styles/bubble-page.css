@@ -553,14 +553,14 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   position: relative;
   width: 420px;
   height: 420px;
-  transform: translateY(var(--bubble2-canvas-y, 0px));
+  transform: translate3d(var(--bubble2-canvas-x, 0px), var(--bubble2-canvas-y, 0px), 0);
   --bubble2-lens-accent: rgb(159, 232, 255);
   --bubble2-lens-accent-secondary: rgb(174, 255, 221);
   overflow: hidden;
   border-radius: 32px;
-  border: 1px solid var(--bubble2-frame-border);
-  background: var(--bubble2-frame-bg);
-  box-shadow: var(--bubble2-shadow);
+  border: 0.5px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  box-shadow: none;
   z-index: 1;
 }
 

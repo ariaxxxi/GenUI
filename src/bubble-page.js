@@ -1420,6 +1420,7 @@ const state = {
   backgroundVideoProgress: 0,
   backgroundVideoAlpha: 0.8,
   backgroundVideoX: 0,
+  canvasX: 0,
   canvasY: 0,
   isPressed: false,
   hoveredBubble: null,
@@ -1499,6 +1500,8 @@ const refs = {
   handRatio: document.querySelector('[data-bubble2-hand-ratio]'),
   handRatioState: document.querySelector('[data-bubble2-hand-ratio-state]'),
   canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  canvasX: document.querySelector('[data-bubble2-canvas-x]'),
+  canvasXState: document.querySelector('[data-bubble2-canvas-x-state]'),
   canvasY: document.querySelector('[data-bubble2-canvas-y]'),
   canvasYState: document.querySelector('[data-bubble2-canvas-y-state]'),
   homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
@@ -2353,10 +2356,15 @@ function syncCanvaslessUi() {
 }
 
 function syncCanvasPositionUi() {
+  const canvasX = clamp(Number(state.canvasX) || 0, -1000, 1000);
   const canvasY = clamp(Number(state.canvasY) || 0, -240, 240);
+  state.canvasX = canvasX;
   state.canvasY = canvasY;
+  if (refs.canvasX) refs.canvasX.value = String(Math.round(canvasX));
+  if (refs.canvasXState) refs.canvasXState.textContent = `${Math.round(canvasX)}px`;
   if (refs.canvasY) refs.canvasY.value = String(Math.round(canvasY));
   if (refs.canvasYState) refs.canvasYState.textContent = `${Math.round(canvasY)}px`;
+  refs.shell?.style.setProperty('--bubble2-canvas-x', `${canvasX}px`);
   refs.shell?.style.setProperty('--bubble2-canvas-y', `${canvasY}px`);
 }
 
@@ -2722,6 +2730,7 @@ function bindEvents() {
   refs.orbReset?.addEventListener('click', resetActiveSetOrbToDefaults);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.canvasX?.addEventListener('input', handleCanvasXInput);
   refs.canvasY?.addEventListener('input', handleCanvasYInput);
   refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
   refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
@@ -2775,6 +2784,13 @@ function handleCanvaslessToggleChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   state.canvaslessEnabled = target.checked;
   syncCanvaslessUi();
+}
+
+function handleCanvasXInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.canvasX = clamp(Number(target.value) || 0, -1000, 1000);
+  syncCanvasPositionUi();
 }
 
 function handleCanvasYInput(event) {
