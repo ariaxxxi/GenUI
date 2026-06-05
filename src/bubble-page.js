@@ -3121,7 +3121,8 @@ function cycleRowAgent(step) {
   const currentIndex = sequence.indexOf(state.orbAgentId);
   const fromIndex = currentIndex >= 0 ? currentIndex : sequence.indexOf(getSafeRowAgentId());
   const direction = step > 0 ? 1 : -1;
-  const toIndex = (fromIndex + direction + sequence.length) % sequence.length;
+  const toIndex = fromIndex + direction;
+  if (toIndex < 0 || toIndex >= sequence.length) return;
   const nextId = sequence[toIndex];
   if (!nextId || nextId === state.orbAgentId) return;
   const now = performance.now();
@@ -3630,8 +3631,12 @@ function commitRowTransition(transition) {
 
 function rowSequenceIdAt(index) {
   const sequence = getActiveRowAgentSequence();
-  const length = sequence.length;
-  return sequence[(index + length) % length];
+  return sequence[index] || '';
+}
+
+function getBoundedRowSlotIndexes(fromIndex) {
+  const sequence = getActiveRowAgentSequence();
+  return sequence.map((_, index) => index - fromIndex);
 }
 
 function rowAgentDepthForCenterX(centerX) {
@@ -3704,10 +3709,7 @@ function syncRowCarousel(now = performance.now()) {
   const moveLinearProgress = clamp(elapsed / ROW_CAROUSEL_MOVE_DURATION_MS, 0, 1);
   const moveProgress = easeSmoothConnect(clamp((moveLinearProgress - 0.12) / 0.66, 0, 1));
   const shiftX = -transition.direction * ROW_CAROUSEL_SPACING * moveProgress;
-  const activeSequence = getActiveRowAgentSequence();
-  const slotIndexes = activeSequence.length <= 3
-    ? [-1, 0, 1]
-    : (transition.direction > 0 ? [-1, 0, 1, 2] : [-2, -1, 0, 1]);
+  const slotIndexes = getBoundedRowSlotIndexes(transition.fromIndex);
   const visibleIds = new Set();
 
   slotIndexes.forEach((slotIndex) => {
