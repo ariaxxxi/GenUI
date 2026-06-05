@@ -764,29 +764,12 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   font-weight: 500;
   transform-origin: 50% 50%;
   transition:
-    opacity 360ms ease,
-    transform 360ms cubic-bezier(0.22, 0.76, 0.22, 1);
+    opacity 700ms ease,
+    transform 700ms cubic-bezier(0.22, 0.76, 0.22, 1);
   text-shadow:
     0 0 16px color-mix(in srgb, var(--bubble2-lens-accent) 86%, transparent),
     0 0 34px color-mix(in srgb, var(--bubble2-lens-accent-secondary) 68%, transparent),
     0 1px 8px rgba(0, 0, 0, 0.4);
-}
-
-.bubble2-lens-toast.is-concept-toast::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: currentColor;
-  opacity: 0;
-  transform: translate3d(-50%, -50%, 0) scale(0.25);
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--bubble2-lens-accent) 72%, transparent),
-    0 0 18px rgba(255, 255, 255, 0.28);
-  pointer-events: none;
 }
 
 .bubble2-lens-toast.is-hidden {
@@ -796,10 +779,6 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
 
 .bubble2-lens-toast.is-concept-toast.is-hidden {
   transform: translate3d(-50%, 0, 0) scale(0.1);
-}
-
-.bubble2-lens-toast.is-concept-toast.is-hidden::after {
-  animation: bubble2-lens-concept-toast-dot 360ms ease-out both;
 }
 
 .bubble2-canvas.is-canvasless {
@@ -920,21 +899,6 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   100% {
     opacity: 0;
     transform: scale(2.25);
-  }
-}
-
-@keyframes bubble2-lens-concept-toast-dot {
-  0% {
-    opacity: 0;
-    transform: translate3d(-50%, -50%, 0) scale(0.25);
-  }
-  42% {
-    opacity: 0.92;
-    transform: translate3d(-50%, -50%, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(-50%, -50%, 0) scale(0.7);
   }
 }
 
