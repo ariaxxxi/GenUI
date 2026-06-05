@@ -822,10 +822,10 @@ const LENS_IMAGE_BY_SLOT_ID = Object.freeze({
 
 const LENS_THEME_BY_SLOT_ID = Object.freeze({
   1: Object.freeze({
-    blobTopCore: 'rgb(184 246 174)',
-    blobTopEdge: 'rgb(116 220 132)',
-    blobBottomCore: 'rgb(240 255 230)',
-    blobBottomEdge: 'rgb(177 238 185)',
+    blobTopCore: 'rgb(205 238 190)',
+    blobTopEdge: 'rgb(154 210 152)',
+    blobBottomCore: 'rgb(244 252 232)',
+    blobBottomEdge: 'rgb(202 232 196)',
   }),
   3: Object.freeze({
     blobTopCore: 'rgb(96 128 64)',
