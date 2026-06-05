@@ -793,20 +793,20 @@ const PROMPT_BUBBLES_CONFIG = [
 ].map(enrichBubbleMetrics);
 
 const LENS_TITLES_BY_SLOT_ID = Object.freeze({
-  1: 'Photography Lens',
+  1: 'Shopping Lens',
   2: 'Music Lens',
   3: 'Golf Lens',
-  5: 'Style Lens',
+  5: 'Dog Walking Lens',
   6: 'Nature Lens',
   8: 'Travel Lens',
   9: 'Hiking Lens',
 });
 
 const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
-  1: 'Photo ideas',
+  1: 'Shopping finds',
   2: 'Fresh mixes',
   3: 'Better form',
-  5: 'Daily looks',
+  5: 'Routes and routines',
   6: 'Nature care',
   8: 'Local finds',
   9: 'Trail guides',
@@ -831,6 +831,12 @@ const LENS_THEME_BY_SLOT_ID = Object.freeze({
     blobTopEdge: 'rgb(64 96 48)',
     blobBottomCore: 'rgb(80 112 64)',
     blobBottomEdge: 'rgb(32 48 32)',
+  }),
+  5: Object.freeze({
+    blobTopCore: 'rgb(255 214 77)',
+    blobTopEdge: 'rgb(255 184 46)',
+    blobBottomCore: 'rgb(255 242 146)',
+    blobBottomEdge: 'rgb(188 132 16)',
   }),
 });
 
