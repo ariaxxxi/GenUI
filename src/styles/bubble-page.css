@@ -623,6 +623,19 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   animation: bubble2-lens-expand-blob 2000ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.bubble2-canvas.is-lens-concept-firing::before {
+  inset: -26%;
+  background:
+    radial-gradient(circle at 50% 52%,
+      white 0%,
+      color-mix(in srgb, white 88%, var(--bubble2-lens-accent) 12%) 8%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 94%, white 6%) 24%,
+      color-mix(in srgb, var(--bubble2-lens-accent-secondary) 72%, transparent) 46%,
+      transparent 76%);
+  filter: blur(24px) saturate(2.1) brightness(1.85);
+  animation: bubble2-lens-concept-blob 2000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .bubble2-canvas.is-lens-expand-firing::after {
   opacity: 0;
   background:
@@ -638,6 +651,21 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   mix-blend-mode: screen;
   transform: scale(0.2);
   animation: bubble2-lens-expand-haze 2000ms cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.bubble2-canvas.is-lens-concept-firing::after {
+  background:
+    radial-gradient(circle at 50% 50%,
+      color-mix(in srgb, white 70%, var(--bubble2-lens-accent) 30%) 0%,
+      color-mix(in srgb, var(--bubble2-lens-accent) 72%, transparent) 24%,
+      transparent 58%),
+    radial-gradient(circle at 50% 50%,
+      transparent 0%,
+      transparent 30%,
+      color-mix(in srgb, white 46%, var(--bubble2-lens-accent-secondary) 40%) 43%,
+      transparent 68%);
+  filter: blur(10px) saturate(1.9) brightness(1.75);
+  animation: bubble2-lens-concept-haze 2000ms cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 
 .bubble2-canvas.is-lens-focus-firing::before {
@@ -729,6 +757,17 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   bottom: 120px;
 }
 
+.bubble2-lens-toast.is-concept-toast {
+  bottom: -80px;
+  color: rgba(255, 255, 255, 0.98);
+  font-size: 22px;
+  font-weight: 500;
+  text-shadow:
+    0 0 16px color-mix(in srgb, var(--bubble2-lens-accent) 86%, transparent),
+    0 0 34px color-mix(in srgb, var(--bubble2-lens-accent-secondary) 68%, transparent),
+    0 1px 8px rgba(0, 0, 0, 0.4);
+}
+
 .bubble2-lens-toast.is-hidden {
   opacity: 0;
   transform: translate3d(-50%, 8px, 0);
@@ -817,6 +856,41 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   100% {
     opacity: 0;
     transform: scale(1.9);
+  }
+}
+
+@keyframes bubble2-lens-concept-blob {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.04);
+  }
+  10% {
+    opacity: 1;
+  }
+  44% {
+    opacity: 0.96;
+    transform: translate3d(0, 0, 0) scale(1.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(3.05);
+  }
+}
+
+@keyframes bubble2-lens-concept-haze {
+  0% {
+    opacity: 0;
+    transform: scale(0.12);
+  }
+  18% {
+    opacity: 0.94;
+  }
+  58% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.25);
   }
 }
 
