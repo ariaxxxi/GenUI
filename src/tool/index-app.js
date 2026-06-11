@@ -721,6 +721,77 @@ const orb = initOrbController({
   morphTo: (...args) => morphApi.morphTo(...args),
 });
 
+const prototypeTimer = {
+  stageId: '',
+  remainingSeconds: 180,
+  running: false,
+  intervalId: null,
+};
+
+function isEditableKeyTarget(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  const tagName = target.tagName.toLowerCase();
+  return ['input', 'textarea', 'select', 'button'].includes(tagName) || Boolean(target.closest('[contenteditable="true"]'));
+}
+
+function formatPrototypeTimer(seconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${String(Math.floor(safeSeconds / 60)).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
+}
+
+function parsePrototypeTimer(value) {
+  const match = String(value || '').trim().match(/^(\d{1,2}):([0-5]\d)$/);
+  if (!match) return 180;
+  return (Number(match[1]) * 60) + Number(match[2]);
+}
+
+function stopPrototypeTimer() {
+  prototypeTimer.running = false;
+  if (prototypeTimer.intervalId) {
+    window.clearInterval(prototypeTimer.intervalId);
+    prototypeTimer.intervalId = null;
+  }
+}
+
+function renderPrototypeTimer() {
+  if (C.prim) C.prim.textContent = formatPrototypeTimer(prototypeTimer.remainingSeconds);
+}
+
+function syncPrototypeTimerForScenario(scenario) {
+  const stageIdValue = String(scenario?.shape || '');
+  const renderShape = String(renderShapeForStageId(stageIdValue, scenario) || '');
+  if (renderShape !== 'timer') {
+    stopPrototypeTimer();
+    prototypeTimer.stageId = '';
+    return;
+  }
+  if (prototypeTimer.stageId !== stageIdValue) {
+    stopPrototypeTimer();
+    prototypeTimer.stageId = stageIdValue;
+    prototypeTimer.remainingSeconds = parsePrototypeTimer(stageTextForShape(scenario, stageIdValue).primary || '03:00');
+  }
+  renderPrototypeTimer();
+}
+
+function togglePrototypeTimer() {
+  const scenario = selectedScenario();
+  const stageIdValue = String(scenario?.shape || '');
+  if (String(renderShapeForStageId(stageIdValue, scenario) || '') !== 'timer') return false;
+  if (prototypeTimer.stageId !== stageIdValue) syncPrototypeTimerForScenario(scenario);
+  if (prototypeTimer.running) {
+    stopPrototypeTimer();
+    return true;
+  }
+  prototypeTimer.running = true;
+  prototypeTimer.intervalId = window.setInterval(() => {
+    prototypeTimer.remainingSeconds = Math.max(0, prototypeTimer.remainingSeconds - 1);
+    renderPrototypeTimer();
+    if (prototypeTimer.remainingSeconds <= 0) stopPrototypeTimer();
+  }, 1000);
+  return true;
+}
+
 function previewScenario(scenario) {
   if (!scenario) return;
   const currentShape = String(morphApi?.getCurrentShape?.() || '').trim().toLowerCase();
@@ -737,6 +808,7 @@ function previewScenario(scenario) {
   applyStagePhoneBlur(scenario.shape);
   morphApi.morphTo(renderShapeForStageId(scenario.shape, scenario), morphApi.scenarioToRenderContent(scenario), null, scenario.shape);
   syncPrototypeIntentHeader(scenario);
+  syncPrototypeTimerForScenario(scenario);
 }
 
 function previewScenarioInstant(scenario) {
@@ -779,6 +851,7 @@ function previewScenarioInstant(scenario) {
   updateActive(shape);
   morphApi.setSuppressDeformation(false);
   syncPrototypeIntentHeader(scenario);
+  syncPrototypeTimerForScenario(scenario);
   ['--anim-w','--anim-h','--anim-br','--anim-tx','--anim-t','--content-fade-ms','--detail-fade-ms','--media-fade-ms','--content-move-t','--primary-size-anim-ms','--text-size-anim-ms'].forEach((key) => root.style.removeProperty(key));
 }
 
@@ -1255,6 +1328,15 @@ UI.prototypeSetupImport?.addEventListener('change', (event) => {
       window.alert(err?.message || 'Import failed.');
     })
     .finally(() => { event.target.value = ''; });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.code === 'Space' && !event.altKey && !event.ctrlKey && !event.metaKey && !isEditableKeyTarget(event)) {
+    if (togglePrototypeTimer()) {
+      event.preventDefault();
+      return;
+    }
+  }
 });
 
 document.addEventListener('keydown', (event) => {

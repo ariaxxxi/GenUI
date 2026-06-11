@@ -22,6 +22,7 @@ export function createMorphLayout(ctx) {
 
   function contentPos(shape, w, h) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'timer') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:1, fs:24, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (shape === 'list') {
       const scenario = callbacks.selectedScenario?.();
       const showListOrb = !!callbacks.stageListListeningOrbForShape?.(scenario, scenario?.shape || 'list');

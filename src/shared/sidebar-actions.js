@@ -69,6 +69,9 @@ export function createSidebarActions(ctx, refs) {
     if (value === 'nudge') {
       return { renderShape: 'pill', name: 'Nudge Stage', cornerRadius: 60, iconTextGap: null, iconLeftPadding: null, components: ['primary', 'secondary'] };
     }
+    if (value === 'timer') {
+      return { renderShape: 'timer', name: 'Timer Stage', cornerRadius: 0, iconTextGap: null, iconLeftPadding: null, hideShell: true, components: ['primary'] };
+    }
     if (value === 'blank') {
       return { renderShape: 'card', name: 'Blank Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: [] };
     }
@@ -92,13 +95,33 @@ export function createSidebarActions(ctx, refs) {
       listListeningOrb: false,
       listSelectable: true,
       selected: false,
+      hideShell: template.hideShell === true,
       accentColor: '#90acff',
       secondaryAccentColor: '#9761ff',
       components: template.components,
     });
     ctx.setStageLibrary([...ctx.getStageLibrary(), newStage]);
     ctx.persistStageLibrary();
-    commitScenarioChange((scenario) => { scenario.shape = newStage.id; return scenario; });
+    commitScenarioChange((scenario) => {
+      scenario.shape = newStage.id;
+      if (stageKind === 'timer') {
+        scenario.content = scenario.content || {};
+        scenario.content.textByShape = { ...(scenario.content.textByShape || {}) };
+        scenario.content.textByShape[newStage.id] = {
+          ...(scenario.content.textByShape[newStage.id] || {}),
+          primary: '03:00',
+          secondary: '',
+          detail: '',
+          intentHeader: '',
+        };
+        scenario.content.typographyByShape = { ...(scenario.content.typographyByShape || {}) };
+        scenario.content.typographyByShape[newStage.id] = {
+          ...(scenario.content.typographyByShape[newStage.id] || {}),
+          primary: { size: 24, color: '#ffffff' },
+        };
+      }
+      return scenario;
+    });
   }
 
   function duplicateCurrentStage() {

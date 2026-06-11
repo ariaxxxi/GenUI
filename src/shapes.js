@@ -1,4 +1,4 @@
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'timer', 'pill', 'card', 'card-s', 'image'];
 const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
@@ -89,6 +89,11 @@ export const SHAPES = {
     left: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
     right: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
   },
+  timer: {
+    main: { w: 96, h: 32, br: '0px', tx: -48, ty: -16, op: 1 },
+    left: { w: 0, h: 0, br: '0px', tx: 0, ty: 0, op: 0 },
+    right: { w: 0, h: 0, br: '0px', tx: 0, ty: 0, op: 0 },
+  },
   list: {
     main: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
     left: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
@@ -139,7 +144,7 @@ export const SHAPES = {
 export function defaultTypographyForShape(shape = 'pill') {
   return {
     icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: 28, color: '#ffffff' },
+    primary: { size: shape === 'timer' ? 24 : 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
     intentHeader: { size: 18, color: '#a0a0a0' },
