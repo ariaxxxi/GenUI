@@ -1239,11 +1239,14 @@ export function initManualBindings({
 
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));
-  UI.bgImageSelect?.addEventListener('change', () => updateCanvas({
-    backgroundImage: UI.bgImageSelect.value,
-    backgroundEnabled: true,
-    backgroundMediaKind: 'image',
-  }));
+  UI.bgImageSelect?.addEventListener('change', () => {
+    updateCanvas({
+      backgroundImage: UI.bgImageSelect.value,
+      backgroundEnabled: true,
+      backgroundMediaKind: 'image',
+    });
+    clearBackgroundImageStorage?.();
+  });
   UI.bgImageUpload?.addEventListener('click', (e) => { e.target.value = ''; });
   UI.bgImageUpload?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];

@@ -25,6 +25,7 @@ document.body.appendChild(detailMeasureEl);
 
 const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: '' });
 const PROTOTYPE_BACKGROUND_OPTIONS = [
+  'dark',
   'assets/bg/living room.jpg',
   'assets/bg/living room 2.jpg',
   'assets/bg/desk.jpg',
@@ -34,7 +35,8 @@ const PROTOTYPE_BACKGROUND_OPTIONS = [
   'assets/bg/grocery store.jpg',
   'assets/bg/kitechen.jpg',
 ];
-const DEFAULT_PROTOTYPE_BACKGROUND = PROTOTYPE_BACKGROUND_OPTIONS[0];
+const DARK_PROTOTYPE_BACKGROUND = 'dark';
+const DEFAULT_PROTOTYPE_BACKGROUND = 'assets/bg/living room.jpg';
 
 function normalizePrototypeBackground(src) {
   const value = String(src || '').trim();
@@ -194,6 +196,7 @@ function applyCanvasSettings() {
   const isGlasses = frameMode === 'glasses';
   const backgroundImage = normalizePrototypeBackground(canvasSettings.backgroundImage);
   const backgroundEnabled = canvasSettings.backgroundEnabled !== false;
+  const isDarkBackground = backgroundImage === DARK_PROTOTYPE_BACKGROUND;
   const backgroundVideo = canvasSettings.backgroundVideo?.src ? canvasSettings.backgroundVideo : null;
   const backgroundMediaKind = backgroundVideo && canvasSettings.backgroundMediaKind === 'video' ? 'video' : 'image';
   document.body.classList.toggle('bg-off', !backgroundEnabled);
@@ -206,8 +209,10 @@ function applyCanvasSettings() {
   document.body.style.backgroundSize = '';
   document.body.style.backgroundRepeat = '';
   if (blurBg) {
-    blurBg.style.backgroundImage = backgroundEnabled && backgroundMediaKind === 'image' ? `url("${encodeURI(backgroundImage)}")` : 'none';
-    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image'
+    blurBg.style.backgroundImage = backgroundEnabled && backgroundMediaKind === 'image' && !isDarkBackground
+      ? `url("${encodeURI(backgroundImage)}")`
+      : 'none';
+    blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image' && !isDarkBackground
       ? String(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))))
       : '0';
   }
