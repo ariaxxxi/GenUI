@@ -814,7 +814,7 @@ const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
 });
 
 const LENS_CAROUSEL_SEQUENCE = Object.freeze([8, 1, 5]);
-const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 1, 3]);
+const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 1, 3, 9]);
 
 const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
   8: Object.freeze({
@@ -836,6 +836,10 @@ const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
   3: Object.freeze({
     label: 'Golf',
     icon: 'assets/mode icon/golf.png',
+  }),
+  9: Object.freeze({
+    label: 'Travel',
+    icon: 'assets/mode icon/travel.png',
   }),
 });
 
