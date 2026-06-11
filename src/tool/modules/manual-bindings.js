@@ -1661,6 +1661,7 @@ export function initManualBindings({
   UI.stageAdd.addEventListener('click', () => {
     const kind = String(UI.stageAddKind?.value || 'card');
     addStage(kind);
+    UI.stageAdd.blur();
   });
   UI.stageDuplicate?.addEventListener('click', () => duplicateCurrentStage());
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());

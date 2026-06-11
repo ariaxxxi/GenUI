@@ -724,6 +724,8 @@ const orb = initOrbController({
 const prototypeTimer = {
   stageId: '',
   remainingSeconds: 180,
+  elapsedSeconds: 0,
+  mode: '',
   running: false,
   intervalId: null,
 };
@@ -740,10 +742,24 @@ function formatPrototypeTimer(seconds) {
   return `${String(Math.floor(safeSeconds / 60)).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
 }
 
+function formatPrototypeRecorder(seconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(safeSeconds % 60).padStart(2, '0')}`;
+}
+
 function parsePrototypeTimer(value) {
   const match = String(value || '').trim().match(/^(\d{1,2}):([0-5]\d)$/);
   if (!match) return 180;
   return (Number(match[1]) * 60) + Number(match[2]);
+}
+
+function isPrototypeRecorderStage(stageIdValue, scenario) {
+  const stage = stageById(stageIdValue, scenario);
+  const id = String(stageIdValue || '').trim().toLowerCase();
+  const name = String(stage?.name || '').trim().toLowerCase();
+  return id === 'recorder' || id.startsWith('recorder-') || name.includes('recorder');
 }
 
 function stopPrototypeTimer() {
@@ -755,7 +771,10 @@ function stopPrototypeTimer() {
 }
 
 function renderPrototypeTimer() {
-  if (C.prim) C.prim.textContent = formatPrototypeTimer(prototypeTimer.remainingSeconds);
+  if (!C.prim) return;
+  C.prim.textContent = prototypeTimer.mode === 'recorder'
+    ? formatPrototypeRecorder(prototypeTimer.elapsedSeconds)
+    : formatPrototypeTimer(prototypeTimer.remainingSeconds);
 }
 
 function syncPrototypeTimerForScenario(scenario) {
@@ -769,7 +788,9 @@ function syncPrototypeTimerForScenario(scenario) {
   if (prototypeTimer.stageId !== stageIdValue) {
     stopPrototypeTimer();
     prototypeTimer.stageId = stageIdValue;
+    prototypeTimer.mode = isPrototypeRecorderStage(stageIdValue, scenario) ? 'recorder' : 'timer';
     prototypeTimer.remainingSeconds = parsePrototypeTimer(stageTextForShape(scenario, stageIdValue).primary || '03:00');
+    prototypeTimer.elapsedSeconds = 0;
   }
   renderPrototypeTimer();
 }
@@ -785,9 +806,13 @@ function togglePrototypeTimer() {
   }
   prototypeTimer.running = true;
   prototypeTimer.intervalId = window.setInterval(() => {
-    prototypeTimer.remainingSeconds = Math.max(0, prototypeTimer.remainingSeconds - 1);
+    if (prototypeTimer.mode === 'recorder') {
+      prototypeTimer.elapsedSeconds += 1;
+    } else {
+      prototypeTimer.remainingSeconds = Math.max(0, prototypeTimer.remainingSeconds - 1);
+    }
     renderPrototypeTimer();
-    if (prototypeTimer.remainingSeconds <= 0) stopPrototypeTimer();
+    if (prototypeTimer.mode !== 'recorder' && prototypeTimer.remainingSeconds <= 0) stopPrototypeTimer();
   }, 1000);
   return true;
 }

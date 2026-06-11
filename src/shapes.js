@@ -1,4 +1,4 @@
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'timer', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'timer', 'recorder', 'pill', 'card', 'card-s', 'image'];
 const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 

@@ -72,6 +72,9 @@ export function createSidebarActions(ctx, refs) {
     if (value === 'timer') {
       return { renderShape: 'timer', name: 'Timer Stage', cornerRadius: 0, iconTextGap: null, iconLeftPadding: null, hideShell: true, components: ['primary'] };
     }
+    if (value === 'recorder') {
+      return { renderShape: 'timer', name: 'Recorder Stage', cornerRadius: 0, iconTextGap: null, iconLeftPadding: null, hideShell: true, components: ['primary'] };
+    }
     if (value === 'blank') {
       return { renderShape: 'card', name: 'Blank Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: [] };
     }
@@ -82,7 +85,7 @@ export function createSidebarActions(ctx, refs) {
     const stageKind = String(kind || '').toLowerCase();
     const template = stageTemplateFromKind(kind);
     const newStage = ctx.normalizeStage({
-      id: stageKind === 'nudge' ? `nudge-${ctx.stageId()}` : ctx.stageId(),
+      id: stageKind === 'nudge' || stageKind === 'recorder' ? `${stageKind}-${ctx.stageId()}` : ctx.stageId(),
       name: template.name,
       preset: false,
       renderShape: template.renderShape,
@@ -110,6 +113,22 @@ export function createSidebarActions(ctx, refs) {
         scenario.content.textByShape[newStage.id] = {
           ...(scenario.content.textByShape[newStage.id] || {}),
           primary: '03:00',
+          secondary: '',
+          detail: '',
+          intentHeader: '',
+        };
+        scenario.content.typographyByShape = { ...(scenario.content.typographyByShape || {}) };
+        scenario.content.typographyByShape[newStage.id] = {
+          ...(scenario.content.typographyByShape[newStage.id] || {}),
+          primary: { size: 24, color: '#ffffff' },
+        };
+      }
+      if (stageKind === 'recorder') {
+        scenario.content = scenario.content || {};
+        scenario.content.textByShape = { ...(scenario.content.textByShape || {}) };
+        scenario.content.textByShape[newStage.id] = {
+          ...(scenario.content.textByShape[newStage.id] || {}),
+          primary: '00:00:00',
           secondary: '',
           detail: '',
           intentHeader: '',
