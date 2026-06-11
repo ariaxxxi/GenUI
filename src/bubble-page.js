@@ -814,6 +814,30 @@ const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
 });
 
 const LENS_CAROUSEL_SEQUENCE = Object.freeze([8, 1, 5]);
+const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 1, 3]);
+
+const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
+  8: Object.freeze({
+    label: 'Commute',
+    icon: 'assets/mode icon/commute.png',
+  }),
+  2: Object.freeze({
+    label: 'Cooking',
+    icon: 'assets/mode icon/cook.png',
+  }),
+  6: Object.freeze({
+    label: 'Nutrition',
+    icon: 'assets/mode icon/nutrition.png',
+  }),
+  1: Object.freeze({
+    label: 'Shopping',
+    icon: 'assets/mode icon/shopping.png',
+  }),
+  3: Object.freeze({
+    label: 'Golf',
+    icon: 'assets/mode icon/golf.png',
+  }),
+});
 
 const LENS_IMAGE_BY_SLOT_ID = Object.freeze({
   1: 'assets/app/camera.png',
@@ -1328,6 +1352,8 @@ function resolveInterruptPrimaryControlState(slot) {
 
 function createBaseSlotContent(slot, setId = state.activeSetId) {
   const slotTheme = slot.theme || bubbleSlotThemeForId(slot.id);
+  const conceptMode = isLensConceptBubbleSet(setId) ? LENS_CONCEPT_MODE_BY_SLOT_ID[slot.id] : null;
+  const conceptTitle = conceptMode ? `${conceptMode.label} Lens` : '';
   const resolvedPrimaryControl = setId === 'interrupt' && slot?.id === 1
     ? resolveInterruptPrimaryControlState(slot)
     : null;
@@ -1335,7 +1361,7 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     kind: 'slot-bubble',
     contentId: `slot:${slot.id}`,
     sourceSlotId: slot.id,
-    label: resolvedPrimaryControl?.label || slot.label || slot.pillTitle || '',
+    label: conceptTitle || resolvedPrimaryControl?.label || slot.label || slot.pillTitle || '',
     baseSize: slot.baseSize ?? getDefaultBubbleBaseSizeForSet(setId),
     fieldMaxSize: slot.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     graphicKind: slot.graphicKind || 'image',
@@ -1352,8 +1378,8 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     isPill: Boolean(slot.isPill),
     hoverExpandsToPill: Boolean(slot.hoverExpandsToPill),
     usesSurfaceShell: Boolean(slot.usesSurfaceShell),
-    pillTitle: slot.pillTitle || '',
-    pillSubtitle: slot.pillSubtitle || '',
+    pillTitle: conceptTitle || slot.pillTitle || '',
+    pillSubtitle: conceptMode ? `${conceptMode.label} mode` : (slot.pillSubtitle || ''),
     pillTrailingIcon: slot.pillTrailingIcon || '',
     pillTrailingIconColor: slot.pillTrailingIconColor || '',
     pillTrailingIconSize: slot.pillTrailingIconSize,
@@ -1373,6 +1399,8 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     subIconOffsetY: slot.subIconOffsetY,
     childActions: slot.childActions || [],
     childLayout: slot.childLayout || null,
+    lensModeIcon: conceptMode?.icon || slot.lensModeIcon || '',
+    lensModeLabel: conceptMode?.label || slot.lensModeLabel || '',
     haloColor: slot.haloColor || haloColorForTheme(slotTheme),
     theme: slotTheme,
     hoverShadowMode: 'default',
@@ -1410,6 +1438,7 @@ function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
 }
 
 function getBubbleSetSequence(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (isLensConceptBubbleSet(setId)) return LENS_CONCEPT_SEQUENCE;
   if (isLensBubbleSet(setId)) return LENS_CAROUSEL_SEQUENCE;
   return getBubblesConfigForSet(setId).map((bubble) => bubble.id);
 }
@@ -2062,7 +2091,20 @@ function showLensToast(text, options = {}) {
     window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
     bubbleHomeStreamState.lensToastTimer = null;
   }
-  refs.lensToast.textContent = text || 'Lens on';
+  const label = text || 'Lens on';
+  if (options.iconSrc) {
+    const icon = document.createElement('img');
+    icon.className = 'bubble2-lens-toast-icon';
+    icon.src = options.iconSrc;
+    icon.alt = options.iconAlt || '';
+    icon.draggable = false;
+    const copy = document.createElement('span');
+    copy.className = 'bubble2-lens-toast-copy';
+    copy.textContent = label;
+    refs.lensToast.replaceChildren(icon, copy);
+  } else {
+    refs.lensToast.textContent = label;
+  }
   refs.lensToast.classList.toggle('is-above-orb', options.placement === 'above-orb');
   refs.lensToast.classList.toggle('is-concept-toast', options.placement === 'concept-bottom');
   refs.lensToast.classList.remove('is-hidden');
@@ -2097,7 +2139,11 @@ function startLensFeedback(content, now = performance.now(), options = {}) {
     if (lensAccentSecondary) refs.shell.style.setProperty('--bubble2-lens-accent-secondary', lensAccentSecondary);
     void refs.shell.offsetWidth;
   }
-  showLensToast(getLensOnText(content), options);
+  showLensToast(getLensOnText(content), {
+    ...options,
+    iconSrc: options.iconSrc || content?.lensModeIcon || '',
+    iconAlt: options.iconAlt || (content?.lensModeLabel ? `${content.lensModeLabel} mode icon` : ''),
+  });
   scheduleMotionPhaseRender(state.lensShimmerUntil);
 }
 
