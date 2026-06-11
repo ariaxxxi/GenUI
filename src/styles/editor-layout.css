@@ -308,6 +308,14 @@ body.bg-off #main-col::before {
   background: transparent;
   border: none;
 }
+#c-thumb.timer-dot {
+  background: rgb(255,56,56);
+  border: none;
+}
+#c-thumb.timer-dot #c-thumb-label,
+#c-thumb.timer-dot #c-thumb-img {
+  display: none;
+}
 #c-thumb-img {
   display: none;
   width: 100%;

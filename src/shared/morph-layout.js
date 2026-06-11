@@ -22,7 +22,24 @@ export function createMorphLayout(ctx) {
 
   function contentPos(shape, w, h) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
-    if (shape === 'timer') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:1, fs:24, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'timer') {
+      const typography = normalizeTypography(state.contentTypographyState, 'timer');
+      const dotSize = 10;
+      const dotGap = 12;
+      const primarySize = typography.primary.size || 24;
+      const primaryText = String(C.prim.textContent || '').trim();
+      const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, primarySize, 500) : 0;
+      const primaryHeight = measureLineHeight(primarySize, 1.1);
+      const rowWidth = dotSize + dotGap + primaryWidth;
+      const rowX = Math.round((w - rowWidth) / 2);
+      return {
+        thumb:{ x:rowX, y:Math.round((h - dotSize) / 2), w:dotSize, h:dotSize, br:'999px', op:1 },
+        prim:{ x:rowX + dotSize + dotGap, y:Math.round((h - primaryHeight) / 2), op:1, fs:primarySize, cx:false },
+        sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+        div:{ x:w/2, y:h/2, dw:0, op:0 },
+        det:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+      };
+    }
     if (shape === 'list') {
       const scenario = callbacks.selectedScenario?.();
       const showListOrb = !!callbacks.stageListListeningOrbForShape?.(scenario, scenario?.shape || 'list');

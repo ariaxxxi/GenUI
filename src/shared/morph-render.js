@@ -658,6 +658,7 @@ export function createMorphRender(ctx) {
     const homeEmpty = (shape === 'circle' || shape === 'listening') && !icon;
     const hasTextOrEmojiIcon = state.thumbContentState.kind === 'emoji' && !!icon;
     C.thumb.classList.toggle('thumb-empty', homeEmpty);
+    C.thumb.classList.toggle('timer-dot', shape === 'timer');
     const plain = hasTextOrEmojiIcon || isIconOnlyThumb(shape);
     C.thumb.classList.toggle('thumb-plain-icon', plain && !homeEmpty);
     if (!plain || homeEmpty) { C.thumb.style.fontSize = ''; C.thumb.style.color = ''; return; }
