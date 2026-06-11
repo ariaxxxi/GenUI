@@ -814,7 +814,7 @@ const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
 });
 
 const LENS_CAROUSEL_SEQUENCE = Object.freeze([8, 1, 5]);
-const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 1, 3, 9]);
+const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 1, 3, 5, 9]);
 
 const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
   8: Object.freeze({
@@ -836,6 +836,10 @@ const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
   3: Object.freeze({
     label: 'Golf',
     icon: 'assets/mode icon/golf.png',
+  }),
+  5: Object.freeze({
+    label: 'Dog Walking',
+    icon: 'assets/mode icon/walk dog.png',
   }),
   9: Object.freeze({
     label: 'Travel',
@@ -2095,7 +2099,7 @@ function showLensToast(text, options = {}) {
     window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
     bubbleHomeStreamState.lensToastTimer = null;
   }
-  const label = text || 'Lens on';
+  const label = text || 'Lens On';
   if (options.iconSrc) {
     const icon = document.createElement('img');
     icon.className = 'bubble2-lens-toast-icon';
@@ -2120,7 +2124,7 @@ function showLensToast(text, options = {}) {
 
 function getLensOnText(content) {
   const lensName = String(content?.pillTitle || content?.label || 'Lens').trim() || 'Lens';
-  return `${lensName.replace(/\s+lens$/i, ' lens')} on`;
+  return `${lensName.replace(/\s+lens$/i, ' Lens')} On`;
 }
 
 function startLensFeedback(content, now = performance.now(), options = {}) {
