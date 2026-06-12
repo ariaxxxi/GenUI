@@ -1185,6 +1185,13 @@ body.bubble2-page.is-bubble-ui-hidden .g-hand-cursor {
   border-radius: 0;
 }
 
+.bubble2-item.is-lens-switch-content-hidden .bubble2-icon-wrap,
+.bubble2-item.is-lens-switch-content-hidden .bubble2-pill-leading-group,
+.bubble2-item.is-lens-switch-content-hidden .bubble2-pill-copy,
+.bubble2-item.is-lens-switch-content-hidden .bubble2-subicon {
+  opacity: 0 !important;
+}
+
 .bubble2-icon {
   display: block;
   width: 100%;

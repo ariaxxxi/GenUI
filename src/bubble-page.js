@@ -1531,6 +1531,7 @@ const state = {
   promptHomeThinkingAnimating: false,
   promptHomeThinkingTimer: null,
   rowStarsHidden: false,
+  hideLensSwitchContent: false,
   slotContentBySetId: createInitialSlotContentMaps(),
   swapTransition: null,
   swapResetPending: false,
@@ -1576,6 +1577,8 @@ const refs = {
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
   rowSettings: document.querySelector('[data-bubble2-row-settings]'),
   rowHideStarsToggle: document.querySelector('[data-bubble2-row-hide-stars-toggle]'),
+  lensConceptSettings: document.querySelector('[data-bubble2-lens-concept-settings]'),
+  lensSwitchHideContentToggle: document.querySelector('[data-bubble2-lens-switch-hide-content-toggle]'),
   orbReset: document.querySelector('[data-bubble2-orb-reset]'),
   viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
   handToggle: document.querySelector('[data-bubble2-hand-toggle]'),
@@ -1626,6 +1629,7 @@ async function init() {
   await hydrateStoredBackgroundMedia();
   syncSetSwitcherUi();
   syncRowSettingsUi();
+  syncLensConceptSettingsUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
   syncCanvasPositionUi();
@@ -2147,11 +2151,15 @@ function startLensFeedback(content, now = performance.now(), options = {}) {
     if (lensAccentSecondary) refs.shell.style.setProperty('--bubble2-lens-accent-secondary', lensAccentSecondary);
     void refs.shell.offsetWidth;
   }
-  showLensToast(getLensOnText(content), {
-    ...options,
-    iconSrc: options.iconSrc || content?.lensModeIcon || '',
-    iconAlt: options.iconAlt || (content?.lensModeLabel ? `${content.lensModeLabel} mode icon` : ''),
-  });
+  if (state.hideLensSwitchContent && isLensConceptBubbleSet(state.activeSetId)) {
+    clearLensToast();
+  } else {
+    showLensToast(getLensOnText(content), {
+      ...options,
+      iconSrc: options.iconSrc || content?.lensModeIcon || '',
+      iconAlt: options.iconAlt || (content?.lensModeLabel ? `${content.lensModeLabel} mode icon` : ''),
+    });
+  }
   scheduleMotionPhaseRender(state.lensShimmerUntil);
 }
 
@@ -2451,6 +2459,11 @@ function syncSetSwitcherUi() {
 function syncRowSettingsUi() {
   if (refs.rowSettings) refs.rowSettings.hidden = !isRowBubbleSet(state.activeSetId);
   if (refs.rowHideStarsToggle) refs.rowHideStarsToggle.checked = state.rowStarsHidden;
+}
+
+function syncLensConceptSettingsUi() {
+  if (refs.lensConceptSettings) refs.lensConceptSettings.hidden = !isLensConceptBubbleSet(state.activeSetId);
+  if (refs.lensSwitchHideContentToggle) refs.lensSwitchHideContentToggle.checked = state.hideLensSwitchContent;
 }
 
 function syncViewportPanToggleUi() {
@@ -2830,6 +2843,7 @@ function switchBubbleSet(nextSetId) {
   else if (isLensConceptBubbleSet(previousSetId)) state.homeOrbVisible = true;
   syncSetSwitcherUi();
   syncRowSettingsUi();
+  syncLensConceptSettingsUi();
   syncViewportPanToggleUi();
   syncCanvaslessUi();
   syncCanvasPositionUi();
@@ -2844,6 +2858,7 @@ function bindEvents() {
   refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
   refs.rowHideStarsToggle?.addEventListener('change', handleRowHideStarsToggleChange);
+  refs.lensSwitchHideContentToggle?.addEventListener('change', handleLensSwitchHideContentToggleChange);
   refs.orbReset?.addEventListener('click', resetActiveSetOrbToDefaults);
   refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
   refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
@@ -2902,6 +2917,15 @@ function handleRowHideStarsToggleChange(event) {
     syncBubbleHomeOrbVisual(refs.orb, { animate: false });
   }
   syncRowSettingsUi();
+  scheduleRender();
+}
+
+function handleLensSwitchHideContentToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.hideLensSwitchContent = target.checked;
+  if (state.hideLensSwitchContent && isLensConceptBubbleSet(state.activeSetId)) clearLensToast();
+  syncLensConceptSettingsUi();
   scheduleRender();
 }
 
@@ -3834,6 +3858,7 @@ function render() {
   const isLensExpandShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'expand';
   const isLensFocusShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'focus';
   const isLensConceptShimmerActive = isLensShimmerActive && isLensConceptBubbleSet(state.activeSetId);
+  const hideLensSwitchContent = state.hideLensSwitchContent && isLensConceptShimmerActive;
   const isRowTransitionActive = isRowTransitionRunning(now);
   const isRowHandoffActive = now < state.rowHandoffUntil;
   const isPostSwapReset = state.swapResetPending;
@@ -3980,6 +4005,7 @@ function render() {
       : `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
     node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
+    node.root.classList.toggle('is-lens-switch-content-hidden', hideLensSwitchContent);
     if (node.visual) {
       node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
     }
