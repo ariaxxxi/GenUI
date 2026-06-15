@@ -842,7 +842,7 @@ const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
     icon: 'assets/mode icon/walk dog.png',
   }),
   9: Object.freeze({
-    label: 'Travel',
+    label: 'Exploration',
     icon: 'assets/mode icon/travel.png',
   }),
 });

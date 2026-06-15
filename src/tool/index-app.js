@@ -36,7 +36,7 @@ const PROTOTYPE_BACKGROUND_OPTIONS = [
   'assets/bg/kitechen.jpg',
 ];
 const DARK_PROTOTYPE_BACKGROUND = 'dark';
-const DEFAULT_PROTOTYPE_BACKGROUND = 'assets/bg/living room.jpg';
+const DEFAULT_PROTOTYPE_BACKGROUND = 'assets/bg/park.jpg';
 
 function normalizePrototypeBackground(src) {
   const value = String(src || '').trim();
@@ -261,8 +261,10 @@ function applyCanvasSettings() {
   }
   if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : '';
   if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
+  [UI.bgImagePresetRow, UI.bgImageUploadRow, UI.bgImageAlphaRow].forEach((row) => {
+    row?.classList.toggle('hidden', !backgroundEnabled);
+  });
   if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
-  if (UI.bgImageState) UI.bgImageState.textContent = isCustomPrototypeBackground(backgroundImage) ? 'uploaded' : 'preset';
   if (UI.bgImageAlpha) {
     UI.bgImageAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))) * 100));
     syncRangeProgress(UI.bgImageAlpha);

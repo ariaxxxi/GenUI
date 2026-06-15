@@ -102,49 +102,67 @@
       <span class="sb-chevron">▾</span>
     </button>
     <div class="sb-section-body">
-      <label class="sb-toggle" for="float-toggle">
+      <label class="sb-toggle settings-toggle" for="float-toggle">
         <div class="sb-toggle-copy">
           <strong>Floating effect</strong>
         </div>
         <input id="float-toggle" class="sb-toggle-input" type="checkbox" checked/>
       </label>
-      <label class="sb-toggle" for="align-bottom-toggle">
+      <label class="sb-toggle settings-toggle" for="align-bottom-toggle">
         <div class="sb-toggle-copy">
           <strong>Bottom align</strong>
         </div>
         <input id="align-bottom-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
-      <label class="sb-toggle" for="bg-toggle">
+      <label class="sb-toggle settings-toggle" for="bg-toggle">
         <div class="sb-toggle-copy">
           <strong>Background image</strong>
         </div>
         <input id="bg-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
-      <div class="sb-row tight">
+      <div id="bg-image-preset-row" class="sb-row tight bg-image-setting-row">
         <label class="sb-lbl" for="bg-image-select">Background preset</label>
         <select id="bg-image-select" class="sb-select" aria-label="Background preset">
           <option value="assets/bg/living room.jpg">Living room</option>
           <option value="assets/bg/living room 2.jpg">Living room 2</option>
           <option value="assets/bg/desk.jpg">Desk</option>
           <option value="assets/bg/work.jpg">Work</option>
-          <option value="assets/bg/park.jpg">Park</option>
+          <option value="assets/bg/park.jpg">White wall</option>
           <option value="assets/bg/street.jpg">Street</option>
           <option value="assets/bg/grocery store.jpg">Grocery store</option>
           <option value="assets/bg/kitechen.jpg">Kitechen</option>
           <option value="dark">Dark</option>
         </select>
       </div>
-      <div class="sb-row tight">
+      <div id="bg-image-upload-row" class="sb-row tight bg-image-setting-row">
         <label class="sb-lbl" for="bg-image-upload">Background image upload</label>
         <div class="media-upload-row">
           <label class="sb-mini-btn upload-btn" for="bg-image-upload">Upload<input id="bg-image-upload" type="file" accept="image/*"/></label>
           <button id="bg-image-reset" class="sb-mini-btn" type="button">Reset</button>
         </div>
       </div>
-      <div id="bg-image-state" class="icon-mode-badge">preset</div>
-      <div class="sb-row tight">
+      <div id="bg-image-alpha-row" class="sb-row tight bg-image-setting-row">
         <label class="sb-lbl" for="bg-image-alpha">Image alpha</label>
         <input id="bg-image-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="90"/>
+      </div>
+      <div class="sb-row tight left-bg-video-section">
+        <label class="sb-lbl" for="bg-video-upload">Background video</label>
+        <div class="media-upload-row">
+          <label class="sb-mini-btn upload-btn" for="bg-video-upload">Upload<input id="bg-video-upload" type="file" accept="video/*"/></label>
+          <button id="bg-video-reset" class="sb-mini-btn" type="button">Reset</button>
+        </div>
+        <div id="bg-video-state" class="icon-mode-badge">empty</div>
+        <div id="bg-video-controls" class="sb-row tight hidden">
+          <div class="sb-btn-row">
+            <button id="bg-video-play-toggle" class="sb-mini-btn" type="button">Play</button>
+          </div>
+          <label class="sb-lbl" for="bg-video-progress">Video progress</label>
+          <input id="bg-video-progress" class="sb-input" type="range" min="0" max="1000" step="1" value="0"/>
+          <label class="sb-lbl" for="bg-video-alpha">Video alpha</label>
+          <input id="bg-video-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="80"/>
+          <label class="sb-lbl" for="bg-video-y">Video Y position</label>
+          <input id="bg-video-y" class="sb-input" type="range" min="-500" max="500" step="1" value="0"/>
+        </div>
       </div>
     </div>
   </div>
@@ -362,11 +380,8 @@
       </div>
     </div>
 
-    <div class="sb-section" data-collapsible="1">
-      <button class="sb-section-toggle" type="button">
-        <div class="sb-heading">AI Debug</div>
-        <span class="sb-chevron">▾</span>
-      </button>
+    <div class="sb-section prototype-ai-debug-section">
+      <div class="sb-lbl prototype-ai-debug-heading">AI Debug</div>
       <div class="sb-section-body">
         <div class="legacy-grid prototype-ai-debug-grid">
           <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
@@ -415,41 +430,13 @@
       </div>
     </div>
 
-    <div class="sb-section" data-collapsible="1">
-      <button class="sb-section-toggle" type="button">
-        <div class="sb-heading">Background Video</div>
-        <span class="sb-chevron">▾</span>
-      </button>
-      <div class="sb-section-body">
-        <div class="sb-row tight">
-          <label class="sb-lbl" for="bg-video-upload">Background video</label>
-          <div class="media-upload-row">
-            <label class="sb-mini-btn upload-btn" for="bg-video-upload">Upload<input id="bg-video-upload" type="file" accept="video/*"/></label>
-            <button id="bg-video-reset" class="sb-mini-btn" type="button">Reset</button>
-          </div>
-        </div>
-        <div id="bg-video-state" class="icon-mode-badge">empty</div>
-        <div id="bg-video-controls" class="sb-row tight hidden">
-          <div class="sb-btn-row">
-            <button id="bg-video-play-toggle" class="sb-mini-btn" type="button">Play</button>
-          </div>
-          <label class="sb-lbl" for="bg-video-progress">Video progress</label>
-          <input id="bg-video-progress" class="sb-input" type="range" min="0" max="1000" step="1" value="0"/>
-          <label class="sb-lbl" for="bg-video-alpha">Video alpha</label>
-          <input id="bg-video-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="80"/>
-          <label class="sb-lbl" for="bg-video-y">Video Y position</label>
-          <input id="bg-video-y" class="sb-input" type="range" min="-500" max="500" step="1" value="0"/>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <!-- ── Content tab ── -->
   <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="content">
 
     <!-- Icon layer row -->
-    <div id="editor-icon-layer" class="layer-row editor-field">
+    <div id="editor-icon-layer" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Icon</span>
         <span class="layer-row-preview">
@@ -465,7 +452,6 @@
           <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
           <button id="scenario-icon-reset" class="sb-mini-btn" type="button">×</button>
         </div>
-        <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
         <div class="typo-controls">
           <input id="scenario-icon-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Icon size"/>
           <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
@@ -473,7 +459,7 @@
       </div>
     </div>
 
-    <div id="editor-list-items" class="layer-row editor-field hidden">
+    <div id="editor-list-items" class="layer-row editor-field hidden expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">List Items</span>
         <span class="layer-row-preview">
@@ -487,7 +473,7 @@
     </div>
 
     <!-- Primary layer row -->
-    <div id="editor-primary-field" class="layer-row editor-field">
+    <div id="editor-primary-field" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Primary</span>
         <span class="layer-row-preview">
@@ -506,8 +492,24 @@
       </div>
     </div>
 
+    <div id="stage-nudge-style-section" class="layer-row editor-field hidden expanded">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Divider</span>
+        <span class="layer-row-preview">
+          <span class="layer-preview-val">Nudge</span>
+          <span id="layer-preview-nudge-divider-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <div class="typo-controls">
+          <input id="stage-nudge-divider-color" class="typo-color" type="color" value="#ffffff"/>
+        </div>
+      </div>
+    </div>
+
     <!-- Secondary layer row -->
-    <div id="editor-secondary-field" class="layer-row editor-field">
+    <div id="editor-secondary-field" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Secondary</span>
         <span class="layer-row-preview">
@@ -527,7 +529,7 @@
     </div>
 
     <!-- Detail layer row -->
-    <div id="editor-detail-field" class="layer-row editor-field">
+    <div id="editor-detail-field" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Detail</span>
         <span class="layer-row-preview">
@@ -546,7 +548,7 @@
       </div>
     </div>
 
-    <div id="editor-action-card-field" class="layer-row editor-field hidden">
+    <div id="editor-action-card-field" class="layer-row editor-field hidden expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Actions</span>
         <span class="layer-row-preview">
@@ -560,7 +562,7 @@
       </div>
     </div>
 
-    <div id="editor-intent-header-field" class="layer-row editor-field hidden">
+    <div id="editor-intent-header-field" class="layer-row editor-field hidden expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Intent Header</span>
         <span class="layer-row-preview">
@@ -589,35 +591,7 @@
 
   <!-- ── Style tab ── -->
   <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="style">
-    <div class="sb-row tight">
-      <label class="sb-toggle" for="stage-selected-toggle">
-        <div class="sb-toggle-copy"><strong>Selected</strong></div>
-        <input id="stage-selected-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-    </div>
-    <div class="sb-row tight">
-      <label class="sb-toggle" for="stage-shell-hidden-toggle">
-        <div class="sb-toggle-copy"><strong>Hide shell</strong></div>
-        <input id="stage-shell-hidden-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-    </div>
-
-    <div id="stage-nudge-style-section" class="sb-section hidden" data-collapsible="1">
-      <button class="sb-section-toggle" type="button">
-        <div class="sb-heading">Nudge Style</div>
-        <span class="sb-chevron">▾</span>
-      </button>
-      <div class="sb-section-body">
-        <div class="sb-stage-grid sb-style-color-grid">
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-nudge-divider-color">Divider</label>
-            <input id="stage-nudge-divider-color" class="typo-color" type="color" value="#ffffff"/>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="stage-geometry-section" class="sb-section" data-collapsible="1">
+    <div id="stage-geometry-section" class="sb-section layer-row editor-field style-editor-field expanded" data-collapsible="1">
       <button class="sb-section-toggle" type="button">
         <div class="sb-heading">Geometry</div>
         <span class="sb-chevron">▾</span>
@@ -626,7 +600,7 @@
         <div class="sb-geometry-controls">
           <div class="sb-row">
             <div class="sb-range-head">
-              <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
+              <label class="sb-lbl" for="stage-radius-input">Corner</label>
               <span class="sb-val" id="stage-radius-val">30px</span>
             </div>
             <input id="stage-radius-input" type="range" min="0" max="100" step="10" value="30"/>
@@ -654,7 +628,7 @@
           </div>
           <div class="sb-row">
             <div class="sb-range-head">
-              <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
+              <label class="sb-lbl" for="stage-icon-pad-input">Left padding</label>
               <span class="sb-val" id="stage-icon-pad-val">16px</span>
             </div>
             <input id="stage-icon-pad-input" type="range" min="0" max="30" step="1" value="16"/>
@@ -666,6 +640,12 @@
             </div>
             <input id="stage-gap-input" type="range" min="0" max="30" step="1" value="8"/>
           </div>
+        </div>
+        <div class="sb-row tight style-toggle-row">
+          <label class="sb-toggle" for="stage-shell-hidden-toggle">
+            <div class="sb-toggle-copy"><strong>Hide shell</strong></div>
+            <input id="stage-shell-hidden-toggle" class="sb-toggle-input" type="checkbox"/>
+          </label>
         </div>
         <div id="stage-card-s-row" class="sb-row tight hidden">
           <label class="sb-toggle" for="stage-card-s-toggle">
@@ -737,7 +717,7 @@
       </div>
     </div>
 
-    <div class="sb-section" data-collapsible="1">
+    <div id="stage-animation-section" class="sb-section layer-row editor-field style-editor-field expanded" data-collapsible="1">
       <button class="sb-section-toggle" type="button">
         <div class="sb-heading">Animation</div>
         <span class="sb-chevron">▾</span>

@@ -20,6 +20,9 @@ body.bg-image-on,
 body.bg-video-on {
   background: #050505;
 }
+body.bg-off {
+  background: #030303;
+}
 .entry-point-btn {
   position: fixed;
   left: 16px;
@@ -63,10 +66,10 @@ body.bg-video-on {
   pointer-events: none;
   opacity: 0;
   background:
-    linear-gradient(135deg, rgba(17,17,17,0.055), transparent 38%),
-    linear-gradient(rgba(17,17,17,0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(17,17,17,0.055) 1px, transparent 1px),
-    rgba(216, 210, 200, 0.84);
+    linear-gradient(135deg, rgba(24,24,24,0.16), transparent 38%),
+    linear-gradient(rgba(34,34,34,0.9) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,34,34,0.9) 1px, transparent 1px);
+  background-color: rgba(3, 3, 3, 0.96);
   background-size: auto, 32px 32px, 32px 32px, auto;
   transition: opacity 220ms var(--motion-ease);
 }

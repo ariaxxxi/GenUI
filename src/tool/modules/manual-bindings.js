@@ -1269,7 +1269,7 @@ export function initManualBindings({
   });
   UI.bgImageReset?.addEventListener('click', () => {
     updateCanvas({
-      backgroundImage: UI.bgImageSelect?.value || 'assets/bg/living room.jpg',
+      backgroundImage: UI.bgImageSelect?.value || 'assets/bg/park.jpg',
       backgroundImageAlpha: canvasSettings().backgroundImageAlpha ?? 0.9,
       backgroundEnabled: true,
       backgroundMediaKind: 'image',
@@ -1689,14 +1689,6 @@ export function initManualBindings({
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
     commitStageChange(stage.id, (draft) => { draft.listSelectable = e.target.checked; });
-  });
-  UI.stageSelectedToggle?.addEventListener('change', (e) => {
-    const scenario = selectedScenario();
-    if (!scenario) return;
-    commitScenarioChange((draft) => {
-      draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
-      draft.content.selectedByShape[draft.shape] = e.target.checked;
-    });
   });
   UI.stageShellHiddenToggle?.addEventListener('change', (e) => {
     const stage = stageById(selectedScenario()?.shape);

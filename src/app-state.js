@@ -21,7 +21,7 @@ export const RESPONSE_MODE = Object.freeze({
   AI: 'ai',
 });
 
-const DEFAULT_BACKGROUND_IMAGE = 'assets/bg/living room.jpg';
+const DEFAULT_BACKGROUND_IMAGE = 'assets/bg/park.jpg';
 
 export const PAGE_MODE_OVERRIDE = (() => {
   const raw = String(document.body?.dataset?.pageMode || '').trim().toLowerCase();
@@ -71,7 +71,7 @@ export function loadCanvasSettings() {
     backgroundVideoProgress: Math.max(0, Math.min(1, Number(stored?.backgroundVideoProgress) || 0)),
     backgroundVideoAlpha: Math.max(0, Math.min(1, Number(stored?.backgroundVideoAlpha ?? 0.8))),
     backgroundVideoY: Math.max(-500, Math.min(500, Number(stored?.backgroundVideoY) || 0)),
-    floatingEnabled: stored?.floatingEnabled !== false,
+    floatingEnabled: stored?.floatingEnabled === true,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
     phoneBgEnabled: stored?.phoneBgEnabled !== false,

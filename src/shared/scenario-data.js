@@ -32,7 +32,7 @@ const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
   { id: 'list', name: 'List', preset: true, renderShape: 'list', cornerRadius: 25, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail'] },
   { id: 'list-pill', name: 'List-Pill', preset: true, renderShape: 'list', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
-  { id: 'nudge', name: 'Nudge', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary', 'secondary'] },
+  { id: 'nudge', name: 'Nudge', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: 60, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary', 'secondary'] },
   { id: 'timer', name: 'Timer', preset: true, renderShape: 'timer', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, hideShell: true, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary'] },
   { id: 'recorder', name: 'Recorder', preset: true, renderShape: 'timer', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, hideShell: true, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary'] },
   { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
@@ -517,7 +517,17 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   function stageTypographyForShape(stageIdValue, scenario = null) {
     const renderShape = renderShapeForStageId(stageIdValue, scenario) || stageIdValue || 'pill';
     const typographyByShape = normalizeTypographyByShape(scenario?.content?.typographyByShape, stageIdValue);
-    return typographyByShape?.[stageIdValue] || defaultTypographyForShape(renderShape);
+    const typography = typographyByShape?.[stageIdValue] || defaultTypographyForShape(renderShape);
+    if (!isNudgeStageId(stageIdValue)) return typography;
+    const rawPrimarySize = Number(scenario?.content?.typographyByShape?.[stageIdValue]?.primary?.size);
+    if (Number.isFinite(rawPrimarySize)) return typography;
+    return {
+      ...typography,
+      primary: {
+        ...typography.primary,
+        size: 24,
+      },
+    };
   }
 
   function scenarioStageSizeOverride(scenario, shape) {
@@ -534,7 +544,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       return { width: 300, height: 80 };
     }
     if (isNudgeStageId(stageIdValue)) {
-      return { width: 240, height: 80 };
+      return { width: 240, height: 60 };
     }
     const renderShape = renderShapeForStageId(stageIdValue);
     const base = SHAPES[renderShape] || SHAPES.pill;

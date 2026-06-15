@@ -215,7 +215,6 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageCardSToggle.checked = renderShape === 'card-s';
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
     }
-    if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
     if (ctx.UI.stageCelestialStyleSection) ctx.UI.stageCelestialStyleSection.classList.toggle('hidden', !stageSelected);
     if (ctx.UI.stageShellHiddenToggle) {
       ctx.UI.stageShellHiddenToggle.checked = !!stage?.hideShell;
@@ -322,7 +321,6 @@ export function createSidebarRender(ctx, refs) {
     const actionCardRight = actionCardActions.right ?? 'Join now →';
     const typography = ctx.getScenarioTypography(scenario, scenario?.shape);
     if (ctx.UI.scenarioIconInput) ctx.UI.scenarioIconInput.value = stageIcon.kind === 'emoji' ? stageIcon.value : '';
-    if (ctx.UI.scenarioIconMode) ctx.UI.scenarioIconMode.textContent = stageIcon.kind === 'image' ? 'png/gif' : (stageIcon.kind || 'none');
     if (ctx.UI.scenarioPrimary) ctx.UI.scenarioPrimary.value = stageText.primary;
     if (ctx.UI.scenarioSecondary) ctx.UI.scenarioSecondary.value = stageText.secondary;
     if (ctx.UI.scenarioDetail) ctx.UI.scenarioDetail.value = stageText.detail;
