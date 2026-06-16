@@ -122,6 +122,11 @@ export function createSidebarActions(ctx, refs) {
           ...(scenario.content.typographyByShape[newStage.id] || {}),
           primary: { size: 24, color: '#ffffff' },
         };
+        scenario.content.sizeByShape = { ...(scenario.content.sizeByShape || {}) };
+        scenario.content.sizeByShape[newStage.id] = {
+          ...(scenario.content.sizeByShape[newStage.id] || {}),
+          widthOverride: 150,
+        };
       }
       if (stageKind === 'nudge') {
         scenario.content = scenario.content || {};
