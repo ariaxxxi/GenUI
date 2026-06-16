@@ -1,8 +1,0 @@
-{
-  "disambiguate_found_two": "I found 2 hiro in your contact list, which one do you mean?",
-  "compose_prompt": "What would you like to say?",
-  "confirm_message_to": "Confirm message to {{name}}.",
-  "confirm_ready_send": "Ready to send?",
-  "edit_message": "Edit your message.",
-  "contact_not_found": "Contact not found."
-}
