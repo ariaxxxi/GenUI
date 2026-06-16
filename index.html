@@ -114,6 +114,15 @@
         </div>
         <input id="align-bottom-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
+    </div>
+  </div>
+
+  <div class="sb-section" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Background</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
       <label class="sb-toggle settings-toggle" for="bg-toggle">
         <div class="sb-toggle-copy">
           <strong>Background image</strong>
@@ -121,8 +130,8 @@
         <input id="bg-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
       <div id="bg-image-preset-row" class="sb-row tight bg-image-setting-row">
-        <label class="sb-lbl" for="bg-image-select">Background preset</label>
-        <select id="bg-image-select" class="sb-select" aria-label="Background preset">
+        <label class="sb-lbl" for="bg-image-select">Preset</label>
+        <select id="bg-image-select" class="sb-select" aria-label="Preset">
           <option value="assets/bg/living room.jpg">Living room</option>
           <option value="assets/bg/living room 2.jpg">Living room 2</option>
           <option value="assets/bg/desk.jpg">Desk</option>
@@ -135,7 +144,7 @@
         </select>
       </div>
       <div id="bg-image-upload-row" class="sb-row tight bg-image-setting-row">
-        <label class="sb-lbl" for="bg-image-upload">Background image upload</label>
+        <label class="sb-lbl" for="bg-image-upload">Custom Image</label>
         <div class="media-upload-row">
           <label class="sb-mini-btn upload-btn" for="bg-image-upload">Upload<input id="bg-image-upload" type="file" accept="image/*"/></label>
           <button id="bg-image-reset" class="sb-mini-btn" type="button">Reset</button>
@@ -340,29 +349,29 @@
         <span class="sb-lbl">Stages</span>
         <div class="sb-stage-strip-note">Double-click to rename</div>
       </div>
-      <div class="stage-timeline" id="scenario-shape-row"></div>
-    </div>
 
-    <div class="sb-btn-row stage-actions">
-      <div class="stage-add-group">
-        <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
-          <option value="dot">Dot</option>
-          <option value="list-pill">List-Pill</option>
-          <option value="nudge">Nudge</option>
-          <option value="timer">Timer</option>
-          <option value="recorder">Recorder</option>
-          <option value="pill">Pill</option>
-          <option value="card" selected>Card</option>
-          <option value="blank">Blank</option>
-        </select>
-        <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
+      <div class="sb-btn-row stage-actions">
+        <div class="stage-add-group">
+          <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
+            <option value="dot">Dot</option>
+            <option value="list-pill">List-Pill</option>
+            <option value="nudge">Nudge</option>
+            <option value="timer">Timer</option>
+            <option value="recorder">Recorder</option>
+            <option value="pill">Pill</option>
+            <option value="card" selected>Card</option>
+            <option value="blank">Blank</option>
+          </select>
+          <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
+        </div>
+        <button id="stage-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate stage" aria-label="Duplicate stage">⧉</button>
+        <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
       </div>
-      <button id="stage-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate stage" aria-label="Duplicate stage">⧉</button>
-      <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
-    </div>
-    <div class="prototype-setup-actions" aria-label="Prototype setup transfer">
-      <button id="prototype-setup-export" class="sb-mini-btn" type="button">Export setup</button>
-      <label class="sb-mini-btn upload-btn" for="prototype-setup-import">Import setup<input id="prototype-setup-import" type="file" accept="application/json,.json"/></label>
+      <div class="stage-timeline" id="scenario-shape-row"></div>
+      <div class="prototype-setup-actions" aria-label="Prototype setup transfer">
+        <button id="prototype-setup-export" class="sb-mini-btn" type="button">Export setup</button>
+        <label class="sb-mini-btn upload-btn" for="prototype-setup-import">Import setup<input id="prototype-setup-import" type="file" accept="application/json,.json"/></label>
+      </div>
     </div>
 
     <div id="stage-config-panel" class="sb-stage-config">

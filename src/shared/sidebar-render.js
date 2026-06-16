@@ -35,8 +35,8 @@ export function createSidebarRender(ctx, refs) {
   }
 
   function stageComponentLabel(type) {
-    if (type === 'action-row') return 'actions';
-    return type === 'intent-header' ? 'intent header' : type;
+    const label = type === 'action-row' ? 'actions' : (type === 'intent-header' ? 'intent header' : String(type || ''));
+    return label ? label[0].toUpperCase() + label.slice(1) : label;
   }
 
   function syncRangeProgress(input) {
@@ -137,7 +137,7 @@ export function createSidebarRender(ctx, refs) {
       const listItemCount = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(ctx.selectedScenario(), stage.id).length : 0;
       const row = document.createElement('div');
       row.className = 'stage-comp-row';
-      row.innerHTML = `<span class="stage-comp-label">items</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="remove">-</button><span class="stage-comp-count">${listItemCount}</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="add">+</button>`;
+      row.innerHTML = `<span class="stage-comp-label">Items</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="remove">-</button><span class="stage-comp-count">${listItemCount}</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="add">+</button>`;
       const removeBtn = row.querySelector('[data-stage-list-count-action="remove"]');
       const addBtn = row.querySelector('[data-stage-list-count-action="add"]');
       if (removeBtn) removeBtn.disabled = listItemCount <= 1;
