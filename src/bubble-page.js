@@ -1490,9 +1490,9 @@ const state = {
   ...getBubbleSetControlDefaults(DEFAULT_BUBBLE_SET_ID),
   backgroundImageEnabled: true,
   backgroundImage: {
-    src: 'assets/bg/park.jpg',
+    src: 'assets/bg/white wall.jpg',
     objectUrl: '',
-    name: 'park image',
+    name: 'white wall image',
   },
   backgroundImageAlpha: 0.8,
   backgroundVideo: null,
@@ -2503,13 +2503,13 @@ function syncBackgroundImageUi() {
   state.backgroundImageAlpha = imageAlpha;
   if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
   refs.stage?.classList.toggle('has-bg-image', enabled);
-  if (refs.bgImageState) refs.bgImageState.textContent = state.backgroundImage?.name || 'park image';
+  if (refs.bgImageState) refs.bgImageState.textContent = state.backgroundImage?.name || 'white wall image';
   if (refs.bgImageAlpha) {
     refs.bgImageAlpha.value = String(Math.round(imageAlpha * 100));
     refs.bgImageAlpha.disabled = !enabled;
   }
   if (refs.bgImage) {
-    const src = state.backgroundImage?.src || 'assets/bg/park.jpg';
+    const src = state.backgroundImage?.src || 'assets/bg/white wall.jpg';
     refs.bgImage.style.backgroundImage = enabled ? `url("${src}")` : 'none';
     refs.bgImage.style.opacity = enabled ? String(imageAlpha) : '0';
   }
@@ -3015,9 +3015,9 @@ async function handleBackgroundImageUpload(event) {
 function resetBackgroundImage() {
   revokeBackgroundImageObjectUrl(state.backgroundImage);
   state.backgroundImage = {
-    src: 'assets/bg/park.jpg',
+    src: 'assets/bg/white wall.jpg',
     objectUrl: '',
-    name: 'park image',
+    name: 'white wall image',
   };
   state.backgroundImageAlpha = 0.8;
   state.backgroundImageEnabled = true;

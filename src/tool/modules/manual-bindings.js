@@ -1269,7 +1269,7 @@ export function initManualBindings({
   });
   UI.bgImageReset?.addEventListener('click', () => {
     updateCanvas({
-      backgroundImage: UI.bgImageSelect?.value || 'assets/bg/park.jpg',
+      backgroundImage: UI.bgImageSelect?.value || 'assets/bg/white wall.jpg',
       backgroundImageAlpha: canvasSettings().backgroundImageAlpha ?? 0.9,
       backgroundEnabled: true,
       backgroundMediaKind: 'image',

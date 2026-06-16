@@ -1110,13 +1110,9 @@ body.bg-off .bg-blur-video { opacity: 0; }
 #sidebar .sb-section:not(.mode-toggle-bottom) > .sb-section-body,
 #sidebar [data-panel="stage"] .stage-timeline,
 #sidebar [data-panel="stage"] .sb-stage-rail .stage-actions,
-#sidebar [data-panel="stage"] .sb-stage-rail .prototype-setup-actions,
 #sidebar [data-panel="stage"] #stage-component-controls {
   padding: 0 12px 12px;
   gap: 8px;
-}
-#sidebar [data-panel="stage"] .sb-stage-rail .prototype-setup-actions {
-  margin-top: 0;
 }
 #left-sidebar .sb-section:not(.mode-toggle-bottom) .sb-chevron,
 #sidebar .sb-section:not(.mode-toggle-bottom) .sb-chevron {

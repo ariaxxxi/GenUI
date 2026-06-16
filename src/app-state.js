@@ -21,7 +21,7 @@ export const RESPONSE_MODE = Object.freeze({
   AI: 'ai',
 });
 
-const DEFAULT_BACKGROUND_IMAGE = 'assets/bg/park.jpg';
+const DEFAULT_BACKGROUND_IMAGE = 'assets/bg/white wall.jpg';
 
 export const PAGE_MODE_OVERRIDE = (() => {
   const raw = String(document.body?.dataset?.pageMode || '').trim().toLowerCase();

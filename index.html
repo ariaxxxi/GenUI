@@ -87,7 +87,7 @@
       <span class="sb-chevron">▾</span>
     </button>
     <div class="sb-section-body">
-      <div class="sb-btn-row">
+      <div class="sb-btn-row scenario-actions">
         <button id="scenario-add" class="sb-mini-btn icon-btn" type="button" title="Add scenario" aria-label="Add scenario">+</button>
         <button id="scenario-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate scenario" aria-label="Duplicate scenario">⧉</button>
         <button id="scenario-delete" class="sb-mini-btn icon-btn" type="button" title="Delete scenario" aria-label="Delete scenario">🗑</button>
@@ -132,9 +132,11 @@
       <div id="bg-image-preset-row" class="sb-row tight bg-image-setting-row">
         <label class="sb-lbl" for="bg-image-select">Preset</label>
         <select id="bg-image-select" class="sb-select" aria-label="Preset">
-          <option value="assets/bg/living room.jpg">Living room</option>
+          <option value="assets/bg/living room.jpg">Home</option>
           <option value="assets/bg/work.jpg">Work</option>
-          <option value="assets/bg/park.jpg">White wall</option>
+          <option value="assets/bg/garage.jpg">Garage</option>
+          <option value="assets/bg/dog walk.jpg">Park</option>
+          <option value="assets/bg/white wall.jpg">White wall</option>
           <option value="assets/bg/street.jpg">Street</option>
           <option value="assets/bg/grocery store.jpg">Grocery store</option>
           <option value="assets/bg/kitechen.jpg">Kitchen</option>
@@ -366,10 +368,10 @@
         <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
       </div>
       <div class="stage-timeline" id="scenario-shape-row"></div>
-      <div class="prototype-setup-actions" aria-label="Prototype setup transfer">
-        <button id="prototype-setup-export" class="sb-mini-btn" type="button">Export setup</button>
-        <label class="sb-mini-btn upload-btn" for="prototype-setup-import">Import setup<input id="prototype-setup-import" type="file" accept="application/json,.json"/></label>
-      </div>
+    </div>
+    <div class="prototype-setup-actions" aria-label="Prototype setup transfer">
+      <button id="prototype-setup-export" class="sb-mini-btn" type="button">Export setup</button>
+      <label class="sb-mini-btn upload-btn" for="prototype-setup-import">Import setup<input id="prototype-setup-import" type="file" accept="application/json,.json"/></label>
     </div>
 
     <div id="stage-config-panel" class="sb-stage-config">

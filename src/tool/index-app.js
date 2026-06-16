@@ -27,16 +27,16 @@ const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: 
 const PROTOTYPE_BACKGROUND_OPTIONS = [
   'dark',
   'assets/bg/living room.jpg',
-  'assets/bg/living room 2.jpg',
-  'assets/bg/desk.jpg',
   'assets/bg/work.jpg',
-  'assets/bg/park.jpg',
+  'assets/bg/garage.jpg',
+  'assets/bg/dog walk.jpg',
+  'assets/bg/white wall.jpg',
   'assets/bg/street.jpg',
   'assets/bg/grocery store.jpg',
   'assets/bg/kitechen.jpg',
 ];
 const DARK_PROTOTYPE_BACKGROUND = 'dark';
-const DEFAULT_PROTOTYPE_BACKGROUND = 'assets/bg/park.jpg';
+const DEFAULT_PROTOTYPE_BACKGROUND = 'assets/bg/white wall.jpg';
 
 function normalizePrototypeBackground(src) {
   const value = String(src || '').trim();
