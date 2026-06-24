@@ -463,7 +463,7 @@ function syncManualShapeButtonStates(shape = document.body?.dataset?.currentShap
   const actualShape = String(shape || '').trim();
   const displayShape = prototypeAiDebugState.active && actualShape === 'magic'
     ? 'magic'
-    : actualShape;
+    : (actualShape === 'list' ? 'list-pill' : actualShape);
   document.querySelectorAll('.sb-shape-btn').forEach((button) => {
     button.classList.toggle('active', button.dataset.shape === displayShape);
   });

@@ -288,7 +288,7 @@ export function createSidebarRender(ctx, refs) {
         ? 'emoji'
         : 'default';
       const row = document.createElement('div');
-      row.className = 'sb-row tight';
+      row.className = 'sb-row tight list-item-container';
       row.innerHTML = `
         <label class="sb-lbl" for="${primaryId}">Row ${index + 1}</label>
         <input id="${primaryId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-primary-index="${index}" value="${String(item?.primary || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" placeholder="Primary text"/>

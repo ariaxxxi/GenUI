@@ -321,10 +321,11 @@ function armAiWakeListening(options = {}) {
 }
 
 function updateActive(shape) {
+  const displayShape = shape === "list" ? "list-pill" : shape;
   window.currentShape = shape;
   syncHomeContextTextClasses(shape);
   document.querySelectorAll(".sb-shape-btn").forEach((b) => {
-    if (b.dataset.shape) b.classList.toggle("active", b.dataset.shape === shape);
+    if (b.dataset.shape) b.classList.toggle("active", b.dataset.shape === displayShape);
   });
   const prompt = document.getElementById("home-start-prompt");
   if (!prompt) return;
@@ -607,7 +608,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.key === "9") demo.manualShape("magic");
-  if (e.key === "5") demo.manualShape("list");
+  if (e.key === "5") demo.manualShape("list-pill");
   if (e.key === "6") demo.manualShape("split");
   if (e.key === "0") armAiWakeListening();
   if (e.key === "Escape") {

@@ -188,8 +188,8 @@ export function initManualDemo({
     stopSiriOrb();
     hideRich();
     document.getElementById('drop-main').classList.remove('ai-mode');
-    morphTo('list', demoListRenderContent(items));
-    updateActive('list');
+    morphTo('list', demoListRenderContent(items), null, 'list-pill');
+    updateActive('list-pill');
   }
 
   function manualShape(shape) {
@@ -206,9 +206,9 @@ export function initManualDemo({
     if (!leavingList) clearListPills();
     if (shape === 'split') return void morphTo('split', { icon: '', primary: '', secondary: '', detail: '' });
     if (!leavingSplit && currentShape === 'split') resetSplitState();
-    if (shape === 'list') {
+    if (shape === 'list' || shape === 'list-pill') {
       morphToList(DEMO_LIST);
-      updateActive('list');
+      updateActive('list-pill');
       return;
     }
     if (shape === 'listening') {

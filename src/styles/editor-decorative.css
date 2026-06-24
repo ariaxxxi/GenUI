@@ -383,6 +383,34 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
 .prototype-disambiguation-pills .g-disambiguation-pill {
   pointer-events: none;
 }
+.prototype-disambiguation-pills:not(.prototype-disambiguation-pills--list-pill) .g-disambiguation-pill {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  box-shadow:
+    inset 0 0 20px rgba(255,255,255,0.8),
+    inset 0 0 0 1px rgba(129,129,129,0.5);
+}
+.prototype-disambiguation-pills:not(.prototype-disambiguation-pills--list-pill) .g-disambiguation-pill.selected {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+}
+.prototype-disambiguation-pills:not(.prototype-disambiguation-pills--list-pill) .g-disambiguation-pill-media {
+  width: var(--g-disambiguation-media-size, 32px);
+  height: var(--g-disambiguation-media-size, 32px);
+  flex: 0 0 var(--g-disambiguation-media-size, 32px);
+  font-size: var(--g-disambiguation-media-size, 32px);
+  line-height: 1;
+  overflow: visible;
+  background: transparent;
+  color: rgba(255,255,255,0.96);
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "DM Sans", sans-serif;
+}
+.prototype-disambiguation-pills:not(.prototype-disambiguation-pills--list-pill) .g-disambiguation-pill-media .g-ava-img {
+  display: block;
+  width: var(--g-disambiguation-media-size, 32px);
+  height: var(--g-disambiguation-media-size, 32px);
+  object-fit: contain;
+}
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill {
   width: var(--prototype-list-pill-width, 300px);
   height: var(--prototype-list-pill-height, 80px);
@@ -598,6 +626,15 @@ body.bg-off .bg-blur-video { opacity: 0; }
   transition: border-color .15s var(--motion-ease);
 }
 .layer-row.expanded { border-color: rgba(255,255,255,0.20); }
+#sidebar .sb-row.list-item-container {
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  overflow: visible;
+  box-shadow: none;
+}
 .layer-row-header {
   display: flex;
   align-items: center;

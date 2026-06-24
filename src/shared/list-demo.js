@@ -6,6 +6,7 @@ export const DEMO_LIST = [
 
 export function demoListRenderContent(items = DEMO_LIST) {
   return {
+    scenario: { shape: "list-pill", content: {} },
     icon: { kind: "none", value: "" },
     primary: "",
     secondary: "",

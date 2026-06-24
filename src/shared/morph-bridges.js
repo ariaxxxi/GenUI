@@ -142,7 +142,7 @@ export function createMorphBridges(ctx) {
 
   function bridgeFromListToTarget(shape, contentData, customGeo, stageId = null) {
     callbacks.collapseListStack(listBridgeMs());
-    callbacks.updateActive('list');
+    callbacks.updateActive('list-pill');
     state.listBridgeTimer = setTimeout(() => {
       state.listBridgeTimer = null;
       if (shape === 'listening') {

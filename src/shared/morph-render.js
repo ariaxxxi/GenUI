@@ -84,13 +84,14 @@ export function createMorphRender(ctx) {
   }
 
   function prototypeListEntriesFromContent(contentData = {}) {
-    const icon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
     const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
     const shape = String(scenario?.shape || 'list');
     const blobTopCore = callbacks.stageSelectedBlobTopCoreColorForShape?.(scenario, shape) || '#8fb2ef';
     const blobTopEdge = callbacks.stageSelectedBlobTopEdgeColorForShape?.(scenario, shape) || '#8a72eb';
     const blobBottomCore = callbacks.stageSelectedBlobBottomCoreColorForShape?.(scenario, shape) || '#a8bbf0';
     const blobBottomEdge = callbacks.stageSelectedBlobBottomEdgeColorForShape?.(scenario, shape) || '#572fff';
+    const iconTypography = callbacks.getScenarioTypography?.(scenario, shape)?.icon || {};
+    const mediaSize = Number(iconTypography.size);
     const sourceItems = Array.isArray(contentData?.listItems) && contentData.listItems.length
       ? contentData.listItems
       : [
@@ -98,12 +99,24 @@ export function createMorphRender(ctx) {
         { primary: String(contentData?.secondary || '').trim(), secondary: '', icon: contentData?.listChipIcons?.secondary },
         { primary: String(contentData?.detail || '').trim(), secondary: '', icon: contentData?.listChipIcons?.detail },
       ];
+    const listChipIconFallbacks = [
+      contentData?.listChipIcons?.primary,
+      contentData?.listChipIcons?.secondary,
+      contentData?.listChipIcons?.detail,
+    ];
+    const stageIcon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
+    const hasIconValue = (value) => value?.kind !== 'none' && String(value?.value || '').trim();
     const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
     return sourceItems.map((entry, index) => {
       const primary = String(entry?.primary ?? entry?.label ?? '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
       const secondary = String(entry?.secondary || '').trim();
-      const slotIcon = entry?.icon || { kind: 'none', value: '' };
-      const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim() ? slotIcon : icon;
+      const itemIcon = entry?.icon || { kind: 'none', value: '' };
+      const fallbackIcon = listChipIconFallbacks[index] || { kind: 'none', value: '' };
+      const resolvedIcon = hasIconValue(itemIcon)
+        ? itemIcon
+        : hasIconValue(fallbackIcon)
+        ? fallbackIcon
+        : stageIcon;
       const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
         ? { avatar: String(resolvedIcon.value).trim(), initials: '' }
         : resolvedIcon?.kind === 'emoji' && String(resolvedIcon?.value || '').trim()
@@ -118,6 +131,7 @@ export function createMorphRender(ctx) {
         blobTopEdge,
         blobBottomCore,
         blobBottomEdge,
+        mediaSize: Number.isFinite(mediaSize) ? mediaSize : null,
       });
     });
   }
@@ -221,8 +235,8 @@ export function createMorphRender(ctx) {
       selectedIndex: resolvedSelectedIndex,
       rowDataAttr: 'data-prototype-list-pill',
       clusterClass: `g-disambiguation-pills prototype-disambiguation-pills${pillListStyle ? ' prototype-disambiguation-pills--list-pill' : ''}`,
+      selectedChrome: false,
     });
-    applyPrototypeListSelectedChromePresets(items);
     syncPrototypeListPhase(entering ? 'entering' : 'settled');
     if (!entering) return;
     prototypeListSettleTimer = setTimeout(() => {
@@ -255,11 +269,10 @@ export function createMorphRender(ctx) {
     const incomingDirection = movingDown ? 'top' : 'bottom';
     pills.forEach((pill, index) => {
       const chrome = pill.querySelector('.g-selection-chrome');
-      if (!chrome) return;
       if (index === previousSelectedIndex) {
         const existingTimer = state.prototypeListDeselectTimers.get(pill);
         if (existingTimer) clearTimeout(existingTimer);
-        chrome.dataset.stageDirection = outgoingDirection;
+        if (chrome) chrome.dataset.stageDirection = outgoingDirection;
         pill.classList.add('deselecting');
         pill.classList.remove('selected');
         const timerId = setTimeout(() => {
@@ -275,7 +288,7 @@ export function createMorphRender(ctx) {
           clearTimeout(existingTimer);
           state.prototypeListDeselectTimers.delete(pill);
         }
-        chrome.dataset.stageDirection = incomingDirection;
+        if (chrome) chrome.dataset.stageDirection = incomingDirection;
         pill.classList.remove('deselecting');
         pill.classList.add('selected');
         return;
@@ -286,7 +299,7 @@ export function createMorphRender(ctx) {
         state.prototypeListDeselectTimers.delete(pill);
       }
       pill.classList.remove('deselecting');
-      if (!pill.classList.contains('selected')) {
+      if (chrome && !pill.classList.contains('selected')) {
         chrome.dataset.stageDirection = 'bottom';
       }
     });
@@ -460,26 +473,6 @@ export function createMorphRender(ctx) {
       state.prototypeSelectionChromeSyncFrame = requestAnimationFrame(syncForFrame);
     };
     syncForFrame();
-  }
-
-  function applyPrototypeListSelectedChromePresets(entries = []) {
-    if (!prototypeListRoot) return;
-    const activeScenario = state.prototypeListContent?.scenario || callbacks.selectedScenario?.() || null;
-    const shape = String(activeScenario?.shape || 'list');
-    const preset = celestialSelectedPresetForRenderShape('list');
-    const maskBlur = callbacks.stageSelectedMaskBlurForShape?.(activeScenario, shape) ?? preset.maskBlur;
-    const pills = Array.from(prototypeListRoot.querySelectorAll('[data-prototype-list-pill]'));
-    pills.forEach((pill, index) => {
-      const chrome = pill.querySelector('.g-selection-chrome');
-      if (!chrome) return;
-      const entry = entries[index] || {};
-      applySelectedChromePreset(chrome, pill, preset, {
-        blobTopCore: entry.blobTopCore,
-        blobTopEdge: entry.blobTopEdge,
-        blobBottomCore: entry.blobBottomCore,
-        blobBottomEdge: entry.blobBottomEdge,
-      }, null, { maskBlur });
-    });
   }
 
   function syncPrototypeFigmaButtonDemo(stageId = null, scenario = null) {
@@ -727,30 +720,6 @@ export function createMorphRender(ctx) {
         buttons[1].hidden = !rightLabel;
       }
       visibleActionCount = Number(Boolean(leftLabel)) + Number(Boolean(rightLabel));
-      const scenario = callbacks.selectedScenario?.() || null;
-      const stageId = state.currentStageId || scenario?.shape || 'card';
-      const renderShape = callbacks.renderShapeForStageId?.(stageId, scenario) || 'card';
-      const preset = celestialSelectedPresetForRenderShape(renderShape);
-      const accentA = hexToCssColor(
-        callbacks.stageSelectedBlobTopCoreColorForShape?.(scenario, stageId),
-        hexToCssColor(preset.blobTopCore, 'rgb(215 234 255)'),
-      );
-      const accentB = hexToCssColor(
-        callbacks.stageSelectedBlobBottomCoreColorForShape?.(scenario, stageId),
-        hexToCssColor(preset.blobBottomCore, 'rgb(127 184 255)'),
-      );
-      const accentEdgeA = hexToCssColor(
-        callbacks.stageSelectedBlobTopEdgeColorForShape?.(scenario, stageId),
-        hexToCssColor(preset.blobTopEdge, accentA),
-      );
-      const accentEdgeB = hexToCssColor(
-        callbacks.stageSelectedBlobBottomEdgeColorForShape?.(scenario, stageId),
-        hexToCssColor(preset.blobBottomEdge, accentB),
-      );
-      el.style.setProperty('--action-card-accent-a', accentA);
-      el.style.setProperty('--action-card-accent-b', accentB);
-      el.style.setProperty('--action-card-accent-edge-a', accentEdgeA);
-      el.style.setProperty('--action-card-accent-edge-b', accentEdgeB);
       el.style.setProperty('--action-card-actions-y', `${actionTop}px`);
       el.classList.toggle('is-single-action', visibleActionCount === 1);
     }

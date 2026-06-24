@@ -110,7 +110,7 @@ export function layoutDisambiguationPillItems(items = [], selectedIndex = 0, var
   }));
 }
 
-export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills" } = {}) {
+export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase = "settled", rowDataAttr = "data-g-contact", clusterClass = "g-disambiguation-pills", selectedChrome = true } = {}) {
   const attrName = String(rowDataAttr || "data-g-contact").trim();
   const phaseClass = phase === "entering" ? "entering" : "settled";
   return `<div data-glass-body class="${esc(clusterClass)} ${phaseClass}">${items.map((item, index) => {
@@ -132,9 +132,11 @@ export function renderDisambiguationPills({ items = [], selectedIndex = 0, phase
     ];
     if (Number.isFinite(Number(item?.xStart))) styleVars.push(`--pill-x-start:${Math.round(Number(item.xStart))}px`);
     if (Number.isFinite(Number(item?.yStart))) styleVars.push(`--pill-y-start:${Math.round(Number(item.yStart))}px`);
+    if (Number.isFinite(Number(item?.mediaSize))) styleVars.push(`--g-disambiguation-media-size:${Math.max(0, Math.round(Number(item.mediaSize)))}px`);
     if (accentRgb) styleVars.push(`--g-stage-selected-rgb:${esc(accentRgb)}`);
     if (accentSecondaryRgb) styleVars.push(`--g-stage-selected-secondary-rgb:${esc(accentSecondaryRgb)}`);
-    return `<div class="g-disambiguation-pill g-stage-selected-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${renderSelectedChrome(item?.direction || "bottom")}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
+    const chromeHtml = selectedChrome ? renderSelectedChrome(item?.direction || "bottom") : "";
+    return `<div class="g-disambiguation-pill g-stage-selected-host ${selected ? "selected" : ""} ${subtitle ? "has-subtitle" : ""}" ${attrName}="${index}" aria-label="${esc(title)}" style="${styleVars.join(";")};">${chromeHtml}${avatar}<div class="g-disambiguation-pill-copy">${renderTextLine("g-disambiguation-pill-text", title)}${renderTextLine("g-disambiguation-pill-subtitle", subtitle)}</div></div>`;
   }).join("")}</div>`;
 }
 

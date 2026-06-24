@@ -1083,7 +1083,7 @@ export function initManualBindings({
     if (e.key === '2') manualShape('dot');
     if (e.key === '3') manualShape('pill');
     if (e.key === '4') manualShape('card');
-    if (e.key === '5') manualShape('list');
+    if (e.key === '5') manualShape('list-pill');
     if (e.key === '8') manualShape('ai');
     if (e.key === '6') manualShape('split');
     if (e.key === '7') openCustom();
@@ -1621,6 +1621,7 @@ export function initManualBindings({
   }
 
   UI.scenarioList?.addEventListener('dblclick', (e) => {
+    e.preventDefault();
     const button = e.target.closest('.scenario-item');
     if (!button) return;
     const scenarioId = String(button.dataset.scenarioId || '');
@@ -1634,6 +1635,7 @@ export function initManualBindings({
         setScenarioLibrary(getScenarioLibrary().map((item) => (
           item.id === scenarioId ? { ...item, name: nextValue } : item
         )));
+        persistScenarios();
         renderScenarioUi();
       },
     });

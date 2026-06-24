@@ -24,9 +24,9 @@ export function initDemoControls({
     shell.stopSiriOrb();
     morph.hideRich();
     document.getElementById("drop-main").classList.remove("ai-mode");
-    shell.setIntentHeader("Demo", "List");
-    morph.morphTo("list", demoListRenderContent(items));
-    updateActive("list");
+    shell.setIntentHeader("Demo", "List-Pill");
+    morph.morphTo("list", demoListRenderContent(items), null, "list-pill");
+    updateActive("list-pill");
   }
 
   function openCustom() {
@@ -55,7 +55,7 @@ export function initDemoControls({
     document.getElementById("stage")?.classList.remove("flow-active");
     document.getElementById("stage-wrap")?.classList.remove("flow-active");
     clearListPills();
-    if (nextShape === "list") return void morphToList(DEMO_LIST);
+    if (nextShape === "list" || nextShape === "list-pill") return void morphToList(DEMO_LIST);
     if (nextShape === "magic") {
       morph.morphTo("magic", { icon: "", primary: "", secondary: "", detail: "" });
       updateActive("magic");
