@@ -23,7 +23,7 @@ import {
   celestialSelectedMaskBlurDefaultForRenderShape,
 } from './celestial-selected-presets.js';
 
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list-pill', 'nudge', 'timer', 'recorder', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list-pill', 'nudge', 'pill', 'card', 'card-s', 'image'];
 const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
@@ -32,8 +32,6 @@ const BUILTIN_STAGE_DEFS = Object.freeze([
   { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
   { id: 'list-pill', name: 'List-Pill', preset: true, renderShape: 'list', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
   { id: 'nudge', name: 'Nudge', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: 60, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary', 'secondary'] },
-  { id: 'timer', name: 'Timer', preset: true, renderShape: 'timer', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, hideShell: true, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary'] },
-  { id: 'recorder', name: 'Recorder', preset: true, renderShape: 'timer', cornerRadius: 0, widthOverride: 150, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, hideShell: true, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary'] },
   { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
   { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
   { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
@@ -84,7 +82,11 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     if (!Array.isArray(legacyStored)) return defaultStageLibrary();
     const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
     const normalized = legacyStored
-      .filter((item) => String(item?.id || '').trim() !== 'list')
+      .filter((item) => {
+        const id = String(item?.id || '').trim();
+        const renderShape = String(item?.renderShape || '').trim();
+        return !['list', 'timer', 'recorder'].includes(id) && !id.startsWith('recorder-') && renderShape !== 'timer';
+      })
       .map((item) => normalizeStage(item, byId.get(item?.id)))
       .filter(Boolean)
       .map((stage) => {
@@ -785,7 +787,9 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     content = {},
     triggers = [],
   } = {}) {
-    const normalizedShape = String(shape || '') === 'list' ? 'list-pill' : shape;
+    const normalizedShape = String(shape || '') === 'list'
+      ? 'list-pill'
+      : (['timer', 'recorder'].includes(String(shape || '')) ? 'pill' : shape);
     const migratedContent = migrateListStageContent(content);
     const normalizedTextByShape = normalizeStageTextByShape(migratedContent.textByShape, normalizedShape, {
       primary: String(migratedContent.primary || ''),
