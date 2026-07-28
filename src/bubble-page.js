@@ -717,6 +717,25 @@ const PROMPT_BUBBLES_CONFIG = [
     childActions: [],
   },
   {
+    id: 4,
+    ...getAppSetSlotLayout(4),
+    img: 'assets/mode icon/influencer.png',
+    imageScale: 0.94,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Influencer mode on',
+    pillSubtitle: 'Creator context',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    usesSurfaceShell: true,
+    theme: BUBBLE_HOME_SLOT_THEMES[4],
+    haloColor: BUBBLE_HOME_SLOT_THEMES[4].blobTopCore,
+    childActions: [],
+  },
+  {
     id: 1,
     ...getAppSetSlotLayout(1),
     img: 'assets/app/day.png',
@@ -797,6 +816,7 @@ const LENS_TITLES_BY_SLOT_ID = Object.freeze({
   1: 'Shopping Lens',
   2: 'Music Lens',
   3: 'Golf Lens',
+  4: 'Influencer Lens',
   5: 'Dog Walking Lens',
   6: 'Nature Lens',
   8: 'Travel Lens',
@@ -807,6 +827,7 @@ const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
   1: 'Shopping finds',
   2: 'Fresh mixes',
   3: 'Better form',
+  4: 'Influencer mode on',
   5: 'Routes and routines',
   6: 'Nature care',
   8: 'Local finds',
@@ -814,7 +835,7 @@ const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
 });
 
 const LENS_CAROUSEL_SEQUENCE = Object.freeze([8, 1, 5]);
-const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 1, 3, 5, 9]);
+const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 4, 1, 3, 5, 9]);
 
 const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
   8: Object.freeze({
@@ -833,6 +854,11 @@ const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
     label: 'Shopping',
     icon: 'assets/mode icon/shopping.png',
   }),
+  4: Object.freeze({
+    label: 'Influencer',
+    icon: 'assets/mode icon/influencer.png',
+    onText: 'Influencer mode on',
+  }),
   3: Object.freeze({
     label: 'Golf',
     icon: 'assets/mode icon/golf.png',
@@ -850,6 +876,7 @@ const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
 const LENS_IMAGE_BY_SLOT_ID = Object.freeze({
   1: 'assets/app/camera.png',
   3: 'assets/app/golf.png',
+  4: 'assets/mode icon/influencer.png',
 });
 
 const LENS_THEME_BY_SLOT_ID = Object.freeze({
@@ -1409,6 +1436,7 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     childLayout: slot.childLayout || null,
     lensModeIcon: conceptMode?.icon || slot.lensModeIcon || '',
     lensModeLabel: conceptMode?.label || slot.lensModeLabel || '',
+    lensModeOnText: conceptMode?.onText || slot.lensModeOnText || '',
     haloColor: slot.haloColor || haloColorForTheme(slotTheme),
     theme: slotTheme,
     hoverShadowMode: 'default',
@@ -2127,6 +2155,8 @@ function showLensToast(text, options = {}) {
 }
 
 function getLensOnText(content) {
+  const modeOnText = String(content?.lensModeOnText || '').trim();
+  if (modeOnText) return modeOnText;
   const lensName = String(content?.pillTitle || content?.label || 'Lens').trim() || 'Lens';
   return `${lensName.replace(/\s+lens$/i, ' Lens')} On`;
 }
