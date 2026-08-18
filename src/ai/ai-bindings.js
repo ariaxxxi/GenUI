@@ -330,19 +330,7 @@ function updateActive(shape) {
   const prompt = document.getElementById("home-start-prompt");
   if (!prompt) return;
   const positionListeningPrompt = (hasText) => {
-    if (shape !== "listening" || !hasText) {
-      prompt.style.top = "";
-      prompt.style.bottom = "";
-      return;
-    }
-    const stage = document.getElementById("stage");
-    const main = document.getElementById("drop-main");
-    if (!stage || !main) return;
-    const stageRect = stage.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const promptH = prompt.offsetHeight || 24;
-    prompt.style.top = `${Math.max(8, Math.round(mainRect.top - stageRect.top - promptH - 12))}px`;
-    prompt.style.bottom = "auto";
+    prompt.classList.toggle("is-transcript", shape === "listening" && hasText);
   };
   const updatePromptText = () => {
     prompt.textContent = shape === "listening" ? String(listeningPromptText || "").trim() : "";
@@ -484,8 +472,7 @@ initEditorBindings({ document, UI, PAGE_MODE_OVERRIDE, RESPONSE_MODE, AI_STAGE_O
 input?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
-    if (messageFlow.isActive()) void messageFlow.handleInputSubmit(input.value);
-    else actions.handleSend();
+    actions.handleSend();
   }
   if (e.key === "Escape" && messageFlow.isActive()) {
     e.preventDefault();
