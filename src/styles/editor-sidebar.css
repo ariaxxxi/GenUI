@@ -9,9 +9,34 @@
   background: #0b0b0b;
   gap: 24px; flex-shrink: 0;
   overflow-y: auto;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    width 280ms var(--motion-ease),
+    padding 280ms var(--motion-ease),
+    opacity 180ms var(--motion-ease),
+    border-color 180ms var(--motion-ease),
+    visibility 0ms linear 0ms;
 }
 #left-sidebar { border-right: 1px solid rgba(255,255,255,0.06); }
 #sidebar { border-left: 1px solid rgba(255,255,255,0.06); }
+body.tool-panels-hidden #left-sidebar,
+body.tool-panels-hidden #sidebar {
+  width: 0;
+  padding-right: 0;
+  padding-left: 0;
+  border-width: 0;
+  border-color: transparent;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    width 280ms var(--motion-ease),
+    padding 280ms var(--motion-ease),
+    opacity 140ms var(--motion-ease),
+    border-color 140ms var(--motion-ease),
+    visibility 0ms linear 280ms;
+}
 .sb-section { display: flex; flex-direction: column; gap: 14px; }
 .sb-section-toggle {
   display: flex;

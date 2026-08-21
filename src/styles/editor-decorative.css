@@ -547,6 +547,16 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
   z-index:0;
   pointer-events:none;
   background:#000;
+  transition:
+    left 280ms var(--motion-ease),
+    width 280ms var(--motion-ease),
+    opacity 180ms var(--motion-ease);
+  will-change:left, width;
+}
+body.tool-panels-hidden .bg-blur-video{
+  left:0;
+  width:100vw;
+  object-fit:cover;
 }
 body.bg-off .bg-blur-image { opacity: 0; }
 body.bg-off .bg-blur-video { opacity: 0; }

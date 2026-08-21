@@ -1173,6 +1173,30 @@ export function initManualBindings({
     });
   };
 
+  const toggleToolPanels = () => {
+    const hidden = !document.body?.classList.contains('tool-panels-hidden');
+    document.body?.classList.toggle('tool-panels-hidden', hidden);
+    [document.getElementById('left-sidebar'), document.getElementById('sidebar')]
+      .filter(Boolean)
+      .forEach((panel) => panel.setAttribute('aria-hidden', hidden ? 'true' : 'false'));
+  };
+
+  const toggleBackgroundVideoPlayback = () => {
+    if (!canvasSettings().backgroundVideo?.src) return false;
+    const nextPaused = !canvasSettings().backgroundVideoPaused;
+    setCanvasSettings({ ...canvasSettings(), backgroundVideoPaused: nextPaused, backgroundMediaKind: 'video' });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: nextPaused,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
+    });
+    applyCanvasSettings();
+    return true;
+  };
+
   input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && input.value.trim()) {
@@ -1187,6 +1211,16 @@ export function initManualBindings({
 
   document.addEventListener('keydown', (e) => {
     if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+    if (e.repeat) return;
+    if (e.key.toLowerCase() === 'h') {
+      e.preventDefault();
+      toggleToolPanels();
+      return;
+    }
+    if (e.key.toLowerCase() === 'p' && toggleBackgroundVideoPlayback()) {
+      e.preventDefault();
+      return;
+    }
     if (flight.handleKeyDown(e)) return;
     const activeStageShape = selectedScenario()?.shape;
     const activeRenderShape = activeStageShape ? stageById(activeStageShape, selectedScenario())?.renderShape : '';
@@ -1523,19 +1557,7 @@ export function initManualBindings({
     applyCanvasSettings();
     if (UI.bgVideoUpload) UI.bgVideoUpload.value = '';
   });
-  UI.bgVideoPlayToggle?.addEventListener('click', () => {
-    const nextPaused = !canvasSettings().backgroundVideoPaused;
-    setCanvasSettings({ ...canvasSettings(), backgroundVideoPaused: nextPaused, backgroundMediaKind: 'video' });
-    persistCanvasSettings();
-    persistBackgroundVideoStorage?.({
-      ...(canvasSettings().backgroundVideo || {}),
-      paused: nextPaused,
-      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
-      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
-      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
-    });
-    applyCanvasSettings();
-  });
+  UI.bgVideoPlayToggle?.addEventListener('click', toggleBackgroundVideoPlayback);
   UI.bgVideoProgress?.addEventListener('input', (e) => {
     const ratio = clamp((Number(e.target.value) || 0) / 1000, 0, 1);
     setCanvasSettings({
