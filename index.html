@@ -392,7 +392,8 @@
       <div class="sb-section-body">
         <div class="legacy-grid prototype-ai-debug-grid">
           <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
-          <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Thinking</button>
+          <button class="sb-shape-btn" data-shape="idle" type="button" onclick="manualShape('idle')">Empty</button>
+          <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">AI Thinking</button>
         </div>
         <div id="prototype-multi-agent-row" class="sb-row tight prototype-ai-icon-row hidden">
           <span class="sb-lbl">Multi Agent</span>
@@ -432,6 +433,7 @@
           <div class="prototype-thinking-copy-controls">
             <input id="prototype-thinking-copy-input" class="sb-input prototype-thinking-copy-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type custom thinking text"/>
             <button id="prototype-thinking-copy-fire" class="sb-mini-btn prototype-thinking-copy-fire" type="button" disabled>Fire</button>
+            <button id="prototype-thinking-copy-loop" class="sb-mini-btn prototype-thinking-copy-loop" type="button" disabled>Loop</button>
           </div>
         </div>
         <div id="prototype-thinking-thumbnail-row" class="sb-row tight prototype-thinking-thumbnail-row hidden">

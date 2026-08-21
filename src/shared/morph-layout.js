@@ -326,7 +326,7 @@ export function createMorphLayout(ctx) {
     const rawGeo = customGeo || (showListOrb ? SHAPES.circle : (SHAPES[shape] || SHAPES.card));
     const stageSizeOverride = callbacks.normalizeStageSizeEntry(contentData?.sizeOverride, callbacks.scenarioStageSizeOverride(scenario, stageId));
     const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
-    const resolvedBaseGeo = shape === 'idle'
+    const resolvedBaseGeo = shape === 'idle' && !customGeo
       ? {
         ...baseGeo,
         main: {

@@ -1081,6 +1081,7 @@ body.bg-off .bg-blur-video { opacity: 0; }
   box-shadow: none;
 }
 #sidebar .prototype-ai-debug-grid .sb-shape-btn[data-shape="listening"],
+#sidebar .prototype-ai-debug-grid .sb-shape-btn[data-shape="idle"],
 #sidebar .prototype-ai-debug-grid .sb-shape-btn[data-shape="magic"] {
   font-size: 13px;
 }

@@ -254,6 +254,7 @@ export function initManualBindings({
   const thinkingResumeBtn = document.getElementById('prototype-thinking-resume');
   const thinkingCopyInput = document.getElementById('prototype-thinking-copy-input');
   const thinkingCopyFireBtn = document.getElementById('prototype-thinking-copy-fire');
+  const thinkingCopyLoopBtn = document.getElementById('prototype-thinking-copy-loop');
   const thinkingThumbnailPreview = document.getElementById('prototype-thinking-thumbnail-preview');
   const thinkingThumbnailUpload = document.getElementById('prototype-thinking-thumbnail-upload');
   const thinkingThumbnailPasteBtn = document.getElementById('prototype-thinking-thumbnail-paste');
@@ -268,6 +269,8 @@ export function initManualBindings({
     activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
     activeAppId: PROTOTYPE_APPS[0]?.id || '',
     pendingCustomText: '',
+    customText: '',
+    playbackMode: 'loop',
     streamToken: 0,
     textSwapTimer: null,
     currentText: '',
@@ -862,8 +865,14 @@ export function initManualBindings({
     });
   };
   const syncThinkingCopyFireButton = () => {
-    if (!thinkingCopyFireBtn) return;
-    thinkingCopyFireBtn.disabled = !String(thinkingCopyInput?.value || '').trim();
+    if (thinkingCopyFireBtn) {
+      thinkingCopyFireBtn.disabled = !String(thinkingCopyInput?.value || '').trim();
+    }
+    if (thinkingCopyLoopBtn) {
+      const customPlaybackActive = thinkingDebugState.playbackMode === 'custom';
+      thinkingCopyLoopBtn.disabled = !customPlaybackActive;
+      thinkingCopyLoopBtn.setAttribute('aria-pressed', customPlaybackActive ? 'true' : 'false');
+    }
   };
   const setSkillSelectionOverride = (skill) => {
     setPrototypeSelectionOverride?.(skill ? {
@@ -874,6 +883,11 @@ export function initManualBindings({
   };
   const resumeThinkingPlaybackForCurrentMode = () => {
     if (thinkingDebugState.paused || !isDebugFamilyShape()) return;
+    if (thinkingDebugState.playbackMode === 'custom' && thinkingDebugState.customText) {
+      cancelThinkingStreamPlayback();
+      setThinkingStreamText(thinkingDebugState.customText, { visible: true });
+      return;
+    }
     if (thinkingDebugState.mode === 'thinking') {
       void runThinkingVerbLoop();
       return;
@@ -920,6 +934,11 @@ export function initManualBindings({
       syncPrototypeThinkingStreamIcon();
       if (isPaused) {
         renderPausedThinkingStream();
+        return;
+      }
+      if (thinkingDebugState.playbackMode === 'custom' && thinkingDebugState.customText) {
+        cancelThinkingStreamPlayback();
+        setThinkingStreamText(thinkingDebugState.customText, { visible: true });
         return;
       }
       void runThinkingVerbLoop();
@@ -1037,6 +1056,12 @@ export function initManualBindings({
       syncPrototypeThinkingStreamIcon();
       if (thinkingDebugState.paused) {
         renderPausedThinkingStream();
+        syncThinkingStateButtons();
+        return;
+      }
+      if (thinkingDebugState.playbackMode === 'custom' && thinkingDebugState.customText) {
+        cancelThinkingStreamPlayback();
+        setThinkingStreamText(thinkingDebugState.customText, { visible: true });
         syncThinkingStateButtons();
         return;
       }
@@ -1309,6 +1334,8 @@ export function initManualBindings({
   const fireCustomThinkingText = () => {
     const text = String(thinkingCopyInput?.value || '').trim();
     if (!text || !isDebugFamilyShape()) return;
+    thinkingDebugState.customText = text;
+    thinkingDebugState.playbackMode = 'custom';
     if (thinkingDebugState.paused) {
       thinkingDebugState.pendingCustomText = text;
       if (thinkingCopyInput) thinkingCopyInput.value = '';
@@ -1319,6 +1346,18 @@ export function initManualBindings({
     if (thinkingCopyInput) thinkingCopyInput.value = '';
     syncThinkingCopyFireButton();
   };
+  const resumeDefaultThinkingLoop = () => {
+    if (thinkingDebugState.playbackMode !== 'custom') return;
+    thinkingDebugState.playbackMode = 'loop';
+    thinkingDebugState.customText = '';
+    thinkingDebugState.pendingCustomText = '';
+    syncThinkingCopyFireButton();
+    if (thinkingDebugState.paused) {
+      renderPausedThinkingStream();
+      return;
+    }
+    resumeThinkingPlaybackForCurrentMode();
+  };
   thinkingCopyInput?.addEventListener('input', syncThinkingCopyFireButton);
   thinkingCopyInput?.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
@@ -1326,6 +1365,7 @@ export function initManualBindings({
     fireCustomThinkingText();
   });
   thinkingCopyFireBtn?.addEventListener('click', fireCustomThinkingText);
+  thinkingCopyLoopBtn?.addEventListener('click', resumeDefaultThinkingLoop);
   syncThinkingCopyFireButton();
   renderThinkingThumbnailLibrary();
   thinkingThumbnailLibrary?.addEventListener('click', (event) => {

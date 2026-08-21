@@ -45,6 +45,11 @@ export function initManualDemo({
     left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   };
+  const PROTOTYPE_EMPTY_GEO = {
+    main: { ...PROTOTYPE_THINKING_GEO.main, op: 0 },
+    left: { ...PROTOTYPE_THINKING_GEO.left, op: 0 },
+    right: { ...PROTOTYPE_THINKING_GEO.right, op: 0 },
+  };
   const LIST_PILL_W = 420;
   const isPrototypeNormalStage = (shape) => !['magic', 'listening', 'ai', 'idle', 'split'].includes(String(shape || ''));
 
@@ -229,9 +234,15 @@ export function initManualDemo({
       return;
     }
     if (shape === 'idle') {
-      if (currentShape === 'circle') return void morphApi.bridgeHomeToThinking('idle');
+      if (currentShape === 'circle') {
+        return void morphApi.bridgeHomeToThinking(
+          'idle',
+          { icon: '', primary: '', secondary: '', detail: '' },
+          PROTOTYPE_EMPTY_GEO,
+        );
+      }
       stopSiriOrb();
-      morphTo('ai', { icon: '', primary: '', secondary: '', detail: '' });
+      morphTo('idle', { icon: '', primary: '', secondary: '', detail: '' }, PROTOTYPE_EMPTY_GEO);
       C.thumb.style.opacity = '0';
       document.getElementById('drop-main').classList.add('ai-mode');
       showAiIdle();

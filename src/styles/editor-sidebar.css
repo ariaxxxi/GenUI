@@ -549,6 +549,9 @@
   color: rgba(255,255,255,0.96);
   background: transparent;
 }
+.prototype-ai-debug-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .prototype-ai-debug-grid .sb-shape-btn:hover,
 .prototype-ai-debug-grid .sb-shape-btn:active {
   border-color: rgba(255,255,255,0.78);
@@ -637,7 +640,7 @@
 .prototype-thinking-copy-controls {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
 }
 .prototype-thinking-copy-input {
@@ -646,7 +649,11 @@
 .prototype-thinking-copy-fire {
   min-width: 64px;
 }
-.prototype-thinking-copy-fire:disabled {
+.prototype-thinking-copy-loop {
+  min-width: 64px;
+}
+.prototype-thinking-copy-fire:disabled,
+.prototype-thinking-copy-loop:disabled {
   opacity: 0.48;
   cursor: default;
 }

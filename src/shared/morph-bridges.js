@@ -155,12 +155,12 @@ export function createMorphBridges(ctx) {
         return;
       }
       if (shape === 'idle') {
-        if (queueSeededListPillBaseMorph('ai', EMPTY_CONTENT, null, null, 0, true)) {
+        if (queueSeededListPillBaseMorph('idle', EMPTY_CONTENT, null, null, 0, true)) {
           callbacks.showAiIdle();
           callbacks.updateActive('idle');
           return;
         }
-        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        runtime.morphCore('idle', EMPTY_CONTENT, null, true, 0);
         callbacks.showAiIdle();
         callbacks.updateActive('idle');
         return;
@@ -209,7 +209,7 @@ export function createMorphBridges(ctx) {
       state.thinkingBridgeTimer = null;
       DROPS.main.classList.remove('orb-thinking-bridge');
       if (targetShape === 'idle') {
-        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        runtime.morphCore('idle', EMPTY_CONTENT, customGeo, true, 0);
         callbacks.showAiIdle();
         callbacks.updateActive('idle');
         return;

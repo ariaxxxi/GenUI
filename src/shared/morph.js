@@ -47,6 +47,9 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     if (!inGlassFlow && homeLikeShape && thinkingLikeTarget) {
       return void bridges.bridgeHomeToThinking(shape, contentData, customGeo, stageId);
     }
+    if (inAiIdleState && shape === 'magic') {
+      return void render.morphCore(shape, contentData, customGeo, false, null, stageId);
+    }
     if ((state.currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {
       if (shape === 'circle' || shape === 'listening') return void bridges.bridgeThinkingToHome(contentData, customGeo, stageId);
       return void bridges.bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId);
@@ -56,6 +59,7 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     if (shape === 'split' && state.currentShape !== 'split') return void bridges.bridgeToSplitViaDot();
     render.morphCore(shape, contentData, customGeo, false, null, stageId);
   }
+  runtime.morphTo = morphTo;
 
   return {
     ...layout,
