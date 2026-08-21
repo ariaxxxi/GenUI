@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   mode: 'genui.mode.v1',
   aiStage: 'genui.ai-stage.v1',
   aiOrbIcon: 'genui.ai-orb-icon.v1',
+  thinkingThumbnails: 'genui.thinking-thumbnails.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
   backgroundImage: 'genui.background-image.v1',
@@ -101,6 +102,28 @@ export function loadAiVoiceEnabled() {
 export function loadAiOrbIcon() {
   const stored = readStoredJson(STORAGE_KEYS.aiOrbIcon, null);
   return typeof stored === 'string' ? stored : 'bixby';
+}
+
+export function loadThinkingThumbnails() {
+  const stored = readStoredJson(STORAGE_KEYS.thinkingThumbnails, null);
+  const entries = Array.isArray(stored?.library) ? stored.library : [];
+  return {
+    selectedId: typeof stored?.selectedId === 'string' ? stored.selectedId : 'auto',
+    library: entries.filter((entry) => (
+      entry
+      && typeof entry.id === 'string'
+      && typeof entry.src === 'string'
+      && entry.src.startsWith('data:image/')
+    )).slice(0, 24),
+  };
+}
+
+export function persistThinkingThumbnails(value) {
+  const library = Array.isArray(value?.library) ? value.library.slice(0, 24) : [];
+  return persistToStorage(STORAGE_KEYS.thinkingThumbnails, {
+    selectedId: typeof value?.selectedId === 'string' ? value.selectedId : 'auto',
+    library,
+  }, 'thinking thumbnails');
 }
 
 export function loadDisableTextInput() {

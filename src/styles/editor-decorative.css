@@ -421,15 +421,18 @@ body.mode-manual[data-current-shape="magic"] #c-thumb img {
   background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
+  /* Matches #drop-main plus its glass-surface overlay. */
   box-shadow:
-    inset 0 0 20px rgba(255,255,255,0.8),
-    inset 0 0 0 1px rgba(129,129,129,0.5);
+    inset 0 0 10px 0 rgba(255,255,255,0.2),
+    inset 0 0 20px rgba(255,255,255,0.25);
 }
 .prototype-disambiguation-pills--list-pill .g-disambiguation-pill-media {
   width: 60px;
   height: 60px;
   border-radius: 0;
-  font-size: 24px;
+  /* Set per row from the stage Icon size control. */
+  font-size: var(--g-disambiguation-media-size, 40px);
+  line-height: 1;
   background: transparent;
   color: rgba(255,255,255,0.96);
 }

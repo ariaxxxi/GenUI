@@ -1,4 +1,5 @@
 import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId } from '../../shared/ai-orb-icon.js';
+import { loadThinkingThumbnails, persistThinkingThumbnails } from '../../app-state.js';
 import {
   renderThinkingOrbStreamMarkup,
   setThinkingOrbStreamVisible,
@@ -231,6 +232,8 @@ export function initManualBindings({
   const thinkingStateRow = document.getElementById('prototype-thinking-state-row');
   const thinkingPauseRow = document.getElementById('prototype-thinking-pause-row');
   const thinkingCopyRow = document.getElementById('prototype-thinking-copy-row');
+  const thinkingThumbnailRow = document.getElementById('prototype-thinking-thumbnail-row');
+  const thinkingThumbnailLibraryRow = document.getElementById('prototype-thinking-thumbnail-library-row');
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
   const thinkingOrb = document.getElementById('siri-orb');
   const stageThumb = document.getElementById('c-thumb');
@@ -251,6 +254,11 @@ export function initManualBindings({
   const thinkingResumeBtn = document.getElementById('prototype-thinking-resume');
   const thinkingCopyInput = document.getElementById('prototype-thinking-copy-input');
   const thinkingCopyFireBtn = document.getElementById('prototype-thinking-copy-fire');
+  const thinkingThumbnailPreview = document.getElementById('prototype-thinking-thumbnail-preview');
+  const thinkingThumbnailUpload = document.getElementById('prototype-thinking-thumbnail-upload');
+  const thinkingThumbnailPasteBtn = document.getElementById('prototype-thinking-thumbnail-paste');
+  const thinkingThumbnailLibrary = document.getElementById('prototype-thinking-thumbnail-library');
+  const thinkingThumbnailStatus = document.getElementById('prototype-thinking-thumbnail-status');
   const DEBUG_FAMILY_SHAPES = new Set(['magic']);
   const thinkingDebugState = {
     mode: 'thinking',
@@ -267,6 +275,7 @@ export function initManualBindings({
     verbIndex: 0,
     skillPhraseIndexById: Object.create(null),
   };
+  let thinkingThumbnailState = loadThinkingThumbnails();
   let thinkingMinimizeExpandTimer = null;
   let thinkingMinimizePhaseTimer = null;
 
@@ -324,6 +333,17 @@ export function initManualBindings({
     return source[Math.floor(Math.random() * source.length)] || items[0] || null;
   };
   const getPrototypeThinkingStreamVisual = () => {
+    const selectedThumbnail = thinkingThumbnailState.library.find((item) => item.id === thinkingThumbnailState.selectedId);
+    if (thinkingDebugState.mode === 'thinking' && selectedThumbnail) {
+      return {
+        src: selectedThumbnail.src,
+        alt: selectedThumbnail.name || 'Custom thinking thumbnail',
+      };
+    }
+    if (thinkingDebugState.mode === 'thinking' && thinkingThumbnailState.selectedId !== 'auto') {
+      const preset = AI_ORB_ICON_OPTIONS[thinkingThumbnailState.selectedId];
+      if (preset) return { src: preset.src, alt: `${preset.label} thumbnail` };
+    }
     if (thinkingDebugState.mode === 'skill') {
       const skill = getSkillById(thinkingDebugState.activeSkillId);
       return {
@@ -354,6 +374,95 @@ export function initManualBindings({
       motion,
     });
     syncPrototypeStageThinkingIcon();
+  };
+  const thumbnailPresets = () => ([
+    { id: 'auto', label: 'Auto', src: AI_ORB_ICON_OPTIONS[loadAiOrbIconId()]?.src || AI_ORB_ICON_OPTIONS.bixby.src },
+    ...Object.values(AI_ORB_ICON_OPTIONS).map((item) => ({ id: item.id, label: item.label, src: item.src })),
+  ]);
+  const persistThinkingThumbnailState = () => persistThinkingThumbnails(thinkingThumbnailState);
+  const setThinkingThumbnailStatus = (message = '') => {
+    if (thinkingThumbnailStatus) thinkingThumbnailStatus.textContent = message;
+  };
+  const renderThinkingThumbnailLibrary = () => {
+    if (!thinkingThumbnailLibrary) return;
+    const entries = [
+      ...thumbnailPresets().map((item) => ({ ...item, builtin: true })),
+      ...thinkingThumbnailState.library,
+    ];
+    thinkingThumbnailLibrary.replaceChildren(...entries.map((item) => {
+      const button = document.createElement('button');
+      button.className = 'prototype-thumbnail-card';
+      button.type = 'button';
+      button.dataset.thumbnailId = item.id;
+      button.classList.toggle('active', item.id === thinkingThumbnailState.selectedId);
+      button.setAttribute('aria-pressed', item.id === thinkingThumbnailState.selectedId ? 'true' : 'false');
+      button.title = item.label || item.name || 'Custom thumbnail';
+      const image = document.createElement('img');
+      image.src = item.src;
+      image.alt = '';
+      const label = document.createElement('span');
+      label.textContent = item.label || item.name || 'Custom';
+      button.append(image, label);
+      return button;
+    }));
+    const selected = entries.find((item) => item.id === thinkingThumbnailState.selectedId) || entries[0];
+    if (thinkingThumbnailPreview) {
+      thinkingThumbnailPreview.src = selected?.src || '';
+      thinkingThumbnailPreview.alt = selected?.label || selected?.name || 'Selected thinking thumbnail';
+    }
+  };
+  const selectThinkingThumbnail = (id) => {
+    thinkingThumbnailState.selectedId = id === 'auto' || AI_ORB_ICON_OPTIONS[id] || thinkingThumbnailState.library.some((item) => item.id === id)
+      ? id
+      : 'auto';
+    persistThinkingThumbnailState();
+    renderThinkingThumbnailLibrary();
+    syncPrototypeThinkingStreamIcon({ animate: true });
+  };
+  const addThinkingThumbnailFile = (file) => {
+    if (!file || !String(file.type || '').startsWith('image/')) {
+      setThinkingThumbnailStatus('Choose an image file.');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setThinkingThumbnailStatus('Images must be 4 MB or smaller.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      const src = String(reader.result || '');
+      if (!src.startsWith('data:image/')) return;
+      const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      thinkingThumbnailState = {
+        selectedId: id,
+        library: [...thinkingThumbnailState.library, {
+          id,
+          name: String(file.name || 'Pasted image').replace(/\.[^.]+$/, '').slice(0, 32) || 'Custom image',
+          src,
+        }].slice(-24),
+      };
+      persistThinkingThumbnailState();
+      renderThinkingThumbnailLibrary();
+      syncPrototypeThinkingStreamIcon({ animate: true });
+      setThinkingThumbnailStatus('Added to your thumbnail library.');
+    });
+    reader.readAsDataURL(file);
+  };
+  const pasteThinkingThumbnail = async () => {
+    if (!navigator.clipboard?.read) {
+      setThinkingThumbnailStatus('Paste an image here with ⌘V / Ctrl+V.');
+      return;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((value) => value.startsWith('image/'));
+        if (type) return addThinkingThumbnailFile(await item.getType(type));
+      }
+      setThinkingThumbnailStatus('No image found on the clipboard.');
+    } catch {
+      setThinkingThumbnailStatus('Clipboard access was not allowed. Paste with ⌘V / Ctrl+V instead.');
+    }
   };
   const syncPrototypeStageThinkingIcon = () => {
     const visual = getPrototypeThinkingStreamVisual();
@@ -916,6 +1025,8 @@ export function initManualBindings({
     thinkingStateRow?.classList.toggle('hidden', !inDebugFamily);
     thinkingPauseRow?.classList.toggle('hidden', !inDebugFamily);
     thinkingCopyRow?.classList.toggle('hidden', !inDebugFamily);
+    thinkingThumbnailRow?.classList.toggle('hidden', !inDebugFamily);
+    thinkingThumbnailLibraryRow?.classList.toggle('hidden', !inDebugFamily);
     syncThinkingPauseButtons();
     if (shape === 'magic') {
       setSkillSelectionOverride(null);
@@ -1216,6 +1327,32 @@ export function initManualBindings({
   });
   thinkingCopyFireBtn?.addEventListener('click', fireCustomThinkingText);
   syncThinkingCopyFireButton();
+  renderThinkingThumbnailLibrary();
+  thinkingThumbnailLibrary?.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-thumbnail-id]') : null;
+    if (button) selectThinkingThumbnail(button.dataset.thumbnailId || 'auto');
+  });
+  thinkingThumbnailUpload?.addEventListener('change', () => {
+    const file = thinkingThumbnailUpload.files?.[0];
+    if (file) addThinkingThumbnailFile(file);
+    thinkingThumbnailUpload.value = '';
+  });
+  thinkingThumbnailPasteBtn?.addEventListener('click', () => {
+    void pasteThinkingThumbnail();
+  });
+  thinkingThumbnailLibrary?.addEventListener('paste', (event) => {
+    const file = Array.from(event.clipboardData?.files || []).find((item) => item.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    addThinkingThumbnailFile(file);
+  });
+  document.addEventListener('paste', (event) => {
+    if (!isDebugFamilyShape() || isEditableTarget(event.target)) return;
+    const file = Array.from(event.clipboardData?.files || []).find((item) => item.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    addThinkingThumbnailFile(file);
+  });
 
   new MutationObserver(syncPrototypeAiDebugPanels).observe(document.body, {
     attributes: true,

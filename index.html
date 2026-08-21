@@ -434,6 +434,19 @@
             <button id="prototype-thinking-copy-fire" class="sb-mini-btn prototype-thinking-copy-fire" type="button" disabled>Fire</button>
           </div>
         </div>
+        <div id="prototype-thinking-thumbnail-row" class="sb-row tight prototype-thinking-thumbnail-row hidden">
+          <span class="sb-lbl">Thumbnail</span>
+          <div class="prototype-thinking-thumbnail-controls">
+            <img id="prototype-thinking-thumbnail-preview" class="prototype-thinking-thumbnail-preview" alt="Selected thinking thumbnail"/>
+            <label class="sb-mini-btn upload-btn" for="prototype-thinking-thumbnail-upload">Upload<input id="prototype-thinking-thumbnail-upload" type="file" accept="image/*"/></label>
+            <button id="prototype-thinking-thumbnail-paste" class="sb-mini-btn" type="button">Paste</button>
+          </div>
+          <span id="prototype-thinking-thumbnail-status" class="prototype-thinking-thumbnail-status" aria-live="polite"></span>
+        </div>
+        <div id="prototype-thinking-thumbnail-library-row" class="sb-row tight prototype-thinking-thumbnail-library-row hidden">
+          <span class="sb-lbl">Thumbnail library</span>
+          <div id="prototype-thinking-thumbnail-library" class="prototype-thinking-thumbnail-library" role="group" aria-label="Thinking thumbnail library"></div>
+        </div>
       </div>
     </div>
 
