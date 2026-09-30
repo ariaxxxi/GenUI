@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Adaptive Cluster</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="src/styles/shared.css"/>
+<link rel="stylesheet" href="src/styles/ai-glass.css"/>
+<link rel="stylesheet" href="src/styles/ai-decorative.css"/>
+<link rel="stylesheet" href="src/styles/editor-layout.css"/>
+<link rel="stylesheet" href="src/styles/editor-sidebar.css"/>
+<link rel="stylesheet" href="src/styles/editor-decorative.css"/>
+<link rel="stylesheet" href="src/styles/adaptive-cluster.css"/>
+</head>
+<body class="mode-manual adaptive-cluster-page" data-page-mode="manual">
+<style id="anim-style">
+  :root {
+    --motion-ease: cubic-bezier(0.35, 0.23, 0.13, 0.98);
+    --spring: var(--motion-ease);
+    --anim-w:  450ms var(--spring);
+    --anim-h:  450ms var(--spring);
+    --anim-br: 450ms var(--spring);
+    --anim-tx: 450ms var(--spring);
+    --anim-t:  450ms var(--spring);
+  }
+</style>
+
+<div id="main-col">
+  <div id="ui-frame">
+    <div id="ui-frame-bg"></div>
+    <div id="stage-wrap">
+      <div id="intent-header">
+        <span id="intent-label">Adaptive Cluster</span>
+        <div id="intent-step-dot"></div>
+        <span id="intent-step-lbl"></span>
+      </div>
+      <div id="prototype-listening-prompt" aria-live="polite" aria-atomic="true"></div>
+
+      <div id="stage">
+        <div class="drop" id="drop-main">
+          <div id="home-glow-layer"></div>
+          <div id="prototype-stage-selection" aria-hidden="true">
+            <div class="g-stage-selected-refraction">
+              <div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div>
+              <div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div>
+            </div>
+            <div class="g-stage-selected-sharp-pass">
+              <div class="g-stage-selected-sharp-highlight"></div>
+            </div>
+            <div class="g-stage-selected-accent-rim"></div>
+            <div class="g-stage-selected-highlight-mask">
+              <div class="g-stage-selected-highlight-mask-image"></div>
+            </div>
+          </div>
+          <div id="c-thumb"><span id="c-thumb-label"></span><img id="c-thumb-img" alt=""/></div>
+          <div id="c-primary"></div>
+          <div id="c-secondary"></div>
+          <div id="c-divider"></div>
+          <div id="c-detail"></div>
+          <img id="c-media" alt=""/>
+          <div id="c-rich"></div>
+          <div id="siri-orb"></div>
+          <div id="prototype-thinking-stream" class="hidden" aria-hidden="true">
+            <span id="prototype-thinking-stream-text"></span>
+          </div>
+        </div>
+        <div id="adaptive-top-slot" aria-hidden="true"></div>
+        <div id="adaptive-card-reflection" aria-hidden="true"></div>
+        <div id="adaptive-action-row" aria-hidden="true"></div>
+        <div class="drop" id="drop-left"></div>
+        <div class="drop" id="drop-right"></div>
+        <div id="action-card-actions" aria-hidden="true">
+          <button class="action-card-button action-card-button-secondary" type="button" tabindex="-1">Cancel</button>
+          <button class="action-card-button action-card-button-primary" type="button" tabindex="-1">Confirm</button>
+        </div>
+        <div id="list-pills"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="adaptive-cluster-controls" aria-label="Adaptive cluster controls">
+    <button type="button" data-adaptive-action="listen">Listen</button>
+    <button type="button" data-adaptive-action="start">Start</button>
+    <button type="button" data-adaptive-action="toggle-frame" aria-pressed="false">Frame</button>
+    <button type="button" data-adaptive-action="reset">Reset</button>
+  </div>
+</div>
+
+<script type="module" src="src/adaptive-cluster-app.js"></script>
+</body>
+</html>

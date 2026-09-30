@@ -175,14 +175,15 @@ export function createMorphRender(ctx) {
     const bottomInset = 20;
     const hasOrb = listStageShowsOrb(contentData);
     const listSelectable = listStageAllowsSelection(contentData);
-    const orbClearance = 8;
+    const orbClearance = 11;
+    const entries = prototypeListEntriesFromContent(contentData);
     let bottomY = Math.round((frameHeight / 2) - bottomInset - (pillHeight / 2));
     if (hasOrb) {
       const listGeo = state.lastMainGeo || SHAPES.list.main;
-      bottomY = Math.round((Number(listGeo?.ty) || -45) - orbClearance - (pillHeight / 2));
+      const orbTopY = Number(listGeo?.ty) || -45;
+      bottomY = Math.round(orbTopY - orbClearance - (pillHeight / 2));
     }
     const orbAnchor = getPrototypeThinkingOrbAnchor();
-    const entries = prototypeListEntriesFromContent(contentData);
     const previousSelectedIndex = listSelectable
       ? clamp(
         Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
@@ -203,7 +204,7 @@ export function createMorphRender(ctx) {
       entries,
       resolvedSelectedIndex,
       'stack',
-      { bottomY, gap: pillListStyle ? 10 : 8, startX: orbAnchor.x, startY: orbAnchor.y, itemHeight: pillHeight }
+      { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y, itemHeight: pillHeight }
     ).map((item, index) => {
       let direction = 'bottom';
       if (movingDown) {
