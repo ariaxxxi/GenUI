@@ -22,6 +22,12 @@ const uiFrame = document.getElementById('ui-frame');
 const topSlot = document.getElementById('adaptive-top-slot');
 const actionRow = document.getElementById('adaptive-action-row');
 const cardReflection = document.getElementById('adaptive-card-reflection');
+const promptInput = document.getElementById('adaptive-prompt-input');
+const listeningPrompt = document.getElementById('prototype-listening-prompt');
+const v4Page = document.getElementById('adaptive-v4-page');
+const v4LensTabs = document.getElementById('adaptive-v4-lens-tabs');
+const v4LensTitle = document.getElementById('adaptive-v4-lens-title');
+const v4Stack = document.getElementById('adaptive-v4-stack');
 
 const C = {
   thumb: document.getElementById('c-thumb'),
@@ -39,7 +45,7 @@ const C = {
 const EMPTY_CONTENT = { icon: '', primary: '', secondary: '', detail: '' };
 const THINKING_LABEL = 'Finding options';
 const THINKING_METRICS = { iconSize: 46, gap: 10, paddingX: { left: 14, right: 20 }, minWidth: 80 };
-const CONTENT_BOTTOM_Y = -40;
+const CONTENT_BOTTOM_Y = 228;
 const RICH_CARD_PADDING = 20;
 const REVIEW_CARD_W = 380;
 const BOOKING_CARD_W = 356;
@@ -139,12 +145,72 @@ let phase = 'idle';
 let morph = null;
 let orb = null;
 let thinkingStream = document.getElementById('prototype-thinking-stream');
-let frameEnabled = false;
 let actionRowTimer = null;
 let richRevealTimer = null;
 let topChromeTimer = null;
 let postActionTimer = null;
 let activeActionIndex = 0;
+let mockPromptText = '';
+let taskCreated = false;
+let taskDismissed = false;
+let taskTerminal = false;
+let taskFlowStage = 'idle';
+let taskState = 'ongoing';
+let taskTitle = 'Rebook Osaka Flight';
+let taskDetail = 'Searching flight';
+let v4Lens = 'travel';
+let v4SelectedIndex = null;
+let v4TransitionTimer = null;
+const v4Lenses = [
+  { id: 'work', label: 'Work' },
+  { id: 'travel', label: 'Travel' },
+  { id: 'fitness', label: 'Fitness' },
+];
+const v4BaseCardsByLens = {
+  work: [
+    {
+      id: 'work-priya-review',
+      kind: 'task',
+      state: 'needs-input',
+      title: 'Accept Priya review?',
+      detail: 'Priya moved the review to 3:00.',
+      icon: 'person',
+    },
+    {
+      id: 'work-review-cal',
+      kind: 'calendar',
+      title: 'Review with Priya',
+      detail: '15:00',
+      badge: { name: 'P', tint: '#ffb3a0' },
+    },
+  ],
+  travel: [
+    {
+      id: 'travel-mia-message',
+      kind: 'message',
+      title: 'the flight was canceled...',
+      detail: 'what’s your plan?',
+      badge: { name: 'Mia', tint: '#b79bff', app: 'msg' },
+    },
+  ],
+  fitness: [
+    {
+      id: 'fitness-golf-booked',
+      kind: 'task',
+      state: 'done',
+      title: 'Golf course booked',
+      detail: 'Sunnyside Golf Course 3:00PM, Saturday',
+      icon: 'check',
+    },
+    {
+      id: 'fitness-golf',
+      kind: 'calendar',
+      title: 'Golf with Mia',
+      detail: '14:30',
+      badge: { name: 'Mia', tint: '#b79bff' },
+    },
+  ],
+};
 const LIST_TO_CARD_RICH_REVEAL_MS = 420;
 
 const scenarioData = initScenarioData({
@@ -292,11 +358,8 @@ function updateActive(shape) {
   if (shape === 'magic' || shape === 'listening') {
     requestAnimationFrame(() => syncStageThinkingIcon(shape));
   }
-  const prompt = document.getElementById('prototype-listening-prompt');
-  if (prompt) {
-    prompt.textContent = '';
-    prompt.classList.remove('visible', 'has-interim', 'is-settling-out');
-  }
+  if (shape === 'listening') setListeningTranscript(mockPromptText);
+  else hideListeningTranscript();
 }
 
 function hideIntentHeader() {
@@ -306,6 +369,54 @@ function hideIntentHeader() {
   hdr.style.display = 'none';
   hdr.style.left = '';
   hdr.style.top = '';
+}
+
+function ensureListeningPromptStructure() {
+  if (!listeningPrompt) return {};
+  let finalEl = listeningPrompt.querySelector('[data-listening-prompt-final]');
+  let interimEl = listeningPrompt.querySelector('[data-listening-prompt-interim]');
+  if (!finalEl || !interimEl) {
+    listeningPrompt.innerHTML = '<span class="prototype-listening-prompt-final" data-listening-prompt-final></span><span class="prototype-listening-prompt-interim" data-listening-prompt-interim></span>';
+    finalEl = listeningPrompt.querySelector('[data-listening-prompt-final]');
+    interimEl = listeningPrompt.querySelector('[data-listening-prompt-interim]');
+  }
+  return { finalEl, interimEl };
+}
+
+function positionListeningPrompt() {
+  if (!listeningPrompt || !DROPS.main) return;
+  const frameRect = uiFrame?.getBoundingClientRect?.() || stageEl?.getBoundingClientRect?.();
+  const mainRect = DROPS.main.getBoundingClientRect();
+  if (!frameRect) return;
+  const promptRect = listeningPrompt.getBoundingClientRect();
+  const centerX = Math.round(mainRect.left - frameRect.left + mainRect.width / 2);
+  const top = Math.round(mainRect.top - frameRect.top - promptRect.height - 14);
+  listeningPrompt.style.left = `${centerX}px`;
+  listeningPrompt.style.bottom = 'auto';
+  listeningPrompt.style.top = `${top}px`;
+}
+
+function setListeningTranscript(text = '') {
+  mockPromptText = String(text || '');
+  const { finalEl, interimEl } = ensureListeningPromptStructure();
+  if (finalEl) finalEl.textContent = mockPromptText;
+  if (interimEl) interimEl.textContent = '';
+  if (!listeningPrompt) return;
+  listeningPrompt.dataset.dictationState = mockPromptText ? 'settled' : '';
+  listeningPrompt.classList.toggle('has-final', !!mockPromptText);
+  listeningPrompt.classList.remove('has-interim', 'is-settling-out');
+  listeningPrompt.classList.toggle('visible', phase === 'listening' && !!mockPromptText);
+  requestAnimationFrame(positionListeningPrompt);
+}
+
+function hideListeningTranscript() {
+  if (!listeningPrompt) return;
+  mockPromptText = '';
+  listeningPrompt.classList.remove('visible', 'has-final', 'has-interim', 'is-settling-out');
+  listeningPrompt.dataset.dictationState = '';
+  const { finalEl, interimEl } = ensureListeningPromptStructure();
+  if (finalEl) finalEl.textContent = '';
+  if (interimEl) interimEl.textContent = '';
 }
 
 function initMorphRuntime() {
@@ -383,6 +494,253 @@ function topChromeHtml(title, state = 'needs-input', icon = planeIcon, { showAur
       <div class="adaptive-stage-title${toneClass}">${escapeHtml(title)}</div>
     </div>
   `;
+}
+
+function setAiLayerActive(active) {
+  document.body.classList.toggle('adaptive-ai-active', Boolean(active));
+  updateV4TaskPage();
+}
+
+function setPromptInputVisible(visible) {
+  document.body.classList.toggle('adaptive-input-active', Boolean(visible));
+}
+
+function v4TaskCardData() {
+  if (!taskCreated || taskDismissed || taskTerminal) return null;
+  return {
+    id: 'travel-rebook-osaka',
+    kind: 'task',
+    state: taskState,
+    title: taskTitle,
+    detail: taskDetail,
+  };
+}
+
+function v4VisibleCards() {
+  const taskCard = v4TaskCardData();
+  const baseCards = v4BaseCardsByLens[v4Lens] || [];
+  return taskCard && v4Lens === 'travel' ? [taskCard, ...baseCards] : [...baseCards];
+}
+
+function canShowV4Page() {
+  return !document.body.classList.contains('adaptive-ai-active') && v4VisibleCards().length > 0;
+}
+
+function renderV4Badge(card) {
+  const badge = card.badge || {};
+  const appClass = badge.app ? ` is-${escapeHtml(badge.app)}` : '';
+  return `
+    <span class="hud-badge" style="--badge-tint:${escapeHtml(badge.tint || '#8fc7ff')}">
+      <span class="hud-badge-face">${escapeHtml(badge.name || '?').slice(0, 1)}</span>
+      ${badge.app ? `<span class="hud-badge-chip${appClass}"></span>` : ''}
+    </span>
+  `;
+}
+
+function v4SelectionClasses(index) {
+  if (v4SelectedIndex === null) return '';
+  return [
+    index === v4SelectedIndex ? 'is-selected' : '',
+    index === v4SelectedIndex - 1 ? 'is-reflection-before' : '',
+    index === v4SelectedIndex + 1 ? 'is-reflection-after' : '',
+  ].filter(Boolean).join(' ');
+}
+
+function renderV4Card(card, layout, index = 0) {
+  const selectionClass = v4SelectionClasses(index);
+  if (card.kind === 'task') {
+    const icon = card.icon === 'check' || card.state === 'done' ? checkIcon : planeIcon;
+    const taskAttrs = card.id === 'travel-rebook-osaka'
+      ? 'data-adaptive-task-card'
+      : `data-adaptive-card-id="${escapeHtml(card.id)}"`;
+    return `
+      <button class="hud-card is-v3 is-task is-${layout === 'one' ? 'pill is-task-large' : 'square'} is-layout-${layout} ${selectionClass}" type="button" ${taskAttrs} data-v4-card-index="${index}" data-task-state="${escapeHtml(card.state || 'ongoing')}">
+        <span class="hud-card-content">
+          <span class="hud-task-bubble" aria-hidden="true">${taskAurora(card.state || 'ongoing', icon)}</span>
+          <span class="hud-card-copy">
+            <span class="hud-module-title">${escapeHtml(card.title)}</span>
+            <span class="hud-module-subtitle">${escapeHtml(card.detail)}</span>
+          </span>
+        </span>
+        ${card.id === 'travel-rebook-osaka' ? '<span class="adaptive-v4-dismiss" data-adaptive-task-dismiss aria-label="Dismiss task">&times;</span>' : ''}
+      </button>
+    `;
+  }
+  if (card.kind === 'calendar') {
+    return `
+      <button class="hud-card is-v3 is-calendar is-square is-layout-${layout} ${selectionClass}" type="button" data-adaptive-card-id="${escapeHtml(card.id)}" data-v4-card-index="${index}">
+        <span class="hud-card-content">
+          ${renderV4Badge(card)}
+          <span class="hud-card-copy">
+            <span class="hud-module-label">${escapeHtml(card.title)}</span>
+            <span class="hud-module-time">${escapeHtml(card.detail)}</span>
+          </span>
+        </span>
+      </button>
+    `;
+  }
+  return `
+    <button class="hud-card is-v3 is-message is-square is-layout-${layout} ${selectionClass}" type="button" data-adaptive-card-id="${escapeHtml(card.id)}" data-v4-card-index="${index}">
+      <span class="hud-card-content">
+        ${renderV4Badge(card)}
+        <span class="hud-card-copy">
+          <span class="hud-module-title">${escapeHtml(card.title)}</span>
+          <span class="hud-module-subtitle">${escapeHtml(card.detail)}</span>
+        </span>
+      </span>
+    </button>
+  `;
+}
+
+function renderV4TaskPageNow() {
+  const cards = v4VisibleCards();
+  const layout = cards.length === 1 ? 'one' : 'many';
+  const visible = canShowV4Page();
+  if (v4SelectedIndex !== null && v4SelectedIndex >= cards.length) v4SelectedIndex = Math.max(0, cards.length - 1);
+  if (v4LensTabs) {
+    v4LensTabs.innerHTML = v4Lenses.map((lens) => `
+      <button class="adaptive-v4-lens-tab${lens.id === v4Lens ? ' is-active' : ''}" type="button" data-adaptive-v4-lens="${escapeHtml(lens.id)}" aria-pressed="${lens.id === v4Lens ? 'true' : 'false'}">${escapeHtml(lens.label)}</button>
+    `).join('');
+  }
+  if (v4LensTitle) {
+    v4LensTitle.textContent = v4Lenses.find((lens) => lens.id === v4Lens)?.label || 'Travel';
+  }
+  if (v4Stack) {
+    v4Stack.className = `hud-stack is-v3 is-${layout}${v4SelectedIndex !== null ? ' is-selecting' : ''}`;
+    v4Stack.innerHTML = cards.map((card, index) => renderV4Card(card, layout, index)).join('');
+  }
+  if (v4Page) {
+    v4Page.classList.toggle('is-visible', visible);
+    v4Page.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  }
+}
+
+function updateV4TaskPage({ animate = false, direction = 0 } = {}) {
+  if (!animate || !v4Page?.classList.contains('is-visible') || document.body.classList.contains('adaptive-ai-active')) {
+    renderV4TaskPageNow();
+    return;
+  }
+  if (v4TransitionTimer) {
+    clearTimeout(v4TransitionTimer);
+    v4TransitionTimer = null;
+  }
+  v4Page.classList.remove('is-entering', 'is-page-left', 'is-page-right');
+  v4Page.classList.add('is-leaving', direction >= 0 ? 'is-page-right' : 'is-page-left');
+  v4TransitionTimer = window.setTimeout(() => {
+    v4TransitionTimer = null;
+    renderV4TaskPageNow();
+    v4Page.classList.remove('is-leaving');
+    v4Page.classList.add('is-entering', direction >= 0 ? 'is-page-right' : 'is-page-left');
+    window.setTimeout(() => {
+      v4Page.classList.remove('is-entering', 'is-page-left', 'is-page-right');
+    }, 720);
+  }, 240);
+}
+
+function setV4Task({ stage = taskFlowStage, state = taskState, title = taskTitle, detail = taskDetail } = {}) {
+  if (taskTerminal || taskDismissed) return;
+  taskCreated = true;
+  v4Lens = 'travel';
+  taskFlowStage = stage;
+  taskState = state;
+  taskTitle = title;
+  taskDetail = detail;
+  updateV4TaskPage();
+}
+
+function clearV4Task({ terminal = false, dismissed = false } = {}) {
+  taskCreated = false;
+  taskTerminal = Boolean(terminal);
+  taskDismissed = Boolean(dismissed);
+  taskFlowStage = 'idle';
+  taskState = 'ongoing';
+  taskTitle = 'Rebook Osaka Flight';
+  taskDetail = 'Searching flight';
+  updateV4TaskPage();
+}
+
+function hideFlowSurface() {
+  clearPostActionTimer();
+  clearExternalChrome();
+  hideIntentHeader();
+  hideThinkingStream();
+  hideListeningTranscript();
+  clearRichRevealTimer();
+  morph.hideRich();
+  morph.clearPrototypeListStage?.(true);
+  orb?.stopSiriOrb?.();
+  DROPS.main?.classList.remove('ai-mode', 'home-glow', 'home-blur', 'magic-glow', 'listening-orb', 'orb-thinking-bridge', 'adaptive-success-mode', 'adaptive-success-exit');
+  currentScenario = makeScenario('idle');
+  morph.morphCore?.('idle', EMPTY_CONTENT, null, false, 0, null);
+}
+
+function showV4TaskPage() {
+  if (!taskCreated || taskDismissed || taskTerminal) return enterIdle();
+  phase = 'task-page';
+  hideFlowSurface();
+  setAiLayerActive(false);
+  updateV4TaskPage();
+  return undefined;
+}
+
+function resumeV4TaskFlow() {
+  if (!taskCreated || taskDismissed || taskTerminal) return undefined;
+  if (taskFlowStage === 'booked') return enterBooked();
+  if (taskFlowStage === 'booking') return enterBooking();
+  if (taskFlowStage === 'review') return enterReview();
+  if (taskFlowStage === 'options') return enterOptions();
+  enterThinking(THINKING_LABEL);
+  window.setTimeout(() => {
+    if (phase === 'thinking') enterOptions();
+  }, 2000);
+  return undefined;
+}
+
+function stepV4Lens(delta) {
+  if (document.body.classList.contains('adaptive-ai-active')) return false;
+  if (v4SelectedIndex !== null) return stepV4Selection(delta);
+  const current = v4Lenses.findIndex((lens) => lens.id === v4Lens);
+  const next = clamp(current + delta, 0, v4Lenses.length - 1);
+  if (next === current || next < 0) return false;
+  v4Lens = v4Lenses[next].id;
+  v4SelectedIndex = null;
+  updateV4TaskPage({ animate: true, direction: delta });
+  return true;
+}
+
+function stepV4Selection(delta) {
+  if (document.body.classList.contains('adaptive-ai-active')) return false;
+  const cards = v4VisibleCards();
+  if (!cards.length || v4SelectedIndex === null) return false;
+  const next = clamp(v4SelectedIndex + delta, 0, cards.length - 1);
+  if (next === v4SelectedIndex) return false;
+  v4SelectedIndex = next;
+  updateV4TaskPage();
+  return true;
+}
+
+function clearV4Selection() {
+  if (v4SelectedIndex === null) return false;
+  v4SelectedIndex = null;
+  updateV4TaskPage();
+  return true;
+}
+
+function confirmV4Card() {
+  if (document.body.classList.contains('adaptive-ai-active')) return false;
+  const cards = v4VisibleCards();
+  if (!cards.length) return false;
+  if (v4SelectedIndex === null) {
+    v4SelectedIndex = 0;
+    updateV4TaskPage();
+    return true;
+  }
+  const card = cards[v4SelectedIndex];
+  if (card?.id === 'travel-rebook-osaka') {
+    resumeV4TaskFlow();
+    return true;
+  }
+  return true;
 }
 
 function bottomAnchoredGeo({ width = REVIEW_CARD_W, height = REVIEW_CARD_MIN_H, radius = 30 } = {}) {
@@ -498,7 +856,10 @@ function activateAction(action) {
   if (action === 'confirm') return enterBooking();
   if (action === 'options') return enterOptions();
   if (action === 'share' || action === 'calendar') return enterPostBookedAction(action);
-  if (action === 'reset') return enterIdle();
+  if (action === 'reset') {
+    clearV4Task();
+    return enterIdle();
+  }
   return undefined;
 }
 
@@ -615,16 +976,9 @@ function showRichDelayed(html, delayMs = 0, expectedPhase = phase) {
 function syncToggles() {
   document.body.classList.add('adaptive-bg-off');
   document.body.classList.add('float-off');
-  document.body.classList.toggle('adaptive-frame-on', frameEnabled);
-  uiFrame?.classList.toggle('phone', frameEnabled);
+  document.body.classList.remove('adaptive-frame-on');
+  uiFrame?.classList.remove('phone');
   uiFrame?.classList.remove('has-bg');
-  uiFrame?.style.setProperty('--phone-frame-w', `${canvasSettings.phoneFrameWidth}px`);
-  uiFrame?.style.setProperty('--phone-frame-h', `${canvasSettings.phoneFrameHeight}px`);
-  uiFrame?.style.setProperty('--frame-corner-radius', `${canvasSettings.frameCornerRadius}px`);
-  document.querySelectorAll('[data-adaptive-action="toggle-frame"]').forEach((button) => {
-    button.classList.toggle('is-active', frameEnabled);
-    button.setAttribute('aria-pressed', String(frameEnabled));
-  });
 }
 
 function escapeHtml(value) {
@@ -705,10 +1059,13 @@ function enterIdle() {
   clearPostActionTimer();
   phase = 'idle';
   selectedIndex = 0;
+  setAiLayerActive(false);
+  setPromptInputVisible(false);
   currentScenario = makeScenario('idle');
   clearExternalChrome();
   hideIntentHeader();
   hideThinkingStream();
+  hideListeningTranscript();
   clearRichRevealTimer();
   morph.hideRich();
   morph.clearPrototypeListStage?.(true);
@@ -719,6 +1076,8 @@ function enterIdle() {
 
 function enterListening() {
   phase = 'listening';
+  setAiLayerActive(true);
+  setPromptInputVisible(true);
   currentScenario = makeScenario('listening');
   clearExternalChrome();
   hideIntentHeader();
@@ -732,13 +1091,22 @@ function enterListening() {
     secondary: '',
     detail: '',
   });
+  setListeningTranscript(promptInput?.value || mockPromptText);
 }
 
-function enterThinking() {
-  const thinkingGeo = measureThinkingGeo(THINKING_LABEL);
+function enterThinking(label = THINKING_LABEL) {
+  const thinkingGeo = measureThinkingGeo(label);
   phase = 'thinking';
+  setAiLayerActive(true);
+  setPromptInputVisible(false);
+  if (taskTerminal || taskDismissed) {
+    taskTerminal = false;
+    taskDismissed = false;
+  }
+  setV4Task({ stage: 'searching', state: 'ongoing', title: 'Rebook Osaka Flight', detail: 'Finding options' });
   currentScenario = makeScenario('magic');
   clearExternalChrome();
+  hideListeningTranscript();
   clearRichRevealTimer();
   morph.hideRich();
   morph.clearPrototypeListStage?.(true);
@@ -752,7 +1120,7 @@ function enterThinking() {
   };
   morph.morphTo('magic', content, thinkingGeo);
   window.setTimeout(() => {
-    if (phase === 'thinking') setThinkingText(THINKING_LABEL);
+    if (phase === 'thinking') setThinkingText(label);
   }, 180);
   window.setTimeout(() => {
     if (phase === 'thinking') syncStageThinkingIcon('magic');
@@ -764,6 +1132,9 @@ function enterThinking() {
 
 function enterOptions() {
   phase = 'options';
+  setAiLayerActive(true);
+  setPromptInputVisible(false);
+  setV4Task({ stage: 'options', state: 'needs-input', title: 'Rebook Osaka Flight', detail: '3 flight options available' });
   selectedIndex = 0;
   setExternalChrome({ topHtml: topChromeHtml('Choose flight option', 'needs-input', planeIcon, { showAurora: false }) });
   hideIntentHeader();
@@ -779,6 +1150,9 @@ function enterOptions() {
 
 function enterReview() {
   phase = 'review';
+  setAiLayerActive(true);
+  setPromptInputVisible(false);
+  setV4Task({ stage: 'review', state: 'needs-input', title: 'Rebook Osaka Flight', detail: 'Ready to confirm' });
   const option = OPTIONS[selectedIndex] || OPTIONS[0];
   currentScenario = makeScenario('card');
   hideIntentHeader();
@@ -800,6 +1174,9 @@ function enterReview() {
 
 function enterBooking() {
   phase = 'booking';
+  setAiLayerActive(true);
+  setPromptInputVisible(false);
+  setV4Task({ stage: 'booking', state: 'ongoing', title: 'Rebook Osaka Flight', detail: 'Booking flight' });
   currentScenario = makeScenario('card');
   hideIntentHeader();
   clearRichRevealTimer();
@@ -821,6 +1198,9 @@ function enterBooking() {
 function enterBooked() {
   phase = 'booked';
   const option = OPTIONS[selectedIndex] || OPTIONS[0];
+  setAiLayerActive(true);
+  setPromptInputVisible(false);
+  setV4Task({ stage: 'booked', state: 'done', title: 'Rebook Osaka Flight', detail: `${option.title.replace(/^(Book|Take|Pick)\s+/, '')} booked` });
   currentScenario = makeScenario('card');
   hideIntentHeader();
   clearRichRevealTimer();
@@ -841,6 +1221,8 @@ function enterPostBookedAction(action) {
   clearPostActionTimer();
   const label = action === 'calendar' ? 'Adding to calendar' : 'Sharing flight';
   phase = action === 'calendar' ? 'adding-calendar' : 'sharing-flight';
+  taskTerminal = true;
+  setAiLayerActive(true);
   currentScenario = makeScenario('magic');
   hideIntentHeader();
   clearRichRevealTimer();
@@ -871,6 +1253,8 @@ function enterPostBookedAction(action) {
 function enterPostDone() {
   clearPostActionTimer();
   phase = 'post-done';
+  taskTerminal = true;
+  setAiLayerActive(true);
   currentScenario = makeScenario('dot');
   clearExternalChrome();
   hideThinkingStream();
@@ -913,6 +1297,16 @@ function startFlow() {
   }, fromIdle ? 2520 : 2000);
 }
 
+function submitPrompt() {
+  const text = String(promptInput?.value || mockPromptText || '').trim();
+  if (text) mockPromptText = text;
+  hideListeningTranscript();
+  enterThinking(THINKING_LABEL);
+  window.setTimeout(() => {
+    if (phase === 'thinking') enterOptions();
+  }, 2000);
+}
+
 function moveOption(delta) {
   if (phase !== 'options') return false;
   const next = clamp(selectedIndex + delta, 0, OPTIONS.length - 1);
@@ -922,23 +1316,40 @@ function moveOption(delta) {
 }
 
 function confirmCurrent() {
-  if (phase === 'idle' || phase === 'listening') return startFlow();
+  if (phase === 'idle' || phase === 'task-page') return confirmV4Card();
+  if (phase === 'listening') return undefined;
   if (phase === 'options') return enterReview();
   if (phase === 'review' || phase === 'booked') return activateCurrentAction();
   return undefined;
 }
 
 function back() {
-  if (phase === 'review') return enterOptions();
-  if (phase === 'options' || phase === 'thinking' || phase === 'booked') return enterIdle();
-  if (phase === 'listening') return enterIdle();
+  if (phase === 'task-page') return enterIdle();
+  if (['listening', 'thinking', 'options', 'review', 'booking', 'booked'].includes(phase)) {
+    if (taskCreated && !taskTerminal && !taskDismissed) return showV4TaskPage();
+    return enterIdle();
+  }
   return undefined;
 }
 
 function bindEvents() {
   document.addEventListener('keydown', (event) => {
     const target = event.target;
+    if (target === promptInput) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        submitPrompt();
+      }
+      return;
+    }
     if (target instanceof Element && target.closest('input, textarea, select, button, [contenteditable="true"]')) return;
+    if (event.key === 'A' || event.key === 'a') {
+      event.preventDefault();
+      enterListening();
+      promptInput?.focus();
+      setListeningTranscript(promptInput?.value || '');
+      return;
+    }
     if (event.key === 'L' || event.key === 'l') {
       event.preventDefault();
       enterListening();
@@ -951,12 +1362,15 @@ function bindEvents() {
     }
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
       event.preventDefault();
+      if (event.key === 'ArrowDown' && clearV4Selection()) return;
+      if (event.key === 'ArrowRight' && stepV4Lens(1)) return;
       if (event.key === 'ArrowRight' && moveAction(1)) return;
       moveOption(1);
       return;
     }
     if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
       event.preventDefault();
+      if (event.key === 'ArrowLeft' && stepV4Lens(-1)) return;
       if (event.key === 'ArrowLeft' && moveAction(-1)) return;
       moveOption(-1);
       return;
@@ -969,7 +1383,30 @@ function bindEvents() {
 
   document.addEventListener('click', (event) => {
     const action = event.target?.closest?.('[data-adaptive-action]')?.dataset?.adaptiveAction;
-    if (action === 'listen') enterListening();
+    const dismiss = event.target?.closest?.('[data-adaptive-task-dismiss]');
+    if (dismiss) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearV4Task({ dismissed: true });
+      enterIdle();
+      return;
+    }
+    if (event.target?.closest?.('[data-adaptive-task-card]')) {
+      event.preventDefault();
+      resumeV4TaskFlow();
+      return;
+    }
+    const lensButton = event.target?.closest?.('[data-adaptive-v4-lens]');
+    if (lensButton) {
+      event.preventDefault();
+      v4Lens = lensButton.dataset.adaptiveV4Lens || v4Lens;
+      updateV4TaskPage();
+      return;
+    }
+    if (action === 'listen') {
+      enterListening();
+      promptInput?.focus();
+    }
     if (action === 'start') startFlow();
     if (['reset', 'confirm', 'options', 'share', 'calendar'].includes(action)) {
       const buttons = Array.from(actionRow?.querySelectorAll('[data-adaptive-action]') || []);
@@ -977,14 +1414,6 @@ function bindEvents() {
       const index = buttons.indexOf(clicked);
       if (index >= 0) setActiveAction(index);
       activateAction(action);
-    }
-    if (action === 'toggle-frame') {
-      frameEnabled = !frameEnabled;
-      canvasSettings.frameMode = frameEnabled ? 'phone' : 'none';
-      syncToggles();
-      window.setTimeout(() => {
-        positionExternalChrome();
-      }, 280);
     }
 
     const pill = event.target?.closest?.('[data-prototype-list-pill]');
@@ -996,6 +1425,16 @@ function bindEvents() {
     morph.showPrototypeListStage?.(listContent(), { entering: false, selectedIndex });
     enterReview();
   });
+
+  promptInput?.addEventListener('input', () => {
+    if (phase !== 'listening') enterListening();
+    setListeningTranscript(promptInput.value);
+  });
+
+  promptInput?.addEventListener('focus', () => {
+    if (phase === 'idle') enterListening();
+    setListeningTranscript(promptInput.value);
+  });
 }
 
 setupThinkingStream();
@@ -1005,4 +1444,5 @@ window.addEventListener('resize', () => {
   positionExternalChrome();
 });
 syncToggles();
+updateV4TaskPage();
 enterIdle();

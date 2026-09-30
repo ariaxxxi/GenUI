@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Adaptive Cluster</title>
+<title>Adaptive Cluster V4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="src/styles/shared.css"/>
 <link rel="stylesheet" href="src/styles/ai-glass.css"/>
@@ -29,6 +29,14 @@
 <div id="main-col">
   <div id="ui-frame">
     <div id="ui-frame-bg"></div>
+    <div id="adaptive-v4-page" class="adaptive-v4-page" aria-hidden="true">
+      <section class="adaptive-v4-shell" aria-label="Travel">
+        <div id="adaptive-v4-lens-tabs" class="adaptive-v4-lens-tabs" aria-label="Pages"></div>
+        <div id="adaptive-v4-lens-title" class="adaptive-v4-lens-title">Travel</div>
+        <div id="adaptive-v4-stack" class="adaptive-v4-stack" aria-label="Travel cards"></div>
+      </section>
+    </div>
+
     <div id="stage-wrap">
       <div id="intent-header">
         <span id="intent-label">Adaptive Cluster</span>
@@ -77,13 +85,18 @@
         <div id="list-pills"></div>
       </div>
     </div>
-  </div>
 
-  <div id="adaptive-cluster-controls" aria-label="Adaptive cluster controls">
-    <button type="button" data-adaptive-action="listen">Listen</button>
-    <button type="button" data-adaptive-action="start">Start</button>
-    <button type="button" data-adaptive-action="toggle-frame" aria-pressed="false">Frame</button>
-    <button type="button" data-adaptive-action="reset">Reset</button>
+    <div id="adaptive-cluster-controls" aria-label="Adaptive AI input">
+      <label class="adaptive-input-shell">
+        <span>AI prompt</span>
+        <textarea id="adaptive-prompt-input" rows="2" placeholder="Ask ChatGPT"></textarea>
+      </label>
+      <div class="adaptive-side-actions">
+        <button type="button" data-adaptive-action="listen">Listen</button>
+        <button type="button" data-adaptive-action="start">Start</button>
+        <button type="button" data-adaptive-action="reset">Reset</button>
+      </div>
+    </div>
   </div>
 </div>
 
