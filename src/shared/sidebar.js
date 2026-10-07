@@ -13,6 +13,8 @@ export function buildUiRefs(documentRef = document) {
     bgImageReset: documentRef.getElementById('bg-image-reset'),
     bgImageAlpha: documentRef.getElementById('bg-image-alpha'),
     bgImageAlphaRow: documentRef.getElementById('bg-image-alpha-row'),
+    bgImageBlur: documentRef.getElementById('bg-image-blur'),
+    bgImageBlurRow: documentRef.getElementById('bg-image-blur-row'),
     bgVideoUpload: documentRef.getElementById('bg-video-upload'),
     bgVideoReset: documentRef.getElementById('bg-video-reset'),
     bgVideoState: documentRef.getElementById('bg-video-state'),

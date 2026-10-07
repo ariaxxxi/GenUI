@@ -1503,6 +1503,15 @@ export function initManualBindings({
     }
     applyCanvasSettings();
   });
+  UI.bgImageBlur?.addEventListener('input', (e) => {
+    const blur = clamp(Number(e.target.value) || 0, 0, 60);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundImageBlur: blur,
+    });
+    persistCanvasSettings();
+    applyCanvasSettings();
+  });
   UI.bgVideoUpload?.addEventListener('click', (e) => { e.target.value = ''; });
   UI.bgVideoUpload?.addEventListener('change', async (e) => {
     const file = e.target.files?.[0];

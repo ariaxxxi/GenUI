@@ -560,9 +560,34 @@ export function createMorphRender(ctx) {
     playPrototypeSelectionMotion(selectionOverlay, true);
   }
 
+  function effectiveRadiusPx(radius, w, h) {
+    const value = Number.parseFloat(radius);
+    const cap = Math.min(Number(w), Number(h)) / 2;
+    if (!Number.isFinite(value) || !Number.isFinite(cap) || value <= cap) return radius;
+    return `${cap}px`;
+  }
+
+  // Pill-ish shapes carry an inline 999px radius. Interpolating 999px -> 30px keeps the
+  // corners visually unchanged until late in the morph, which reads as a delayed corner
+  // change, so snap to the already-rendered (clamped) radius before the transition starts.
+  function normalizeMainRadiusForMorph() {
+    const main = DROPS.main;
+    if (!main) return;
+    const cs = getComputedStyle(main);
+    const current = Number.parseFloat(cs.borderRadius);
+    const cap = Math.min(Number.parseFloat(cs.width), Number.parseFloat(cs.height)) / 2;
+    if (!Number.isFinite(current) || !Number.isFinite(cap) || current <= cap) return;
+    const prevTransition = main.style.transition;
+    main.style.transition = 'none';
+    main.style.borderRadius = `${cap}px`;
+    void main.offsetWidth;
+    main.style.transition = prevTransition;
+  }
+
   function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
-    const mainRadius = stageId ? layout.stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
+    const rawMainRadius = stageId ? layout.stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
+    const mainRadius = effectiveRadiusPx(rawMainRadius, geo.main.w, geo.main.h);
     const bottomAlignRef = callbacks.getBottomAlignRefHeight?.() || BOTTOM_ALIGN_REF_H;
     const useBottomAlign = !!callbacks.getCanvasSettings()?.bottomAlign;
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
@@ -995,6 +1020,7 @@ export function createMorphRender(ctx) {
     state.currentShape = shape;
     state.currentStageId = stageId || null;
     document.body.dataset.currentShape = shape;
+    normalizeMainRadiusForMorph();
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
     const orbVisualShape = (value) => value === 'magic' || value === 'ai';
     const thinkingVisualShape = orbVisualShape(shape);

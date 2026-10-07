@@ -77,6 +77,8 @@ let prototypeListeningPromptText = '';
 let prototypeListeningPromptFinalText = '';
 let prototypeListeningPromptInterimText = '';
 let prototypeListeningPromptDismissTimer = null;
+let prototypeListeningTypedText = '';
+let prototypeListeningTypingActive = false;
 const prototypeAiDebugState = { active: false, mode: 'thinking' };
 
 function isPrototypeNormalRenderShape(shape) {
@@ -215,6 +217,11 @@ function applyCanvasSettings() {
     blurBg.style.opacity = backgroundEnabled && backgroundMediaKind === 'image' && !isDarkBackground
       ? String(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))))
       : '0';
+ 
+    const bgBlurPx = Math.max(0, Math.min(60, Number(canvasSettings.backgroundImageBlur) || 0));
+    blurBg.style.filter = bgBlurPx > 0 ? `blur(${bgBlurPx}px)` : 'none';
+    // Scale up so the blur does not bleed transparent edges into the viewport.
+    blurBg.style.transform = bgBlurPx > 0 ? `scale(${1 + (bgBlurPx / 200)})` : 'none';
   }
   if (blurVideo) {
     const nextSrc = backgroundEnabled && backgroundMediaKind === 'video' && backgroundVideo?.src ? backgroundVideo.src : '';
@@ -261,13 +268,17 @@ function applyCanvasSettings() {
   }
   if (frameBg) frameBg.style.backgroundImage = canvasSettings.phoneFrameBackground?.src ? `url("${canvasSettings.phoneFrameBackground.src}")` : '';
   if (UI.bgToggle) UI.bgToggle.checked = !!backgroundEnabled;
-  [UI.bgImagePresetRow, UI.bgImageUploadRow, UI.bgImageAlphaRow].forEach((row) => {
+  [UI.bgImagePresetRow, UI.bgImageUploadRow, UI.bgImageAlphaRow, UI.bgImageBlurRow].forEach((row) => {
     row?.classList.toggle('hidden', !backgroundEnabled);
   });
   if (UI.bgImageSelect) UI.bgImageSelect.value = backgroundImage;
   if (UI.bgImageAlpha) {
     UI.bgImageAlpha.value = String(Math.round(Math.max(0, Math.min(1, Number(canvasSettings.backgroundImageAlpha ?? 0.9))) * 100));
     syncRangeProgress(UI.bgImageAlpha);
+  }
+  if (UI.bgImageBlur) {
+    UI.bgImageBlur.value = String(Math.round(Math.max(0, Math.min(60, Number(canvasSettings.backgroundImageBlur) || 0))));
+    syncRangeProgress(UI.bgImageBlur);
   }
   if (UI.bgVideoState) UI.bgVideoState.textContent = backgroundVideo ? 'loaded' : 'empty';
   if (UI.bgVideoControls) UI.bgVideoControls.classList.toggle('hidden', !backgroundVideo);
@@ -620,6 +631,8 @@ function schedulePrototypeListeningPromptDismiss() {
 
 function resetPrototypeListeningPromptText() {
   clearPrototypeListeningPromptDismissTimer();
+  prototypeListeningTypedText = '';
+  prototypeListeningTypingActive = false;
   prototypeListeningPromptFinalText = '';
   prototypeListeningPromptInterimText = '';
   const prompt = document.getElementById('prototype-listening-prompt');
@@ -649,6 +662,51 @@ function setPrototypeListeningTranscript(text = '', isFinal = false) {
   if (prompt) prompt.dataset.dismissing = 'false';
   prototypeListeningPromptInterimText = nextText;
   setPrototypeListeningPromptText(joinPrototypeDictationText(prototypeListeningPromptFinalText, nextText));
+}
+
+function applyPrototypeListeningTypedText() {
+  clearPrototypeListeningPromptDismissTimer();
+  const prompt = document.getElementById('prototype-listening-prompt');
+  if (prompt) prompt.dataset.dismissing = 'false';
+  const text = prototypeListeningTypedText.replace(/\s+/g, ' ').replace(/^ /, '');
+  const words = text.trim().split(' ').filter(Boolean);
+  const trailingSpace = text.endsWith(' ');
+  prototypeListeningPromptFinalText = trailingSpace ? words.join(' ') : words.slice(0, -1).join(' ');
+  prototypeListeningPromptInterimText = trailingSpace ? '' : (words[words.length - 1] || '');
+  setPrototypeListeningPromptText(text.trim());
+}
+
+function handlePrototypeListeningTyping(event) {
+  if (!isPrototypeListeningActive()) return false;
+  if (event.metaKey || event.ctrlKey || event.altKey) return false;
+  if (isEditableKeyTarget(event)) return false;
+  if (event.key === 'Enter') {
+    const text = prototypeListeningTypedText.replace(/\s+/g, ' ').trim();
+    if (!text) return false;
+    prototypeListeningTypingActive = false;
+    prototypeListeningTypedText = '';
+    const input = document.getElementById('user-input');
+    if (input) {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    manualDemo?.manualShape?.('magic');
+    return true;
+  }
+  if (event.key === 'Backspace') {
+    if (!prototypeListeningTypedText) return false;
+    prototypeListeningTypedText = prototypeListeningTypedText.slice(0, -1);
+    prototypeListeningTypingActive = !!prototypeListeningTypedText;
+    if (prototypeListeningTypedText) applyPrototypeListeningTypedText();
+    else resetPrototypeListeningPromptText();
+    return true;
+  }
+  if (event.key.length !== 1) return false;
+  if (event.key === ' ' && !prototypeListeningTypedText) return false;
+  prototypeListeningTypingActive = true;
+  prototypeListeningTypedText += event.key;
+  applyPrototypeListeningTypedText();
+  return true;
 }
 
 function syncPrototypeListeningOrb(shape) {
@@ -697,6 +755,7 @@ prototypeVoice = initVoiceEngine({
   ),
   shouldFilterTtsEcho: () => false,
   onTranscriptUpdate: (text, isFinal = false) => {
+    if (prototypeListeningTypingActive && isPrototypeListeningActive()) return;
     if (isPrototypeListeningActive()) {
       setPrototypeListeningTranscript(text, isFinal);
     }
@@ -1355,6 +1414,12 @@ UI.prototypeSetupImport?.addEventListener('change', (event) => {
       window.alert(err?.message || 'Import failed.');
     })
     .finally(() => { event.target.value = ''; });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (!handlePrototypeListeningTyping(event)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
 });
 
 document.addEventListener('keydown', (event) => {
