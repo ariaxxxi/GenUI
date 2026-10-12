@@ -204,7 +204,49 @@ function pcm16MonoToAudioBuffer(base64, sampleRate = 24000) {
   return buffer;
 }
 
+/* Speech amplitude, published as `ai-tts-level` so AI visuals can shape a mouth
+   from the voice that is actually playing. */
+let ttsAnalyser = null;
+let ttsLevelRaf = 0;
+
+function emitTtsLevel(level) {
+  window.dispatchEvent(new CustomEvent('ai-tts-level', { detail: { level } }));
+}
+
+function stopTtsLevelMeter() {
+  if (ttsLevelRaf) { cancelAnimationFrame(ttsLevelRaf); ttsLevelRaf = 0; }
+  if (ttsAnalyser) {
+    try { ttsAnalyser.disconnect(); } catch {}
+    ttsAnalyser = null;
+  }
+  emitTtsLevel(0);
+}
+
+function startTtsLevelMeter(analyser) {
+  ttsAnalyser = analyser;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  let smoothed = 0;
+  const tick = () => {
+    if (ttsAnalyser !== analyser) return;
+    analyser.getByteFrequencyData(data);
+    const bins = data.subarray(2, 48);
+    let sum = 0;
+    let peak = 0;
+    for (let i = 0; i < bins.length; i += 1) {
+      sum += bins[i];
+      if (bins[i] > peak) peak = bins[i];
+    }
+    const weighted = ((sum / bins.length) * 0.6) + (peak * 0.4);
+    const raw = Math.min(Math.pow(weighted / 86, 0.9), 1);
+    smoothed += (raw - smoothed) * (raw > smoothed ? 0.5 : 0.16);
+    emitTtsLevel(smoothed);
+    ttsLevelRaf = requestAnimationFrame(tick);
+  };
+  ttsLevelRaf = requestAnimationFrame(tick);
+}
+
 function stopCurrentAudio() {
+  stopTtsLevelMeter();
   if (currentSource) {
     try { currentSource.stop(); } catch {}
     try { currentSource.disconnect(); } catch {}
@@ -268,10 +310,16 @@ async function playAudioEntry(entry, text, seq) {
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.playbackRate.value = playbackRateForText(text);
-  source.connect(ctx.destination);
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.6;
+  source.connect(analyser);
+  analyser.connect(ctx.destination);
   source.start();
+  startTtsLevelMeter(analyser);
   source.onended = () => {
     if (currentSource === source) currentSource = null;
+    stopTtsLevelMeter();
     setTtsSpeaking(false);
   };
   currentSource = source;

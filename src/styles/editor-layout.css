@@ -8,6 +8,8 @@ body {
   font-family: 'DM Sans', sans-serif;
   height: 100%;
   --panel-w: 360px;
+  --stage-w: 380px;
+  --stage-h: 500px;
   --tool-bg: #f6f3ed;
   --tool-panel: #fbf8f2;
   --tool-canvas: #d8d2c8;
@@ -109,8 +111,8 @@ body.bg-off #main-col::before {
   transition: opacity 260ms var(--motion-ease), filter 260ms var(--motion-ease);
 }
 #ui-frame.glasses {
-  width: 420px;
-  height: 420px;
+  width: var(--stage-w);
+  height: var(--stage-h);
   border-radius: var(--frame-corner-radius);
   overflow: visible;
   border: none;
@@ -755,7 +757,7 @@ body[data-current-shape="pill"] #c-secondary {
   66%     { transform: translateY(-3px) rotate(0.2deg); }
 }
 #stage {
-  position: relative; width: 420px;
+  position: relative; width: var(--stage-w);
   animation: float 6s var(--motion-ease) infinite;
   flex-shrink: 0;
   mix-blend-mode: normal;

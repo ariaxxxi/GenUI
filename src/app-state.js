@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   mode: 'genui.mode.v1',
   aiStage: 'genui.ai-stage.v1',
   aiOrbIcon: 'genui.ai-orb-icon.v1',
+  aiEchoVisual: 'genui.ai-echo-visual.v1',
   thinkingThumbnails: 'genui.thinking-thumbnails.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
@@ -103,6 +104,24 @@ export function loadAiVoiceEnabled() {
 export function loadAiOrbIcon() {
   const stored = readStoredJson(STORAGE_KEYS.aiOrbIcon, null);
   return typeof stored === 'string' ? stored : 'bixby';
+}
+
+export function loadAiEchoVisual() {
+  const stored = readStoredJson(STORAGE_KEYS.aiEchoVisual, null);
+  const listeningLook = stored?.listeningLook === 'glow' ? 'glow' : 'metaball';
+  return {
+    enabled: stored?.enabled === true,
+    listeningLook,
+    presetId: typeof stored?.presetId === 'string' ? stored.presetId : '',
+  };
+}
+
+export function persistAiEchoVisual(value) {
+  return persistToStorage(STORAGE_KEYS.aiEchoVisual, {
+    enabled: value?.enabled === true,
+    listeningLook: value?.listeningLook === 'glow' ? 'glow' : 'metaball',
+    presetId: typeof value?.presetId === 'string' ? value.presetId : '',
+  }, 'ai echo visual');
 }
 
 export function loadThinkingThumbnails() {

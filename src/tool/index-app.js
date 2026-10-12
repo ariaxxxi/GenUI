@@ -5,6 +5,7 @@ import { initScenarioData } from '../shared/scenario-data.js';
 import { buildUiRefs, initSidebar } from '../shared/sidebar.js';
 import { initAnimControls } from '../shared/anim-controls.js';
 import { initOrbController } from '../shared/orb-controller.js';
+import { initEchoAiVisual, ECHO_LISTENING_LOOK, ECHO_PRESET_AUTO, ECHO_SHAPE_STATE, ECHO_FADE_MS, STAGE_SETTLE_MS } from '../shared/echo-ai-visual.js';
 import { initManualFlight } from './modules/manual-flight.js';
 import { initManualDemo } from './modules/manual-demo.js';
 import { initManualActions } from './modules/manual-actions.js';
@@ -22,6 +23,9 @@ bindAiOrbIconStorageSync(document, window);
 const detailMeasureEl = document.createElement('div');
 detailMeasureEl.style.cssText = "position:fixed;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;white-space:normal;word-break:break-word;font-family:'DM Sans', sans-serif;font-weight:300;";
 document.body.appendChild(detailMeasureEl);
+
+/* Canvas height. The width is --stage-w in editor-layout.css; keep both in step. */
+const STAGE_HEIGHT = 500;
 
 const createRootCircle = () => ({ icon: '', primary: '', secondary: '', detail: '' });
 const PROTOTYPE_BACKGROUND_OPTIONS = [
@@ -72,6 +76,7 @@ let splitAnimStyleBackup = null;
 let prototypeIntentHeaderTrackRaf = null;
 let prototypeOrbChromeSyncRaf = 0;
 let prototypeVoice = null;
+let echoAi = null;
 let prototypeSelectionOverride = null;
 let prototypeListeningPromptText = '';
 let prototypeListeningPromptFinalText = '';
@@ -470,11 +475,71 @@ function syncPrototypeIntentHeader(scenario) {
   trackPrototypeIntentHeader();
 }
 
+/* Sidebar controls for the Echo AI visual: the on/off switch, the two authored
+   Listening looks, and a direct pick of any of the eight baked presets. */
+function initEchoAiVisualControls(echo) {
+  const toggle = document.getElementById('ai-echo-visual-toggle');
+  const controls = document.getElementById('ai-echo-visual-controls');
+  const lookButtons = Array.from(document.querySelectorAll('[data-echo-listening-look]'));
+  const presetGrid = document.getElementById('ai-echo-preset-grid');
+  let renderedPresetIds = '';
+
+  function renderPresetGrid() {
+    if (!presetGrid) return;
+    const presets = echo.getPresets();
+    const signature = presets.map((p) => p.id).join('|');
+    if (signature === renderedPresetIds) return;
+    renderedPresetIds = signature;
+    presetGrid.replaceChildren();
+    const entries = [{ id: ECHO_PRESET_AUTO, label: 'Auto' }, ...presets];
+    entries.forEach((entry) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sb-shape-btn prototype-thinking-state-btn';
+      btn.dataset.echoPreset = entry.id;
+      btn.textContent = entry.label;
+      btn.title = entry.label;
+      btn.addEventListener('click', () => echo.setPresetId(entry.id));
+      presetGrid.appendChild(btn);
+    });
+  }
+
+  function sync() {
+    const enabled = echo.isEnabled();
+    if (toggle) toggle.checked = enabled;
+    controls?.classList.toggle('hidden', !enabled);
+    lookButtons.forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.echoListeningLook === echo.getListeningLook());
+    });
+    renderPresetGrid();
+    const selected = echo.getPresetId();
+    presetGrid?.querySelectorAll('[data-echo-preset]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.echoPreset === selected);
+    });
+  }
+
+  toggle?.addEventListener('change', (event) => echo.setEnabled(event.target.checked));
+  lookButtons.forEach((btn) => {
+    btn.addEventListener('click', () => echo.setListeningLook(btn.dataset.echoListeningLook === 'glow'
+      ? ECHO_LISTENING_LOOK.GLOW
+      : ECHO_LISTENING_LOOK.METABALL));
+  });
+  echo.onChange(sync);
+  sync();
+}
+
+const ECHO_STATE_SHAPE = Object.freeze({ listening: 'listening', idle: 'idle' });
+
 function syncManualShapeButtonStates(shape = document.body?.dataset?.currentShape || '') {
   const actualShape = String(shape || '').trim();
-  const displayShape = prototypeAiDebugState.active && actualShape === 'magic'
-    ? 'magic'
-    : (actualShape === 'list' ? 'list-pill' : actualShape);
+  /* While Echo holds the canvas the live shape is idle, so the AI Debug row
+     reflects the look that was asked for instead. */
+  const echoOverride = echoAi?.isEnabled() ? echoAi.getOverride() : '';
+  const displayShape = echoOverride
+    ? (ECHO_STATE_SHAPE[echoOverride] || 'magic')
+    : (prototypeAiDebugState.active && actualShape === 'magic'
+      ? 'magic'
+      : (actualShape === 'list' ? 'list-pill' : actualShape));
   document.querySelectorAll('.sb-shape-btn').forEach((button) => {
     button.classList.toggle('active', button.dataset.shape === displayShape);
   });
@@ -690,7 +755,7 @@ function handlePrototypeListeningTyping(event) {
       input.value = text;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    manualDemo?.manualShape?.('magic');
+    manualShape('magic');
     return true;
   }
   if (event.key === 'Backspace') {
@@ -878,8 +943,57 @@ function togglePrototypeTimer() {
   return true;
 }
 
+/* The Echo visual and the stage never share the canvas. Pressing an AI visual
+   sends the current stage to idle and then brings Echo in; pressing a stage
+   takes Echo away and then grows that stage back out of idle. Both directions
+   go through `manualShape` / `previewScenario`, the two places the prototype
+   decides what the canvas is showing. */
+function manualShape(shape) {
+  const next = String(shape || '').trim().toLowerCase();
+  if (!echoAi?.isEnabled()) return void manualDemo.manualShape(next);
+
+  const echoState = ECHO_SHAPE_STATE[next];
+  if (echoState) {
+    /* An AI shape is a request for Echo. The shape itself still runs, so its
+       side effects (dictation, orb chrome) happen as usual - it is only the
+       classic visual that steps aside under the Echo overlay. */
+    const alreadyCovering = echoAi.prepareState(echoState);
+    if (alreadyCovering) {
+      manualDemo.manualShape(next);
+      echoAi.revealNow();
+      syncManualShapeButtonStates();
+      return;
+    }
+    manualDemo.manualShape('idle');
+    window.setTimeout(() => {
+      manualDemo.manualShape(next);
+      echoAi.revealNow();
+      syncManualShapeButtonStates();
+    }, STAGE_SETTLE_MS);
+    return;
+  }
+
+  /* A stage takes the canvas back: Echo fades out over the idle shape, then the
+     stage grows out of it. */
+  if (!echoAi.isCovering()) return void manualDemo.manualShape(next);
+  echoAi.yieldToStage();
+  manualDemo.manualShape('idle');
+  window.setTimeout(() => {
+    manualDemo.manualShape(next);
+    syncManualShapeButtonStates();
+  }, ECHO_FADE_MS);
+}
+
 function previewScenario(scenario) {
   if (!scenario) return;
+  if (echoAi?.isCovering()) {
+    /* Echo owns the canvas: fade it out over the idle shape, then let the stage
+       grow out of it. */
+    echoAi.yieldToStage();
+    manualDemo?.manualShape?.('idle');
+    window.setTimeout(() => previewScenario(scenario), ECHO_FADE_MS);
+    return;
+  }
   const currentShape = String(morphApi?.getCurrentShape?.() || '').trim().toLowerCase();
   const nextShape = String(renderShapeForStageId(scenario.shape, scenario) || '').trim().toLowerCase();
   if (currentShape === 'magic' && isPrototypeNormalRenderShape(nextShape)) {
@@ -899,6 +1013,7 @@ function previewScenario(scenario) {
 
 function previewScenarioInstant(scenario) {
   if (!scenario) return;
+  if (echoAi?.isCovering()) echoAi.yieldToStage();
   if (flight?.isActive()) flight.cancelFlightFlow();
   orb.stopSiriOrb();
   morphApi.hideRich();
@@ -946,6 +1061,8 @@ morphApi = initMorph({
   C,
   detailMeasureEl,
   callbacks: {
+    /* Canvas height; the width lives in CSS as --stage-w. */
+    getBottomAlignRefHeight: () => STAGE_HEIGHT,
     clamp,
     selectedScenario,
     stageById: (id, scenario = selectedScenario()) => stageById(id, scenario),
@@ -1379,7 +1496,7 @@ initManualBindings({
   hideRich: morphApi.hideRich,
   hideIntentHeader,
   handleSend: actions.handleSend,
-  manualShape: manualDemo.manualShape,
+  manualShape,
   openCustom: manualDemo.openCustom,
   movePrototypeListSelection: morphApi.movePrototypeListSelection,
   flight,
@@ -1396,6 +1513,14 @@ initManualBindings({
   },
   getPrototypeAiDebugState: () => ({ ...prototypeAiDebugState }),
 });
+
+echoAi = initEchoAiVisual({
+  document,
+  window,
+  goIdle: () => manualDemo.manualShape('idle'),
+  getShape: () => String(morphApi?.getCurrentShape?.() || document.body?.dataset?.currentShape || '').trim().toLowerCase(),
+});
+if (echoAi) initEchoAiVisualControls(echoAi);
 
 UI.prototypeSetupExport?.addEventListener('click', () => {
   void exportPrototypeSetup().catch((err) => console.warn('[prototype-setup] Export failed:', err));
@@ -1443,7 +1568,7 @@ Object.assign(window, {
   applyCustomShape: manualDemo.applyCustomShape,
   fireChip: actions.fireChip,
   handleSend: actions.handleSend,
-  manualShape: manualDemo.manualShape,
+  manualShape,
   openCustom: manualDemo.openCustom,
   selectListItem: manualDemo.selectListItem,
   copyStagePng,

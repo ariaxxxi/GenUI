@@ -1,0 +1,64 @@
+/* ── Echo AI visual overlay ──
+   The 640px authored frame is scaled, not resized, so the baked Effects and
+   Metaball values keep their authored proportions. 640 x 0.6875 = 440 drawn.
+   Sits dead-centre of the canvas, over the drops, under the sidebars. */
+#ai-echo-overlay {
+  --echo-frame: 640px;
+  --echo-scale: 0.6875;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--echo-frame);
+  height: var(--echo-frame);
+  transform-origin: 50% 50%;
+  transform: translate(-50%, -50%) scale(calc(var(--echo-scale) * 0.96));
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 320ms var(--motion-ease), transform 320ms var(--motion-ease);
+}
+#ai-echo-overlay.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(var(--echo-scale));
+}
+#ai-echo-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color-scheme: normal;
+  pointer-events: none;
+}
+
+/* While Echo is covering an AI state it is the whole visual: the classic orb,
+   the glass drop and the thinking stream step aside. */
+body.ai-echo-active #drop-main,
+body.ai-echo-active #drop-left,
+body.ai-echo-active #drop-right {
+  opacity: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+body.ai-echo-active #drop-main #siri-orb,
+body.ai-echo-active #drop-main #siri-orb.visible {
+  opacity: 0 !important;
+}
+body.ai-echo-active #home-glow-layer,
+body.ai-echo-active #prototype-thinking-stream,
+body.ai-echo-active #prototype-stage-selection {
+  opacity: 0 !important;
+}
+
+/* Sidebar controls */
+#ai-echo-visual-controls.hidden { display: none; }
+#ai-echo-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+#ai-echo-preset-grid .sb-shape-btn {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

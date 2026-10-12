@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="src/styles/shared.css"/>
 <link rel="stylesheet" href="src/styles/ai-glass.css"/>
 <link rel="stylesheet" href="src/styles/ai-decorative.css"/>
+<link rel="stylesheet" href="src/styles/ai-echo.css"/>
 <link rel="stylesheet" href="src/styles/editor-layout.css"/>
 <link rel="stylesheet" href="src/styles/editor-sidebar.css"/>
 <link rel="stylesheet" href="src/styles/editor-decorative.css"/>
@@ -394,6 +395,21 @@
     <div class="sb-section prototype-ai-debug-section">
       <div class="sb-lbl prototype-ai-debug-heading">AI Debug</div>
       <div class="sb-section-body">
+        <label class="sb-toggle settings-toggle" for="ai-echo-visual-toggle">
+          <div class="sb-toggle-copy">
+            <strong>Echo visual</strong>
+          </div>
+          <input id="ai-echo-visual-toggle" class="sb-toggle-input" type="checkbox"/>
+        </label>
+        <div id="ai-echo-visual-controls" class="sb-row tight hidden">
+          <span class="sb-lbl">Listening look</span>
+          <div class="shape-chip-row" role="group" aria-label="Echo listening look">
+            <button class="shape-chip" data-echo-listening-look="metaball" type="button">Metaball</button>
+            <button class="shape-chip" data-echo-listening-look="glow" type="button">Glow</button>
+          </div>
+          <span class="sb-lbl">Preset</span>
+          <div id="ai-echo-preset-grid" role="group" aria-label="Echo preset"></div>
+        </div>
         <div class="legacy-grid prototype-ai-debug-grid">
           <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
           <button class="sb-shape-btn" data-shape="idle" type="button" onclick="manualShape('idle')">Empty</button>

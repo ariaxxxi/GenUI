@@ -113,6 +113,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function applyVoiceVisualization(level, actionBtns) {
+    /* The Echo visual drives its own mouth geometry from the same mic level,
+       independently of whether the classic orb is on screen. */
+    window.GenUiEchoAi?.setVoiceLevel?.(level);
     const field = getComposePulseField();
     const state = getGlassUi?.()?.state;
     const composeState = getGlassState?.()?.COMPOSE;
@@ -165,6 +168,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function resetVizStyles({ clearDropMain = true, clearOrb = true } = {}) {
+    window.GenUiEchoAi?.setVoiceLevel?.(0);
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
     const orb = getListeningOrb();
     if (orb && clearOrb) {
