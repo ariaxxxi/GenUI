@@ -165,28 +165,6 @@
     <div id="sim-title">GlassOS Simulator</div>
     <div id="sim-key-legend"><kbd>1/Space</kbd> confirm · <kbd>F/B</kbd> nav · <kbd>L</kbd> listen · <kbd>Esc</kbd> back</div>
   </div>
-  <div id="sim-input-section">
-    <div id="sim-input-label">Voice Command</div>
-    <div id="sim-input-wrap">
-      <div id="sim-dot"></div>
-      <input id="sim-input" type="text" autocomplete="off" spellcheck="false" placeholder="Book a flight, check weather…"/>
-    </div>
-    <div id="sim-input-hint"></div>
-  </div>
-  <div id="sim-quick-chips">
-    <button class="sim-quick-chip" onclick="fireChip(this)">Send message to Hiro</button>
-    <button class="sim-quick-chip" onclick="fireChip(this)">Book a flight</button>
-    <button class="sim-quick-chip" onclick="fireChip(this)">What's the weather</button>
-  </div>
-  <div id="sim-voice-out">
-    <div id="sim-voice-label">🔊 AI</div>
-    <div id="sim-voice-text"></div>
-  </div>
-  <div id="sim-mic">
-    <div id="sim-mic-dot"></div>
-    <span id="sim-mic-label">Listening…</span>
-  </div>
-  <div id="sim-log"></div>
   <div id="sim-kbd">
     <div class="sim-key-badge"><kbd>1/Space</kbd> <span>Confirm</span></div>
     <div class="sim-key-badge"><kbd>F/B</kbd> <span>Nav</span></div>
@@ -196,10 +174,17 @@
 </div>
 
 <div id="main-col">
-  <div id="ui-frame">
-    <div id="ui-frame-bg"></div>
-    <div id="stage-wrap">
-      <div id="stage">
+  <div id="ai-frame-stack">
+    <div id="ai-frame-status" aria-live="polite">
+      <div id="sim-mic">
+        <div id="sim-mic-dot"></div>
+        <span id="sim-mic-label">Listening…</span>
+      </div>
+    </div>
+    <div id="ui-frame">
+      <div id="ui-frame-bg"></div>
+      <div id="stage-wrap">
+        <div id="stage">
         <div id="intent-header">
           <span id="intent-label">Book a Flight</span>
           <div id="intent-step-dot"></div>
@@ -235,11 +220,33 @@
         <div class="drop" id="drop-right"></div>
         <div id="list-pills"></div>
         <div id="home-state-dot" aria-hidden="true"></div>
-        <div id="home-start-prompt"></div>
+        </div>
       </div>
     </div>
+    <aside id="ai-frame-output" aria-label="Simulator output">
+      <div id="sim-log" role="log" aria-label="Chat history"></div>
+      <div id="sim-voice-out">
+        <div id="sim-voice-label">🔊 AI</div>
+        <div id="sim-voice-text"></div>
+      </div>
+    </aside>
+    <div id="ai-frame-controls">
+      <div id="sim-input-section">
+        <div id="sim-input-label">Voice Command</div>
+        <div id="sim-input-wrap">
+          <div id="sim-dot"></div>
+          <input id="sim-input" type="text" autocomplete="off" spellcheck="false" placeholder="Book a flight, check weather…"/>
+        </div>
+        <div id="sim-input-hint"></div>
+      </div>
+      <div id="sim-quick-chips">
+        <button class="sim-quick-chip" onclick="fireChip(this)">Send message to Hiro</button>
+        <button class="sim-quick-chip" onclick="fireChip(this)">Book a flight</button>
+        <button class="sim-quick-chip" onclick="fireChip(this)">What's the weather</button>
+      </div>
+      <div id="home-start-prompt" aria-live="polite"></div>
+    </div>
   </div>
-
 </div>
 
 <div id="sidebar">

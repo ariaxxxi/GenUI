@@ -23,19 +23,25 @@ import {
   celestialSelectedMaskBlurDefaultForRenderShape,
 } from './celestial-selected-presets.js';
 
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
-const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list-pill', 'nudge', 'pill', 'card', 'card-s', 'image'];
+const STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const BUILTIN_STAGE_DEFS = Object.freeze([
-  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
-  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
-  { id: 'list', name: 'List', preset: true, renderShape: 'list', cornerRadius: 25, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail'] },
-  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
-  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
-  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
+  { id: 'idle', name: 'Idle', preset: true, renderShape: 'idle', cornerRadius: 0, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: [] },
+  { id: 'dot', name: 'Dot', preset: true, renderShape: 'dot', cornerRadius: 50, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon'] },
+  { id: 'list-pill', name: 'List-Pill', preset: true, renderShape: 'list', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
+  { id: 'nudge', name: 'Nudge', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: 60, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['primary', 'secondary'] },
+  { id: 'pill', name: 'Pill', preset: true, renderShape: 'pill', cornerRadius: 60, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary'] },
+  { id: 'card', name: 'Card', preset: true, renderShape: 'card', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'card-s', name: 'Card-S', preset: true, renderShape: 'card-s', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: 8, iconLeftPadding: 16, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['icon', 'primary', 'secondary', 'detail', 'image'] },
+  { id: 'image', name: 'Image', preset: true, renderShape: 'image', cornerRadius: 30, widthOverride: null, heightOverride: null, iconTextGap: null, iconLeftPadding: null, phoneBgBlur: false, listListeningOrb: false, listSelectable: true, selected: false, accentColor: '#90acff', secondaryAccentColor: '#9761ff', components: ['image'] },
 ]);
+
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
 
 function selectedBlobDefaultsForRenderShape(renderShape = 'pill') {
   return celestialSelectedBlobColorDefaultsForRenderShape(renderShape);
@@ -43,6 +49,8 @@ function selectedBlobDefaultsForRenderShape(renderShape = 'pill') {
 
 export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }) {
   const clamp = typeof clampFn === 'function' ? clampFn : ((v, lo, hi) => Math.max(lo, Math.min(hi, v)));
+  const textMeasureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+  const textMeasureContext = textMeasureCanvas?.getContext?.('2d') || null;
 
   function stageLibrary() {
     const value = typeof getStageLibrary === 'function' ? getStageLibrary() : [];
@@ -73,7 +81,18 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const legacyStored = Array.isArray(stored) ? stored : readStoredJson('undefined', null);
     if (!Array.isArray(legacyStored)) return defaultStageLibrary();
     const byId = new Map(BUILTIN_STAGE_DEFS.map((stage) => [stage.id, stage]));
-    const normalized = legacyStored.map((item) => normalizeStage(item, byId.get(item?.id))).filter(Boolean);
+    const normalized = legacyStored
+      .filter((item) => {
+        const id = String(item?.id || '').trim();
+        const renderShape = String(item?.renderShape || '').trim();
+        return !['list', 'timer', 'recorder'].includes(id) && !id.startsWith('recorder-') && renderShape !== 'timer';
+      })
+      .map((item) => normalizeStage(item, byId.get(item?.id)))
+      .filter(Boolean)
+      .map((stage) => {
+      if (stage.id !== 'action-card' || stage.components.includes('action-row')) return stage;
+      return { ...stage, components: [...stage.components, 'action-row'] };
+    });
     const ids = new Set(normalized.map((stage) => stage.id));
     BUILTIN_STAGE_DEFS.forEach((builtin) => {
       if (!ids.has(builtin.id)) normalized.unshift(normalizeStage(builtin, builtin));
@@ -154,6 +173,7 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function stageVisibleEditorFields(stage) {
+    if (stage?.id === 'list-pill') return new Set();
     const fields = new Set();
     if (stageHasComponent(stage, 'primary')) fields.add('primary');
     if (stageHasComponent(stage, 'secondary')) fields.add('secondary');
@@ -176,6 +196,15 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
   }
 
   function defaultStageTextFallback(shape) {
+    if (isNudgeStageId(shape)) {
+      return { primary: 'Buy milk', secondary: 'Grocery list', detail: '', intentHeader: '' };
+    }
+    if (shape === 'timer') {
+      return { primary: '03:00', secondary: '', detail: '', intentHeader: '' };
+    }
+    if (shape === 'recorder') {
+      return { primary: '00:00:00', secondary: '', detail: '', intentHeader: '' };
+    }
     const renderShape = renderShapeForStageId(shape) || shape;
     if (renderShape === 'pill') {
       return { primary: 'Primary text', secondary: 'Secondary text', detail: '', intentHeader: '' };
@@ -194,13 +223,20 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return [fallback.primary, fallback.secondary, fallback.detail].filter(Boolean);
   }
 
-  function createDefaultListItem(label = '', icon = createIcon('none', '')) {
-    return { label: String(label || ''), icon: normalizeIcon(icon) };
+  function createDefaultListItem(primary = '', secondary = '', icon = createIcon('none', '')) {
+    return {
+      primary: String(primary || ''),
+      secondary: String(secondary || ''),
+      icon: normalizeIcon(icon),
+    };
   }
 
   function normalizeListItem(value = {}, fallback = {}) {
+    const fallbackPrimary = String(fallback?.primary ?? fallback?.label ?? '');
+    const fallbackSecondary = String(fallback?.secondary ?? '');
     return {
-      label: String(value?.label ?? fallback?.label ?? ''),
+      primary: String(value?.primary ?? value?.label ?? fallbackPrimary),
+      secondary: String(value?.secondary ?? fallbackSecondary),
       icon: normalizeIcon(value?.icon ?? fallback?.icon),
     };
   }
@@ -277,6 +313,16 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const output = {};
     stageIds.forEach((shape) => {
       output[shape] = normalizeStageSizeEntry(value?.[shape], shape === fallbackShape ? legacy : {});
+    });
+    return output;
+  }
+
+  function normalizeCardImagePaddingByShape(value = {}, fallbackShape = 'card') {
+    const stageIds = scenarioStageIdsForMap(value, fallbackShape);
+    const output = {};
+    stageIds.forEach((shape) => {
+      const raw = Number(value?.[shape]);
+      output[shape] = Number.isFinite(raw) ? clamp(Math.round(raw), 0, 120) : 24;
     });
     return output;
   }
@@ -393,13 +439,21 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return output;
   }
 
+  function normalizeDividerColorByShape(value = {}, fallbackShape = 'pill') {
+    const output = {};
+    scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
+      output[shape] = normalizeHexColor(value?.[shape], '#ffffff');
+    });
+    return output;
+  }
+
   function normalizeSelectedMaskBlurByShape(value = {}, fallbackShape = 'pill') {
     const output = {};
     scenarioStageIdsForMap(value, fallbackShape).forEach((shape) => {
       const renderShape = stageById(shape)?.renderShape || shape;
       const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
       const raw = Number(value?.[shape]);
-      output[shape] = Number.isFinite(raw) ? clamp(raw, 0, 120) : fallback;
+      output[shape] = Number.isFinite(raw) ? clamp(raw, 0, 30) : fallback;
     });
     return output;
   }
@@ -425,7 +479,11 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     const icons = normalizeListChipIconEntry(listChipIconsByShape?.[shape]);
     const labels = [text.primary, text.secondary, text.detail].filter((value) => String(value || '').trim());
     const fallbackLabels = labels.length ? labels : defaultListLabelsForShape(shape);
-    return fallbackLabels.map((label, index) => createDefaultListItem(label, [icons.primary, icons.secondary, icons.detail][index] || createIcon('none', '')));
+    return fallbackLabels.map((label, index) => createDefaultListItem(
+      label,
+      '',
+      [icons.primary, icons.secondary, icons.detail][index] || createIcon('none', ''),
+    ));
   }
 
   function normalizeListItemsByShape(value = {}, fallbackShape = 'pill', legacy = {}) {
@@ -451,11 +509,48 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return renderShapeForStageId(shape, scenario);
   }
 
+  function measureSingleLineWidth(text, fontSize, fontWeight = 400) {
+    const value = String(text || '').trim();
+    if (!value) return 0;
+    if (textMeasureContext) {
+      textMeasureContext.font = `${fontWeight} ${fontSize}px "DM Sans", sans-serif`;
+      return Math.ceil(textMeasureContext.measureText(value).width);
+    }
+    return Math.ceil(value.length * fontSize * 0.58);
+  }
+
+  function stageTypographyForShape(stageIdValue, scenario = null) {
+    const renderShape = renderShapeForStageId(stageIdValue, scenario) || stageIdValue || 'pill';
+    const typographyByShape = normalizeTypographyByShape(scenario?.content?.typographyByShape, stageIdValue);
+    const typography = typographyByShape?.[stageIdValue] || defaultTypographyForShape(renderShape);
+    if (!isNudgeStageId(stageIdValue)) return typography;
+    const rawPrimarySize = Number(scenario?.content?.typographyByShape?.[stageIdValue]?.primary?.size);
+    if (Number.isFinite(rawPrimarySize)) return typography;
+    return {
+      ...typography,
+      primary: {
+        ...typography.primary,
+        size: 24,
+      },
+    };
+  }
+
   function scenarioStageSizeOverride(scenario, shape) {
     return normalizeStageSizeEntry(scenario?.content?.sizeByShape?.[shape]);
   }
 
+  function stageCardImagePaddingForShape(scenario, shape) {
+    const raw = Number(scenario?.content?.cardImagePaddingByShape?.[shape]);
+    return Number.isFinite(raw) ? clamp(Math.round(raw), 0, 120) : 24;
+  }
+
   function stageDefaultMainSize(stageIdValue) {
+    if (stageIdValue === 'list-pill') {
+      return { width: 300, height: 80 };
+    }
+    if (isNudgeStageId(stageIdValue)) {
+      return { width: 240, height: 60 };
+    }
     const renderShape = renderShapeForStageId(stageIdValue);
     const base = SHAPES[renderShape] || SHAPES.pill;
     const width = Number(base?.main?.w);
@@ -476,7 +571,28 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     ).frameMode;
     const phoneDefaultWidth = clamp((Number(canvasSettings()?.phoneFrameWidth) || 390) - 20, 40, 1400);
     const usePhoneDefaultWidth = frameMode === 'phone' && ['pill', 'card', 'card-s', 'image'].includes(renderShape);
-    const defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
+    let defaultWidth = usePhoneDefaultWidth ? phoneDefaultWidth : defaults.width;
+    if (isNudgeStageId(stage?.id)) {
+      const text = stageTextForShape(scenario, stage.id);
+      const typography = stageTypographyForShape(stage.id, scenario);
+      const primaryText = String(text?.primary || '').trim();
+      const secondaryText = String(text?.secondary || '').trim();
+      const leftPad = 24;
+      const rightPad = 24;
+      const primaryToDividerGap = 12;
+      const dividerToSecondaryGap = 14;
+      const dividerWidth = 1;
+      const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, typography.primary.size, 500) : 0;
+      const secondaryWidth = secondaryText ? measureSingleLineWidth(secondaryText, typography.secondary.size, 400) : 0;
+      const dividerExtra = primaryText && secondaryText
+        ? (primaryToDividerGap + dividerWidth + dividerToSecondaryGap)
+        : 0;
+      defaultWidth = clamp(
+        Math.round(leftPad + primaryWidth + dividerExtra + secondaryWidth + rightPad),
+        120,
+        1400,
+      );
+    }
     return {
       width: Number.isFinite(sizeOverride.widthOverride) ? sizeOverride.widthOverride : defaultWidth,
       height: Number.isFinite(sizeOverride.heightOverride) ? sizeOverride.heightOverride : defaults.height,
@@ -535,6 +651,10 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     return !!stageById(shape, scenario)?.listListeningOrb;
   }
 
+  function stageListSelectableForShape(scenario, shape) {
+    return stageById(shape, scenario)?.listSelectable !== false;
+  }
+
   function stageImagesForShape(scenario, shape) {
     return normalizeStageImages(
       scenario?.content?.imagesByShape?.[shape] || scenario?.content?.images || (scenario?.content?.image ? [scenario.content.image] : [])
@@ -589,11 +709,15 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     );
   }
 
+  function stageNudgeDividerColorForShape(scenario, shape) {
+    return normalizeHexColor(scenario?.content?.dividerColorByShape?.[shape], '#ffffff');
+  }
+
   function stageSelectedMaskBlurForShape(scenario, shape) {
     const renderShape = stageById(shape, scenario)?.renderShape || shape;
     const fallback = celestialSelectedMaskBlurDefaultForRenderShape(renderShape);
     const raw = Number(scenario?.content?.selectedMaskBlurByShape?.[shape]);
-    return Number.isFinite(raw) ? clamp(raw, 0, 120) : fallback;
+    return Number.isFinite(raw) ? clamp(raw, 0, 30) : fallback;
   }
 
   function normalizeTriggers(value) {
@@ -604,6 +728,58 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
       .filter(Boolean);
   }
 
+  function normalizeActionCardActionsByShape(value = {}, fallbackShape = 'action-card') {
+    const output = {};
+    const stageIds = Array.from(new Set([
+      ...DEFAULT_SCENARIO_SHAPES,
+      ...availableScenarioShapes(),
+      ...Object.keys(value || {}),
+      fallbackShape,
+    ].filter(Boolean)));
+    stageIds.forEach((shape) => {
+      const source = value?.[shape] || {};
+      const hasLeft = Object.prototype.hasOwnProperty.call(source, 'left');
+      const hasRight = Object.prototype.hasOwnProperty.call(source, 'right');
+      output[shape] = {
+        left: hasLeft ? String(source.left ?? '') : 'Snooze',
+        right: hasRight ? String(source.right ?? '') : 'Join now →',
+      };
+    });
+    return output;
+  }
+
+  function migrateListStageContent(content = {}) {
+    if (!content || typeof content !== 'object') return {};
+    const output = { ...content };
+    [
+      'textByShape',
+      'listChipIconsByShape',
+      'listItemsByShape',
+      'iconByShape',
+      'imagesByShape',
+      'typographyByShape',
+      'sizeByShape',
+      'cardImagePaddingByShape',
+      'stageRenderShapeById',
+      'actionCardActionsByShape',
+      'selectedByShape',
+      'accentColorByShape',
+      'secondaryAccentColorByShape',
+      'dividerColorByShape',
+      'selectedBlobTopCoreColorByShape',
+      'selectedBlobTopEdgeColorByShape',
+      'selectedBlobBottomCoreColorByShape',
+      'selectedBlobBottomEdgeColorByShape',
+      'selectedMaskBlurByShape',
+    ].forEach((key) => {
+      const value = output[key];
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+      if (value['list-pill'] !== undefined || value.list === undefined) return;
+      output[key] = { ...value, 'list-pill': value.list };
+    });
+    return output;
+  }
+
   function createScenario({
     id = scenarioId(),
     name = 'New Scenario',
@@ -611,50 +787,57 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     content = {},
     triggers = [],
   } = {}) {
-    const normalizedTextByShape = normalizeStageTextByShape(content.textByShape, shape, {
-      primary: String(content.primary || ''),
-      secondary: String(content.secondary || ''),
-      detail: String(content.detail || ''),
+    const normalizedShape = String(shape || '') === 'list'
+      ? 'list-pill'
+      : (['timer', 'recorder'].includes(String(shape || '')) ? 'pill' : shape);
+    const migratedContent = migrateListStageContent(content);
+    const normalizedTextByShape = normalizeStageTextByShape(migratedContent.textByShape, normalizedShape, {
+      primary: String(migratedContent.primary || ''),
+      secondary: String(migratedContent.secondary || ''),
+      detail: String(migratedContent.detail || ''),
     });
-    const normalizedListChipIconsByShape = normalizeListChipIconsByShape(content.listChipIconsByShape, shape);
+    const normalizedListChipIconsByShape = normalizeListChipIconsByShape(migratedContent.listChipIconsByShape, normalizedShape);
     return {
       id,
       name,
-      shape: availableScenarioShapes().includes(shape) ? shape : 'pill',
+      shape: availableScenarioShapes().includes(normalizedShape) ? normalizedShape : 'pill',
       content: {
-        icon: normalizeIcon(content.icon),
-        iconByShape: normalizeIconByShape(content.iconByShape, shape, content.icon),
-        primary: String(content.primary || ''),
-        secondary: String(content.secondary || ''),
-        detail: String(content.detail || ''),
+        icon: normalizeIcon(migratedContent.icon),
+        iconByShape: normalizeIconByShape(migratedContent.iconByShape, normalizedShape, migratedContent.icon),
+        primary: String(migratedContent.primary || ''),
+        secondary: String(migratedContent.secondary || ''),
+        detail: String(migratedContent.detail || ''),
         textByShape: normalizedTextByShape,
-        listItemsByShape: normalizeListItemsByShape(content.listItemsByShape, shape, {
+        listItemsByShape: normalizeListItemsByShape(migratedContent.listItemsByShape, normalizedShape, {
           textByShape: normalizedTextByShape,
           listChipIconsByShape: normalizedListChipIconsByShape,
         }),
-        images: normalizeStageImages(content.images || (content.image ? [content.image] : [])),
+        images: normalizeStageImages(migratedContent.images || (migratedContent.image ? [migratedContent.image] : [])),
         imagesByShape: normalizeImagesByShape(
-          content.imagesByShape,
-          shape,
-          normalizeStageImages(content.images || (content.image ? [content.image] : []))
+          migratedContent.imagesByShape,
+          normalizedShape,
+          normalizeStageImages(migratedContent.images || (migratedContent.image ? [migratedContent.image] : []))
         ),
-        typographyByShape: normalizeTypographyByShape(content.typographyByShape || content.typography, shape),
-        sizeByShape: normalizeStageSizeByShape(content.sizeByShape, shape, {
-          widthOverride: content.widthOverride,
-          heightOverride: content.heightOverride,
+        typographyByShape: normalizeTypographyByShape(migratedContent.typographyByShape || migratedContent.typography, normalizedShape),
+        sizeByShape: normalizeStageSizeByShape(migratedContent.sizeByShape, normalizedShape, {
+          widthOverride: migratedContent.widthOverride,
+          heightOverride: migratedContent.heightOverride,
         }),
-        stageRenderShapeById: normalizeStageRenderShapeById(content.stageRenderShapeById),
-        hiddenStageIds: normalizeHiddenStageIds(content.hiddenStageIds),
-        selectedByShape: normalizeSelectedByShape(content.selectedByShape, shape),
-        accentColorByShape: normalizeAccentColorByShape(content.accentColorByShape, shape),
-        secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(content.secondaryAccentColorByShape, shape),
-        selectedBlobTopCoreColorByShape: normalizeSelectedBlobTopCoreColorByShape(content.selectedBlobTopCoreColorByShape, shape),
-        selectedBlobTopEdgeColorByShape: normalizeSelectedBlobTopEdgeColorByShape(content.selectedBlobTopEdgeColorByShape, shape),
-        selectedBlobBottomCoreColorByShape: normalizeSelectedBlobBottomCoreColorByShape(content.selectedBlobBottomCoreColorByShape, shape),
-        selectedBlobBottomEdgeColorByShape: normalizeSelectedBlobBottomEdgeColorByShape(content.selectedBlobBottomEdgeColorByShape, shape),
-        selectedMaskBlurByShape: normalizeSelectedMaskBlurByShape(content.selectedMaskBlurByShape, shape),
+        cardImagePaddingByShape: normalizeCardImagePaddingByShape(migratedContent.cardImagePaddingByShape, normalizedShape),
+        stageRenderShapeById: normalizeStageRenderShapeById(migratedContent.stageRenderShapeById),
+        actionCardActionsByShape: normalizeActionCardActionsByShape(migratedContent.actionCardActionsByShape, normalizedShape),
+        hiddenStageIds: normalizeHiddenStageIds(migratedContent.hiddenStageIds),
+        selectedByShape: normalizeSelectedByShape(migratedContent.selectedByShape, normalizedShape),
+        accentColorByShape: normalizeAccentColorByShape(migratedContent.accentColorByShape, normalizedShape),
+        secondaryAccentColorByShape: normalizeSecondaryAccentColorByShape(migratedContent.secondaryAccentColorByShape, normalizedShape),
+        dividerColorByShape: normalizeDividerColorByShape(migratedContent.dividerColorByShape, normalizedShape),
+        selectedBlobTopCoreColorByShape: normalizeSelectedBlobTopCoreColorByShape(migratedContent.selectedBlobTopCoreColorByShape, normalizedShape),
+        selectedBlobTopEdgeColorByShape: normalizeSelectedBlobTopEdgeColorByShape(migratedContent.selectedBlobTopEdgeColorByShape, normalizedShape),
+        selectedBlobBottomCoreColorByShape: normalizeSelectedBlobBottomCoreColorByShape(migratedContent.selectedBlobBottomCoreColorByShape, normalizedShape),
+        selectedBlobBottomEdgeColorByShape: normalizeSelectedBlobBottomEdgeColorByShape(migratedContent.selectedBlobBottomEdgeColorByShape, normalizedShape),
+        selectedMaskBlurByShape: normalizeSelectedMaskBlurByShape(migratedContent.selectedMaskBlurByShape, normalizedShape),
         listChipIconsByShape: normalizedListChipIconsByShape,
-        canvas: normalizeScenarioCanvas(content.canvas, { frameMode: content.frameMode || 'none' }),
+        canvas: normalizeScenarioCanvas(migratedContent.canvas, { frameMode: migratedContent.frameMode || 'none' }),
       },
       triggers: normalizeTriggers(triggers),
     };
@@ -709,29 +892,6 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
         },
         triggers: ['qr', 'boarding pass', 'ticket', 'check in'],
       }),
-      createScenario({
-        name: 'Card-S Promo',
-        shape: 'card-s',
-        content: {
-          icon: createIcon('emoji', '🎟'),
-          primary: 'Event Access',
-          secondary: 'Hall B · 19:30',
-          detail: 'Show this pass at entry',
-        },
-        triggers: ['event', 'pass', 'entry'],
-      }),
-      createScenario({
-        name: 'Image Hero',
-        shape: 'image',
-        content: {
-          image: {
-            src: 'https://images.unsplash.com/photo-1495567720989-cebdbdd97913?auto=format&fit=crop&w=1200&q=80',
-            width: 1200,
-            height: 800,
-          },
-        },
-        triggers: ['photo', 'hero image', 'cover'],
-      }),
     ];
   }
 
@@ -771,6 +931,8 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     normalizeStageSizeEntry,
     normalizeStageSizeByShape,
     scenarioStageSizeOverride,
+    normalizeCardImagePaddingByShape,
+    stageCardImagePaddingForShape,
     stageDefaultMainSize,
     stageMainSize,
     stageIconTextGap,
@@ -780,11 +942,13 @@ export function initScenarioData({ getStageLibrary, getCanvasSettings, clampFn }
     stageListChipIconsForShape,
     stageListItemsForShape,
     stageListListeningOrbForShape,
+    stageListSelectableForShape,
     stageImagesForShape,
     stageRenderShapeForShape,
     stageSelectedForShape,
     stageAccentColorForShape,
     stageSecondaryAccentColorForShape,
+    stageNudgeDividerColorForShape,
     stageSelectedBlobTopCoreColorForShape,
     stageSelectedBlobTopEdgeColorForShape,
     stageSelectedBlobBottomCoreColorForShape,

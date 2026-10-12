@@ -9,12 +9,14 @@
 <link rel="stylesheet" href="src/styles/shared.css"/>
 <link rel="stylesheet" href="src/styles/ai-glass.css"/>
 <link rel="stylesheet" href="src/styles/ai-decorative.css"/>
+<link rel="stylesheet" href="src/styles/ai-echo.css"/>
 <link rel="stylesheet" href="src/styles/editor-layout.css"/>
 <link rel="stylesheet" href="src/styles/editor-sidebar.css"/>
 <link rel="stylesheet" href="src/styles/editor-decorative.css"/>
 </head>
 <body class="mode-manual" data-page-mode="manual">
 <div class="bg-blur-image"></div>
+<video class="bg-blur-video" muted playsinline preload="metadata" aria-hidden="true"></video>
 
 <style id="anim-style">
   :root {
@@ -86,10 +88,10 @@
       <span class="sb-chevron">▾</span>
     </button>
     <div class="sb-section-body">
-      <div class="sb-btn-row">
-        <button id="scenario-add" class="sb-mini-btn" type="button">Add</button>
-        <button id="scenario-duplicate" class="sb-mini-btn" type="button">Duplicate</button>
-        <button id="scenario-delete" class="sb-mini-btn" type="button">Delete</button>
+      <div class="sb-btn-row scenario-actions">
+        <button id="scenario-add" class="sb-mini-btn icon-btn" type="button" title="Add scenario" aria-label="Add scenario">+</button>
+        <button id="scenario-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate scenario" aria-label="Duplicate scenario">⧉</button>
+        <button id="scenario-delete" class="sb-mini-btn icon-btn" type="button" title="Delete scenario" aria-label="Delete scenario">🗑</button>
       </div>
       <div id="scenario-list" class="scenario-list"></div>
     </div>
@@ -101,24 +103,81 @@
       <span class="sb-chevron">▾</span>
     </button>
     <div class="sb-section-body">
-      <label class="sb-toggle" for="float-toggle">
+      <label class="sb-toggle settings-toggle" for="float-toggle">
         <div class="sb-toggle-copy">
           <strong>Floating effect</strong>
         </div>
         <input id="float-toggle" class="sb-toggle-input" type="checkbox" checked/>
       </label>
-      <label class="sb-toggle" for="align-bottom-toggle">
+      <label class="sb-toggle settings-toggle" for="align-bottom-toggle">
         <div class="sb-toggle-copy">
           <strong>Bottom align</strong>
         </div>
         <input id="align-bottom-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
-      <label class="sb-toggle" for="bg-toggle">
+    </div>
+  </div>
+
+  <div class="sb-section" data-collapsible="1">
+    <button class="sb-section-toggle" type="button">
+      <div class="sb-heading">Background</div>
+      <span class="sb-chevron">▾</span>
+    </button>
+    <div class="sb-section-body">
+      <label class="sb-toggle settings-toggle" for="bg-toggle">
         <div class="sb-toggle-copy">
           <strong>Background image</strong>
         </div>
         <input id="bg-toggle" class="sb-toggle-input" type="checkbox"/>
       </label>
+      <div id="bg-image-preset-row" class="sb-row tight bg-image-setting-row">
+        <label class="sb-lbl" for="bg-image-select">Preset</label>
+        <select id="bg-image-select" class="sb-select" aria-label="Preset">
+          <option value="assets/bg/living room.jpg">Home</option>
+          <option value="assets/bg/work.jpg">Work</option>
+          <option value="assets/bg/garage.jpg">Garage</option>
+          <option value="assets/bg/dog walk.jpg">Park</option>
+          <option value="assets/bg/white wall.jpg">White wall</option>
+          <option value="assets/bg/street.jpg">Street</option>
+          <option value="assets/bg/grocery store.jpg">Grocery store</option>
+          <option value="assets/bg/kitechen.jpg">Kitchen</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div id="bg-image-upload-row" class="sb-row tight bg-image-setting-row">
+        <label class="sb-lbl" for="bg-image-upload">Custom Image</label>
+        <div class="media-upload-row">
+          <label class="sb-mini-btn upload-btn" for="bg-image-upload">Upload<input id="bg-image-upload" type="file" accept="image/*"/></label>
+          <button id="bg-image-reset" class="sb-mini-btn" type="button">Reset</button>
+        </div>
+      </div>
+      <div id="bg-image-alpha-row" class="sb-row tight bg-image-setting-row">
+        <label class="sb-lbl" for="bg-image-alpha">Image alpha</label>
+        <input id="bg-image-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="90"/>
+      </div>
+      <div id="bg-image-blur-row" class="sb-row tight bg-image-setting-row">
+        <label class="sb-lbl" for="bg-image-blur">Image blur</label>
+        <input id="bg-image-blur" class="sb-input" type="range" min="0" max="60" step="1" value="0"/>
+      </div>
+      <div class="sb-row tight left-bg-video-section">
+        <label class="sb-lbl" for="bg-video-upload">Background video</label>
+        <div class="media-upload-row">
+          <label class="sb-mini-btn upload-btn" for="bg-video-upload">Upload<input id="bg-video-upload" type="file" accept="video/*"/></label>
+          <button id="bg-video-reset" class="sb-mini-btn" type="button">Reset</button>
+        </div>
+        <div id="bg-video-state" class="icon-mode-badge">empty</div>
+        <div id="bg-video-controls" class="sb-row tight hidden">
+          <div class="sb-btn-row">
+            <button id="bg-video-play-toggle" class="sb-mini-btn" type="button">Play</button>
+          </div>
+          <label class="sb-lbl" for="bg-video-progress">Video progress</label>
+          <input id="bg-video-progress" class="sb-input" type="range" min="0" max="1000" step="1" value="0"/>
+          <label class="sb-lbl" for="bg-video-alpha">Video alpha</label>
+          <input id="bg-video-alpha" class="sb-input" type="range" min="0" max="100" step="1" value="80"/>
+          <label class="sb-lbl" for="bg-video-y">Video Y position</label>
+          <input id="bg-video-y" class="sb-input" type="range" min="-500" max="500" step="1" value="0"/>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -134,6 +193,7 @@
         <div id="intent-step-dot"></div>
         <span id="intent-step-lbl"></span>
       </div>
+      <div id="prototype-listening-prompt" aria-live="polite" aria-atomic="true"></div>
 
       <div id="stage">
         <div class="drop" id="drop-main">
@@ -165,6 +225,10 @@
         </div>
         <div class="drop" id="drop-left"></div>
         <div class="drop" id="drop-right"></div>
+        <div id="action-card-actions" aria-hidden="true">
+          <button class="action-card-button action-card-button-secondary" type="button" tabindex="-1">Snooze</button>
+          <button class="action-card-button action-card-button-primary" type="button" tabindex="-1">Join now →</button>
+        </div>
         <div id="list-pills"></div>
       </div>
     </div>
@@ -290,21 +354,27 @@
         <span class="sb-lbl">Stages</span>
         <div class="sb-stage-strip-note">Double-click to rename</div>
       </div>
+
+      <div class="sb-btn-row stage-actions">
+        <div class="stage-add-group">
+          <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
+            <option value="dot">Dot</option>
+            <option value="list-pill">List-Pill</option>
+            <option value="nudge">Nudge</option>
+            <option value="pill">Pill</option>
+            <option value="card" selected>Card</option>
+            <option value="blank">Blank</option>
+          </select>
+          <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
+        </div>
+        <button id="stage-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate stage" aria-label="Duplicate stage">⧉</button>
+        <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
+      </div>
       <div class="stage-timeline" id="scenario-shape-row"></div>
     </div>
-
-    <div class="sb-btn-row stage-actions">
-      <div class="stage-add-group">
-        <select id="stage-add-kind" class="sb-select" aria-label="New stage type">
-          <option value="dot">Dot</option>
-          <option value="pill">Pill</option>
-          <option value="card" selected>Card</option>
-          <option value="blank">Blank</option>
-        </select>
-        <button id="stage-add" class="sb-mini-btn" type="button">Add</button>
-      </div>
-      <button id="stage-duplicate" class="sb-mini-btn icon-btn" type="button" title="Duplicate stage" aria-label="Duplicate stage">⧉</button>
-      <button id="stage-delete" class="sb-mini-btn icon-btn" type="button" title="Delete stage" aria-label="Delete stage">🗑</button>
+    <div class="prototype-setup-actions" aria-label="Prototype setup transfer">
+      <button id="prototype-setup-export" class="sb-mini-btn" type="button">Export setup</button>
+      <label class="sb-mini-btn upload-btn" for="prototype-setup-import">Import setup<input id="prototype-setup-import" type="file" accept="application/json,.json"/></label>
     </div>
 
     <div id="stage-config-panel" class="sb-stage-config">
@@ -322,15 +392,28 @@
       </div>
     </div>
 
-    <div class="sb-section" data-collapsible="1">
-      <button class="sb-section-toggle" type="button">
-        <div class="sb-heading">AI Debug</div>
-        <span class="sb-chevron">▾</span>
-      </button>
+    <div class="sb-section prototype-ai-debug-section">
+      <div class="sb-lbl prototype-ai-debug-heading">AI Debug</div>
       <div class="sb-section-body">
+        <label class="sb-toggle settings-toggle" for="ai-echo-visual-toggle">
+          <div class="sb-toggle-copy">
+            <strong>Echo visual</strong>
+          </div>
+          <input id="ai-echo-visual-toggle" class="sb-toggle-input" type="checkbox"/>
+        </label>
+        <div id="ai-echo-visual-controls" class="sb-row tight hidden">
+          <span class="sb-lbl">Listening look</span>
+          <div class="shape-chip-row" role="group" aria-label="Echo listening look">
+            <button class="shape-chip" data-echo-listening-look="metaball" type="button">Metaball</button>
+            <button class="shape-chip" data-echo-listening-look="glow" type="button">Glow</button>
+          </div>
+          <span class="sb-lbl">Preset</span>
+          <div id="ai-echo-preset-grid" role="group" aria-label="Echo preset"></div>
+        </div>
         <div class="legacy-grid prototype-ai-debug-grid">
           <button class="sb-shape-btn" data-shape="listening" type="button" onclick="manualShape('listening')">Listening</button>
-          <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">Thinking</button>
+          <button class="sb-shape-btn" data-shape="idle" type="button" onclick="manualShape('idle')">Empty</button>
+          <button class="sb-shape-btn" data-shape="magic" type="button" onclick="manualShape('magic')">AI Thinking</button>
         </div>
         <div id="prototype-multi-agent-row" class="sb-row tight prototype-ai-icon-row hidden">
           <span class="sb-lbl">Multi Agent</span>
@@ -353,9 +436,16 @@
           <span class="sb-lbl">Thinking State</span>
           <div class="prototype-thinking-state-grid" role="group" aria-label="Thinking state">
             <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="thinking" type="button">thinking</button>
-            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="skill" type="button">skill</button>
+            <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="skill" type="button">domain</button>
             <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="agent" type="button">agent</button>
             <button class="sb-shape-btn prototype-thinking-state-btn" data-thinking-state="app" type="button">app</button>
+          </div>
+        </div>
+        <div id="prototype-thinking-pause-row" class="sb-row tight prototype-thinking-pause-row hidden">
+          <span class="sb-lbl">Playback</span>
+          <div class="prototype-thinking-pause-controls" role="group" aria-label="Thinking playback">
+            <button id="prototype-thinking-pause" class="sb-mini-btn prototype-thinking-pause-btn" type="button">Pause</button>
+            <button id="prototype-thinking-resume" class="sb-mini-btn prototype-thinking-resume-btn" type="button" disabled>Resume</button>
           </div>
         </div>
         <div id="prototype-thinking-copy-row" class="sb-row tight prototype-thinking-copy-row hidden">
@@ -363,7 +453,21 @@
           <div class="prototype-thinking-copy-controls">
             <input id="prototype-thinking-copy-input" class="sb-input prototype-thinking-copy-input" type="text" autocomplete="off" spellcheck="false" placeholder="Type custom thinking text"/>
             <button id="prototype-thinking-copy-fire" class="sb-mini-btn prototype-thinking-copy-fire" type="button" disabled>Fire</button>
+            <button id="prototype-thinking-copy-loop" class="sb-mini-btn prototype-thinking-copy-loop" type="button" disabled>Loop</button>
           </div>
+        </div>
+        <div id="prototype-thinking-thumbnail-row" class="sb-row tight prototype-thinking-thumbnail-row hidden">
+          <span class="sb-lbl">Thumbnail</span>
+          <div class="prototype-thinking-thumbnail-controls">
+            <img id="prototype-thinking-thumbnail-preview" class="prototype-thinking-thumbnail-preview" alt="Selected thinking thumbnail"/>
+            <label class="sb-mini-btn upload-btn" for="prototype-thinking-thumbnail-upload">Upload<input id="prototype-thinking-thumbnail-upload" type="file" accept="image/*"/></label>
+            <button id="prototype-thinking-thumbnail-paste" class="sb-mini-btn" type="button">Paste</button>
+          </div>
+          <span id="prototype-thinking-thumbnail-status" class="prototype-thinking-thumbnail-status" aria-live="polite"></span>
+        </div>
+        <div id="prototype-thinking-thumbnail-library-row" class="sb-row tight prototype-thinking-thumbnail-library-row hidden">
+          <span class="sb-lbl">Thumbnail library</span>
+          <div id="prototype-thinking-thumbnail-library" class="prototype-thinking-thumbnail-library" role="group" aria-label="Thinking thumbnail library"></div>
         </div>
       </div>
     </div>
@@ -374,7 +478,7 @@
   <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="content">
 
     <!-- Icon layer row -->
-    <div id="editor-icon-layer" class="layer-row editor-field">
+    <div id="editor-icon-layer" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Icon</span>
         <span class="layer-row-preview">
@@ -390,7 +494,6 @@
           <label class="sb-mini-btn upload-btn" for="scenario-icon-upload">PNG<input id="scenario-icon-upload" type="file" accept="image/png,image/gif"/></label>
           <button id="scenario-icon-reset" class="sb-mini-btn" type="button">×</button>
         </div>
-        <div id="scenario-icon-mode" class="icon-mode-badge">emoji</div>
         <div class="typo-controls">
           <input id="scenario-icon-size" class="sb-input typo-size" type="text" inputmode="numeric" placeholder="Icon size"/>
           <input id="scenario-icon-color" class="typo-color" type="color" value="#ffffff"/>
@@ -398,7 +501,7 @@
       </div>
     </div>
 
-    <div id="editor-list-items" class="layer-row editor-field hidden">
+    <div id="editor-list-items" class="layer-row editor-field hidden expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">List Items</span>
         <span class="layer-row-preview">
@@ -412,7 +515,7 @@
     </div>
 
     <!-- Primary layer row -->
-    <div id="editor-primary-field" class="layer-row editor-field">
+    <div id="editor-primary-field" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Primary</span>
         <span class="layer-row-preview">
@@ -431,8 +534,24 @@
       </div>
     </div>
 
+    <div id="stage-nudge-style-section" class="layer-row editor-field hidden expanded">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Divider</span>
+        <span class="layer-row-preview">
+          <span class="layer-preview-val">Nudge</span>
+          <span id="layer-preview-nudge-divider-color" class="layer-preview-dot"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <div class="typo-controls">
+          <input id="stage-nudge-divider-color" class="typo-color" type="color" value="#ffffff"/>
+        </div>
+      </div>
+    </div>
+
     <!-- Secondary layer row -->
-    <div id="editor-secondary-field" class="layer-row editor-field">
+    <div id="editor-secondary-field" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Secondary</span>
         <span class="layer-row-preview">
@@ -452,7 +571,7 @@
     </div>
 
     <!-- Detail layer row -->
-    <div id="editor-detail-field" class="layer-row editor-field">
+    <div id="editor-detail-field" class="layer-row editor-field expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Detail</span>
         <span class="layer-row-preview">
@@ -471,7 +590,21 @@
       </div>
     </div>
 
-    <div id="editor-intent-header-field" class="layer-row editor-field hidden">
+    <div id="editor-action-card-field" class="layer-row editor-field hidden expanded">
+      <button class="layer-row-header" type="button">
+        <span class="layer-row-label">Actions</span>
+        <span class="layer-row-preview">
+          <span id="layer-preview-action-card-text" class="layer-preview-val"></span>
+        </span>
+        <span class="layer-row-chevron">▾</span>
+      </button>
+      <div class="layer-row-body">
+        <input id="scenario-action-card-left" class="sb-input" type="text" autocomplete="off" spellcheck="false" placeholder="Left action"/>
+        <input id="scenario-action-card-right" class="sb-input" type="text" autocomplete="off" spellcheck="false" placeholder="Right action"/>
+      </div>
+    </div>
+
+    <div id="editor-intent-header-field" class="layer-row editor-field hidden expanded">
       <button class="layer-row-header" type="button">
         <span class="layer-row-label">Intent Header</span>
         <span class="layer-row-preview">
@@ -500,41 +633,61 @@
 
   <!-- ── Style tab ── -->
   <div class="sb-tab-panel sb-tab-panel-hidden mode-manual-only" data-panel="style">
-    <div class="sb-row tight">
-      <label class="sb-toggle" for="stage-selected-toggle">
-        <div class="sb-toggle-copy"><strong>Selected</strong></div>
-        <input id="stage-selected-toggle" class="sb-toggle-input" type="checkbox"/>
-      </label>
-    </div>
-
-    <div id="stage-geometry-section" class="layer-row">
-      <button class="layer-row-header" type="button">
-        <span class="layer-row-label">Geometry</span>
-        <span class="layer-row-preview"></span>
-        <span class="layer-row-chevron">▾</span>
+    <div id="stage-geometry-section" class="sb-section layer-row editor-field style-editor-field expanded" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Geometry</div>
+        <span class="sb-chevron">▾</span>
       </button>
-      <div class="layer-row-body">
-        <div class="sb-stage-grid">
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-radius-input">Corner radius</label>
-            <input id="stage-radius-input" class="sb-input" type="text" inputmode="numeric" placeholder="0–120"/>
+      <div class="sb-section-body">
+        <div class="sb-geometry-controls">
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-radius-input">Corner</label>
+              <span class="sb-val" id="stage-radius-val">30px</span>
+            </div>
+            <input id="stage-radius-input" type="range" min="0" max="100" step="10" value="30"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-width-input">Width override</label>
-            <input id="stage-width-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-width-input">Width</label>
+              <span class="sb-val" id="stage-width-val">420px</span>
+            </div>
+            <input id="stage-width-input" type="range" min="40" max="420" step="10" value="420"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-height-input">Height override</label>
-            <input id="stage-height-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-height-input">Height</label>
+              <span class="sb-val" id="stage-height-val">120px</span>
+            </div>
+            <input id="stage-height-input" type="range" min="40" max="420" step="10" value="120"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-icon-pad-input">Icon left pad</label>
-            <input id="stage-icon-pad-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div id="stage-image-padding-field" class="sb-row hidden">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-image-padding-input">Image padding</label>
+              <span class="sb-val" id="stage-image-padding-val">24px</span>
+            </div>
+            <input id="stage-image-padding-input" type="range" min="0" max="30" step="1" value="24"/>
           </div>
-          <div class="sb-stage-field">
-            <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
-            <input id="stage-gap-input" class="sb-input" type="text" inputmode="numeric" placeholder="Default"/>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-icon-pad-input">Left padding</label>
+              <span class="sb-val" id="stage-icon-pad-val">16px</span>
+            </div>
+            <input id="stage-icon-pad-input" type="range" min="0" max="30" step="1" value="16"/>
           </div>
+          <div class="sb-row">
+            <div class="sb-range-head">
+              <label class="sb-lbl" for="stage-gap-input">Icon gap</label>
+              <span class="sb-val" id="stage-gap-val">8px</span>
+            </div>
+            <input id="stage-gap-input" type="range" min="0" max="30" step="1" value="8"/>
+          </div>
+        </div>
+        <div class="sb-row tight style-toggle-row">
+          <label class="sb-toggle" for="stage-shell-hidden-toggle">
+            <div class="sb-toggle-copy"><strong>Hide shell</strong></div>
+            <input id="stage-shell-hidden-toggle" class="sb-toggle-input" type="checkbox"/>
+          </label>
         </div>
         <div id="stage-card-s-row" class="sb-row tight hidden">
           <label class="sb-toggle" for="stage-card-s-toggle">
@@ -559,43 +712,54 @@
       </div>
     </div>
 
-    <div class="sb-stage-group">
-      <div class="sb-stage-group-head">
-        <span class="sb-lbl">Accent blobs</span>
-      </div>
-      <div class="sb-stage-grid sb-style-color-grid">
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-top-core-color">Top-left core</label>
-          <input id="stage-blob-top-core-color" class="typo-color" type="color" value="#90acff"/>
+    <div id="stage-celestial-style-section" class="sb-section hidden" data-collapsible="1">
+      <button class="sb-section-toggle" type="button">
+        <div class="sb-heading">Celestial Style</div>
+        <span class="sb-chevron">▾</span>
+      </button>
+      <div class="sb-section-body">
+        <div class="sb-stage-group">
+          <div class="sb-stage-group-head">
+            <span class="sb-lbl">Accent blobs</span>
+          </div>
+          <div class="sb-stage-grid sb-style-color-grid">
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-top-core-color">Top-left core</label>
+              <input id="stage-blob-top-core-color" class="typo-color" type="color" value="#90acff"/>
+            </div>
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-top-edge-color">Top-left edge</label>
+              <input id="stage-blob-top-edge-color" class="typo-color" type="color" value="#9761ff"/>
+            </div>
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-bottom-core-color">Bottom-right core</label>
+              <input id="stage-blob-bottom-core-color" class="typo-color" type="color" value="#90acff"/>
+            </div>
+            <div class="sb-stage-field">
+              <label class="sb-lbl" for="stage-blob-bottom-edge-color">Bottom-right edge</label>
+              <input id="stage-blob-bottom-edge-color" class="typo-color" type="color" value="#9761ff"/>
+            </div>
+          </div>
         </div>
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-top-edge-color">Top-left edge</label>
-          <input id="stage-blob-top-edge-color" class="typo-color" type="color" value="#9761ff"/>
-        </div>
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-bottom-core-color">Bottom-right core</label>
-          <input id="stage-blob-bottom-core-color" class="typo-color" type="color" value="#90acff"/>
-        </div>
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-blob-bottom-edge-color">Bottom-right edge</label>
-          <input id="stage-blob-bottom-edge-color" class="typo-color" type="color" value="#9761ff"/>
+
+        <div class="sb-stage-group">
+          <div class="sb-stage-group-head">
+            <span class="sb-lbl">Refraction mask</span>
+          </div>
+          <div class="sb-geometry-controls">
+            <div class="sb-row">
+              <div class="sb-range-head">
+                <label class="sb-lbl" for="stage-mask-blur-input">Mask blur</label>
+                <span class="sb-val" id="stage-mask-blur-val">30px</span>
+              </div>
+              <input id="stage-mask-blur-input" type="range" min="0" max="30" step="0.5" value="30"/>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="sb-stage-group">
-      <div class="sb-stage-group-head">
-        <span class="sb-lbl">Refraction mask</span>
-      </div>
-      <div class="sb-stage-grid">
-        <div class="sb-stage-field">
-          <label class="sb-lbl" for="stage-mask-blur-input">Mask blur</label>
-          <input id="stage-mask-blur-input" class="sb-input" type="text" inputmode="decimal" placeholder="Auto"/>
-        </div>
-      </div>
-    </div>
-
-    <div class="sb-section" data-collapsible="1">
+    <div id="stage-animation-section" class="sb-section layer-row editor-field style-editor-field expanded" data-collapsible="1">
       <button class="sb-section-toggle" type="button">
         <div class="sb-heading">Animation</div>
         <span class="sb-chevron">▾</span>
@@ -629,8 +793,6 @@
   </div>
 
 </div>
-
-<a class="entry-point-btn" href="./ai.html">ai mode</a>
 
 <script src="src/shared/modern-screenshot.min.js"></script>
 <script type="module" src="src/tool/index-app.js"></script>

@@ -6,8 +6,12 @@ export const STORAGE_KEYS = {
   mode: 'genui.mode.v1',
   aiStage: 'genui.ai-stage.v1',
   aiOrbIcon: 'genui.ai-orb-icon.v1',
+  aiEchoVisual: 'genui.ai-echo-visual.v1',
+  thinkingThumbnails: 'genui.thinking-thumbnails.v1',
   aiVoiceEnabled: 'genui.ai-voice-enabled.v1',
   disableTextInput: 'genui.disable-text-input.v1',
+  backgroundImage: 'genui.background-image.v1',
+  backgroundVideo: 'genui.background-video.v1',
 };
 
 const DURABLE_DB_NAME = 'genui-durable.v1';
@@ -18,6 +22,8 @@ export const RESPONSE_MODE = Object.freeze({
   MANUAL: 'manual',
   AI: 'ai',
 });
+
+const DEFAULT_BACKGROUND_IMAGE = 'assets/bg/white wall.jpg';
 
 export const PAGE_MODE_OVERRIDE = (() => {
   const raw = String(document.body?.dataset?.pageMode || '').trim().toLowerCase();
@@ -56,8 +62,19 @@ export function readStoredJson(key, fallback) {
 export function loadCanvasSettings() {
   const stored = readStoredJson(STORAGE_KEYS.settings, null);
   return {
-    backgroundEnabled: stored?.backgroundEnabled === true,
-    floatingEnabled: stored?.floatingEnabled !== false,
+    backgroundEnabled: stored?.backgroundEnabled !== false,
+    backgroundImage: typeof stored?.backgroundImage === 'string' && stored.backgroundImage.trim()
+      ? stored.backgroundImage
+      : DEFAULT_BACKGROUND_IMAGE,
+    backgroundImageAlpha: Math.max(0, Math.min(1, Number(stored?.backgroundImageAlpha ?? 0.9))),
+    backgroundImageBlur: Math.max(0, Math.min(60, Number(stored?.backgroundImageBlur) || 0)),
+    backgroundMediaKind: stored?.backgroundMediaKind === 'video' ? 'video' : 'image',
+    backgroundVideo: null,
+    backgroundVideoPaused: stored?.backgroundVideoPaused === true,
+    backgroundVideoProgress: Math.max(0, Math.min(1, Number(stored?.backgroundVideoProgress) || 0)),
+    backgroundVideoAlpha: Math.max(0, Math.min(1, Number(stored?.backgroundVideoAlpha ?? 0.8))),
+    backgroundVideoY: Math.max(-500, Math.min(500, Number(stored?.backgroundVideoY) || 0)),
+    floatingEnabled: stored?.floatingEnabled === true,
     bottomAlign: stored?.bottomAlign !== false,
     frameMode: ['none', 'glasses', 'phone'].includes(stored?.frameMode) ? stored.frameMode : 'none',
     phoneBgEnabled: stored?.phoneBgEnabled !== false,
@@ -87,6 +104,46 @@ export function loadAiVoiceEnabled() {
 export function loadAiOrbIcon() {
   const stored = readStoredJson(STORAGE_KEYS.aiOrbIcon, null);
   return typeof stored === 'string' ? stored : 'bixby';
+}
+
+export function loadAiEchoVisual() {
+  const stored = readStoredJson(STORAGE_KEYS.aiEchoVisual, null);
+  const listeningLook = stored?.listeningLook === 'glow' ? 'glow' : 'metaball';
+  return {
+    enabled: stored?.enabled === true,
+    listeningLook,
+    presetId: typeof stored?.presetId === 'string' ? stored.presetId : '',
+  };
+}
+
+export function persistAiEchoVisual(value) {
+  return persistToStorage(STORAGE_KEYS.aiEchoVisual, {
+    enabled: value?.enabled === true,
+    listeningLook: value?.listeningLook === 'glow' ? 'glow' : 'metaball',
+    presetId: typeof value?.presetId === 'string' ? value.presetId : '',
+  }, 'ai echo visual');
+}
+
+export function loadThinkingThumbnails() {
+  const stored = readStoredJson(STORAGE_KEYS.thinkingThumbnails, null);
+  const entries = Array.isArray(stored?.library) ? stored.library : [];
+  return {
+    selectedId: typeof stored?.selectedId === 'string' ? stored.selectedId : 'auto',
+    library: entries.filter((entry) => (
+      entry
+      && typeof entry.id === 'string'
+      && typeof entry.src === 'string'
+      && entry.src.startsWith('data:image/')
+    )).slice(0, 24),
+  };
+}
+
+export function persistThinkingThumbnails(value) {
+  const library = Array.isArray(value?.library) ? value.library.slice(0, 24) : [];
+  return persistToStorage(STORAGE_KEYS.thinkingThumbnails, {
+    selectedId: typeof value?.selectedId === 'string' ? value.selectedId : 'auto',
+    library,
+  }, 'thinking thumbnails');
 }
 
 export function loadDisableTextInput() {
@@ -172,6 +229,29 @@ export async function readDurableJsonRecord(key) {
     } catch (err) {
       console.warn('Unable to read durable data', err);
       resolve(null);
+    }
+  });
+}
+
+export async function deleteDurableJsonRecord(key, { label = 'data' } = {}) {
+  const db = await openDurableDb();
+  if (!db) return false;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(DURABLE_STORE_NAME, 'readwrite');
+      tx.objectStore(DURABLE_STORE_NAME).delete(key);
+      tx.oncomplete = () => resolve(true);
+      tx.onabort = () => {
+        console.warn(`Unable to delete durable ${label}`, tx.error);
+        resolve(false);
+      };
+      tx.onerror = () => {
+        console.warn(`Unable to delete durable ${label}`, tx.error);
+        resolve(false);
+      };
+    } catch (err) {
+      console.warn(`Unable to delete durable ${label}`, err);
+      resolve(false);
     }
   });
 }

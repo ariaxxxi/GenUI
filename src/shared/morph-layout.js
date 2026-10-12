@@ -7,6 +7,11 @@ import {
   normalizeIcon,
 } from '../shapes.js';
 
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 export function createMorphLayout(ctx) {
   const { C, detailMeasureEl, constants, callbacks, state } = ctx;
   const {
@@ -17,6 +22,24 @@ export function createMorphLayout(ctx) {
 
   function contentPos(shape, w, h) {
     if (shape === 'idle') return { thumb:{ x:w/2, y:h/2, w:0, h:0, br:'0px', op:0 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:w/2, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
+    if (shape === 'timer') {
+      const typography = normalizeTypography(state.contentTypographyState, 'timer');
+      const dotSize = 10;
+      const dotGap = 12;
+      const primarySize = typography.primary.size || 24;
+      const primaryText = String(C.prim.textContent || '').trim();
+      const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, primarySize, 500) : 0;
+      const primaryHeight = measureLineHeight(primarySize, 1.1);
+      const rowWidth = dotSize + dotGap + primaryWidth;
+      const rowX = Math.round((w - rowWidth) / 2);
+      return {
+        thumb:{ x:rowX, y:Math.round((h - dotSize) / 2), w:dotSize, h:dotSize, br:'999px', op:1 },
+        prim:{ x:rowX + dotSize + dotGap, y:Math.round((h - primaryHeight) / 2), op:1, fs:primarySize, cx:false },
+        sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+        div:{ x:w/2, y:h/2, dw:0, op:0 },
+        det:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
+      };
+    }
     if (shape === 'list') {
       const scenario = callbacks.selectedScenario?.();
       const showListOrb = !!callbacks.stageListListeningOrbForShape?.(scenario, scenario?.shape || 'list');
@@ -28,29 +51,38 @@ export function createMorphLayout(ctx) {
         det:{ x:w/2, y:h/2, op:0, fs:24, cx:true },
       };
     }
-    if (['circle', 'magic', 'listening', 'dot', 'agent-circle'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
-    if (shape === 'skill-pill') {
-      const typography = normalizeTypography(state.contentTypographyState, 'pill');
-      const chipIconSize = 36;
-      const chipIconRadius = '18px';
-      const chipLeft = 18;
-      const chipGap = 10;
-      const chipTextLeft = chipLeft + chipIconSize + chipGap;
-      const chipRightPad = 22;
-      const hasIcon = hasIconContent(state.thumbContentState);
-      const textWidth = Math.max(40, w - chipTextLeft - chipRightPad);
-      const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
-      const iconTop = Math.round((h - chipIconSize) / 2);
-      const primaryTop = Math.round((h - primaryHeight) / 2);
-      return {
-        thumb:{ x:chipLeft, y:iconTop, w:chipIconSize, h:chipIconSize, br:chipIconRadius, op:hasIcon ? 1 : 0 },
-        prim:{ x:chipTextLeft, y:primaryTop, op:1, fs:typography.primary.size, cx:false, w:textWidth },
-        sec:{ x:chipTextLeft, y:primaryTop, op:0, fs:typography.secondary.size, cx:false },
-        div:{ x:P, y:h/2, dw:0, op:0 },
-        det:{ x:chipTextLeft, y:primaryTop, op:0, fs:typography.detail.size, cx:false },
-      };
-    }
+    if (['circle', 'magic', 'listening', 'dot'].includes(shape)) return { thumb:{ x:(w-TS)/2, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:1 }, prim:{ x:w/2, y:h/2, op:0, fs:28, cx:true }, sec:{ x:w/2, y:h/2, op:0, fs:24, cx:true }, div:{ x:P, y:h/2, dw:0, op:0 }, det:{ x:w/2, y:h/2, op:0, fs:24, cx:true } };
     if (shape === 'pill') {
+      const activeStageId = String(callbacks.selectedScenario?.()?.shape || '');
+      if (isNudgeStageId(activeStageId)) {
+        const typography = normalizeTypography(state.contentTypographyState, 'pill');
+        const leftPad = 24;
+        const rightPad = 24;
+        const primaryToDividerGap = 12;
+        const dividerToSecondaryGap = 14;
+        const dividerWidth = 1;
+        const dividerHeight = Math.max(18, Math.round(typography.primary.size * 0.9));
+        const primaryText = String(C.prim.textContent || '').trim();
+        const secondaryText = String(C.sec.textContent || '').trim();
+        const primaryWidth = primaryText ? measureSingleLineWidth(primaryText, typography.primary.size, 500) : 0;
+        const secondaryWidth = secondaryText ? measureSingleLineWidth(secondaryText, typography.secondary.size, 400) : 0;
+        const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
+        const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
+        const rowWidth = primaryWidth
+          + (primaryText && secondaryText ? (primaryToDividerGap + dividerWidth + dividerToSecondaryGap) : 0)
+          + secondaryWidth;
+        const primaryX = Math.max(leftPad, Math.round((w - rightPad - rowWidth) / 2));
+        const dividerX = primaryX + primaryWidth + primaryToDividerGap;
+        const secondaryX = primaryText && secondaryText ? (dividerX + dividerWidth + dividerToSecondaryGap) : primaryX;
+        const dividerOp = primaryText && secondaryText ? 1 : 0;
+        return {
+          thumb:{ x:leftPad, y:(h-TS)/2, w:TS, h:TS, br:TBR, op:0 },
+          prim:{ x:primaryX, y:Math.round((h - primaryHeight) / 2), op:primaryText ? 1 : 0, fs:typography.primary.size, cx:false },
+          sec:{ x:secondaryX, y:Math.round((h - secondaryHeight) / 2), op:secondaryText ? 1 : 0, fs:typography.secondary.size, cx:false },
+          div:{ x:dividerX, y:Math.round((h - dividerHeight) / 2), dw:dividerWidth, op:dividerOp, dh:dividerHeight },
+          det:{ x:secondaryX, y:Math.round((h - secondaryHeight) / 2), op:0, fs:typography.detail.size, cx:false },
+        };
+      }
       const isAiHomeContext = document.body?.dataset?.pageMode === 'ai' && document.body?.dataset?.aiHomeState === 'context';
       if (isAiHomeContext) {
         const primarySize = 20;
@@ -155,16 +187,18 @@ export function createMorphLayout(ctx) {
     return normalizeTypography(scenario?.content?.typographyByShape?.[shape], renderShape);
   }
 
+  function cardImagePadding(shape = state.currentShape, scenario = callbacks.selectedScenario?.()) {
+    const stageId = scenario?.shape || callbacks.selectedScenario?.()?.shape || shape;
+    const value = callbacks.stageCardImagePaddingForShape?.(scenario, stageId);
+    return Number.isFinite(Number(value)) ? Math.max(0, Math.min(120, Math.round(Number(value)))) : CARD_P;
+  }
+
   const cardDetailTextWidth = (cardWidth) => Math.max(120, cardWidth - CARD_P * 2);
   function lineTextWidth(shape, width) {
     const hasIcon = hasIconContent(state.thumbContentState);
     if (shape === 'pill') {
       const textX = hasIcon ? (callbacks.stageIconLeftPadding(callbacks.selectedScenario()?.shape, 'pill') + TS + callbacks.stageIconTextGap(callbacks.selectedScenario()?.shape, 'pill')) : PILL_NO_ICON_P;
       return Math.max(120, width - textX - P);
-    }
-    if (shape === 'skill-pill') {
-      const textX = hasIcon ? 64 : 20;
-      return Math.max(60, width - textX - 22);
     }
     if (shape === 'card') return Math.max(120, width - CARD_P * 2);
     if (shape === 'card-s') {
@@ -174,7 +208,7 @@ export function createMorphLayout(ctx) {
     return null;
   }
 
-  const cardMediaWidth = (cardWidth, shape = 'card') => Math.max(shape === 'image' ? 40 : 120, cardWidth - CARD_P * 2);
+  const cardMediaWidth = (cardWidth, shape = 'card', mediaPadding = cardImagePadding(shape)) => Math.max(shape === 'image' ? 40 : 120, cardWidth - mediaPadding * 2);
   const measureLineHeight = (fontSize, lineHeight = 1.2) => Math.ceil(Number(fontSize || 0) * lineHeight);
   const measureSingleLineWidth = (text, fontSize, fontWeight = 400) => {
     const value = String(text || '').trim();
@@ -188,11 +222,11 @@ export function createMorphLayout(ctx) {
     detailMeasureEl.textContent = value;
     return Math.ceil(detailMeasureEl.getBoundingClientRect().width);
   };
-  const measureCardMediaHeight = (imageValue, cardWidth, shape = 'card') => {
+  const measureCardMediaHeight = (imageValue, cardWidth, shape = 'card', mediaPadding = cardImagePadding(shape)) => {
     const image = normalizeStageImage(imageValue);
-    return image ? Math.ceil(cardMediaWidth(cardWidth, shape) * (image.height / image.width)) : 0;
+    return image ? Math.ceil(cardMediaWidth(cardWidth, shape, mediaPadding) * (image.height / image.width)) : 0;
   };
-  const measureCardMediaHeights = (imagesValue, cardWidth, shape = 'card') => normalizeStageImages(Array.isArray(imagesValue) ? imagesValue : (imagesValue ? [imagesValue] : [])).map((image) => measureCardMediaHeight(image, cardWidth, shape)).filter((height) => height > 0);
+  const measureCardMediaHeights = (imagesValue, cardWidth, shape = 'card', mediaPadding = cardImagePadding(shape)) => normalizeStageImages(Array.isArray(imagesValue) ? imagesValue : (imagesValue ? [imagesValue] : [])).map((image) => measureCardMediaHeight(image, cardWidth, shape, mediaPadding)).filter((height) => height > 0);
   const mediaStackHeight = (mediaHeights) => !Array.isArray(mediaHeights) || !mediaHeights.length ? 0 : mediaHeights.reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * Math.max(0, mediaHeights.length - 1);
 
   function measureCardDetailHeight(detailText, typography, cardWidth) {
@@ -200,7 +234,7 @@ export function createMorphLayout(ctx) {
     if (!text.trim()) return 0;
     detailMeasureEl.style.width = `${cardDetailTextWidth(cardWidth)}px`;
     detailMeasureEl.style.fontSize = `${typography.detail.size}px`;
-    detailMeasureEl.style.lineHeight = '1.2';
+    detailMeasureEl.style.lineHeight = '1.4';
     detailMeasureEl.style.whiteSpace = 'pre-wrap';
     detailMeasureEl.style.wordBreak = 'break-word';
     detailMeasureEl.textContent = text;
@@ -213,6 +247,7 @@ export function createMorphLayout(ctx) {
   };
 
   function getCardLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
+    const mediaPadding = cardImagePadding('card');
     const hasPrimary = !!String(primaryText || '').trim();
     const hasSecondary = !!String(secondaryText || '').trim();
     const hasTopRow = hasIconContent(iconValue);
@@ -220,7 +255,7 @@ export function createMorphLayout(ctx) {
     const primaryHeight = measureLineHeight(typography.primary.size, 1.1);
     const secondaryHeight = measureLineHeight(typography.secondary.size, 1.2);
     const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
-    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth);
+    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card', mediaPadding);
     const mediaHeight = mediaStackHeight(mediaHeights);
     const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
     const bodyStart = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
@@ -230,13 +265,14 @@ export function createMorphLayout(ctx) {
     if (hasPrimary) { primaryTop = cursorY; cursorY += primaryHeight; }
     if (hasSecondary) { if (hasPrimary) cursorY += CARD_PRIMARY_TO_SECONDARY_GAP; secondaryTop = cursorY; cursorY += secondaryHeight; }
     const detailTop = hasDetailText ? ((hasPrimary || hasSecondary) ? (cursorY + CARD_SECONDARY_TO_DETAIL_GAP) : bodyStart) : bodyStart;
-    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : ((hasPrimary || hasSecondary) ? (cursorY + CARD_DETAIL_TO_MEDIA_GAP) : bodyStart);
+    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : ((hasPrimary || hasSecondary) ? (cursorY + CARD_DETAIL_TO_MEDIA_GAP) : mediaPadding);
     const contentBottom = mediaHeight > 0 ? mediaTop + mediaHeight : (detailHeight > 0 ? detailTop + detailHeight : ((hasPrimary || hasSecondary) ? cursorY : bodyStart));
     const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
     return { hasTopRow, dividerY, primaryTop, secondaryTop, detailTop, detailHeight, mediaTop, mediaTops: mediaHeights.map((_, index) => mediaTop + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index), mediaHeights, mediaHeight, neededHeight: contentBottom + bottomPadding };
   }
 
   function getCardSLayoutMetrics(cardWidth, typography, detailText = '', imageValue = null, primaryText = '', secondaryText = '', iconValue = null) {
+    const mediaPadding = cardImagePadding('card-s');
     const hasPrimary = !!String(primaryText || '').trim();
     const hasSecondary = !!String(secondaryText || '').trim();
     const hasTopRow = hasIconContent(iconValue) || hasPrimary || hasSecondary;
@@ -257,10 +293,10 @@ export function createMorphLayout(ctx) {
     const dividerY = hasTopRow ? (CARD_P + TS + CARD_DIVIDER_GAP) : CARD_P;
     const detailTop = hasTopRow ? (dividerY + CARD_PRIMARY_GAP) : CARD_P;
     const detailHeight = measureCardDetailHeight(detailText, typography, cardWidth);
-    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card-s');
+    const mediaHeights = measureCardMediaHeights(imageValue, cardWidth, 'card-s', mediaPadding);
     const mediaHeight = mediaStackHeight(mediaHeights);
     const hasDetailText = String(detailText || '').trim().length > 0;
-    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : (hasTopRow ? detailTop : CARD_P);
+    const mediaTop = hasDetailText ? detailTop + detailHeight + CARD_DETAIL_TO_MEDIA_GAP : (hasTopRow ? detailTop : mediaPadding);
     const contentBottom = mediaHeight > 0 ? mediaTop + mediaHeight : (detailHeight > 0 ? detailTop + detailHeight : (hasTopRow ? dividerY : CARD_P));
     const bottomPadding = mediaHeight > 0 ? CARD_MEDIA_BOTTOM_P : CARD_P;
     return { hasTopRow, dividerY, primaryTop, secondaryTop, detailTop, detailHeight, mediaTop, mediaTops: mediaHeights.map((_, index) => mediaTop + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index), mediaHeights, mediaHeight, neededHeight: contentBottom + bottomPadding };
@@ -290,6 +326,19 @@ export function createMorphLayout(ctx) {
     const rawGeo = customGeo || (showListOrb ? SHAPES.circle : (SHAPES[shape] || SHAPES.card));
     const stageSizeOverride = callbacks.normalizeStageSizeEntry(contentData?.sizeOverride, callbacks.scenarioStageSizeOverride(scenario, stageId));
     const baseGeo = customGeo ? rawGeo : withStageSizeOverride(rawGeo, stageId, scenario, stageSizeOverride);
+    const resolvedBaseGeo = shape === 'idle' && !customGeo
+      ? {
+        ...baseGeo,
+        main: {
+          ...baseGeo.main,
+          w: 40,
+          h: 40,
+          br: '20px',
+          tx: -20,
+          ty: -20,
+        },
+      }
+      : baseGeo;
     const hasHeightOverride = Number.isFinite(stageSizeOverride.heightOverride);
     const withStageRadius = (geo) => {
       if (!stageId) return geo;
@@ -300,7 +349,7 @@ export function createMorphLayout(ctx) {
       return rawGeo;
     }
     if ((shape !== 'card' && shape !== 'card-s' && shape !== 'image') || customGeo) {
-      return withStageRadius(baseGeo);
+      return withStageRadius(resolvedBaseGeo);
     }
 
     const detailText = contentData?.detail !== undefined ? contentData.detail : C.det.textContent;
@@ -313,15 +362,16 @@ export function createMorphLayout(ctx) {
     const iconValue = contentData?.icon !== undefined ? contentData.icon : state.thumbContentState;
 
     if (shape === 'image') {
-      if (hasHeightOverride) return withStageRadius(baseGeo);
-      const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image'));
-      if (!mediaHeight) return withStageRadius(baseGeo);
-      const neededHeight = mediaHeight + CARD_P * 2;
-      if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
+      if (hasHeightOverride) return withStageRadius(resolvedBaseGeo);
+      const mediaPadding = cardImagePadding('image', scenario);
+      const mediaHeight = mediaStackHeight(measureCardMediaHeights(mediaValue, baseGeo.main.w, 'image', mediaPadding));
+      if (!mediaHeight) return withStageRadius(resolvedBaseGeo);
+      const neededHeight = mediaHeight + mediaPadding * 2;
+      if (neededHeight === baseGeo.main.h) return withStageRadius(resolvedBaseGeo);
       return withStageRadius({
-        ...baseGeo,
+        ...resolvedBaseGeo,
         main: {
-          ...baseGeo.main,
+          ...resolvedBaseGeo.main,
           h: neededHeight,
           ty: -(neededHeight / 2),
         },
@@ -344,12 +394,12 @@ export function createMorphLayout(ctx) {
         Math.round(baseGeo.main.h + (layoutMetrics.neededHeight - baselineLayout.neededHeight)),
         Math.ceil(layoutMetrics.neededHeight)
       );
-    if (hasHeightOverride) return withStageRadius(baseGeo);
-    if (neededHeight === baseGeo.main.h) return withStageRadius(baseGeo);
+    if (hasHeightOverride) return withStageRadius(resolvedBaseGeo);
+    if (neededHeight === baseGeo.main.h) return withStageRadius(resolvedBaseGeo);
     return withStageRadius({
-      ...baseGeo,
+      ...resolvedBaseGeo,
       main: {
-        ...baseGeo.main,
+        ...resolvedBaseGeo.main,
         h: neededHeight,
         ty: -(neededHeight / 2),
       },
@@ -373,6 +423,7 @@ export function createMorphLayout(ctx) {
       secondary: has('secondary') ? text.secondary : '',
       detail: has('detail') ? text.detail : '',
       images: has('image') ? callbacks.stageImagesForShape(scenario, shape) : [],
+      actionCardActions: has('action-row') ? (scenario?.content?.actionCardActionsByShape?.[shape] || { left: 'Snooze', right: 'Join now →' }) : null,
       typography: getScenarioTypography(scenario, shape),
       sizeOverride: callbacks.scenarioStageSizeOverride(scenario, shape),
       scenario,
@@ -386,6 +437,7 @@ export function createMorphLayout(ctx) {
     setStageMedia,
     getScenarioTypography,
     cardDetailTextWidth,
+    cardImagePadding,
     lineTextWidth,
     cardMediaWidth,
     measureLineHeight,

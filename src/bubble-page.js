@@ -1,4 +1,4 @@
-// import { initHandTracking } from './hand-tracking.js';
+import { initHandTracking } from './hand-tracking.js';
 import {
   applySelectedChromePreset,
   clearDirectionalSelectionTimers,
@@ -13,46 +13,18 @@ import {
   syncAiOrbCenterIcon,
   syncAiOrbCenterImage,
 } from './shared/ai-orb-icon.js';
-
-// ── Audio ─────────────────────────────────────────────────────────────────────
-let _audioCtx = null;
-let _clickBuffer = null;
-let _clickBufferLoading = false;
-
-function getAudioCtx() {
-  if (!_audioCtx) {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (AC) _audioCtx = new AC();
-  }
-  return _audioCtx;
-}
-
-async function loadClickBuffer() {
-  if (_clickBuffer || _clickBufferLoading) return;
-  _clickBufferLoading = true;
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  try {
-    const res = await fetch('src/assets/click.mp3');
-    const arrayBuffer = await res.arrayBuffer();
-    _clickBuffer = await ctx.decodeAudioData(arrayBuffer);
-  } catch (e) {}
-}
-
-function playBubbleHoverSound() {
-  const ctx = getAudioCtx();
-  if (!ctx) return;
-  loadClickBuffer();
-  if (!_clickBuffer) return;
-  const src = ctx.createBufferSource();
-  src.buffer = _clickBuffer;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.8, ctx.currentTime);
-  src.connect(gain);
-  gain.connect(ctx.destination);
-  src.start();
-}
-// ─────────────────────────────────────────────────────────────────────────────
+import {
+  renderThinkingOrbStreamMarkup,
+  setThinkingOrbStreamVisible,
+  syncThinkingOrbStreamIcon,
+  syncThinkingOrbStreamText,
+} from './shared/thinking-orb-stream.js';
+import {
+  deleteDurableJsonRecord,
+  persistDurableJson,
+  readDurableJsonRecord,
+} from './app-state.js';
+import { playSimEarcon } from './sim-panel.js';
 
 const APP_SET_BUBBLE_BASE_SIZE = 110;
 const AGENT_SET_BUBBLE_BASE_SIZE = 110;
@@ -81,6 +53,7 @@ const ACTIVE_MOVE_DURATION_MS = 250;
 const APPEAR_MOVE_DURATION_MS = 400;
 const DISAPPEAR_MOVE_DURATION_MS = 300;
 const BUBBLE_HOVER_CONTENT_SCALE = 0.75;
+const CONTROL_BUBBLE_HOVER_SCALE = 1.1;
 const BUBBLE_RELEASE_CONTENT_SCALE = 0.45;
 const PILL_HOVER_BUBBLE_SCALE = 0.8;
 const FADE_IN_DURATION_MS = 400;
@@ -98,6 +71,8 @@ const CENTER_PROBE_BASE_Y = CANVAS_CENTER_Y - ORB_CENTER_Y;
 const FALLBACK_ICON = 'src/assets/fallback-icon.png';
 const PILL_TEXT_LEFT_PADDING = 8;
 const PILL_TEXT_RIGHT_PADDING = 24;
+const PILL_TITLE_FONT_SIZE = 20;
+const PILL_SUBTITLE_FONT_SIZE = 18;
 const PILL_TRAILING_ICON_SIZE = 40;
 const PILL_TRAILING_ICON_RIGHT = 18;
 const PILL_ACTION_GAP = 16;
@@ -124,6 +99,54 @@ const SWAP_ORB_BLOOM_OVERSHOOT_MS = 150;
 const SWAP_ORB_BLOOM_SETTLE_MS = 220;
 const SWAP_DEMOTED_START_DELAY_MS = 90;
 const SWAP_DEMOTED_END_SCALE = 0.55;
+const SWAP_PROMOTED_HANDOFF_DELAY_MS = 0;
+const SWAP_PROMOTED_HANDOFF_FADE_MS = 60;
+const BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS = 1200;
+const BUBBLE_HOME_IDLE_STREAM_GAP_MS = 180;
+const BUBBLE_HOME_STREAM_FADE_MS = 180;
+const BUBBLE_HOME_INTERRUPT_THINKING_TEXT = 'Reasoning';
+const BUBBLE_HOME_THINKING_PILL_ICON_SIZE = 52;
+const BUBBLE_HOME_THINKING_PILL_GAP = 10;
+const BUBBLE_HOME_THINKING_PILL_PADDING_X = Object.freeze({ left: 14, right: 20 });
+const BUBBLE_HOME_THINKING_PILL_MIN_WIDTH = 80;
+const BUBBLE_HOME_PROMPT_THINKING_PILL_ICON_SIZE = ORB_BASE_SIZE;
+const BUBBLE_HOME_PROMPT_THINKING_PILL_GAP = 0;
+const BUBBLE_HOME_PROMPT_THINKING_PILL_PADDING_X = Object.freeze({ left: 0, right: 20 });
+const BUBBLE_HOME_THINKING_TEXT_FONT = '500 20px "DM Sans", sans-serif';
+const BUBBLE_HOME_PROMPT_THINKING_LOOP_MS = 5000;
+const BUBBLE_HOME_PROMPT_TEXT_SWAP_MS = 140;
+const LENS_SHIMMER_DURATION_MS = 3000;
+const LENS_EXPAND_SHIMMER_DURATION_MS = 2000;
+const LENS_FOCUS_SHIMMER_DURATION_MS = 1800;
+const LENS_PUNCTURE_SCALE_DURATION_MS = 860;
+const LENS_PUNCTURE_FADE_DURATION_MS = 360;
+const LENS_PUNCTURE_POP_SCALE = 1.055;
+const LENS_PUNCTURE_END_SCALE = 0.5;
+const LENS_SET_ID = 'lens';
+const LENS_EXPAND_SET_ID = 'lens-expand';
+const LENS_FOCUS_SET_ID = 'lens-focus';
+const LENS_CONCEPT_SET_ID = 'lens-concept';
+const ROW_SET_ID = 'row';
+const ROW_AGENT_SEQUENCE = Object.freeze(['stars', 'gemini', 'bixby', 'perplexity']);
+const ROW_AGENT_SEQUENCE_WITHOUT_STARS = Object.freeze(['gemini', 'bixby', 'perplexity']);
+const ROW_SET_DEFAULT_AGENT_ID = 'stars';
+const ROW_SET_DEFAULT_AGENT_ID_WITHOUT_STARS = 'gemini';
+const ROW_CAROUSEL_MOVE_DURATION_MS = 760;
+const ROW_CAROUSEL_FADE_OUT_DELAY_MS = 760;
+const ROW_CAROUSEL_FADE_OUT_DURATION_MS = 320;
+const ROW_CAROUSEL_SPACING = 76;
+const ROW_CAROUSEL_STAGGER_MS = 70;
+const ROW_CAROUSEL_DURATION_MS = ROW_CAROUSEL_FADE_OUT_DELAY_MS
+  + ROW_CAROUSEL_FADE_OUT_DURATION_MS
+  + (ROW_CAROUSEL_STAGGER_MS * 2);
+const ROW_CAROUSEL_HANDOFF_MS = 140;
+const AGENT_SET_RETURN_HOLD_MS = 10000;
+const AGENT_SET_SPREAD_SLOT_IDS = Object.freeze([1, 2, 8]);
+const BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY = 'genui.bubble.background-image.v1';
+const BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY = 'genui.bubble.background-video.v1';
+const UI_CHROME_HOTKEY = 'h';
+const HOME_ORB_HOTKEY = 'd';
+const BACKGROUND_VIDEO_HOTKEY = 'p';
 const textMeasureContext = document.createElement('canvas').getContext('2d');
 const FIGMA_ASSETS = {
   chatgpt: 'src/assets/figma-chatgpt.png',
@@ -133,10 +156,19 @@ const FIGMA_ASSETS = {
   weather: 'src/assets/figma-weather.png',
   note:    'src/assets/figma-note.png',
 };
+const LENS_HOME_ORB_ASSET = 'assets/app/lens.png';
 const BUBBLE_HOME_AGENT_SEQUENCE = Object.freeze(['bixby', 'gemini', 'chatgpt']);
 const BUBBLE_HOME_DEFAULT_AGENT_ID = 'bixby';
+const PROMPT_SET_DEFAULT_AGENT_ID = 'chatgpt';
+const BUBBLE_HOME_PROMPT_THINKING_TEXT = 'Thinking';
 const PROFILE_CALL_BADGE_ASSET = 'src/assets/profile-call-badge.png';
 const CLAUDE_AGENT_ASSET = 'assets/agents/Claude-ai-icon.png';
+const PERPLEXITY_AGENT_ASSET = 'assets/agents/perplexity.png';
+const STARS_AGENT_ASSET = 'assets/agents/stars.png';
+const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
+const GREEN_AGENT_ASSET = 'assets/agents/green.png';
+const ORANGE_AGENT_ASSET = 'assets/agents/orange.png';
+const YELLOW_AGENT_ASSET = 'assets/agents/yellow.png';
 const CELESTIAL_CHIP_PRESET = celestialSelectedPresetForRenderShape('chip');
 const CELESTIAL_ORB_PRESET = celestialSelectedPresetForRenderShape('orb');
 const NON_PROMOTABLE_BUBBLE_IDS = new Set([1, 3, 4, 5]);
@@ -146,29 +178,134 @@ const CLAUDE_AGENT_THEME = Object.freeze({
   blobBottomCore: 'rgb(255 230 208)',
   blobBottomEdge: 'rgb(187 110 72)',
 });
+const PERPLEXITY_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(180 255 246)',
+  blobTopEdge: 'rgb(47 173 164)',
+  blobBottomCore: 'rgb(230 255 252)',
+  blobBottomEdge: 'rgb(21 116 122)',
+});
+const STARS_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(116 184 255)',
+  blobTopEdge: 'rgb(56 124 255)',
+  blobBottomCore: 'rgb(206 173 255)',
+  blobBottomEdge: 'rgb(126 92 234)',
+});
+const CHATGPT_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 255 255)',
+  blobTopEdge: 'rgb(228 235 247)',
+  blobBottomCore: 'rgb(255 255 255)',
+  blobBottomEdge: 'rgb(214 223 238)',
+});
+const GEMINI_AGENT_THEME = Object.freeze({
+  blobTopCore: 'rgb(180 214 255)',
+  blobTopEdge: 'rgb(95 152 255)',
+  blobBottomCore: 'rgb(218 191 255)',
+  blobBottomEdge: 'rgb(123 92 255)',
+});
 const WRITING_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(126 186 255)',
-  blobTopEdge: 'rgb(92 132 255)',
-  blobBottomCore: 'rgb(197 223 255)',
-  blobBottomEdge: 'rgb(74 102 212)',
+  blobTopCore: 'rgb(255 243 158)',
+  blobTopEdge: 'rgb(255 212 72)',
+  blobBottomCore: 'rgb(255 249 208)',
+  blobBottomEdge: 'rgb(222 176 34)',
 });
 const BUDGET_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(121 255 168)',
-  blobTopEdge: 'rgb(78 214 127)',
-  blobBottomCore: 'rgb(214 255 143)',
-  blobBottomEdge: 'rgb(92 184 74)',
+  blobTopCore: 'rgb(255 204 152)',
+  blobTopEdge: 'rgb(255 144 76)',
+  blobBottomCore: 'rgb(255 228 194)',
+  blobBottomEdge: 'rgb(215 109 39)',
 });
 const FITNESS_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(118 255 199)',
-  blobTopEdge: 'rgb(72 210 165)',
-  blobBottomCore: 'rgb(187 255 229)',
-  blobBottomEdge: 'rgb(54 145 118)',
+  blobTopCore: 'rgb(146 255 191)',
+  blobTopEdge: 'rgb(82 214 134)',
+  blobBottomCore: 'rgb(210 255 176)',
+  blobBottomEdge: 'rgb(82 176 84)',
 });
 const TRAVEL_AGENT_THEME = Object.freeze({
-  blobTopCore: 'rgb(250 252 255)',
-  blobTopEdge: 'rgb(223 232 247)',
+  blobTopCore: 'rgb(177 222 255)',
+  blobTopEdge: 'rgb(90 164 255)',
+  blobBottomCore: 'rgb(210 232 255)',
+  blobBottomEdge: 'rgb(48 108 226)',
+});
+const RESET_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(232 221 203)',
+  blobTopEdge: 'rgb(191 173 146)',
+  blobBottomCore: 'rgb(222 238 246)',
+  blobBottomEdge: 'rgb(146 176 198)',
+});
+const COFFEE_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(229 199 163)',
+  blobTopEdge: 'rgb(191 150 108)',
+  blobBottomCore: 'rgb(112 74 49)',
+  blobBottomEdge: 'rgb(63 41 27)',
+});
+const MONSTERA_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(176 199 144)',
+  blobTopEdge: 'rgb(118 149 88)',
+  blobBottomCore: 'rgb(227 233 218)',
+  blobBottomEdge: 'rgb(128 151 106)',
+});
+const MIX_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(153 221 255)',
+  blobTopEdge: 'rgb(89 185 239)',
+  blobBottomCore: 'rgb(244 248 255)',
+  blobBottomEdge: 'rgb(184 209 235)',
+});
+const DAY_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 214 196)',
+  blobTopEdge: 'rgb(255 153 129)',
+  blobBottomCore: 'rgb(225 244 250)',
+  blobBottomEdge: 'rgb(151 205 223)',
+});
+const WRITE_APP_THEME = Object.freeze({
+  blobTopCore: 'rgb(231 223 207)',
+  blobTopEdge: 'rgb(194 181 160)',
+  blobBottomCore: 'rgb(135 138 145)',
+  blobBottomEdge: 'rgb(86 92 101)',
+});
+const MUSIC_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 220 116)',
+  blobTopEdge: 'rgb(255 176 68)',
+  blobBottomCore: 'rgb(255 251 232)',
+  blobBottomEdge: 'rgb(255 244 204)',
+});
+const ANDY_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(224 207 188)',
+  blobTopEdge: 'rgb(186 154 124)',
+  blobBottomCore: 'rgb(97 78 64)',
+  blobBottomEdge: 'rgb(49 37 30)',
+});
+const LAYLA_PROMPT_THEME = Object.freeze({
+  blobTopCore: 'rgb(172 236 255)',
+  blobTopEdge: 'rgb(97 205 244)',
+  blobBottomCore: 'rgb(255 190 150)',
+  blobBottomEdge: 'rgb(214 122 78)',
+});
+const INTERRUPT_WHITE_THEME = Object.freeze({
+  blobTopCore: 'rgb(247 249 255)',
+  blobTopEdge: 'rgb(228 235 247)',
   blobBottomCore: 'rgb(255 255 255)',
-  blobBottomEdge: 'rgb(201 214 234)',
+  blobBottomEdge: 'rgb(214 223 238)',
+});
+const INTERRUPT_RED_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 182 182)',
+  blobTopEdge: 'rgb(255 112 112)',
+  blobBottomCore: 'rgb(255 146 111)',
+  blobBottomEdge: 'rgb(209 63 63)',
+});
+const INTERRUPT_HOME_ORB_THEME = Object.freeze({
+  blobTopCore: 'rgb(255 255 255)',
+  blobTopEdge: 'rgb(255 255 255)',
+  blobBottomCore: 'rgb(255 255 255)',
+  blobBottomEdge: 'rgb(255 255 255)',
+});
+const HOME_ORB_SHELL_PRESET = Object.freeze({
+  ...CELESTIAL_ORB_PRESET,
+  maskBlur: 10,
+  blobBlur: 38,
+  blobTopX: -17,
+  blobBottomX: 62,
+  highlightScale: 40,
+  innerGlowBlur: 0,
 });
 
 const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
@@ -210,6 +347,55 @@ const BUBBLE_HOME_SLOT_THEMES = Object.freeze({
   }),
 });
 
+function renderInterruptControlSvg(kind) {
+  if (kind === 'pause-fill') {
+    return `
+      <svg class="bubble2-icon-svg bubble2-icon-svg--pause" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>
+      </svg>
+    `;
+  }
+  if (kind === 'play-fill') {
+    return `
+      <svg class="bubble2-icon-svg bubble2-icon-svg--play" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M11.596 8.697 6.233 11.89A1 1 0 0 1 4.75 11.034V4.966a1 1 0 0 1 1.483-.856l5.363 3.193a.8.8 0 0 1 0 1.394"/>
+      </svg>
+    `;
+  }
+  if (kind === 'plus') {
+    return `
+      <svg class="bubble2-icon-svg bubble2-icon-svg--plus" viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H8.75V12a.75.75 0 0 1-1.5 0V8.75H4a.75.75 0 0 1 0-1.5h3.25V4A.75.75 0 0 1 8 3.25"/>
+      </svg>
+    `;
+  }
+  return `
+    <svg class="bubble2-icon-svg bubble2-icon-svg--end" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="3.25" y="3.25" width="9.5" height="9.5" rx="2.4" fill="currentColor"/>
+    </svg>
+  `;
+}
+
+function createInterruptControlIconDataUri(kind) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      ${kind === 'pause-fill'
+        ? '<path fill="#FFFFFF" d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/>'
+        : (kind === 'play-fill'
+          ? '<path fill="#FFFFFF" d="M11.596 8.697 6.233 11.89A1 1 0 0 1 4.75 11.034V4.966a1 1 0 0 1 1.483-.856l5.363 3.193a.8.8 0 0 1 0 1.394"/>'
+        : (kind === 'plus'
+          ? '<path fill="#FFFFFF" d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H8.75V12a.75.75 0 0 1-1.5 0V8.75H4a.75.75 0 0 1 0-1.5h3.25V4A.75.75 0 0 1 8 3.25"/>'
+          : '<rect x="3.25" y="3.25" width="9.5" height="9.5" rx="2.4" fill="#FFFFFF"/>'))}
+    </svg>
+  `.trim();
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+const PAUSE_CONTROL_ASSET = createInterruptControlIconDataUri('pause-fill');
+const PLAY_CONTROL_ASSET = createInterruptControlIconDataUri('play-fill');
+const PLUS_CONTROL_ASSET = createInterruptControlIconDataUri('plus');
+const END_CONTROL_ASSET = createInterruptControlIconDataUri('end-square');
+
 function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
   const cls = [extraClass, 'g-selection-chrome'].filter(Boolean).join(' ');
   return `<div class="${cls}" data-stage-direction="${direction}" aria-hidden="true"><div class="g-stage-selected-refraction"><div class="g-stage-selected-blob g-stage-selected-blob--top-left"></div><div class="g-stage-selected-blob g-stage-selected-blob--bottom-right"></div></div><div class="g-stage-selected-sharp-pass"><div class="g-stage-selected-sharp-highlight"></div></div><div class="g-stage-selected-accent-rim"></div><div class="g-stage-selected-highlight"></div><div class="g-stage-selected-highlight-mask"><div class="g-stage-selected-highlight-mask-image"></div></div></div>`;
@@ -218,8 +404,7 @@ function renderCelestialSelectionChrome(direction = 'bottom', extraClass = '') {
 function renderBubbleOrbShellMarkup(options = {}) {
   const includeCenter = options.includeCenter !== false;
   return `
-    <div class="bubble2-orb-sphere g-celestial-orb-sphere" aria-hidden="true"></div>
-    ${renderCelestialSelectionChrome('bottom', 'bubble2-orb-selection g-celestial-orb-selection')}
+    <div class="bubble2-orb-simple-shell" aria-hidden="true"></div>
     ${includeCenter ? renderAiOrbCenterMarkup() : ''}
   `;
 }
@@ -237,19 +422,42 @@ function orbGeometryForSize(size) {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function currentBubbleHomeOrbTheme() {
+  if (state.activeSetId === 'interrupt') return INTERRUPT_HOME_ORB_THEME;
   return state.homeOrbContent?.theme || getAiOrbIconOption(state.orbAgentId)?.theme || {};
 }
 
+function isPromptHomeThinkingActive() {
+  return state.activeSetId === 'prompt'
+    && Boolean(state.promptHomeThinking)
+    && state.homeOrbContent?.kind !== 'agent-orb';
+}
+
+function isHomeOrbThinkingModeActive() {
+  return state.activeSetId === 'interrupt' || isPromptHomeThinkingActive();
+}
+
+function currentBubbleHomeThinkingPillMetrics() {
+  if (isPromptHomeThinkingActive()) {
+    return {
+      iconSize: BUBBLE_HOME_PROMPT_THINKING_PILL_ICON_SIZE,
+      gap: BUBBLE_HOME_PROMPT_THINKING_PILL_GAP,
+      paddingX: BUBBLE_HOME_PROMPT_THINKING_PILL_PADDING_X,
+    };
+  }
+  return {
+    iconSize: BUBBLE_HOME_THINKING_PILL_ICON_SIZE,
+    gap: BUBBLE_HOME_THINKING_PILL_GAP,
+    paddingX: BUBBLE_HOME_THINKING_PILL_PADDING_X,
+  };
+}
+
 function applyBubbleHomeOrbShellChrome(hostEl, theme) {
-  if (!hostEl) return;
-  applyBubbleCelestialChrome(
-    hostEl.querySelector('.bubble2-orb-selection'),
-    hostEl,
-    CELESTIAL_ORB_PRESET,
-    theme || {},
-    orbGeometryForSize(ORB_BASE_SIZE),
-  );
+  // Home orb shells use the same static glass treatment as the thinking pill.
 }
 
 function resetBubbleHomeOrbCenter(root = refs.orb) {
@@ -266,36 +474,47 @@ function resetBubbleHomeOrbCenter(root = refs.orb) {
   center.outerHTML = renderAiOrbCenterMarkup();
 }
 
+function syncBubbleHomeOrbVisualStateClasses(visual, content = state.homeOrbContent) {
+  if (!visual || !content) return;
+  visual.classList.toggle('is-promoted-home-claude', content.iconId === 'claude');
+  visual.classList.toggle('is-promoted-home-perplexity', content.iconId === 'perplexity');
+  visual.classList.toggle('is-promoted-home-uncropped', Boolean(content.disableCircularImageMask));
+  const promotedImageSize = Number(content.homePromotedImageSize);
+  const hasPromotedImageSize = Number.isFinite(promotedImageSize) && promotedImageSize > 0;
+  visual.classList.toggle('is-promoted-home-large-image', hasPromotedImageSize);
+  if (hasPromotedImageSize) {
+    visual.style.setProperty('--bubble2-home-promoted-image-size', `${promotedImageSize}px`);
+  } else {
+    visual.style.removeProperty('--bubble2-home-promoted-image-size');
+  }
+}
+
 function applyBubbleHoverShellChrome(hostEl, theme, geometryOverride) {
-  if (!hostEl) return;
-  applyBubbleCelestialChrome(
-    hostEl.querySelector('.bubble2-orb-selection'),
-    hostEl,
-    CELESTIAL_ORB_PRESET,
-    theme || {},
-    geometryOverride,
-  );
+  // Bubble shells use the same static glass treatment as the thinking pill.
 }
 
 const APP_BUBBLES_CONFIG = [
   {
     id: 1,
     x: 9,
-    y: -102,
+    y: -122,
     zIndex: 20,
     img: 'src/assets/spotify-album-happiness.jpg',
     fill: true,
     isPill: true,
+    hoverExpandsToPill: true,
     pillTitle: 'Happiness',
     pillSubtitle: '1975',
     imageOutlineColor: '#1ED760',
     imageOutlineWidth: 3,
     pillTrailingIcon: 'pause',
     pillTrailingIconColor: '#1ED760',
+    pillActionGap: 2,
     subIconKind: 'spotify-badge',
     subIconSize: 42.167,
     subIconOffsetX: 67.83,
     subIconOffsetY: 67.83,
+    theme: INTERRUPT_WHITE_THEME,
     disableHoverScale: true,
     childActions: [
       { id: 'playlist-1', img: 'src/assets/spotify-liked-songs.jpg', fill: true },
@@ -311,8 +530,10 @@ const APP_BUBBLES_CONFIG = [
     img: 'assets/profile1.png',
     fill: true,
     isPill: true,
+    hoverExpandsToPill: true,
     pillTitle: 'Tony',
     pillSubtitle: 'I love it!',
+    theme: INTERRUPT_WHITE_THEME,
     subIconKind: 'message-badge',
     subIconSize: 47.949,
     subIconOffsetX: 62.04,
@@ -393,8 +614,10 @@ const APP_BUBBLES_CONFIG = [
     img: 'assets/profile2.png',
     fill: true,
     isPill: true,
-    pillTitle: 'Hiro',
+    hoverExpandsToPill: true,
+    pillTitle: 'Lisa',
     pillSubtitle: 'Yesterday',
+    theme: INTERRUPT_WHITE_THEME,
     subIconKind: 'call-badge',
     subIconSize: 41.532,
     subIconOffsetX: 66.5,
@@ -434,17 +657,322 @@ const APP_BUBBLES_CONFIG = [
   },
 ].map(enrichBubbleMetrics);
 
+const PROMPT_BUBBLES_CONFIG = [
+  {
+    id: 2,
+    ...getAppSetSlotLayout(2),
+    img: 'assets/app/music.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Make a playlist',
+    pillSubtitle: 'Build a focus mix',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    usesSurfaceShell: true,
+    theme: MUSIC_PROMPT_THEME,
+    haloColor: MUSIC_PROMPT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 3,
+    ...getAppSetSlotLayout(3),
+    img: 'assets/app/Andy.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Andy',
+    pillSubtitle: 'Sent a voice note',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    usesSurfaceShell: true,
+    theme: ANDY_PROMPT_THEME,
+    haloColor: ANDY_PROMPT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 9,
+    ...getAppSetSlotLayout(9),
+    img: 'assets/app/run.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Fitness',
+    pillSubtitle: 'Build a workout plan',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    theme: WRITE_APP_THEME,
+    haloColor: WRITE_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 4,
+    ...getAppSetSlotLayout(4),
+    img: 'assets/mode icon/influencer.png',
+    imageScale: 0.94,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Influencer mode on',
+    pillSubtitle: 'Creator context',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    usesSurfaceShell: true,
+    theme: BUBBLE_HOME_SLOT_THEMES[4],
+    haloColor: BUBBLE_HOME_SLOT_THEMES[4].blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 1,
+    ...getAppSetSlotLayout(1),
+    img: 'assets/app/day.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Day check',
+    pillSubtitle: 'Morning brief',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    theme: DAY_APP_THEME,
+    haloColor: DAY_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 8,
+    ...getAppSetSlotLayout(8),
+    img: 'assets/app/reset.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Book a flight',
+    pillSubtitle: 'Find the best route',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    theme: RESET_APP_THEME,
+    haloColor: RESET_APP_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 5,
+    ...getAppSetSlotLayout(5),
+    img: 'assets/app/layla.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Layla',
+    pillSubtitle: 'Call her back',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    orbPromotionEnabled: true,
+    usesSurfaceShell: true,
+    theme: LAYLA_PROMPT_THEME,
+    haloColor: LAYLA_PROMPT_THEME.blobTopCore,
+    childActions: [],
+  },
+  {
+    id: 6,
+    ...getAppSetSlotLayout(6),
+    img: 'assets/app/coffee.png',
+    imageScale: 1,
+    lockGraphicScaleOnHover: true,
+    hoverExpandsToPill: true,
+    pillTitle: 'Monstera care',
+    pillSubtitle: 'Tips to keep it healthy',
+    pillCopyOffsetX: -10,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    preservePromotedImageScale: true,
+    homePromotedImageSize: ORB_BASE_SIZE,
+    theme: MONSTERA_PROMPT_THEME,
+    haloColor: MONSTERA_PROMPT_THEME.blobTopCore,
+    childActions: [],
+  },
+].map(enrichBubbleMetrics);
+
+const LENS_TITLES_BY_SLOT_ID = Object.freeze({
+  1: 'Shopping Lens',
+  2: 'Music Lens',
+  3: 'Golf Lens',
+  4: 'Influencer Lens',
+  5: 'Dog Walking Lens',
+  6: 'Nature Lens',
+  8: 'Travel Lens',
+  9: 'Hiking Lens',
+});
+
+const LENS_SUBTITLES_BY_SLOT_ID = Object.freeze({
+  1: 'Shopping finds',
+  2: 'Fresh mixes',
+  3: 'Better form',
+  4: 'Influencer mode on',
+  5: 'Routes and routines',
+  6: 'Nature care',
+  8: 'Local finds',
+  9: 'Trail guides',
+});
+
+const LENS_CAROUSEL_SEQUENCE = Object.freeze([8, 1, 5]);
+const LENS_CONCEPT_SEQUENCE = Object.freeze([8, 2, 6, 4, 1, 3, 5, 9]);
+
+const LENS_CONCEPT_MODE_BY_SLOT_ID = Object.freeze({
+  8: Object.freeze({
+    label: 'Commute',
+    icon: 'assets/mode icon/commute.png',
+  }),
+  2: Object.freeze({
+    label: 'Cooking',
+    icon: 'assets/mode icon/cook.png',
+  }),
+  6: Object.freeze({
+    label: 'Nutrition',
+    icon: 'assets/mode icon/nutrition.png',
+  }),
+  1: Object.freeze({
+    label: 'Shopping',
+    icon: 'assets/mode icon/shopping.png',
+  }),
+  4: Object.freeze({
+    label: 'Influencer',
+    icon: 'assets/mode icon/influencer.png',
+    onText: 'Influencer mode on',
+  }),
+  3: Object.freeze({
+    label: 'Golf',
+    icon: 'assets/mode icon/golf.png',
+  }),
+  5: Object.freeze({
+    label: 'Dog Walking',
+    icon: 'assets/mode icon/walk dog.png',
+  }),
+  9: Object.freeze({
+    label: 'Exploration',
+    icon: 'assets/mode icon/travel.png',
+  }),
+});
+
+const LENS_IMAGE_BY_SLOT_ID = Object.freeze({
+  1: 'assets/app/camera.png',
+  3: 'assets/app/golf.png',
+  4: 'assets/mode icon/influencer.png',
+});
+
+const LENS_THEME_BY_SLOT_ID = Object.freeze({
+  1: Object.freeze({
+    blobTopCore: 'rgb(205 238 190)',
+    blobTopEdge: 'rgb(154 210 152)',
+    blobBottomCore: 'rgb(244 252 232)',
+    blobBottomEdge: 'rgb(202 232 196)',
+  }),
+  3: Object.freeze({
+    blobTopCore: 'rgb(96 128 64)',
+    blobTopEdge: 'rgb(64 96 48)',
+    blobBottomCore: 'rgb(80 112 64)',
+    blobBottomEdge: 'rgb(32 48 32)',
+  }),
+  5: Object.freeze({
+    blobTopCore: 'rgb(255 219 156)',
+    blobTopEdge: 'rgb(255 181 104)',
+    blobBottomCore: 'rgb(255 245 222)',
+    blobBottomEdge: 'rgb(255 205 142)',
+  }),
+  8: Object.freeze({
+    blobTopCore: 'rgb(116 190 255)',
+    blobTopEdge: 'rgb(58 132 255)',
+    blobBottomCore: 'rgb(222 244 255)',
+    blobBottomEdge: 'rgb(116 186 235)',
+  }),
+});
+
+const LENS_BUBBLES_CONFIG = PROMPT_BUBBLES_CONFIG.map((bubble) => {
+  const title = LENS_TITLES_BY_SLOT_ID[bubble.id] || 'Topic';
+  const subtitle = LENS_SUBTITLES_BY_SLOT_ID[bubble.id] || 'Curated related content';
+  const img = LENS_IMAGE_BY_SLOT_ID[bubble.id] || bubble.img;
+  const theme = LENS_THEME_BY_SLOT_ID[bubble.id] || bubble.theme;
+  return {
+    ...bubble,
+    img,
+    label: title,
+    pillTitle: title,
+    pillSubtitle: subtitle,
+    theme,
+    haloColor: haloColorForTheme(theme),
+  };
+});
+
+const ROW_AGENT_OPTIONS = Object.freeze({
+  stars: Object.freeze({
+    id: 'stars',
+    label: 'Stars',
+    src: STARS_AGENT_ASSET,
+    theme: STARS_AGENT_THEME,
+  }),
+  gemini: getAiOrbIconOption('gemini'),
+  bixby: getAiOrbIconOption('bixby'),
+  perplexity: Object.freeze({
+    id: 'perplexity',
+    label: 'Perplexity',
+    src: PERPLEXITY_AGENT_ASSET,
+    theme: PERPLEXITY_AGENT_THEME,
+  }),
+});
+
+function getAppSetSlotLayout(slotId) {
+  const slot = APP_BUBBLES_CONFIG.find((bubble) => bubble.id === slotId);
+  if (!slot) {
+    return {
+      baseSize: APP_SET_BUBBLE_BASE_SIZE,
+      fieldMaxSize: BUBBLE_MAX_SIZE,
+      x: 0,
+      y: 0,
+      zIndex: 10,
+    };
+  }
+  return {
+    baseSize: slot.baseSize,
+    fieldMaxSize: slot.fieldMaxSize,
+    x: slot.x,
+    y: slot.y,
+    zIndex: slot.zIndex,
+  };
+}
+
 const AGENT_BUBBLES_CONFIG = [
   {
     id: 1,
-    baseSize: 120,
-    fieldMaxSize: 120,
-    x: 0,
-    y: -105,
-    zIndex: 20,
+    ...getAppSetSlotLayout(1),
+    label: 'Claude',
     img: CLAUDE_AGENT_ASSET,
-    fill: true,
-    imageScale: 0.82,
+    fill: false,
+    imageScale: 0.72,
+    hoverExpandsToPill: true,
+    pillTitle: 'Claude',
+    pillSubtitle: 'Reason deeply',
+    pillCopyOffsetX: -12,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
     theme: CLAUDE_AGENT_THEME,
     haloColor: CLAUDE_AGENT_THEME.blobTopCore,
     orbPromotionEnabled: true,
@@ -452,19 +980,15 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 3,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: -79,
-    y: -108,
-    zIndex: 15,
-    graphicKind: 'emoji',
-    emoji: '✈️',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(3),
+    label: 'Travel Agent',
+    img: BLUE_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Travel Agent',
     pillSubtitle: 'Plan trips',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: TRAVEL_AGENT_THEME,
@@ -474,19 +998,15 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 9,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: 31,
-    y: -165,
-    zIndex: 14,
-    graphicKind: 'emoji',
-    emoji: '📝',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(9),
+    label: 'Writing Agent',
+    img: YELLOW_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Writing Agent',
     pillSubtitle: 'Polish writing',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: WRITING_AGENT_THEME,
@@ -496,39 +1016,49 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 2,
-    x: -69,
-    y: -36,
-    zIndex: 13,
+    ...getAppSetSlotLayout(2),
+    label: 'ChatGPT',
     img: FIGMA_ASSETS.chatgpt,
-    fill: true,
-    haloColor: '#ffffff',
+    fill: false,
+    imageScale: 0.72,
+    hoverExpandsToPill: true,
+    pillTitle: 'ChatGPT',
+    pillSubtitle: 'Ask anything',
+    pillCopyOffsetX: -12,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: CHATGPT_AGENT_THEME,
+    haloColor: CHATGPT_AGENT_THEME.blobTopCore,
     childActions: [],
   },
   {
     id: 8,
-    x: 69,
-    y: -36,
-    zIndex: 14,
+    ...getAppSetSlotLayout(8),
+    label: 'Gemini',
     img: FIGMA_ASSETS.gemini,
-    fill: true,
-    haloColor: '#A391FB',
+    fill: false,
+    imageScale: 0.72,
+    hoverExpandsToPill: true,
+    pillTitle: 'Gemini',
+    pillSubtitle: 'Search and reason',
+    pillCopyOffsetX: -12,
+    pillTextLeftPadding: 2,
+    pillTextRightPadding: 18,
+    theme: GEMINI_AGENT_THEME,
+    haloColor: GEMINI_AGENT_THEME.blobTopCore,
     childActions: [],
   },
   {
     id: 5,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: 79,
-    y: -108,
-    zIndex: 16,
-    graphicKind: 'emoji',
-    emoji: '🏃',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(5),
+    label: 'Fitness Agent',
+    img: GREEN_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Fitness Agent',
     pillSubtitle: 'Train smart',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: FITNESS_AGENT_THEME,
@@ -538,23 +1068,63 @@ const AGENT_BUBBLES_CONFIG = [
   },
   {
     id: 6,
-    baseSize: 80,
-    fieldMaxSize: 80,
-    x: -31,
-    y: -165,
-    zIndex: 10,
-    graphicKind: 'emoji',
-    emoji: '💸',
-    emojiScale: 1,
-    homeEmojiScale: 1.2,
+    ...getAppSetSlotLayout(6),
+    label: 'Budget Agent',
+    img: ORANGE_AGENT_ASSET,
+    imageScale: 0.72,
+    disableCircularImageMask: true,
     hoverExpandsToPill: true,
     pillTitle: 'Budget Agent',
     pillSubtitle: 'Track spending',
-    pillCopyOffsetX: -8,
+    pillCopyOffsetX: -12,
     pillTextLeftPadding: 2,
     pillTextRightPadding: 18,
     theme: BUDGET_AGENT_THEME,
     haloColor: BUDGET_AGENT_THEME.blobTopCore,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+].map(enrichBubbleMetrics);
+
+const INTERRUPT_BUBBLES_CONFIG = [
+  {
+    id: 1,
+    ...getAppSetSlotLayout(1),
+    label: 'Pause',
+    graphicKind: 'interrupt-control',
+    controlIcon: 'pause-fill',
+    img: PAUSE_CONTROL_ASSET,
+    controlAction: 'pause-session',
+    controlToggleMode: 'pause-play',
+    theme: INTERRUPT_WHITE_THEME,
+    haloColor: '#ffffff',
+    usesSurfaceShell: true,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+  {
+    id: 2,
+    ...getAppSetSlotLayout(2),
+    label: 'End',
+    graphicKind: 'interrupt-control',
+    controlIcon: 'end-square',
+    img: END_CONTROL_ASSET,
+    theme: INTERRUPT_RED_THEME,
+    haloColor: INTERRUPT_RED_THEME.blobTopCore,
+    usesSurfaceShell: true,
+    orbPromotionEnabled: true,
+    childActions: [],
+  },
+  {
+    id: 8,
+    ...getAppSetSlotLayout(8),
+    label: 'Add',
+    graphicKind: 'interrupt-control',
+    controlIcon: 'plus',
+    img: PLUS_CONTROL_ASSET,
+    theme: BUBBLE_HOME_SLOT_THEMES[8],
+    haloColor: '#A391FB',
+    usesSurfaceShell: true,
     orbPromotionEnabled: true,
     childActions: [],
   },
@@ -565,13 +1135,64 @@ const BUBBLE_SET_DEFINITIONS = Object.freeze([
     id: 'app',
     label: 'App',
     defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
     slots: APP_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: 'prompt',
+    label: 'Prompt',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: PROMPT_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: LENS_SET_ID,
+    label: 'Lens',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: LENS_EXPAND_SET_ID,
+    label: 'Lens - Expand',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: LENS_CONCEPT_SET_ID,
+    label: 'Lens - Concept',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: LENS_FOCUS_SET_ID,
+    label: 'Lens - Focus',
+    defaultBaseSize: APP_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: LENS_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: ROW_SET_ID,
+    label: 'Row',
+    defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: ROW_SET_DEFAULT_AGENT_ID,
+    slots: [],
   }),
   Object.freeze({
     id: 'agent',
     label: 'Agent',
     defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
     slots: AGENT_BUBBLES_CONFIG,
+  }),
+  Object.freeze({
+    id: 'interrupt',
+    label: 'Interrupt',
+    defaultBaseSize: AGENT_SET_BUBBLE_BASE_SIZE,
+    defaultHomeAgentId: PROMPT_SET_DEFAULT_AGENT_ID,
+    slots: INTERRUPT_BUBBLES_CONFIG,
   }),
 ]);
 
@@ -601,6 +1222,7 @@ function createAgentOrbContent(id) {
     kind: 'agent-orb',
     contentId: `agent-orb:${option.id}`,
     sourceSlotId: null,
+    label: option.label,
     iconId: option.id,
     img: option.src,
     alt: `${option.label} orb icon`,
@@ -614,16 +1236,112 @@ function createAgentOrbContent(id) {
   };
 }
 
+function getRowAgentOption(id) {
+  const key = Object.prototype.hasOwnProperty.call(ROW_AGENT_OPTIONS, id)
+    ? id
+    : getDefaultHomeAgentIdForSet(ROW_SET_ID);
+  return ROW_AGENT_OPTIONS[key] || ROW_AGENT_OPTIONS[ROW_SET_DEFAULT_AGENT_ID];
+}
+
+function getActiveRowAgentSequence() {
+  return state.rowStarsHidden ? ROW_AGENT_SEQUENCE_WITHOUT_STARS : ROW_AGENT_SEQUENCE;
+}
+
+function getSafeRowAgentId(id = state.orbAgentId) {
+  const sequence = getActiveRowAgentSequence();
+  return sequence.includes(id) ? id : sequence[0];
+}
+
+function createRowAgentOrbContent(id) {
+  const option = getRowAgentOption(id);
+  return {
+    kind: 'agent-orb',
+    contentId: `row-agent:${option.id}`,
+    sourceSlotId: null,
+    label: option.label,
+    iconId: option.id,
+    img: option.src,
+    alt: `${option.label} orb icon`,
+    fill: false,
+    imageScale: 0.72,
+    fieldImageScale: 0.96,
+    theme: option.theme,
+    haloColor: fieldHaloColorForAgent(option.id, option.theme),
+    orbPromotionEnabled: false,
+    childActions: [],
+  };
+}
+
+function isLensBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_SET_ID
+    || setId === LENS_EXPAND_SET_ID
+    || setId === LENS_FOCUS_SET_ID
+    || setId === LENS_CONCEPT_SET_ID;
+}
+
+function isRowBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === ROW_SET_ID;
+}
+
+function isLensExpandBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_EXPAND_SET_ID;
+}
+
+function isLensConceptBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_CONCEPT_SET_ID;
+}
+
+function isLensFocusBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === LENS_FOCUS_SET_ID;
+}
+
+function lensShimmerModeForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (isLensExpandBubbleSet(setId) || isLensConceptBubbleSet(setId)) return 'expand';
+  if (isLensFocusBubbleSet(setId)) return 'focus';
+  return 'slice';
+}
+
+function lensShimmerDurationForMode(mode = 'slice') {
+  if (mode === 'expand') return LENS_EXPAND_SHIMMER_DURATION_MS;
+  if (mode === 'focus') return LENS_FOCUS_SHIMMER_DURATION_MS;
+  return LENS_SHIMMER_DURATION_MS;
+}
+
+function createHomeOrbAgentContentForSet(agentId, setId = state.activeSetId) {
+  if (isRowBubbleSet(setId)) return createRowAgentOrbContent(agentId);
+  const content = createAgentOrbContent(agentId);
+  if (!isLensBubbleSet(setId) || agentId !== PROMPT_SET_DEFAULT_AGENT_ID) return content;
+  return {
+    ...content,
+    img: LENS_HOME_ORB_ASSET,
+    alt: 'Lens orb icon',
+  };
+}
+
+function hasCustomAgentOrbImage(content) {
+  if (content?.kind !== 'agent-orb') return false;
+  const defaultSrc = getAiOrbIconOption(content.iconId)?.src || '';
+  return Boolean(content.img) && content.img !== defaultSrc;
+}
+
 function createDemotedOrbSlotContent(homeOrbContent) {
   if (Number.isFinite(homeOrbContent?.sourceSlotId)) {
     const sourceSlot = findBubbleSlotById(homeOrbContent.sourceSlotId, state.activeSetId);
     if (sourceSlot) return createBaseSlotContent(sourceSlot);
   }
+  const usesSurfaceShell = Boolean(
+    homeOrbContent?.usesSurfaceShell
+    || (state.activeSetId === 'agent'
+      && homeOrbContent?.kind === 'agent-orb'
+      && homeOrbContent?.iconId === 'bixby')
+  );
   return {
     kind: 'demoted-orb-bubble',
     contentId: `demoted:${homeOrbContent.contentId}`,
     sourceSlotId: null,
+    label: homeOrbContent.label || '',
     graphicKind: homeOrbContent.graphicKind || 'image',
+    controlAction: homeOrbContent.controlAction || '',
     emoji: homeOrbContent.emoji || '',
     emojiScale: homeOrbContent.emojiScale ?? 1,
     homeEmojiScale: homeOrbContent.homeEmojiScale ?? 1,
@@ -631,8 +1349,11 @@ function createDemotedOrbSlotContent(homeOrbContent) {
     alt: homeOrbContent.alt || '',
     fill: false,
     imageScale: homeOrbContent.fieldImageScale ?? 0.96,
+    disableCircularImageMask: Boolean(homeOrbContent.disableCircularImageMask),
     isPill: false,
     hoverExpandsToPill: false,
+    controlIcon: homeOrbContent.controlIcon || '',
+    usesSurfaceShell,
     pillTitle: '',
     pillSubtitle: '',
     pillTrailingIcon: '',
@@ -644,26 +1365,56 @@ function createDemotedOrbSlotContent(homeOrbContent) {
   };
 }
 
+let interruptSessionPaused = false;
+
+function resolveInterruptPrimaryControlState(slot) {
+  if (slot?.controlToggleMode !== 'pause-play') return null;
+  if (interruptSessionPaused) {
+    return {
+      label: 'Play',
+      controlIcon: 'play-fill',
+      img: PLAY_CONTROL_ASSET,
+      controlAction: 'play-session',
+    };
+  }
+  return {
+    label: 'Pause',
+    controlIcon: 'pause-fill',
+    img: PAUSE_CONTROL_ASSET,
+    controlAction: 'pause-session',
+  };
+}
+
 function createBaseSlotContent(slot, setId = state.activeSetId) {
   const slotTheme = slot.theme || bubbleSlotThemeForId(slot.id);
+  const conceptMode = isLensConceptBubbleSet(setId) ? LENS_CONCEPT_MODE_BY_SLOT_ID[slot.id] : null;
+  const conceptTitle = conceptMode ? `${conceptMode.label} Lens` : '';
+  const resolvedPrimaryControl = setId === 'interrupt' && slot?.id === 1
+    ? resolveInterruptPrimaryControlState(slot)
+    : null;
   return {
     kind: 'slot-bubble',
     contentId: `slot:${slot.id}`,
     sourceSlotId: slot.id,
+    label: conceptTitle || resolvedPrimaryControl?.label || slot.label || slot.pillTitle || '',
     baseSize: slot.baseSize ?? getDefaultBubbleBaseSizeForSet(setId),
     fieldMaxSize: slot.fieldMaxSize ?? BUBBLE_MAX_SIZE,
     graphicKind: slot.graphicKind || 'image',
+    controlAction: resolvedPrimaryControl?.controlAction || slot.controlAction || '',
+    controlIcon: resolvedPrimaryControl?.controlIcon || slot.controlIcon || '',
     emoji: slot.emoji || '',
     emojiScale: slot.emojiScale ?? 1,
     homeEmojiScale: slot.homeEmojiScale ?? 1,
-    img: slot.img,
+    img: resolvedPrimaryControl?.img || slot.img,
     alt: '',
     fill: Boolean(slot.fill),
     imageScale: slot.imageScale ?? (slot.fill ? 1 : 0.72),
+    disableCircularImageMask: Boolean(slot.disableCircularImageMask),
     isPill: Boolean(slot.isPill),
     hoverExpandsToPill: Boolean(slot.hoverExpandsToPill),
-    pillTitle: slot.pillTitle || '',
-    pillSubtitle: slot.pillSubtitle || '',
+    usesSurfaceShell: Boolean(slot.usesSurfaceShell),
+    pillTitle: conceptTitle || slot.pillTitle || '',
+    pillSubtitle: conceptMode ? `${conceptMode.label} mode` : (slot.pillSubtitle || ''),
     pillTrailingIcon: slot.pillTrailingIcon || '',
     pillTrailingIconColor: slot.pillTrailingIconColor || '',
     pillTrailingIconSize: slot.pillTrailingIconSize,
@@ -674,6 +1425,8 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     pillActionGap: slot.pillActionGap,
     imageOutlineColor: slot.imageOutlineColor,
     imageOutlineWidth: slot.imageOutlineWidth,
+    preservePromotedImageScale: Boolean(slot.preservePromotedImageScale),
+    homePromotedImageSize: slot.homePromotedImageSize,
     subIconKind: slot.subIconKind,
     subIcon: slot.subIcon,
     subIconSize: slot.subIconSize,
@@ -681,6 +1434,9 @@ function createBaseSlotContent(slot, setId = state.activeSetId) {
     subIconOffsetY: slot.subIconOffsetY,
     childActions: slot.childActions || [],
     childLayout: slot.childLayout || null,
+    lensModeIcon: conceptMode?.icon || slot.lensModeIcon || '',
+    lensModeLabel: conceptMode?.label || slot.lensModeLabel || '',
+    lensModeOnText: conceptMode?.onText || slot.lensModeOnText || '',
     haloColor: slot.haloColor || haloColorForTheme(slotTheme),
     theme: slotTheme,
     hoverShadowMode: 'default',
@@ -692,12 +1448,35 @@ function getBubbleSetDefinition(setId = DEFAULT_BUBBLE_SET_ID) {
   return BUBBLE_SET_DEFINITIONS.find((setDef) => setDef.id === setId) || BUBBLE_SET_DEFINITIONS[0];
 }
 
+function getDefaultHomeAgentIdForSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (isRowBubbleSet(setId) && state?.rowStarsHidden) return ROW_SET_DEFAULT_AGENT_ID_WITHOUT_STARS;
+  return getBubbleSetDefinition(setId)?.defaultHomeAgentId || BUBBLE_HOME_DEFAULT_AGENT_ID;
+}
+
 function getBubblesConfigForSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubbleSetDefinition(setId)?.slots || [];
 }
 
 function getDefaultBubbleBaseSizeForSet(setId = DEFAULT_BUBBLE_SET_ID) {
   return getBubbleSetDefinition(setId)?.defaultBaseSize || BUBBLE_BASE_SIZE;
+}
+
+function isAgentStyleBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === 'agent' || setId === 'interrupt';
+}
+
+function isPromptLikeBubbleSet(setId = DEFAULT_BUBBLE_SET_ID) {
+  return setId === 'prompt' || isLensBubbleSet(setId);
+}
+
+function getBubbleSetControlDefaults(setId = DEFAULT_BUBBLE_SET_ID) {
+  return { viewportPanEnabled: true, canvaslessEnabled: true };
+}
+
+function getBubbleSetSequence(setId = DEFAULT_BUBBLE_SET_ID) {
+  if (isLensConceptBubbleSet(setId)) return LENS_CONCEPT_SEQUENCE;
+  if (isLensBubbleSet(setId)) return LENS_CAROUSEL_SEQUENCE;
+  return getBubblesConfigForSet(setId).map((bubble) => bubble.id);
 }
 
 function findBubbleSlotById(slotId, setId = DEFAULT_BUBBLE_SET_ID) {
@@ -713,6 +1492,9 @@ function createInitialSlotContentMaps() {
 }
 
 function getCurrentSlotContent(slotId, setId = state.activeSetId) {
+  if (setId === 'interrupt' && slotId === 1) {
+    return createBaseSlotContent(findBubbleSlotById(slotId, setId), setId);
+  }
   const contentMap = state.slotContentBySetId[setId] || {};
   return contentMap[slotId] || createBaseSlotContent(findBubbleSlotById(slotId, setId), setId);
 }
@@ -733,6 +1515,21 @@ function resolveRenderedBubble(slot, setId = state.activeSetId) {
 
 const state = {
   activeSetId: DEFAULT_BUBBLE_SET_ID,
+  ...getBubbleSetControlDefaults(DEFAULT_BUBBLE_SET_ID),
+  backgroundImageEnabled: true,
+  backgroundImage: {
+    src: 'assets/bg/white wall.jpg',
+    objectUrl: '',
+    name: 'white wall image',
+  },
+  backgroundImageAlpha: 0.8,
+  backgroundVideo: null,
+  backgroundVideoPaused: false,
+  backgroundVideoProgress: 0,
+  backgroundVideoAlpha: 0.8,
+  backgroundVideoX: 0,
+  canvasX: 0,
+  canvasY: 0,
   isPressed: false,
   hoveredBubble: null,
   hoveredChildBubble: null,
@@ -745,6 +1542,7 @@ const state = {
     x: ORB_CENTER_X,
     y: ORB_CENTER_Y,
   },
+  lastPointerClient: null,
   pointerMovedSincePress: false,
   lockedExpandedPillId: null,
   lockedExpandedPillScale: null,
@@ -755,14 +1553,43 @@ const state = {
   openMotionUntil: 0,
   closeMotionUntil: 0,
   orbAgentId: BUBBLE_HOME_DEFAULT_AGENT_ID,
+  homeOrbVisible: true,
   homeOrbContent: createAgentOrbContent(BUBBLE_HOME_DEFAULT_AGENT_ID),
+  promptHomeThinking: false,
+  promptHomeThinkingAnimating: false,
+  promptHomeThinkingTimer: null,
+  rowStarsHidden: false,
+  hideLensSwitchContent: false,
   slotContentBySetId: createInitialSlotContentMaps(),
   swapTransition: null,
   swapResetPending: false,
   panSnapPending: false,
   pendingDemotedSlotSwap: null,
+  promotedHandoffGhost: null,
+  rowTransition: null,
+  rowHandoffUntil: 0,
+  agentSetReturnTimer: null,
+  agentSetReturnTriggered: false,
+  agentSetReturnPhase: '',
+  lensShimmerUntil: 0,
+  lensShimmerMode: 'slice',
   lastScene: null,
   renderQueued: false,
+  uiChromeHidden: false,
+};
+
+const bubbleHomeStreamState = {
+  streamToken: 0,
+  currentText: '',
+  currentCursor: null,
+  idleLoopToken: 0,
+  idleLoopActive: false,
+  idleLoopTimer: null,
+  promptLoopTimer: null,
+  textSwapTimer: null,
+  promptPhraseIndex: 0,
+  fadeTimer: null,
+  lensToastTimer: null,
 };
 
 let previousHoveredId = null;
@@ -772,22 +1599,71 @@ let syncedChildSelectionId = null;
 const childSelectionMotionTimers = new Map();
 
 const refs = {
+  stage: document.querySelector('[data-bubble2-stage]'),
   shell: document.querySelector('[data-bubble2-shell]'),
+  controlPanel: document.querySelector('[data-bubble2-control-panel]'),
   setPanel: document.querySelector('[data-bubble2-set-panel]'),
+  rowSettings: document.querySelector('[data-bubble2-row-settings]'),
+  rowHideStarsToggle: document.querySelector('[data-bubble2-row-hide-stars-toggle]'),
+  lensConceptSettings: document.querySelector('[data-bubble2-lens-concept-settings]'),
+  lensSwitchHideContentToggle: document.querySelector('[data-bubble2-lens-switch-hide-content-toggle]'),
+  orbReset: document.querySelector('[data-bubble2-orb-reset]'),
+  viewportPanToggle: document.querySelector('[data-bubble2-viewport-pan-toggle]'),
+  handToggle: document.querySelector('[data-bubble2-hand-toggle]'),
+  handState: document.querySelector('[data-bubble2-hand-state]'),
+  handRatio: document.querySelector('[data-bubble2-hand-ratio]'),
+  handRatioState: document.querySelector('[data-bubble2-hand-ratio-state]'),
+  canvaslessToggle: document.querySelector('[data-bubble2-canvasless-toggle]'),
+  canvasX: document.querySelector('[data-bubble2-canvas-x]'),
+  canvasXState: document.querySelector('[data-bubble2-canvas-x-state]'),
+  canvasY: document.querySelector('[data-bubble2-canvas-y]'),
+  canvasYState: document.querySelector('[data-bubble2-canvas-y-state]'),
+  homeOrbToggle: document.querySelector('[data-bubble2-home-orb-toggle]'),
+  bgImage: document.querySelector('[data-bubble2-bg-image]'),
+  bgImageToggle: document.querySelector('[data-bubble2-bg-image-toggle]'),
+  bgImageUpload: document.querySelector('[data-bubble2-bg-image-upload]'),
+  bgImageReset: document.querySelector('[data-bubble2-bg-image-reset]'),
+  bgImageState: document.querySelector('[data-bubble2-bg-image-state]'),
+  bgImageAlpha: document.querySelector('[data-bubble2-bg-image-alpha]'),
+  bgVideo: document.querySelector('[data-bubble2-bg-video]'),
+  bgVideoUpload: document.querySelector('[data-bubble2-bg-video-upload]'),
+  bgVideoReset: document.querySelector('[data-bubble2-bg-video-reset]'),
+  bgVideoState: document.querySelector('[data-bubble2-bg-video-state]'),
+  bgVideoControls: document.querySelector('[data-bubble2-bg-video-controls]'),
+  bgVideoPlayToggle: document.querySelector('[data-bubble2-bg-video-play-toggle]'),
+  bgVideoProgress: document.querySelector('[data-bubble2-bg-video-progress]'),
+  bgVideoAlpha: document.querySelector('[data-bubble2-bg-video-alpha]'),
+  bgVideoX: document.querySelector('[data-bubble2-bg-video-x]'),
+  canvasBanner: document.querySelector('[data-bubble2-canvas-banner]'),
+  lensToast: document.querySelector('[data-bubble2-lens-toast]'),
   panLayer: document.querySelector('[data-bubble2-pan-layer]'),
   orb: null,
   orbVisual: null,
+  orbStream: null,
+  orbStreamIcon: null,
+  orbStreamText: null,
+  rowLayer: null,
+  rowAgentNodes: new Map(),
   swapLayer: null,
   bubbleNodes: new Map(),
   childNodes: new Map(),
 };
 
-init();
+void init();
 
-function init() {
-  if (!refs.shell || !refs.panLayer) return;
+async function init() {
+  if (!refs.stage || !refs.shell || !refs.panLayer) return;
 
+  await hydrateStoredBackgroundMedia();
   syncSetSwitcherUi();
+  syncRowSettingsUi();
+  syncLensConceptSettingsUi();
+  syncViewportPanToggleUi();
+  syncCanvaslessUi();
+  syncCanvasPositionUi();
+  syncHomeOrbToggleUi();
+  syncBackgroundImageUi();
+  syncBackgroundVideoUi();
   buildScene();
   updateMeasuredChildChipWidths();
   if (document.fonts?.ready) {
@@ -801,7 +1677,16 @@ function init() {
   }
   bindEvents();
   render();
-  // initHandTracking();
+  initHandTracking({
+    toggle: refs.handToggle,
+    status: refs.handState,
+    stage: refs.stage,
+    shell: refs.shell,
+    controlPanel: refs.controlPanel,
+    movementRatioInput: refs.handRatio,
+    movementRatioState: refs.handRatioState,
+  });
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
 }
 
 function buildScene() {
@@ -811,6 +1696,11 @@ function buildScene() {
   refs.childNodes.clear();
   refs.orb = null;
   refs.orbVisual = null;
+  refs.orbStream = null;
+  refs.orbStreamIcon = null;
+  refs.orbStreamText = null;
+  refs.rowLayer = null;
+  refs.rowAgentNodes.clear();
   refs.swapLayer = null;
   syncedChildSelectionParentId = null;
   syncedChildSelectionId = null;
@@ -832,7 +1722,14 @@ function buildScene() {
 
   refs.orb = createOrbNode();
   refs.orbVisual = refs.orb.querySelector('.bubble2-orb-visual');
+  refs.orbStream = refs.orb.querySelector('.g-thinking-orb-stream');
+  refs.orbStreamIcon = refs.orb.querySelector('[data-thinking-orb-stream-icon]');
+  refs.orbStreamText = refs.orb.querySelector('.g-thinking-orb-stream-text');
   fragment.appendChild(refs.orb);
+  if (isRowBubbleSet(state.activeSetId)) {
+    refs.rowLayer = createRowCarouselLayer();
+    fragment.appendChild(refs.rowLayer);
+  }
   refs.swapLayer = document.createElement('div');
   refs.swapLayer.className = 'bubble2-swap-layer';
   refs.panLayer.appendChild(fragment);
@@ -933,13 +1830,17 @@ function bubbleContentSignature(bubble) {
   return JSON.stringify({
     contentId: bubble.contentId || '',
     graphicKind: bubble.graphicKind || 'image',
+    controlAction: bubble.controlAction || '',
     emoji: bubble.emoji || '',
     emojiScale: bubble.emojiScale ?? '',
     img: bubble.img || '',
     fill: Boolean(bubble.fill),
     imageScale: bubble.imageScale ?? '',
+    disableCircularImageMask: Boolean(bubble.disableCircularImageMask),
     isPill: Boolean(bubble.isPill),
     hoverExpandsToPill: Boolean(bubble.hoverExpandsToPill),
+    usesSurfaceShell: Boolean(bubble.usesSurfaceShell),
+    controlIcon: bubble.controlIcon || '',
     pillTitle: bubble.pillTitle || '',
     pillSubtitle: bubble.pillSubtitle || '',
     pillTrailingIcon: bubble.pillTrailingIcon || '',
@@ -963,12 +1864,13 @@ function syncBubbleNodeContent(node, bubble) {
   node.inner.appendChild(visual);
 
   const surface = document.createElement('div');
-  surface.className = `bubble2-surface${bubble.hoverExpandsToPill ? ' g-stage-selected-host' : ''}`;
+  surface.className = `bubble2-surface${(bubble.hoverExpandsToPill || bubble.usesSurfaceShell) ? ' g-stage-selected-host' : ''}`;
   let surfaceChrome = null;
+  let surfaceShell = null;
 
-  if (!bubble.isPill && !bubble.hoverExpandsToPill) {
+  if (!bubble.isPill && !bubble.hoverExpandsToPill && !bubble.usesSurfaceShell) {
     const hoverShell = document.createElement('div');
-    hoverShell.className = 'bubble2-hover-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
+    hoverShell.className = 'bubble2-hover-shell';
     hoverShell.setAttribute('aria-hidden', 'true');
     hoverShell.innerHTML = renderBubbleOrbShellMarkup({ includeCenter: false });
     node.inner.appendChild(hoverShell);
@@ -977,13 +1879,22 @@ function syncBubbleNodeContent(node, bubble) {
     node.hoverShell = null;
   }
 
-  if (bubble.hoverExpandsToPill) {
+  if (usesPillInteraction || bubble.usesSurfaceShell) {
+    surfaceShell = document.createElement('div');
+    surfaceShell.className = 'bubble2-surface-shell';
+    surfaceShell.setAttribute('aria-hidden', 'true');
+    surfaceShell.innerHTML = renderBubbleOrbShellMarkup({ includeCenter: false });
+    surface.appendChild(surfaceShell);
+  }
+
+  if (bubble.hoverExpandsToPill || bubble.usesSurfaceShell) {
     surfaceChrome = createHtmlNode(renderCelestialSelectionChrome('bottom', 'bubble2-surface-selection'));
     surface.appendChild(surfaceChrome);
   }
 
   const iconWrap = document.createElement('div');
   iconWrap.className = 'bubble2-icon-wrap';
+  iconWrap.classList.toggle('is-uncropped', Boolean(bubble.disableCircularImageMask));
   if (bubble.imageOutlineColor) {
     iconWrap.classList.add('has-inner-outline');
     iconWrap.style.setProperty('--bubble-image-outline-color', bubble.imageOutlineColor);
@@ -1061,6 +1972,7 @@ function syncBubbleNodeContent(node, bubble) {
   node.leadingGroup = leadingGroup;
   node.pillCopy = pillCopy;
   node.subIcon = subIcon;
+  node.surfaceShell = surfaceShell;
   node.surfaceChrome = surfaceChrome;
 }
 
@@ -1105,12 +2017,24 @@ function createChildNode(parentBubble, action) {
 
 function createOrbNode() {
   const button = document.createElement('button');
-  button.className = 'bubble2-orb';
+  button.className = `bubble2-orb${state.activeSetId === 'interrupt' ? ' is-interrupt-home-orb' : ''}`;
   button.type = 'button';
   button.setAttribute('aria-label', 'Press and drag to open the bubble field');
 
+  button.insertAdjacentHTML('beforeend', renderThinkingOrbStreamMarkup());
+
+  if (state.activeSetId === 'interrupt') {
+    refs.orbStream = button.querySelector('.g-thinking-orb-stream');
+    refs.orbStreamIcon = button.querySelector('[data-thinking-orb-stream-icon]');
+    refs.orbStreamText = button.querySelector('.g-thinking-orb-stream-text');
+    refs.orbStream.classList.remove('hidden');
+    syncBubbleHomeThinkingPillText(interruptSessionPaused ? 'Session paused' : BUBBLE_HOME_INTERRUPT_THINKING_TEXT, button);
+    syncBubbleHomeThinkingPillIcon(state.homeOrbContent, button);
+    return button;
+  }
+
   const visual = document.createElement('div');
-  visual.className = 'bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected';
+  visual.className = 'bubble2-orb-visual';
 
   visual.innerHTML = renderBubbleOrbShellMarkup();
   button.appendChild(visual);
@@ -1119,16 +2043,352 @@ function createOrbNode() {
   return button;
 }
 
+function createRowCarouselLayer() {
+  const layer = document.createElement('div');
+  layer.className = 'bubble2-row-carousel';
+  layer.setAttribute('aria-hidden', 'true');
+  ROW_AGENT_SEQUENCE.forEach((agentId) => {
+    const option = getRowAgentOption(agentId);
+    const item = document.createElement('div');
+    item.className = `bubble2-row-agent${option.id === 'perplexity' ? ' is-perplexity' : ''}`;
+    item.dataset.rowAgentId = option.id;
+    const image = document.createElement('img');
+    image.className = 'bubble2-row-agent-image';
+    image.src = option.src;
+    image.alt = `${option.label} orb icon`;
+    image.draggable = false;
+    item.appendChild(image);
+    layer.appendChild(item);
+    refs.rowAgentNodes.set(option.id, { root: item, image });
+  });
+  return layer;
+}
+
+function removeBubbleHomeStreamCursor() {
+  if (!bubbleHomeStreamState.currentCursor) return;
+  bubbleHomeStreamState.currentCursor.remove();
+  bubbleHomeStreamState.currentCursor = null;
+}
+
+function clearBubbleHomeStreamTimers() {
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  if (bubbleHomeStreamState.promptLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.promptLoopTimer);
+    bubbleHomeStreamState.promptLoopTimer = null;
+  }
+  if (bubbleHomeStreamState.textSwapTimer) {
+    window.clearTimeout(bubbleHomeStreamState.textSwapTimer);
+    bubbleHomeStreamState.textSwapTimer = null;
+  }
+  if (bubbleHomeStreamState.fadeTimer) {
+    window.clearTimeout(bubbleHomeStreamState.fadeTimer);
+    bubbleHomeStreamState.fadeTimer = null;
+  }
+}
+
+function setBubbleHomeStreamVisible(visible) {
+  if (!refs.orbStream) return;
+  if (visible && bubbleHomeStreamState.fadeTimer) {
+    window.clearTimeout(bubbleHomeStreamState.fadeTimer);
+    bubbleHomeStreamState.fadeTimer = null;
+  }
+  setThinkingOrbStreamVisible(refs.orbStream, visible);
+}
+
+function clearBubbleHomeStream() {
+  removeBubbleHomeStreamCursor();
+  bubbleHomeStreamState.currentText = '';
+  bubbleHomeStreamState.promptPhraseIndex = 0;
+  refs.orbStream?.classList.remove('is-text-transitioning');
+  if (refs.orbStreamText) refs.orbStreamText.textContent = '';
+}
+
+function stopBubbleHomeStream() {
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  clearBubbleHomeStreamTimers();
+  bubbleHomeStreamState.streamToken += 1;
+  clearBubbleHomeStream();
+  setBubbleHomeStreamVisible(false);
+}
+
+function clearLensToast() {
+  if (bubbleHomeStreamState.lensToastTimer) {
+    window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
+    bubbleHomeStreamState.lensToastTimer = null;
+  }
+  refs.lensToast?.classList.add('is-hidden');
+  refs.lensToast?.classList.remove('is-above-orb');
+  refs.lensToast?.classList.remove('is-concept-toast');
+}
+
+function showLensToast(text, options = {}) {
+  if (!refs.lensToast) return;
+  if (bubbleHomeStreamState.lensToastTimer) {
+    window.clearTimeout(bubbleHomeStreamState.lensToastTimer);
+    bubbleHomeStreamState.lensToastTimer = null;
+  }
+  const label = text || 'Lens On';
+  if (options.iconSrc) {
+    const icon = document.createElement('img');
+    icon.className = 'bubble2-lens-toast-icon';
+    icon.src = options.iconSrc;
+    icon.alt = options.iconAlt || '';
+    icon.draggable = false;
+    const copy = document.createElement('span');
+    copy.className = 'bubble2-lens-toast-copy';
+    copy.textContent = label;
+    refs.lensToast.replaceChildren(icon, copy);
+  } else {
+    refs.lensToast.textContent = label;
+  }
+  refs.lensToast.classList.toggle('is-above-orb', options.placement === 'above-orb');
+  refs.lensToast.classList.toggle('is-concept-toast', options.placement === 'concept-bottom');
+  refs.lensToast.classList.remove('is-hidden');
+  bubbleHomeStreamState.lensToastTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.lensToastTimer = null;
+    refs.lensToast?.classList.add('is-hidden');
+  }, 2000);
+}
+
+function getLensOnText(content) {
+  const modeOnText = String(content?.lensModeOnText || '').trim();
+  if (modeOnText) return modeOnText;
+  const lensName = String(content?.pillTitle || content?.label || 'Lens').trim() || 'Lens';
+  return `${lensName.replace(/\s+lens$/i, ' Lens')} On`;
+}
+
+function startLensFeedback(content, now = performance.now(), options = {}) {
+  const lensTheme = content?.theme || {};
+  const lensAccent = content?.haloColor
+    || lensTheme.blobTopCore
+    || lensTheme.blobBottomCore;
+  const lensAccentSecondary = lensTheme.blobBottomCore
+    || lensTheme.blobTopEdge
+    || lensAccent;
+  const shimmerMode = ['expand', 'focus'].includes(options.mode) ? options.mode : 'slice';
+  state.lensShimmerMode = shimmerMode;
+  state.lensShimmerUntil = now + lensShimmerDurationForMode(shimmerMode);
+  if (refs.shell) {
+    refs.shell.classList.remove('is-lens-firing');
+    refs.shell.classList.remove('is-lens-expand-firing');
+    refs.shell.classList.remove('is-lens-focus-firing');
+    refs.shell.classList.remove('is-lens-concept-firing');
+    if (lensAccent) refs.shell.style.setProperty('--bubble2-lens-accent', lensAccent);
+    if (lensAccentSecondary) refs.shell.style.setProperty('--bubble2-lens-accent-secondary', lensAccentSecondary);
+    void refs.shell.offsetWidth;
+  }
+  if (state.hideLensSwitchContent && isLensConceptBubbleSet(state.activeSetId)) {
+    clearLensToast();
+  } else {
+    showLensToast(getLensOnText(content), {
+      ...options,
+      iconSrc: options.iconSrc || content?.lensModeIcon || '',
+      iconAlt: options.iconAlt || (content?.lensModeLabel ? `${content.lensModeLabel} mode icon` : ''),
+    });
+  }
+  scheduleMotionPhaseRender(state.lensShimmerUntil);
+}
+
+function clearPromptHomeThinkingTimer() {
+  if (state.promptHomeThinkingTimer) {
+    window.clearTimeout(state.promptHomeThinkingTimer);
+    state.promptHomeThinkingTimer = null;
+  }
+}
+
+function stopPromptHomeThinking() {
+  state.promptHomeThinking = false;
+  state.promptHomeThinkingAnimating = false;
+  clearPromptHomeThinkingTimer();
+  if (state.activeSetId !== 'interrupt') stopBubbleHomeStream();
+}
+
+function activatePromptHomeThinking() {
+  const phrases = getPromptThinkingPhrases(state.homeOrbContent);
+  state.promptHomeThinking = true;
+  state.promptHomeThinkingAnimating = true;
+  clearPromptHomeThinkingTimer();
+  syncBubbleHomeThinkingPillIcon(state.homeOrbContent);
+  bubbleHomeStreamState.promptPhraseIndex = 0;
+  void showPersistentBubbleHomeStreamText(phrases[0] || BUBBLE_HOME_PROMPT_THINKING_TEXT, { animate: false });
+  scheduleRender();
+  state.promptHomeThinkingTimer = window.setTimeout(() => {
+    state.promptHomeThinkingTimer = null;
+    if (!isPromptHomeThinkingActive()) return;
+    state.promptHomeThinkingAnimating = false;
+    schedulePromptThinkingLoop(BUBBLE_HOME_PROMPT_THINKING_LOOP_MS);
+    scheduleRender();
+  }, 24);
+}
+
+function getPromptThinkingPhrases(content = state.homeOrbContent) {
+  const title = String(content?.pillTitle || content?.label || '').trim().toLowerCase();
+  if (title.includes('playlist') || title.includes('music')) {
+    return ['Picking songs', 'Balancing energy', 'Saving mix'];
+  }
+  if (title.includes('andy')) {
+    return ['Reading note', 'Pulling details', 'Drafting reply'];
+  }
+  if (title.includes('day check')) {
+    return ['Checking calendar', 'Sorting priorities', 'Writing summary'];
+  }
+  if (title.includes('hiking')) {
+    return ['Finding trails', 'Checking elevation', 'Packing essentials'];
+  }
+  if (title.includes('fitness')) {
+    return ['Planning workout', 'Counting reps', 'Tracking progress'];
+  }
+  if (title.includes('mood reset')) {
+    return ['Reading mood', 'Finding calm', 'Shifting energy'];
+  }
+  if (title.includes('layla')) {
+    return ['Reviewing context', 'Drafting reply', 'Setting reminder'];
+  }
+  if (title.includes('monstera')) {
+    return ['Checking light', 'Watching leaves', 'Watering guide'];
+  }
+  return ['Thinking', 'Working through', 'Almost ready'];
+}
+
+function schedulePromptThinkingLoop(delayMs = BUBBLE_HOME_PROMPT_THINKING_LOOP_MS) {
+  if (bubbleHomeStreamState.promptLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.promptLoopTimer);
+    bubbleHomeStreamState.promptLoopTimer = null;
+  }
+  if (!isPromptHomeThinkingActive() || state.isPressed || state.swapTransition?.active || !refs.orbStreamText?.isConnected) return;
+  bubbleHomeStreamState.promptLoopTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.promptLoopTimer = null;
+    if (!isPromptHomeThinkingActive() || state.isPressed || state.swapTransition?.active) return;
+    const phrases = getPromptThinkingPhrases(state.homeOrbContent);
+    if (!phrases.length) return;
+    bubbleHomeStreamState.promptPhraseIndex = (bubbleHomeStreamState.promptPhraseIndex + 1) % phrases.length;
+    void showPersistentBubbleHomeStreamText(phrases[bubbleHomeStreamState.promptPhraseIndex], { animate: true });
+    schedulePromptThinkingLoop(BUBBLE_HOME_PROMPT_THINKING_LOOP_MS);
+  }, delayMs);
+}
+
+async function showPersistentBubbleHomeStreamText(text, options = {}) {
+  const value = String(text || '').trim();
+  if (!value || !refs.orbStreamText) return;
+  const animate = options.animate === true;
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  const token = ++bubbleHomeStreamState.streamToken;
+  setBubbleHomeStreamVisible(true);
+  removeBubbleHomeStreamCursor();
+  if (token !== bubbleHomeStreamState.streamToken) return;
+  syncBubbleHomeThinkingPillText(value, refs.orb, { animate });
+}
+
+function fadeOutBubbleHomeStream({ clearAfter = true } = {}) {
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  bubbleHomeStreamState.streamToken += 1;
+  removeBubbleHomeStreamCursor();
+  setBubbleHomeStreamVisible(false);
+  if (!clearAfter) return;
+  if (bubbleHomeStreamState.fadeTimer) window.clearTimeout(bubbleHomeStreamState.fadeTimer);
+  bubbleHomeStreamState.fadeTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.fadeTimer = null;
+    if (refs.orbStream?.classList.contains('hidden')) clearBubbleHomeStream();
+  }, BUBBLE_HOME_STREAM_FADE_MS);
+}
+
+async function waitForBubbleHomeStream(ms, token) {
+  await sleep(ms);
+  return token === bubbleHomeStreamState.streamToken && Boolean(refs.orbStreamText?.isConnected);
+}
+
+function getBubbleHomeContentLabel(content = state.homeOrbContent) {
+  if (!content) return '';
+  if (content.label) return String(content.label).trim();
+  if (content.kind === 'agent-orb') {
+    return String(getAiOrbIconOption(content.iconId)?.label || '').trim();
+  }
+  const slot = Number.isFinite(content.sourceSlotId)
+    ? findBubbleSlotById(content.sourceSlotId, state.activeSetId)
+    : null;
+  return String(slot?.label || slot?.pillTitle || '').trim();
+}
+
+async function streamBubbleHomeTransitionText(text) {
+  const value = String(text || '').trim();
+  if (!value || !refs.orbStreamText) return;
+  bubbleHomeStreamState.idleLoopToken += 1;
+  bubbleHomeStreamState.idleLoopActive = false;
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  const token = ++bubbleHomeStreamState.streamToken;
+  setBubbleHomeStreamVisible(true);
+  removeBubbleHomeStreamCursor();
+  bubbleHomeStreamState.currentText = value;
+  syncBubbleHomeThinkingPillText(value);
+  if (!(await waitForBubbleHomeStream(BUBBLE_HOME_TRANSITION_TEXT_HOLD_MS, token))) return;
+  if (token !== bubbleHomeStreamState.streamToken) return;
+  await showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
+}
+
+function shouldRunInterruptIdleStream() {
+  return state.activeSetId === 'interrupt'
+    && !interruptSessionPaused
+    && !state.isPressed
+    && !state.swapTransition?.active
+    && !state.pointerMovedSincePress
+    && Boolean(refs.orbStreamText?.isConnected);
+}
+
+function scheduleInterruptRestingStream(delayMs = 0) {
+  if (bubbleHomeStreamState.idleLoopTimer) {
+    window.clearTimeout(bubbleHomeStreamState.idleLoopTimer);
+    bubbleHomeStreamState.idleLoopTimer = null;
+  }
+  if (state.activeSetId !== 'interrupt' || state.isPressed || state.swapTransition?.active) return;
+  bubbleHomeStreamState.idleLoopTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.idleLoopTimer = null;
+    if (state.activeSetId !== 'interrupt' || state.isPressed || state.swapTransition?.active) return;
+    if (interruptSessionPaused) {
+      void showPersistentBubbleHomeStreamText('Session paused');
+      return;
+    }
+    void runInterruptIdleStreamLoop();
+  }, delayMs);
+}
+
+async function runInterruptIdleStreamLoop() {
+  if (!shouldRunInterruptIdleStream() || bubbleHomeStreamState.idleLoopActive) return;
+  const idleToken = ++bubbleHomeStreamState.idleLoopToken;
+  bubbleHomeStreamState.idleLoopActive = true;
+  if (idleToken === bubbleHomeStreamState.idleLoopToken && shouldRunInterruptIdleStream()) {
+    await showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
+  }
+  bubbleHomeStreamState.idleLoopActive = false;
+}
+
 function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
   if (!root) return;
   const content = state.homeOrbContent;
   if (!content) return;
+  if (state.activeSetId === 'interrupt') {
+    syncBubbleHomeThinkingPillIcon(content, root);
+    return;
+  }
   const visual = root?.querySelector?.('.bubble2-orb-visual');
-  const isClaudePromotedImage = content.kind !== 'agent-orb'
-    && content.graphicKind !== 'emoji'
-    && content.img === CLAUDE_AGENT_ASSET;
-  visual?.classList.toggle('is-promoted-home-claude', isClaudePromotedImage);
-  if (content.kind === 'agent-orb') {
+  syncBubbleHomeOrbVisualStateClasses(visual, content);
+  if (content.kind === 'agent-orb' && !hasCustomAgentOrbImage(content)) {
     syncAiOrbCenterIcon(root, {
       animate: options.animate,
       id: content.iconId,
@@ -1143,6 +2403,7 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
       animate: options.animate,
       emoji: content.emoji,
       emojiScale: content.homeEmojiScale ?? 1,
+      switchDirection: options.switchDirection,
       theme: content.theme,
       switchMotion: options.switchMotion || 'fade',
     });
@@ -1152,9 +2413,59 @@ function syncBubbleHomeOrbVisual(root = refs.orb, options = {}) {
     animate: options.animate,
     src: content.img,
     alt: content.alt || '',
+    switchDirection: options.switchDirection,
     theme: content.theme,
     switchMotion: options.switchMotion || 'fade',
   });
+}
+
+function syncBubbleHomeThinkingPillIcon(content = state.homeOrbContent, root = refs.orb) {
+  const image = refs.orbStreamIcon || root?.querySelector?.('[data-thinking-orb-stream-icon]');
+  if (!image || !content) return;
+  const fallback = getAiOrbIconOption(state.orbAgentId);
+  const src = String(content.img || fallback?.src || '').trim();
+  syncThinkingOrbStreamIcon(image, {
+    src,
+    alt: String(content.alt || content.label || fallback?.label || ''),
+  });
+}
+
+function syncBubbleHomeThinkingPillText(text, root = refs.orb, options = {}) {
+  const value = String(text || '').trim();
+  const stream = refs.orbStream || root?.querySelector?.('.g-thinking-orb-stream');
+  const textEl = refs.orbStreamText || root?.querySelector?.('.g-thinking-orb-stream-text');
+  if (!value || !stream || !textEl) return;
+  const metrics = currentBubbleHomeThinkingPillMetrics();
+  syncThinkingOrbStreamText(stream, textEl, value, {
+    metrics: {
+      ...metrics,
+      minWidth: BUBBLE_HOME_THINKING_PILL_MIN_WIDTH,
+    },
+    font: BUBBLE_HOME_THINKING_TEXT_FONT,
+    setText: false,
+  });
+  if (!options.animate || !bubbleHomeStreamState.currentText || bubbleHomeStreamState.currentText === value) {
+    bubbleHomeStreamState.currentText = value;
+    textEl.textContent = value;
+    stream.classList.remove('is-text-transitioning');
+    return;
+  }
+  if (bubbleHomeStreamState.textSwapTimer) {
+    window.clearTimeout(bubbleHomeStreamState.textSwapTimer);
+    bubbleHomeStreamState.textSwapTimer = null;
+  }
+  stream.classList.add('is-text-transitioning');
+  const expectedToken = bubbleHomeStreamState.streamToken;
+  bubbleHomeStreamState.textSwapTimer = window.setTimeout(() => {
+    bubbleHomeStreamState.textSwapTimer = null;
+    if (expectedToken !== bubbleHomeStreamState.streamToken) return;
+    bubbleHomeStreamState.currentText = value;
+    textEl.textContent = value;
+    requestAnimationFrame(() => {
+      if (expectedToken !== bubbleHomeStreamState.streamToken) return;
+      stream.classList.remove('is-text-transitioning');
+    });
+  }, BUBBLE_HOME_PROMPT_TEXT_SWAP_MS);
 }
 
 bindAiOrbIconStorageSync(document, window);
@@ -1175,12 +2486,248 @@ function syncSetSwitcherUi() {
   );
 }
 
+function syncRowSettingsUi() {
+  if (refs.rowSettings) refs.rowSettings.hidden = !isRowBubbleSet(state.activeSetId);
+  if (refs.rowHideStarsToggle) refs.rowHideStarsToggle.checked = state.rowStarsHidden;
+}
+
+function syncLensConceptSettingsUi() {
+  if (refs.lensConceptSettings) refs.lensConceptSettings.hidden = !isLensConceptBubbleSet(state.activeSetId);
+  if (refs.lensSwitchHideContentToggle) refs.lensSwitchHideContentToggle.checked = state.hideLensSwitchContent;
+}
+
+function syncViewportPanToggleUi() {
+  if (!refs.viewportPanToggle) return;
+  refs.viewportPanToggle.checked = state.viewportPanEnabled;
+}
+
+function syncCanvaslessUi() {
+  if (refs.canvaslessToggle) refs.canvaslessToggle.checked = state.canvaslessEnabled;
+  document.body.classList.toggle('is-canvasless', state.canvaslessEnabled);
+  refs.shell?.classList.toggle('is-canvasless', state.canvaslessEnabled);
+}
+
+function syncCanvasPositionUi() {
+  const canvasX = clamp(Number(state.canvasX) || 0, -1000, 1000);
+  const canvasY = clamp(Number(state.canvasY) || 0, -240, 240);
+  state.canvasX = canvasX;
+  state.canvasY = canvasY;
+  if (refs.canvasX) refs.canvasX.value = String(Math.round(canvasX));
+  if (refs.canvasXState) refs.canvasXState.textContent = `${Math.round(canvasX)}px`;
+  if (refs.canvasY) refs.canvasY.value = String(Math.round(canvasY));
+  if (refs.canvasYState) refs.canvasYState.textContent = `${Math.round(canvasY)}px`;
+  refs.shell?.style.setProperty('--bubble2-canvas-x', `${canvasX}px`);
+  refs.shell?.style.setProperty('--bubble2-canvas-y', `${canvasY}px`);
+}
+
+function syncHomeOrbToggleUi() {
+  if (!refs.homeOrbToggle) return;
+  const visible = state.homeOrbVisible !== false;
+  refs.homeOrbToggle.textContent = visible ? 'Dismiss orb' : 'Invoke orb';
+  refs.homeOrbToggle.setAttribute('aria-pressed', String(visible));
+}
+
+function syncBackgroundImageUi() {
+  const enabled = state.backgroundImageEnabled === true;
+  const imageAlpha = clamp(Number(state.backgroundImageAlpha ?? 0.8), 0, 1);
+  state.backgroundImageAlpha = imageAlpha;
+  if (refs.bgImageToggle) refs.bgImageToggle.checked = enabled;
+  refs.stage?.classList.toggle('has-bg-image', enabled);
+  if (refs.bgImageState) refs.bgImageState.textContent = state.backgroundImage?.name || 'white wall image';
+  if (refs.bgImageAlpha) {
+    refs.bgImageAlpha.value = String(Math.round(imageAlpha * 100));
+    refs.bgImageAlpha.disabled = !enabled;
+  }
+  if (refs.bgImage) {
+    const src = state.backgroundImage?.src || 'assets/bg/white wall.jpg';
+    refs.bgImage.style.backgroundImage = enabled ? `url("${src}")` : 'none';
+    refs.bgImage.style.opacity = enabled ? String(imageAlpha) : '0';
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Unable to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function hydrateStoredBackgroundMedia() {
+  const [imageRecord, videoRecord] = await Promise.all([
+    readDurableJsonRecord(BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY),
+    readDurableJsonRecord(BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY),
+  ]);
+  const image = imageRecord?.value;
+  if (typeof image?.src === 'string' && image.src) {
+    revokeBackgroundImageObjectUrl(state.backgroundImage);
+    state.backgroundImage = {
+      src: image.src,
+      objectUrl: '',
+      name: String(image.name || 'uploaded image'),
+    };
+    state.backgroundImageAlpha = clamp(Number(image.alpha ?? 0.8), 0, 1);
+    state.backgroundImageEnabled = true;
+  }
+  const video = videoRecord?.value;
+  const videoBlob = video?.blob instanceof Blob ? video.blob : null;
+  const videoSrc = videoBlob
+    ? URL.createObjectURL(videoBlob)
+    : (typeof video?.src === 'string' && video.src && !video.src.startsWith('blob:') ? video.src : '');
+  if (videoSrc) {
+    revokeBackgroundVideoObjectUrl(state.backgroundVideo);
+    state.backgroundVideo = {
+      src: videoSrc,
+      objectUrl: videoBlob ? videoSrc : '',
+      name: String(video.name || 'uploaded video'),
+      type: String(video.type || ''),
+    };
+    state.backgroundVideoPaused = video.paused === true;
+    state.backgroundVideoProgress = clamp(Number(video.progress) || 0, 0, 1);
+    state.backgroundVideoAlpha = clamp(Number(video.alpha ?? 0.8), 0, 1);
+    state.backgroundVideoX = clamp(Number(video.x) || 0, -1000, 1000);
+  }
+}
+
+function persistBackgroundImage() {
+  void persistDurableJson(
+    BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY,
+    {
+      src: state.backgroundImage?.src || '',
+      name: state.backgroundImage?.name || 'uploaded image',
+      alpha: clamp(Number(state.backgroundImageAlpha ?? 0.8), 0, 1),
+    },
+    { label: 'bubble background image' },
+  );
+}
+
+async function readStoredBackgroundVideoValue() {
+  const record = await readDurableJsonRecord(BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY);
+  return record?.value && typeof record.value === 'object' ? record.value : null;
+}
+
+function persistBackgroundVideo() {
+  if (!state.backgroundVideo?.src) return;
+  void (async () => {
+    const stored = await readStoredBackgroundVideoValue();
+    const currentSrc = String(state.backgroundVideo?.src || '');
+    const durableSrc = currentSrc && !currentSrc.startsWith('blob:') ? currentSrc : (stored?.src || '');
+    const durableBlob = stored?.blob instanceof Blob ? stored.blob : null;
+    if (!durableSrc && !durableBlob) return;
+    await persistDurableJson(
+      BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY,
+      {
+        src: durableSrc,
+        blob: durableBlob,
+        name: state.backgroundVideo.name || 'uploaded video',
+        type: state.backgroundVideo.type || '',
+        paused: state.backgroundVideoPaused === true,
+        progress: clamp(Number(state.backgroundVideoProgress) || 0, 0, 1),
+        alpha: clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1),
+        x: clamp(Number(state.backgroundVideoX) || 0, -1000, 1000),
+      },
+      { label: 'bubble background video' },
+    );
+  })();
+}
+
+function revokeBackgroundImageObjectUrl(image) {
+  const objectUrl = typeof image?.objectUrl === 'string' ? image.objectUrl : '';
+  if (!objectUrl || !objectUrl.startsWith('blob:')) return;
+  try {
+    URL.revokeObjectURL(objectUrl);
+  } catch (_) {}
+}
+
+function revokeBackgroundVideoObjectUrl(video) {
+  const objectUrl = typeof video?.objectUrl === 'string' ? video.objectUrl : '';
+  if (!objectUrl || !objectUrl.startsWith('blob:')) return;
+  try {
+    URL.revokeObjectURL(objectUrl);
+  } catch (_) {}
+}
+
+function syncBackgroundVideoUi() {
+  const video = state.backgroundVideo;
+  const hasVideo = Boolean(video?.src);
+  if (refs.bgVideoState) refs.bgVideoState.textContent = hasVideo ? (video.name || 'loaded') : 'empty';
+  refs.stage?.classList.toggle('has-bg-video', hasVideo);
+  refs.bgVideoControls?.classList.toggle('is-hidden', !hasVideo);
+  if (refs.bgVideoPlayToggle) {
+    refs.bgVideoPlayToggle.textContent = state.backgroundVideoPaused ? 'Play' : 'Pause';
+    refs.bgVideoPlayToggle.disabled = !hasVideo;
+  }
+  if (refs.bgVideoProgress) {
+    refs.bgVideoProgress.value = String(Math.round(clamp(Number(state.backgroundVideoProgress) || 0, 0, 1) * 1000));
+    refs.bgVideoProgress.disabled = !hasVideo;
+  }
+  const videoAlpha = clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1);
+  state.backgroundVideoAlpha = videoAlpha;
+  if (refs.bgVideoAlpha) {
+    refs.bgVideoAlpha.value = String(Math.round(videoAlpha * 100));
+    refs.bgVideoAlpha.disabled = !hasVideo;
+  }
+  const videoX = clamp(Number(state.backgroundVideoX) || 0, -1000, 1000);
+  state.backgroundVideoX = videoX;
+  if (refs.bgVideoX) {
+    refs.bgVideoX.value = String(Math.round(videoX));
+    refs.bgVideoX.disabled = !hasVideo;
+  }
+  if (!refs.bgVideo) return;
+  refs.bgVideo.style.setProperty('--bubble2-bg-video-x', `${videoX}px`);
+  refs.bgVideo.style.opacity = hasVideo ? String(videoAlpha) : '0';
+  const nextSrc = hasVideo ? String(video.src) : '';
+  if (refs.bgVideo.dataset.loadedSrc !== nextSrc) {
+    refs.bgVideo.dataset.loadedSrc = nextSrc;
+    refs.bgVideo.pause();
+    if (nextSrc) refs.bgVideo.src = nextSrc;
+    else refs.bgVideo.removeAttribute('src');
+    refs.bgVideo.load();
+  }
+  if (!hasVideo) return;
+  const desiredProgress = clamp(Number(state.backgroundVideoProgress) || 0, 0, 1);
+  const syncVideoTime = () => {
+    if (!Number.isFinite(refs.bgVideo.duration) || refs.bgVideo.duration <= 0) return;
+    const targetTime = desiredProgress * refs.bgVideo.duration;
+    if (Math.abs(refs.bgVideo.currentTime - targetTime) > 0.1) refs.bgVideo.currentTime = targetTime;
+  };
+  refs.bgVideo.onloadedmetadata = syncVideoTime;
+  if (refs.bgVideo.readyState >= 1) syncVideoTime();
+  if (state.backgroundVideoPaused) {
+    refs.bgVideo.pause();
+    return;
+  }
+  const playPromise = refs.bgVideo.play?.();
+  if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+}
+
+function syncBackgroundVideoProgressUi() {
+  if (!refs.bgVideoProgress || !refs.bgVideo || !Number.isFinite(refs.bgVideo.duration) || refs.bgVideo.duration <= 0) return;
+  const ratio = clamp(refs.bgVideo.currentTime / refs.bgVideo.duration, 0, 1);
+  state.backgroundVideoProgress = ratio;
+  if (document.activeElement === refs.bgVideoProgress) return;
+  refs.bgVideoProgress.value = String(Math.round(ratio * 1000));
+}
+
 function resetStateForSetSwitch() {
+  state.promptHomeThinking = false;
+  state.promptHomeThinkingAnimating = false;
+  clearPromptHomeThinkingTimer();
+  stopBubbleHomeStream();
+  clearLensToast();
+  state.lensShimmerUntil = 0;
+  state.lensShimmerMode = 'slice';
+  refs.shell?.classList.remove('is-lens-firing');
+  refs.shell?.classList.remove('is-lens-expand-firing');
+  refs.shell?.classList.remove('is-lens-focus-firing');
+  refs.shell?.classList.remove('is-lens-concept-firing');
   state.isPressed = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
   state.dragOffset = { x: 0, y: 0, active: false };
   state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.lastPointerClient = null;
   state.pointerMovedSincePress = false;
   state.lockedExpandedPillId = null;
   state.lockedExpandedPillScale = null;
@@ -1194,6 +2741,9 @@ function resetStateForSetSwitch() {
   state.swapResetPending = false;
   state.panSnapPending = false;
   state.pendingDemotedSlotSwap = null;
+  state.rowTransition = null;
+  state.rowHandoffUntil = 0;
+  clearAgentSetReturnInteraction();
   state.lastScene = null;
   previousHoveredId = null;
   previousHoveredChildId = null;
@@ -1202,24 +2752,180 @@ function resetStateForSetSwitch() {
   clearDirectionalSelectionTimers(childSelectionMotionTimers);
 }
 
-function switchBubbleSet(nextSetId) {
-  const nextSet = getBubbleSetDefinition(nextSetId);
-  if (!nextSet || nextSet.id === state.activeSetId) return;
-  state.activeSetId = nextSet.id;
+function clearAgentSetReturnTimer() {
+  if (state.agentSetReturnTimer) {
+    window.clearTimeout(state.agentSetReturnTimer);
+    state.agentSetReturnTimer = null;
+  }
+}
+
+function clearAgentSetReturnInteraction() {
+  clearAgentSetReturnTimer();
+  state.agentSetReturnTriggered = false;
+  state.agentSetReturnPhase = '';
+}
+
+function resetAgentSetToDefaults() {
+  state.promptHomeThinking = false;
+  state.promptHomeThinkingAnimating = false;
+  clearPromptHomeThinkingTimer();
+  state.slotContentBySetId = {
+    ...state.slotContentBySetId,
+    agent: createInitialSlotContentMap('agent'),
+  };
+  state.orbAgentId = BUBBLE_HOME_DEFAULT_AGENT_ID;
+  state.homeOrbContent = createHomeOrbAgentContentForSet(BUBBLE_HOME_DEFAULT_AGENT_ID, 'agent');
+  state.pendingDemotedSlotSwap = null;
+  state.panSnapPending = false;
+  state.swapResetPending = false;
+  syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+}
+
+function resetActiveSetOrbToDefaults() {
+  const activeSetId = state.activeSetId;
+  if (!getBubbleSetDefinition(activeSetId)) return;
   resetStateForSetSwitch();
+  clearSwapLayer();
+  if (activeSetId === 'interrupt') interruptSessionPaused = false;
+  state.slotContentBySetId = {
+    ...state.slotContentBySetId,
+    [activeSetId]: createInitialSlotContentMap(activeSetId),
+  };
+  state.orbAgentId = getDefaultHomeAgentIdForSet(activeSetId);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(state.orbAgentId, activeSetId);
+  state.homeOrbVisible = !isLensConceptBubbleSet(activeSetId);
+  syncBubbleHomeOrbVisual(refs.orb, { animate: false });
   syncSetSwitcherUi();
+  syncRowSettingsUi();
+  syncHomeOrbToggleUi();
   buildScene();
   updateMeasuredChildChipWidths();
   render();
 }
 
+function handleAgentSetReturnLongPress() {
+  if (!state.isPressed || state.activeSetId !== 'agent' || state.swapTransition?.active) return;
+  const now = performance.now();
+  clearAgentSetReturnTimer();
+  state.isPressed = false;
+  state.openMotionUntil = 0;
+  state.closeMotionUntil = now + CLOSE_PHASE_LATCH_MS;
+  state.agentSetReturnTriggered = true;
+  state.agentSetReturnPhase = 'closing';
+  state.dragOffset = { x: 0, y: 0, active: false };
+  state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.lastPointerClient = null;
+  state.pointerMovedSincePress = false;
+  state.hoveredBubble = null;
+  state.hoveredChildBubble = null;
+  state.lockedExpandedPillId = null;
+  state.lockedExpandedPillScale = null;
+  state.childMenuParentId = null;
+  state.childMenuPointerLock = null;
+  clearChildHoverTimer();
+  previousHoveredId = null;
+  previousHoveredChildId = null;
+  scheduleMotionPhaseRender(state.closeMotionUntil);
+  window.setTimeout(() => {
+    if (!state.agentSetReturnTriggered || state.agentSetReturnPhase !== 'closing' || state.activeSetId !== 'agent' || state.swapTransition?.active) return;
+    const reopenNow = performance.now();
+    resetAgentSetToDefaults();
+    state.isPressed = true;
+    state.openMotionUntil = reopenNow + OPEN_PHASE_LATCH_MS;
+    state.closeMotionUntil = 0;
+    state.agentSetReturnPhase = 'reopening';
+    state.dragOffset = { x: 0, y: 0, active: true };
+    state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+    state.lastPointerClient = null;
+    state.pointerMovedSincePress = false;
+    scheduleMotionPhaseRender(state.openMotionUntil);
+    scheduleRender();
+  }, CLOSE_PHASE_LATCH_MS);
+  scheduleRender();
+}
+
+function scheduleAgentSetReturnLongPress() {
+  clearAgentSetReturnTimer();
+  if (state.activeSetId !== 'agent') return;
+  state.agentSetReturnTimer = window.setTimeout(handleAgentSetReturnLongPress, AGENT_SET_RETURN_HOLD_MS);
+}
+
+function getVisibleSlotsForActiveSet(now = performance.now()) {
+  const slots = getBubblesConfigForSet(state.activeSetId);
+  if (state.activeSetId !== 'agent' || !state.isPressed || !state.agentSetReturnTriggered) return slots;
+  if (state.agentSetReturnPhase !== 'reopening') return slots;
+  const visibleIds = new Set(AGENT_SET_SPREAD_SLOT_IDS);
+  return slots.filter((slot) => visibleIds.has(slot.id));
+}
+
+function switchBubbleSet(nextSetId) {
+  const nextSet = getBubbleSetDefinition(nextSetId);
+  if (!nextSet || nextSet.id === state.activeSetId) return;
+  const previousSetId = state.activeSetId;
+  state.activeSetId = nextSet.id;
+  const nextDefaults = getBubbleSetControlDefaults(nextSet.id);
+  state.viewportPanEnabled = nextDefaults.viewportPanEnabled;
+  state.canvaslessEnabled = nextDefaults.canvaslessEnabled;
+  resetStateForSetSwitch();
+  state.orbAgentId = getDefaultHomeAgentIdForSet(nextSet.id);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(state.orbAgentId, nextSet.id);
+  if (isLensConceptBubbleSet(nextSet.id)) state.homeOrbVisible = false;
+  else if (isLensConceptBubbleSet(previousSetId)) state.homeOrbVisible = true;
+  syncSetSwitcherUi();
+  syncRowSettingsUi();
+  syncLensConceptSettingsUi();
+  syncViewportPanToggleUi();
+  syncCanvaslessUi();
+  syncCanvasPositionUi();
+  syncHomeOrbToggleUi();
+  buildScene();
+  updateMeasuredChildChipWidths();
+  render();
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
+}
+
 function bindEvents() {
-  refs.shell?.addEventListener('pointerdown', handlePointerDown);
+  refs.stage?.addEventListener('pointerdown', handlePointerDown);
   refs.setPanel?.addEventListener('click', handleSetPanelClick);
+  refs.rowHideStarsToggle?.addEventListener('change', handleRowHideStarsToggleChange);
+  refs.lensSwitchHideContentToggle?.addEventListener('change', handleLensSwitchHideContentToggleChange);
+  refs.orbReset?.addEventListener('click', resetActiveSetOrbToDefaults);
+  refs.viewportPanToggle?.addEventListener('change', handleViewportPanToggleChange);
+  refs.canvaslessToggle?.addEventListener('change', handleCanvaslessToggleChange);
+  refs.canvasX?.addEventListener('input', handleCanvasXInput);
+  refs.canvasY?.addEventListener('input', handleCanvasYInput);
+  refs.homeOrbToggle?.addEventListener('click', handleHomeOrbToggleClick);
+  refs.bgImageToggle?.addEventListener('change', handleBackgroundImageToggleChange);
+  refs.bgImageUpload?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) target.value = '';
+  });
+  refs.bgImageUpload?.addEventListener('change', handleBackgroundImageUpload);
+  refs.bgImageReset?.addEventListener('click', resetBackgroundImage);
+  refs.bgImageAlpha?.addEventListener('input', handleBackgroundImageAlphaInput);
+  refs.bgVideoUpload?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement) target.value = '';
+  });
+  refs.bgVideoUpload?.addEventListener('change', handleBackgroundVideoUpload);
+  refs.bgVideoReset?.addEventListener('click', resetBackgroundVideo);
+  refs.bgVideoPlayToggle?.addEventListener('click', handleBackgroundVideoPlayToggle);
+  refs.bgVideoProgress?.addEventListener('input', handleBackgroundVideoProgressInput);
+  refs.bgVideoAlpha?.addEventListener('input', handleBackgroundVideoAlphaInput);
+  refs.bgVideoX?.addEventListener('input', handleBackgroundVideoXInput);
+  refs.bgVideo?.addEventListener('timeupdate', syncBackgroundVideoProgressUi);
+  refs.bgVideo?.addEventListener('loadedmetadata', syncBackgroundVideoProgressUi);
+  refs.bgVideo?.addEventListener('error', () => {
+    if (refs.bgVideoState) refs.bgVideoState.textContent = 'unsupported';
+  });
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerRelease);
   window.addEventListener('pointercancel', handlePointerRelease);
+  window.addEventListener('beforeunload', () => {
+    revokeBackgroundImageObjectUrl(state.backgroundImage);
+    revokeBackgroundVideoObjectUrl(state.backgroundVideo);
+  }, { once: true });
 }
 
 function handleSetPanelClick(event) {
@@ -1228,28 +2934,331 @@ function handleSetPanelClick(event) {
   switchBubbleSet(target.dataset.bubbleSetId || '');
 }
 
+function handleRowHideStarsToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.rowStarsHidden = target.checked;
+  state.rowTransition = null;
+  state.rowHandoffUntil = 0;
+  if (isRowBubbleSet(state.activeSetId)) {
+    const nextId = getSafeRowAgentId();
+    state.orbAgentId = nextId;
+    state.homeOrbContent = createHomeOrbAgentContentForSet(nextId, ROW_SET_ID);
+    syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+  }
+  syncRowSettingsUi();
+  scheduleRender();
+}
+
+function handleLensSwitchHideContentToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.hideLensSwitchContent = target.checked;
+  if (state.hideLensSwitchContent && isLensConceptBubbleSet(state.activeSetId)) clearLensToast();
+  syncLensConceptSettingsUi();
+  scheduleRender();
+}
+
+function handleViewportPanToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.viewportPanEnabled = target.checked;
+  syncViewportPanToggleUi();
+}
+
+function handleCanvaslessToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.canvaslessEnabled = target.checked;
+  syncCanvaslessUi();
+}
+
+function handleCanvasXInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.canvasX = clamp(Number(target.value) || 0, -1000, 1000);
+  syncCanvasPositionUi();
+}
+
+function handleCanvasYInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.canvasY = clamp(Number(target.value) || 0, -240, 240);
+  syncCanvasPositionUi();
+}
+
+function handleHomeOrbToggleClick() {
+  toggleHomeOrbVisibility();
+}
+
+function toggleHomeOrbVisibility() {
+  if (isLensConceptBubbleSet(state.activeSetId)) return;
+  state.homeOrbVisible = !state.homeOrbVisible;
+  syncHomeOrbToggleUi();
+  scheduleRender();
+}
+
+function handleBackgroundImageToggleChange(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundImageEnabled = target.checked;
+  persistBackgroundImage();
+  syncBackgroundImageUi();
+}
+
+function handleBackgroundImageAlphaInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundImageAlpha = clamp((Number(target.value) || 0) / 100, 0, 1);
+  persistBackgroundImage();
+  syncBackgroundImageUi();
+}
+
+async function handleBackgroundImageUpload(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const file = target.files?.[0];
+  if (!file) return;
+  if (!String(file.type || '').startsWith('image/')) {
+    target.value = '';
+    return;
+  }
+  const previousImage = state.backgroundImage;
+  const dataUrl = await readFileAsDataUrl(file).catch(() => '');
+  if (!dataUrl) {
+    target.value = '';
+    return;
+  }
+  revokeBackgroundImageObjectUrl(previousImage);
+  state.backgroundImage = {
+    src: dataUrl,
+    objectUrl: '',
+    name: String(file.name || 'uploaded image'),
+  };
+  state.backgroundImageAlpha = clamp(Number(state.backgroundImageAlpha ?? 0.8), 0, 1);
+  state.backgroundImageEnabled = true;
+  persistBackgroundImage();
+  syncBackgroundImageUi();
+  target.value = '';
+}
+
+function resetBackgroundImage() {
+  revokeBackgroundImageObjectUrl(state.backgroundImage);
+  state.backgroundImage = {
+    src: 'assets/bg/white wall.jpg',
+    objectUrl: '',
+    name: 'white wall image',
+  };
+  state.backgroundImageAlpha = 0.8;
+  state.backgroundImageEnabled = true;
+  void deleteDurableJsonRecord(BUBBLE_BACKGROUND_IMAGE_STORAGE_KEY, { label: 'bubble background image' });
+  syncBackgroundImageUi();
+  if (refs.bgImageUpload) refs.bgImageUpload.value = '';
+}
+
+async function handleBackgroundVideoUpload(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const file = target.files?.[0];
+  if (!file) return;
+  if (!String(file.type || '').startsWith('video/')) {
+    target.value = '';
+    return;
+  }
+  const previousVideo = state.backgroundVideo;
+  const objectUrl = URL.createObjectURL(file);
+  revokeBackgroundVideoObjectUrl(previousVideo);
+  state.backgroundVideo = {
+    src: objectUrl,
+    objectUrl,
+    name: String(file.name || ''),
+    type: String(file.type || ''),
+  };
+  state.backgroundVideoPaused = false;
+  state.backgroundVideoProgress = 0;
+  state.backgroundVideoAlpha = clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1);
+  state.backgroundVideoX = 0;
+  syncBackgroundVideoUi();
+  target.value = '';
+  void persistDurableJson(
+    BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY,
+    {
+      src: '',
+      blob: file,
+      name: state.backgroundVideo.name || 'uploaded video',
+      type: state.backgroundVideo.type || '',
+      paused: state.backgroundVideoPaused === true,
+      progress: clamp(Number(state.backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(state.backgroundVideoAlpha ?? 0.8), 0, 1),
+      x: clamp(Number(state.backgroundVideoX) || 0, -1000, 1000),
+    },
+    { label: 'bubble background video' },
+  );
+}
+
+function resetBackgroundVideo() {
+  revokeBackgroundVideoObjectUrl(state.backgroundVideo);
+  state.backgroundVideo = null;
+  state.backgroundVideoPaused = false;
+  state.backgroundVideoProgress = 0;
+  state.backgroundVideoAlpha = 0.8;
+  state.backgroundVideoX = 0;
+  void deleteDurableJsonRecord(BUBBLE_BACKGROUND_VIDEO_STORAGE_KEY, { label: 'bubble background video' });
+  syncBackgroundVideoUi();
+  if (refs.bgVideoUpload) refs.bgVideoUpload.value = '';
+}
+
+function handleBackgroundVideoPlayToggle() {
+  toggleBackgroundVideoPlayback();
+}
+
+function toggleBackgroundVideoPlayback() {
+  if (!state.backgroundVideo?.src) return;
+  state.backgroundVideoPaused = !state.backgroundVideoPaused;
+  persistBackgroundVideo();
+  syncBackgroundVideoUi();
+}
+
+function handleBackgroundVideoProgressInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundVideoProgress = clamp((Number(target.value) || 0) / 1000, 0, 1);
+  persistBackgroundVideo();
+  syncBackgroundVideoUi();
+}
+
+function handleBackgroundVideoAlphaInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundVideoAlpha = clamp((Number(target.value) || 0) / 100, 0, 1);
+  persistBackgroundVideo();
+  syncBackgroundVideoUi();
+}
+
+function handleBackgroundVideoXInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  state.backgroundVideoX = clamp(Number(target.value) || 0, -1000, 1000);
+  persistBackgroundVideo();
+  syncBackgroundVideoUi();
+}
+
+function shouldStartBubblePress(event) {
+  if (isLensConceptBubbleSet(state.activeSetId)) return false;
+  if (isRowBubbleSet(state.activeSetId)) return false;
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return false;
+  if (refs.controlPanel?.contains(target)) return false;
+  if (!state.viewportPanEnabled) return refs.shell?.contains(target) || false;
+  return refs.stage?.contains(target) || false;
+}
+
 function handleKeyDown(event) {
   if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (shouldToggleUiChrome(event)) {
+    event.preventDefault();
+    toggleUiChrome();
+    return;
+  }
+  if (shouldToggleHomeOrb(event)) {
+    event.preventDefault();
+    toggleHomeOrbVisibility();
+    return;
+  }
+  if (shouldToggleBackgroundVideo(event)) {
+    event.preventDefault();
+    toggleBackgroundVideoPlayback();
+    return;
+  }
   if (event.key === 'ArrowRight') {
     event.preventDefault();
-    cycleBubbleHomeAgent(1);
+    cycleBubbleHomeSelection(1);
     return;
   }
   if (event.key === 'ArrowLeft') {
     event.preventDefault();
-    cycleBubbleHomeAgent(-1);
+    cycleBubbleHomeSelection(-1);
   }
+}
+
+function shouldToggleUiChrome(event) {
+  if (event.key?.toLowerCase() !== UI_CHROME_HOTKEY) return false;
+  if (state.uiChromeHidden) return true;
+  return !isEditableHotkeyTarget(event);
+}
+
+function shouldToggleHomeOrb(event) {
+  if (event.key?.toLowerCase() !== HOME_ORB_HOTKEY) return false;
+  return !isEditableHotkeyTarget(event);
+}
+
+function shouldToggleBackgroundVideo(event) {
+  if (event.key?.toLowerCase() !== BACKGROUND_VIDEO_HOTKEY) return false;
+  return !isEditableHotkeyTarget(event);
+}
+
+function isEditableHotkeyTarget(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  const tagName = target.tagName.toLowerCase();
+  return ['input', 'textarea', 'select', 'button'].includes(tagName) || Boolean(target.closest('[contenteditable="true"]'));
+}
+
+function toggleUiChrome() {
+  state.uiChromeHidden = !state.uiChromeHidden;
+  document.body.classList.toggle('is-bubble-ui-hidden', state.uiChromeHidden);
+  if (state.uiChromeHidden && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
+function cycleBubbleHomeSelection(step) {
+  if (isRowBubbleSet(state.activeSetId)) {
+    cycleRowAgent(step);
+    return;
+  }
+  if (isAgentStyleBubbleSet(state.activeSetId) || isLensBubbleSet(state.activeSetId)) {
+    cycleBubbleHomeSetItem(step, state.activeSetId);
+    return;
+  }
+  cycleBubbleHomeAgent(step);
+}
+
+function cycleRowAgent(step) {
+  if (!refs.orb || !step || state.rowTransition?.active || state.swapTransition?.active) return;
+  stopPromptHomeThinking();
+  const sequence = getActiveRowAgentSequence();
+  const currentIndex = sequence.indexOf(state.orbAgentId);
+  const fromIndex = currentIndex >= 0 ? currentIndex : sequence.indexOf(getSafeRowAgentId());
+  const direction = step > 0 ? 1 : -1;
+  const toIndex = fromIndex + direction;
+  if (toIndex < 0 || toIndex >= sequence.length) return;
+  const nextId = sequence[toIndex];
+  if (!nextId || nextId === state.orbAgentId) return;
+  const now = performance.now();
+  state.rowTransition = {
+    active: true,
+    direction,
+    fromIndex,
+    toIndex,
+    nextId,
+    startedAt: now,
+    durationMs: ROW_CAROUSEL_DURATION_MS,
+  };
+  playSimEarcon('button');
+  scheduleMotionPhaseRender(now + ROW_CAROUSEL_DURATION_MS);
+  scheduleRender();
 }
 
 function cycleBubbleHomeAgent(step) {
   if (!refs.orb || !step || state.swapTransition?.active) return;
+  stopPromptHomeThinking();
   const currentIndex = BUBBLE_HOME_AGENT_SEQUENCE.indexOf(state.orbAgentId);
   const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
   const nextIndex = (safeCurrentIndex + step + BUBBLE_HOME_AGENT_SEQUENCE.length) % BUBBLE_HOME_AGENT_SEQUENCE.length;
   const nextId = BUBBLE_HOME_AGENT_SEQUENCE[nextIndex];
   if (nextId === state.orbAgentId) return;
   state.orbAgentId = nextId;
-  state.homeOrbContent = createAgentOrbContent(nextId);
+  state.homeOrbContent = createHomeOrbAgentContentForSet(nextId, state.activeSetId);
+  void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(state.homeOrbContent)}`);
   syncBubbleHomeOrbVisual(refs.orb, {
     animate: true,
     switchDirection: step > 0 ? 'right' : 'left',
@@ -1258,9 +3267,50 @@ function cycleBubbleHomeAgent(step) {
   scheduleRender();
 }
 
+function cycleBubbleHomeSetItem(step, setId = state.activeSetId) {
+  if (!refs.orb || !step || state.swapTransition?.active) return;
+  stopPromptHomeThinking();
+  const sequence = getBubbleSetSequence(setId);
+  if (!sequence.length) return;
+
+  const currentSlotId = Number.isFinite(state.homeOrbContent?.sourceSlotId)
+    ? state.homeOrbContent.sourceSlotId
+    : null;
+  const currentIndex = currentSlotId != null ? sequence.indexOf(currentSlotId) : -1;
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : (step > 0 ? -1 : 0);
+  const nextIndex = (safeCurrentIndex + step + sequence.length) % sequence.length;
+  const nextSlotId = sequence[nextIndex];
+  if (nextSlotId == null) return;
+
+  const slot = findBubbleSlotById(nextSlotId, setId);
+  if (!slot) return;
+  const nextContent = createBaseSlotContent(slot, setId);
+  const switchDirection = step > 0 ? 'right' : 'left';
+
+  state.homeOrbContent = nextContent;
+  if (isLensBubbleSet(setId)) {
+    startLensFeedback(nextContent, performance.now(), {
+      placement: isLensConceptBubbleSet(setId) ? 'concept-bottom' : 'above-orb',
+      mode: lensShimmerModeForSet(setId),
+    });
+  } else {
+    void streamBubbleHomeTransitionText(`Switch to ${getBubbleHomeContentLabel(nextContent)}`);
+  }
+  if (!isLensConceptBubbleSet(setId)) {
+    syncBubbleHomeOrbVisual(refs.orb, {
+      animate: true,
+      switchDirection,
+      switchMotion: 'swipe',
+    });
+  }
+  scheduleRender();
+}
+
 function handlePointerDown(event) {
+  if (!shouldStartBubblePress(event)) return;
   if (state.swapTransition?.active) return;
   event.preventDefault();
+  playSimEarcon('disambiguate-reveal');
   const now = performance.now();
   clearChildHoverTimer();
   if (refs.shell) {
@@ -1277,6 +3327,10 @@ function handlePointerDown(event) {
       y: ORB_CENTER_Y,
     };
   }
+  state.lastPointerClient = {
+    x: event.clientX,
+    y: event.clientY,
+  };
   state.isPressed = true;
   state.pointerMovedSincePress = false;
   state.openMotionUntil = now + OPEN_PHASE_LATCH_MS;
@@ -1285,6 +3339,7 @@ function handlePointerDown(event) {
   state.hoveredChildBubble = null;
   state.childMenuParentId = null;
   state.childMenuPointerLock = null;
+  clearAgentSetReturnInteraction();
   state.dragOffset = {
     x: 0,
     y: 0,
@@ -1293,12 +3348,44 @@ function handlePointerDown(event) {
   if (refs.shell?.setPointerCapture && event.pointerId != null) {
     try { refs.shell.setPointerCapture(event.pointerId); } catch (_) {}
   }
+  scheduleAgentSetReturnLongPress();
   scheduleMotionPhaseRender(state.openMotionUntil);
   scheduleRender();
 }
 
 function handlePointerMove(event) {
   if (state.swapTransition?.active || !state.isPressed || !refs.shell) return;
+
+  if (
+    state.activeSetId === 'agent'
+    && state.agentSetReturnTriggered
+    && state.agentSetReturnPhase === 'reopening'
+  ) {
+    if (!state.lastPointerClient) {
+      state.lastPointerClient = {
+        x: event.clientX,
+        y: event.clientY,
+      };
+      return;
+    }
+    const rect = refs.shell.getBoundingClientRect();
+    const scaleX = rect.width / 420;
+    const scaleY = rect.height / 420;
+    const deltaX = (event.clientX - state.lastPointerClient.x) / scaleX;
+    const deltaY = (event.clientY - state.lastPointerClient.y) / scaleY;
+    state.lastPointerClient = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    state.dragOffset = {
+      x: state.dragOffset.x + deltaX,
+      y: state.dragOffset.y + deltaY,
+      active: true,
+    };
+    state.pointerMovedSincePress = state.pointerMovedSincePress || deltaX !== 0 || deltaY !== 0;
+    scheduleRender();
+    return;
+  }
 
   const rect = refs.shell.getBoundingClientRect();
   const scaleX = rect.width / 420;
@@ -1313,6 +3400,10 @@ function handlePointerMove(event) {
     y: dragOffsetY,
     active: true,
   };
+  state.lastPointerClient = {
+    x: event.clientX,
+    y: event.clientY,
+  };
   state.pointerMovedSincePress = state.pointerMovedSincePress || dragOffsetX !== 0 || dragOffsetY !== 0;
 
   scheduleRender();
@@ -1322,6 +3413,7 @@ function handlePointerRelease(event) {
   if (!state.isPressed) return;
   const now = performance.now();
   const releaseScene = computeScene(now);
+  clearAgentSetReturnTimer();
 
   if (refs.shell?.releasePointerCapture && event.pointerId != null) {
     try {
@@ -1348,6 +3440,7 @@ function handlePointerRelease(event) {
     x: ORB_CENTER_X,
     y: ORB_CENTER_Y,
   };
+  state.lastPointerClient = null;
   state.pointerMovedSincePress = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -1355,11 +3448,14 @@ function handlePointerRelease(event) {
   state.lockedExpandedPillScale = null;
   state.childMenuParentId = null;
   state.childMenuPointerLock = null;
+  state.agentSetReturnTriggered = false;
+  state.agentSetReturnRevealUntil = 0;
   clearChildHoverTimer();
   previousHoveredId = null;
   previousHoveredChildId = null;
   scheduleMotionPhaseRender(state.closeMotionUntil);
   scheduleRender();
+  scheduleInterruptRestingStream(CLOSE_PHASE_LATCH_MS);
 }
 
 function shouldStartBubbleSwap(scene) {
@@ -1376,15 +3472,35 @@ function snapshotReleaseBubble(bubble) {
   };
 }
 
+function isPauseSessionSwap(transition = state.swapTransition) {
+  return transition?.specialAction === 'pause-session';
+}
+
+function isPlaySessionSwap(transition = state.swapTransition) {
+  return transition?.specialAction === 'play-session';
+}
+
+function isInterruptPlaybackSwap(transition = state.swapTransition) {
+  return isPauseSessionSwap(transition) || isPlaySessionSwap(transition);
+}
+
+function isLensFireSwap(transition = state.swapTransition) {
+  return transition?.swapMode === 'lens-fire';
+}
+
 function startBubbleSwap(scene, now) {
   const selectedBubble = scene.bubbles.find((bubble) => bubble.id === scene.hoveredId);
   if (!selectedBubble) return;
 
+  playSimEarcon('button');
+  clearAgentSetReturnInteraction();
+  state.promotedHandoffGhost = null;
   state.isPressed = false;
   state.openMotionUntil = 0;
   state.closeMotionUntil = now + SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS;
   state.dragOffset = { x: 0, y: 0, active: false };
   state.dragStart = { x: ORB_CENTER_X, y: ORB_CENTER_Y };
+  state.lastPointerClient = null;
   state.pointerMovedSincePress = false;
   state.hoveredBubble = null;
   state.hoveredChildBubble = null;
@@ -1398,33 +3514,59 @@ function startBubbleSwap(scene, now) {
 
   const promotedContent = { ...getCurrentSlotContent(selectedBubble.id) };
   const demotedContent = createDemotedOrbSlotContent(state.homeOrbContent);
+  const isPauseAction = selectedBubble.controlAction === 'pause-session';
+  const isPlayAction = selectedBubble.controlAction === 'play-session';
+  const isLensFire = isLensBubbleSet(state.activeSetId);
   const promotedImageScaleCompensation = selectedBubble.graphicKind === 'emoji'
     ? 1
     : (selectedBubble.fill ? (1 / Math.max(selectedBubble.imageScale ?? 1, 0.0001)) : 1);
+  const promotedVisualScaleEnd = selectedBubble.graphicKind === 'emoji'
+    ? BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.homeEmojiScale ?? 1)
+    : ((selectedBubble.preservePromotedImageScale ? 1 : BUBBLE_RELEASE_CONTENT_SCALE) * promotedImageScaleCompensation);
+  const selectedNode = refs.bubbleNodes.get(selectedBubble.id)?.root;
+  const selectedRenderedWidth = selectedNode
+    ? Number.parseFloat(window.getComputedStyle(selectedNode).width)
+    : NaN;
+  if (isLensFire) {
+    startLensFeedback(promotedContent, now, { mode: lensShimmerModeForSet(state.activeSetId) });
+  }
   state.swapTransition = {
     active: true,
+    swapMode: isLensFire ? 'lens-fire' : 'promote',
+    specialAction: isPauseAction ? 'pause-session' : (isPlayAction ? 'play-session' : ''),
     selectedBubbleId: selectedBubble.id,
     startedAt: now,
-    durationMs: SWAP_DURATION_MS,
+    durationMs: isLensFire
+      ? (LENS_PUNCTURE_SCALE_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS)
+      : ((isPauseAction || isPlayAction) ? (SWAP_SIBLING_DURATION_MS + BUBBLE_STAGGER_TOTAL_MS) : SWAP_DURATION_MS),
     siblingDurationMs: SWAP_SIBLING_DURATION_MS,
     highlightFreezeUntil: now + SWAP_HIGHLIGHT_FREEZE_MS,
     panOffset: { ...scene.panOffset },
     demotedCenterStartX: scene.orb?.targetX ?? 0,
     demotedCenterStartY: scene.orb?.targetY ?? 0,
     demotedShellScaleStart: scene.orb?.targetScale ?? 1,
-    demotedShellScaleEnd: SWAP_DEMOTED_END_SCALE,
+    demotedShellScaleEnd: isLensFire ? 0.2 : SWAP_DEMOTED_END_SCALE,
     promotedRootScaleEnd: ORB_BASE_SIZE / selectedBubble.baseSize,
     promotedVisualScaleStart: selectedBubble.hoverExpandsToPill
       ? PILL_HOVER_BUBBLE_SCALE
       : BUBBLE_HOVER_CONTENT_SCALE,
-    promotedVisualScaleEnd: BUBBLE_RELEASE_CONTENT_SCALE * (selectedBubble.graphicKind === 'emoji'
-      ? (selectedBubble.homeEmojiScale ?? 1)
-      : promotedImageScaleCompensation),
+    promotedVisualScaleEnd,
     releaseBubbles: scene.bubbles.map(snapshotReleaseBubble),
     promotedContent,
     demotedContent,
     previousHomeOrbContent: { ...state.homeOrbContent },
+    selectedRenderedWidth: Number.isFinite(selectedRenderedWidth) && selectedRenderedWidth > 0
+      ? selectedRenderedWidth
+      : null,
   };
+
+  if (isPauseAction) {
+    interruptSessionPaused = true;
+    void showPersistentBubbleHomeStreamText('Session paused');
+  } else if (isPlayAction) {
+    interruptSessionPaused = false;
+    void showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
+  }
 
   scheduleMotionPhaseRender(state.closeMotionUntil);
   scheduleRender();
@@ -1433,7 +3575,49 @@ function startBubbleSwap(scene, now) {
 function commitBubbleSwap() {
   const transition = state.swapTransition;
   if (!transition) return;
+  const promotedBubble = findPromotedReleaseBubble(transition);
+  if (isPauseSessionSwap(transition)) {
+    interruptSessionPaused = true;
+    state.swapTransition = null;
+    state.closeMotionUntil = 0;
+    clearSwapLayer();
+    void showPersistentBubbleHomeStreamText('Session paused');
+    scheduleRender();
+    return;
+  }
+  if (isPlaySessionSwap(transition)) {
+    interruptSessionPaused = false;
+    state.swapTransition = null;
+    state.closeMotionUntil = 0;
+    clearSwapLayer();
+    void showPersistentBubbleHomeStreamText(BUBBLE_HOME_INTERRUPT_THINKING_TEXT);
+    scheduleRender();
+    return;
+  }
+  if (isLensFireSwap(transition)) {
+    state.swapTransition = null;
+    state.closeMotionUntil = 0;
+    state.homeOrbVisible = false;
+    clearSwapLayer();
+    syncHomeOrbToggleUi();
+    scheduleRender();
+    return;
+  }
   state.homeOrbContent = transition.promotedContent;
+  state.promotedHandoffGhost = promotedBubble
+    ? {
+        startedAt: performance.now(),
+        centerX: 0,
+        centerY: 0,
+        content: { ...transition.promotedContent },
+        theme: promotedBubble.theme || transition.promotedContent?.theme || null,
+      }
+    : null;
+  if (state.activeSetId === 'prompt') {
+    activatePromptHomeThinking();
+  } else {
+    stopPromptHomeThinking();
+  }
   state.swapTransition = null;
   state.closeMotionUntil = 0;
   state.swapResetPending = true;
@@ -1446,6 +3630,7 @@ function commitBubbleSwap() {
   clearSwapLayer();
   resetBubbleHomeOrbCenter(refs.orb);
   syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+  scheduleInterruptRestingStream(BUBBLE_HOME_IDLE_STREAM_GAP_MS);
 }
 
 function scheduleRender() {
@@ -1471,7 +3656,7 @@ function findPromotedReleaseBubble(transition) {
 function computePromotedSwapMotion(transition, promotedBubble, now) {
   if (!transition || !promotedBubble) return null;
   const progress = clamp((now - transition.startedAt) / transition.durationMs, 0, 1);
-  const travel = easeInOutCubic(progress);
+  const travel = easeSmoothConnect(progress);
   const lift = Math.sin(Math.min(progress, 1) * Math.PI) * -8;
   const orbCanvasDestinationX = -transition.panOffset.x;
   const orbCanvasDestinationY = -transition.panOffset.y;
@@ -1481,12 +3666,48 @@ function computePromotedSwapMotion(transition, promotedBubble, now) {
     currentCenterY: interpolate(promotedBubble.targetY, orbCanvasDestinationY, travel) + lift,
     rootScale: interpolate(promotedBubble.targetScale, transition.promotedRootScaleEnd, travel),
     visualScale: interpolate(transition.promotedVisualScaleStart, transition.promotedVisualScaleEnd, travel),
+    opacity: 1,
   };
+}
+
+function computeLensFirePunctureScale(bubble, transition, now) {
+  const startScale = bubble.targetScale ?? 1;
+  const progress = clamp((now - transition.startedAt) / LENS_PUNCTURE_SCALE_DURATION_MS, 0, 1);
+  if (progress <= 0) return startScale;
+  const popScale = startScale * LENS_PUNCTURE_POP_SCALE;
+  if (progress < 0.18) {
+    return interpolate(startScale, popScale, easeOutBackSoft(progress / 0.18));
+  }
+  return interpolate(popScale, LENS_PUNCTURE_END_SCALE, easeInOutCubic((progress - 0.18) / 0.82));
+}
+
+function computeLensFirePunctureWidth(bubble, transition, staggerIndex, now) {
+  const startWidth = transition.selectedRenderedWidth ?? bubble.targetWidth ?? bubble.baseSize;
+  const collapseStart = transition.startedAt + (LENS_PUNCTURE_SCALE_DURATION_MS * 0.18);
+  const fadeEnd = transition.startedAt + (staggerIndex * BUBBLE_STAGGER_STEP_MS) + LENS_PUNCTURE_SCALE_DURATION_MS;
+  const progress = clamp((now - collapseStart) / Math.max(fadeEnd - collapseStart, 1), 0, 1);
+  return interpolate(startWidth, bubble.baseSize, easeInOutCubic(progress));
 }
 
 function computeDemotedSwapMotion(transition, now) {
   if (!transition) return null;
-  const demotedProgress = easeInOutCubic(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
+  if (isInterruptPlaybackSwap(transition)) return null;
+  if (isLensFireSwap(transition)) {
+    const duration = transition.siblingDurationMs || SWAP_SIBLING_DURATION_MS;
+    const progress = easeSmoothConnect(clamp((now - transition.startedAt) / duration, 0, 1));
+    return {
+      centerX: transition.demotedCenterStartX ?? 0,
+      centerY: transition.demotedCenterStartY ?? 0,
+      shellScale: interpolate(
+        transition.demotedShellScaleStart ?? 1,
+        transition.demotedShellScaleEnd ?? 0.2,
+        progress,
+      ),
+      opacity: 1 - easeOutQuart(clamp((now - transition.startedAt) / duration, 0, 1)),
+    };
+  }
+  const demotedProgress = easeSmoothConnect(clamp((now - transition.startedAt - SWAP_DEMOTED_START_DELAY_MS) / (transition.durationMs - SWAP_DEMOTED_START_DELAY_MS), 0, 1));
+  const orbFadeDurationMs = 200;
   return {
     centerX: transition.demotedCenterStartX ?? 0,
     centerY: transition.demotedCenterStartY ?? 0,
@@ -1495,8 +3716,149 @@ function computeDemotedSwapMotion(transition, now) {
       transition.demotedShellScaleEnd ?? SWAP_DEMOTED_END_SCALE,
       demotedProgress,
     ),
-    opacity: 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / 220, 0, 1)),
+    opacity: 1 - easeOutQuart(clamp((now - transition.startedAt - 30) / orbFadeDurationMs, 0, 1)),
   };
+}
+
+function isRowTransitionRunning(now = performance.now()) {
+  const transition = state.rowTransition;
+  if (!transition?.active) return false;
+  if (now < transition.startedAt + transition.durationMs) return true;
+  commitRowTransition(transition);
+  return false;
+}
+
+function commitRowTransition(transition) {
+  const nextId = transition?.nextId || rowSequenceIdAt(transition?.toIndex ?? 0);
+  state.orbAgentId = nextId;
+  state.homeOrbContent = createHomeOrbAgentContentForSet(nextId, ROW_SET_ID);
+  state.rowTransition = null;
+  state.rowHandoffUntil = performance.now() + ROW_CAROUSEL_HANDOFF_MS;
+  syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+}
+
+function rowSequenceIdAt(index) {
+  const sequence = getActiveRowAgentSequence();
+  return sequence[index] || '';
+}
+
+function getBoundedRowSlotIndexes(fromIndex) {
+  const sequence = getActiveRowAgentSequence();
+  return sequence.map((_, index) => index - fromIndex);
+}
+
+function rowAgentDepthForCenterX(centerX) {
+  const distance = clamp(Math.abs(centerX) / ROW_CAROUSEL_SPACING, 0, 2);
+  if (distance <= 1) {
+    return {
+      opacity: interpolate(1, 0.8, distance),
+      blur: interpolate(0, 1, distance),
+    };
+  }
+  const farProgress = distance - 1;
+  return {
+    opacity: interpolate(0.8, 0.6, farProgress),
+    blur: interpolate(1, 6, farProgress),
+  };
+}
+
+function rowStaggerRank(slotIndex, direction, phase) {
+  if (slotIndex === 0) return 0;
+  const forwardDistance = direction > 0 ? slotIndex : -slotIndex;
+  if (forwardDistance > 0) return Math.max(0, forwardDistance - 1);
+  return 2;
+}
+
+function rowFadeOutStaggerRank(slotIndex, direction, visibleSlotIndexes) {
+  const finalSlotIndex = slotIndex - direction;
+  const finalRightToLeft = visibleSlotIndexes
+    .filter((entry) => entry !== direction)
+    .map((entry) => entry - direction)
+    .sort((a, b) => b - a);
+  return Math.max(0, finalRightToLeft.indexOf(finalSlotIndex));
+}
+
+function syncRowCarousel(now = performance.now()) {
+  if (!refs.rowLayer) return;
+  if (state.homeOrbVisible === false) {
+    refs.rowLayer.classList.remove('is-active');
+    refs.rowAgentNodes.forEach((node) => {
+      node.root.style.opacity = '0';
+      node.root.style.zIndex = '20';
+      node.root.style.transform = 'translate3d(-50%, -50%, 0) scale(0.72)';
+      if (node.image) node.image.style.filter = 'blur(6px)';
+    });
+    return;
+  }
+  const transition = state.rowTransition;
+  const handoffProgress = clamp(
+    (state.rowHandoffUntil - now) / ROW_CAROUSEL_HANDOFF_MS,
+    0,
+    1,
+  );
+  const isHandoffActive = handoffProgress > 0;
+  const isActive = Boolean(transition?.active);
+  refs.rowLayer.classList.toggle('is-active', isActive || isHandoffActive);
+  if (!isActive) {
+    const activeId = getSafeRowAgentId();
+    refs.rowAgentNodes.forEach((node, agentId) => {
+      const isCurrent = agentId === activeId;
+      node.root.style.opacity = isCurrent && isHandoffActive ? String(easeOutQuart(handoffProgress)) : '0';
+      node.root.style.zIndex = isCurrent ? '40' : '20';
+      node.root.style.transform = isCurrent
+        ? 'translate3d(-50%, -50%, 0) scale(1)'
+        : 'translate3d(-50%, -50%, 0) scale(0.72)';
+      if (node.image) node.image.style.filter = isCurrent ? 'blur(0px)' : 'blur(6px)';
+    });
+    return;
+  }
+
+  const elapsed = now - transition.startedAt;
+  const moveLinearProgress = clamp(elapsed / ROW_CAROUSEL_MOVE_DURATION_MS, 0, 1);
+  const moveProgress = easeSmoothConnect(clamp((moveLinearProgress - 0.12) / 0.66, 0, 1));
+  const shiftX = -transition.direction * ROW_CAROUSEL_SPACING * moveProgress;
+  const slotIndexes = getBoundedRowSlotIndexes(transition.fromIndex);
+  const visibleIds = new Set();
+
+  slotIndexes.forEach((slotIndex) => {
+    const agentId = rowSequenceIdAt(transition.fromIndex + slotIndex);
+    visibleIds.add(agentId);
+    const node = refs.rowAgentNodes.get(agentId);
+    if (!node) return;
+    const centerX = (slotIndex * ROW_CAROUSEL_SPACING) + shiftX;
+    const centerWeight = 1 - clamp(Math.abs(centerX) / ROW_CAROUSEL_SPACING, 0, 1);
+    const scale = interpolate(0.72, 1, easeOutQuart(centerWeight));
+    const isDestination = agentId === rowSequenceIdAt(transition.toIndex);
+    const isOrigin = agentId === rowSequenceIdAt(transition.fromIndex);
+    const depth = rowAgentDepthForCenterX(centerX);
+    const fadeInDelay = rowStaggerRank(slotIndex, transition.direction, 'in') * ROW_CAROUSEL_STAGGER_MS;
+    const fadeOutDelay = rowFadeOutStaggerRank(slotIndex, transition.direction, slotIndexes) * ROW_CAROUSEL_STAGGER_MS;
+    const revealOpacity = isOrigin
+      ? 1
+      : easeInOutCubic(clamp((elapsed - fadeInDelay) / (ROW_CAROUSEL_MOVE_DURATION_MS * 0.68), 0, 1));
+    const hideOpacity = isDestination
+      ? 1
+      : 1 - easeInOutCubic(clamp(
+        (elapsed - ROW_CAROUSEL_FADE_OUT_DELAY_MS - fadeOutDelay) / ROW_CAROUSEL_FADE_OUT_DURATION_MS,
+        0,
+        1,
+      ));
+    const sideOpacity = Math.min(revealOpacity, hideOpacity);
+    const opacity = isDestination
+      ? revealOpacity
+      : (isOrigin ? hideOpacity : sideOpacity);
+    node.root.style.opacity = String(clamp(opacity * depth.opacity, 0, 1));
+    node.root.style.zIndex = String(20 + Math.round(centerWeight * 20));
+    node.root.style.transform = `translate3d(calc(-50% + ${format(centerX)}px), -50%, 0) scale(${format(scale)})`;
+    if (node.image) node.image.style.filter = `blur(${format(depth.blur)}px)`;
+  });
+
+  refs.rowAgentNodes.forEach((node, agentId) => {
+    if (visibleIds.has(agentId)) return;
+    node.root.style.opacity = '0';
+    node.root.style.transform = 'translate3d(-50%, -50%, 0) scale(0.72)';
+    if (node.image) node.image.style.filter = 'blur(6px)';
+  });
 }
 
 function render() {
@@ -1509,7 +3871,7 @@ function render() {
   let scene = computeScene(now);
   const hoverChanged = state.hoveredBubble !== scene.hoveredId || state.hoveredChildBubble !== scene.hoveredChildId;
   if (hoverChanged) {
-    if (scene.hoveredId != null && scene.hoveredId !== state.hoveredBubble) playBubbleHoverSound();
+    if (scene.hoveredId != null && scene.hoveredId !== state.hoveredBubble) playSimEarcon('hover');
     state.hoveredBubble = scene.hoveredId;
     state.hoveredChildBubble = scene.hoveredChildId;
     scene = computeScene(now);
@@ -1521,9 +3883,33 @@ function render() {
   }
   const isInitialReveal = state.isPressed && now < state.openMotionUntil;
   const isSwapActive = Boolean(state.swapTransition?.active);
+  const isLensFiring = isLensFireSwap(state.swapTransition);
+  const isLensShimmerActive = isLensFiring || now < state.lensShimmerUntil;
+  const isLensExpandShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'expand';
+  const isLensFocusShimmerActive = isLensShimmerActive && state.lensShimmerMode === 'focus';
+  const isLensConceptShimmerActive = isLensShimmerActive && isLensConceptBubbleSet(state.activeSetId);
+  const hideLensSwitchContent = state.hideLensSwitchContent && isLensConceptShimmerActive;
+  const isRowTransitionActive = isRowTransitionRunning(now);
+  const isRowHandoffActive = now < state.rowHandoffUntil;
   const isPostSwapReset = state.swapResetPending;
   const demotedSwapMotion = isSwapActive ? computeDemotedSwapMotion(state.swapTransition, now) : null;
   const panTransitionDuration = state.panSnapPending ? '0ms' : '1000ms';
+  const showDefaultAgentBanner = state.activeSetId === 'agent'
+    && state.agentSetReturnTriggered
+    && state.agentSetReturnPhase === 'reopening'
+    && state.isPressed;
+
+  refs.shell?.classList.toggle('is-lens-firing', isLensShimmerActive);
+  refs.shell?.classList.toggle('is-lens-expand-firing', isLensExpandShimmerActive);
+  refs.shell?.classList.toggle('is-lens-focus-firing', isLensFocusShimmerActive);
+  refs.shell?.classList.toggle('is-lens-concept-firing', isLensConceptShimmerActive);
+  refs.shell?.classList.toggle('is-row-set', isRowBubbleSet(state.activeSetId));
+
+  if (refs.canvasBanner) {
+    refs.canvasBanner.textContent = 'Set default agent';
+    refs.canvasBanner.classList.toggle('is-hidden', !showDefaultAgentBanner);
+    refs.canvasBanner.setAttribute('aria-hidden', String(!showDefaultAgentBanner));
+  }
 
   refs.panLayer.style.transitionDuration = panTransitionDuration;
   refs.panLayer.style.transform =
@@ -1542,27 +3928,39 @@ function render() {
     const isPromotingDomainPill = isPromoting && bubble.hoverExpandsToPill;
     const isHoverShellActive = (isHovered && !bubble.isPill) || isPromoting;
     const isRoundVisualScaleActive = (isHovered && !usesPillInteraction) || isPromoting;
+    const hoverVisualScale = bubble.usesSurfaceShell
+      ? CONTROL_BUBBLE_HOVER_SCALE
+      : BUBBLE_HOVER_CONTENT_SCALE;
     const isAppearing = isInitialReveal;
     const isSwapFade = bubble.swapState === 'fade';
+    const isSelectedLensFireBubble = isLensFiring
+      && isSwapFade
+      && bubble.id === state.swapTransition?.selectedBubbleId;
     const isSwapHidden = bubble.swapState === 'hidden';
     const isReturning = !isSwapActive && !state.isPressed && now < state.closeMotionUntil;
     const isForcedHiddenReset = isPostSwapReset && !state.isPressed && !isSwapActive;
     const staggerDelay = isSwapFade
-      ? (node.index * BUBBLE_STAGGER_STEP_MS)
+      ? ((bubble.swapStaggerIndex ?? node.index) * BUBBLE_STAGGER_STEP_MS)
       : ((isAppearing || isReturning)
       ? (node.index * BUBBLE_STAGGER_STEP_MS)
       : 0);
-    const transformDuration = isSwapFade
+    const transformDuration = isSelectedLensFireBubble
+      ? 0
+      : isSwapFade
       ? SWAP_SIBLING_DURATION_MS
       : (isSwapHidden ? 1 : (isAppearing
       ? APPEAR_MOVE_DURATION_MS
       : (isReturning ? DISAPPEAR_MOVE_DURATION_MS : ACTIVE_MOVE_DURATION_MS)));
-    const opacityDuration = isSwapFade
+    const opacityDuration = isSelectedLensFireBubble
+      ? LENS_PUNCTURE_FADE_DURATION_MS
+      : isSwapFade
       ? SWAP_SIBLING_DURATION_MS
       : (isSwapHidden ? 1 : (isAppearing
       ? FADE_IN_DURATION_MS
       : (isReturning ? FADE_OUT_DURATION_MS : DEFAULT_MOVE_DURATION_MS)));
-    const shadowDuration = isSwapFade || isSwapHidden
+    const shadowDuration = isSelectedLensFireBubble
+      ? LENS_PUNCTURE_FADE_DURATION_MS
+      : isSwapFade || isSwapHidden
       ? SWAP_SIBLING_DURATION_MS
       : (isAppearing
       ? FADE_IN_DURATION_MS
@@ -1582,15 +3980,22 @@ function render() {
     const isContextParent = state.childMenuParentId === bubble.id;
     const isDimmed = state.childMenuParentId != null && !isContextParent;
     const anyHovered = scene.hoveredId != null;
-    const isHoverDimmed = anyHovered && !isHovered;
+    const isHoverDimmed = !isPromptLikeBubbleSet(state.activeSetId) && anyHovered && !isHovered;
     const bubbleOpacity = isDimmed ? CHILD_DIMMED_OPACITY : isHoverDimmed ? 0.6 : 1;
-    node.root.style.opacity = isPromoting
-      ? '1'
-      : state.isPressed
-      ? String(bubbleOpacity)
-      : (isSwapActive ? '0' : '0');
+    const suppressHoveredShadowForVideo = state.activeSetId === 'app'
+      && Boolean(state.backgroundVideo?.src)
+      && isHovered;
+    if (isPromoting) {
+      node.root.style.opacity = String(clamp(Number(bubble.promotedOpacity) || 0, 0, 1));
+    } else {
+      node.root.style.opacity = state.isPressed
+        ? String(bubbleOpacity)
+        : (isSwapActive ? '0' : '0');
+    }
     if (node.shadowEl) {
-      if (isHoverShellActive || isPromoting) {
+      if (suppressHoveredShadowForVideo) {
+        node.shadowEl.style.boxShadow = 'none';
+      } else if (isHoverShellActive || isPromoting) {
         node.shadowEl.style.boxShadow = '0 15px 35px -5px rgba(0, 0, 0, 0.3)';
       } else {
         const isTightHoverShadow = bubble.hoverShadowMode === 'tight';
@@ -1615,12 +4020,14 @@ function render() {
       ? 'brightness(0.42) saturate(0.68)'
       : 'none';
     node.root.style.setProperty('--bubble2-stagger-delay', `${staggerDelay}ms`);
-    node.root.style.transitionDelay = `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
+    node.root.style.transitionDelay = isSelectedLensFireBubble
+      ? `0ms, 0ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`
+      : `${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms, ${staggerDelay}ms`;
     node.root.style.transitionDuration = isForcedHiddenReset
       ? '0ms, 0ms, 0ms, 0ms, 0ms'
       : isPromoting
       ? '0ms, 0ms, 0ms, 0ms, 0ms'
-      : `${transformDuration}ms, 600ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
+      : `${transformDuration}ms, ${isSelectedLensFireBubble ? 0 : 600}ms, ${opacityDuration}ms, ${shadowDuration}ms, ${opacityDuration}ms`;
     node.root.style.transitionTimingFunction = isForcedHiddenReset
       ? 'linear, linear, linear, linear, linear'
       : isPromoting
@@ -1628,22 +4035,27 @@ function render() {
       : `${transformEase}, var(--bubble2-pill-ease), ease-out, ease, ease`;
     node.root.classList.toggle('is-round-hovered', isHoverShellActive);
     node.root.classList.toggle('is-swap-promoting', isPromoting);
+    node.root.classList.toggle('is-lens-switch-content-hidden', hideLensSwitchContent);
     if (node.visual) {
-      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? BUBBLE_HOVER_CONTENT_SCALE : 1))})`;
+      node.visual.style.transform = `scale(${isPromotingDomainPill ? 1 : (isPromoting ? bubble.promotedVisualScale : (isRoundVisualScaleActive ? hoverVisualScale : 1))})`;
     }
     if (node.surfaceChrome) {
-      applyBubbleCelestialChrome(
-        node.surfaceChrome,
-        node.surface,
-        CELESTIAL_ORB_PRESET,
-        bubble.theme || {},
-        {
-          width: bubble.targetWidth,
-          height: bubble.baseSize,
-          radius: bubble.baseSize / 2,
-        },
-      );
-      node.surfaceChrome.style.opacity = (isHovered || isPromoting) ? '1' : '0';
+      const suppressChromeDuringLensFire = isLensFiring && isSwapFade && !isSelectedLensFireBubble;
+      if (!suppressChromeDuringLensFire) {
+        applyBubbleCelestialChrome(
+          node.surfaceChrome,
+          node.surface,
+          CELESTIAL_ORB_PRESET,
+          bubble.theme || {},
+          {
+            width: bubble.targetWidth,
+            height: bubble.baseSize,
+            radius: bubble.baseSize / 2,
+          },
+        );
+      }
+      node.surfaceChrome.style.transitionDuration = suppressChromeDuringLensFire ? '0ms' : '';
+      node.surfaceChrome.style.opacity = !suppressChromeDuringLensFire && (isHovered || isPromoting || isSelectedLensFireBubble) ? '1' : '0';
     }
     if (node.hoverShell) {
       applyBubbleHoverShellChrome(node.hoverShell, bubble.theme, orbGeometryForSize(bubble.baseSize));
@@ -1659,12 +4071,21 @@ function render() {
     node.iconWrap.style.left = '0px';
     node.iconWrap.style.top = '0px';
     node.iconWrap.style.setProperty('--bubble-emoji-size', `${bubble.baseSize * 0.6}px`);
+    const bubbleGraphicEl = node.iconWrap.querySelector('.bubble2-icon');
     const pillHoverBubbleScale = usesPillInteraction && isHovered ? PILL_HOVER_BUBBLE_SCALE : 1;
-    node.iconWrap.style.transform = isPromotingDomainPill
-      ? 'scale(1)'
-      : (usesPillInteraction ? 'scale(1)' : `scale(${pillHoverBubbleScale})`);
+    let iconWrapScale = bubble.lockGraphicScaleOnHover && usesPillInteraction
+      ? (1 / Math.max(isPromoting ? (bubble.promotedVisualScale ?? 1) : pillHoverBubbleScale, 0.0001))
+      : (isPromotingDomainPill
+        ? 1
+        : (usesPillInteraction ? 1 : pillHoverBubbleScale));
+    node.iconWrap.style.transform = `scale(${iconWrapScale})`;
+    node.iconWrap.style.opacity = '1';
+    if (bubbleGraphicEl instanceof HTMLElement) {
+      bubbleGraphicEl.style.removeProperty('transform');
+    }
+    node.surface.classList.toggle('has-surface-shell', Boolean(bubble.usesSurfaceShell));
     node.surface.classList.toggle('is-pill', bubble.isPill || bubble.isExpanded || bubble.hoverExpandsToPill);
-    node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting));
+    node.surface.classList.toggle('selected', Boolean(node.surfaceChrome) && (isHovered || isPromoting || isSelectedLensFireBubble));
     if (!usesPillInteraction) {
       node.surface.classList.toggle('is-hovered', isHovered);
     } else {
@@ -1678,8 +4099,8 @@ function render() {
       node.pillCopy.style.width = `${bubble.expandedExtraSourceWidth}px`;
       node.pillCopy.style.transitionDuration = bubble.isExpanded ? '' : '0ms';
       node.pillCopy.style.opacity = bubble.isExpanded ? '' : '0';
-      node.pillCopy.style.setProperty('--bubble2-title-size', `${18 / pillContentScale}px`);
-      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${16 / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-title-size', `${PILL_TITLE_FONT_SIZE / pillContentScale}px`);
+      node.pillCopy.style.setProperty('--bubble2-subtitle-size', `${PILL_SUBTITLE_FONT_SIZE / pillContentScale}px`);
       node.pillCopy.style.setProperty('--bubble2-pill-gap', `${4 / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-left-padding', `${(bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING) / pillContentScale}px`);
       node.pillCopy.style.setProperty('--pill-text-right-padding', `${getPillTextRightPadding(bubble) / pillContentScale}px`);
@@ -1777,17 +4198,50 @@ function render() {
     node.content.style.transform = isChip ? 'scale(1)' : (node.action.img ? 'scale(1)' : 'scale(0.88)');
   }
 
+  const promptThinkingActive = isPromptHomeThinkingActive();
+  const thinkingHomeOrbActive = isHomeOrbThinkingModeActive();
+  const collapsedThinkingStream = (promptThinkingActive && state.promptHomeThinkingAnimating)
+    || (!thinkingHomeOrbActive && Boolean(refs.orbStream?.classList.contains('hidden')));
+
   if (refs.orb) {
+    const orbVisibleScale = state.homeOrbVisible === false ? 0.2 : 1;
+    const orbVisibleOpacity = state.homeOrbVisible === false ? 0 : 1;
     refs.orb.classList.toggle('is-pressed', state.isPressed);
-    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms' : '';
+    refs.orb.classList.toggle('is-home-orb-hidden', state.homeOrbVisible === false);
+    refs.orb.classList.toggle('is-interrupt-home-orb', state.activeSetId === 'interrupt');
+    refs.orb.classList.toggle('is-prompt-thinking-home-orb', promptThinkingActive);
+    refs.orb.classList.toggle('is-thinking-home-orb', thinkingHomeOrbActive);
+    refs.orb.classList.toggle('is-collapsed-stream', collapsedThinkingStream);
+    refs.orb.classList.toggle('is-row-home-orb', isRowBubbleSet(state.activeSetId));
+    refs.orb.classList.toggle('is-row-transitioning', isRowBubbleSet(state.activeSetId) && isRowTransitionActive);
+    refs.orb.style.transitionDuration = (demotedSwapMotion || state.panSnapPending) ? '0ms, 0ms' : '';
     refs.orb.style.transform = demotedSwapMotion
-      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0)`
-      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0)`;
-    refs.orb.style.opacity = demotedSwapMotion ? format(demotedSwapMotion.opacity) : (isSwapActive ? '0' : '1');
+      ? `translate3d(${format(demotedSwapMotion.centerX)}px, ${format(demotedSwapMotion.centerY)}px, 0) scale(${format(orbVisibleScale)})`
+      : `translate3d(${format(scene.orb.targetX ?? 0)}px, ${format(scene.orb.targetY ?? 0)}px, 0) scale(${format(orbVisibleScale)})`;
+    refs.orb.style.opacity = demotedSwapMotion
+      ? format(demotedSwapMotion.opacity * orbVisibleOpacity)
+      : ((isSwapActive && !isInterruptPlaybackSwap()) ? '0' : String(orbVisibleOpacity));
+  }
+
+  if (refs.orbStream) {
+    if (thinkingHomeOrbActive) {
+      setBubbleHomeStreamVisible(true);
+      syncBubbleHomeThinkingPillIcon(state.homeOrbContent);
+      if (state.activeSetId === 'interrupt' || !refs.orbStream.classList.contains('is-text-transitioning')) {
+        syncBubbleHomeThinkingPillText(
+          state.activeSetId === 'interrupt'
+            ? (interruptSessionPaused ? 'Session paused' : BUBBLE_HOME_INTERRUPT_THINKING_TEXT)
+            : (bubbleHomeStreamState.currentText || BUBBLE_HOME_PROMPT_THINKING_TEXT),
+        );
+      }
+    }
   }
 
   if (refs.orbVisual) {
-    syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+    syncBubbleHomeOrbVisualStateClasses(refs.orbVisual, state.homeOrbContent);
+    if (!refs.orbVisual.classList.contains('is-orb-icon-switching')) {
+      syncBubbleHomeOrbVisual(refs.orb, { animate: false });
+    }
     refs.orbVisual.classList.toggle('is-promoted-home', state.homeOrbContent?.kind !== 'agent-orb');
     refs.orbVisual.style.transitionDuration = (demotedSwapMotion || state.panSnapPending || state.swapResetPending)
       ? '0ms'
@@ -1797,10 +4251,11 @@ function render() {
     applyBubbleHomeOrbShellChrome(refs.orbVisual, currentBubbleHomeOrbTheme());
   }
 
+  syncRowCarousel(now);
   syncSwapLayer(now);
   state.lastScene = scene;
 
-  if (state.swapTransition?.active) {
+  if (state.swapTransition?.active || state.rowTransition?.active || isRowHandoffActive) {
     scheduleRender();
   }
   if (state.panSnapPending) {
@@ -1845,7 +4300,7 @@ function computeScene(now = performance.now()) {
         radius: (ORB_BASE_SIZE * 0.8) / 2,
       }
       : null;
-    let processedBubbles = getBubblesConfigForSet(state.activeSetId).map((slot) => {
+    let processedBubbles = getVisibleSlotsForActiveSet(now).map((slot) => {
       const bubble = resolveRenderedBubble(slot);
       let depthScale = BUBBLE_MIN_SIZE / bubble.baseSize;
       let dx = 0;
@@ -2095,6 +4550,73 @@ function computeScene(now = performance.now()) {
 
 function computeSwapTransitionScene(now) {
   const transition = state.swapTransition;
+  if (isInterruptPlaybackSwap(transition)) {
+    const progress = easeSmoothConnect(clamp((now - transition.startedAt) / transition.durationMs, 0, 1));
+    return {
+      bubbles: transition.releaseBubbles.map((bubble) => ({
+        ...bubble,
+        swapState: 'fade',
+        targetScale: 0.2,
+        isExpanded: false,
+        expandedExtraSourceWidth: 0,
+        promotedVisualScale: 1,
+      })),
+      children: [],
+      childZone: null,
+      hoveredId: null,
+      hoveredChildId: null,
+      orb: {
+        id: 'orb',
+        targetScale: 1,
+        targetX: 0,
+        targetY: 0,
+      },
+      panOffset: {
+        x: interpolate(transition.panOffset.x, 0, progress),
+        y: interpolate(transition.panOffset.y, 0, progress),
+      },
+    };
+  }
+  if (isLensFireSwap(transition)) {
+    const selectedBubbleId = transition.selectedBubbleId;
+    const nonSelectedBubbles = transition.releaseBubbles.filter((bubble) => bubble.id !== selectedBubbleId);
+    const staggerIndexById = new Map(nonSelectedBubbles.map((bubble, index) => [bubble.id, index]));
+    const selectedStaggerIndex = Math.max(transition.releaseBubbles.length - 1, 0);
+    return {
+      bubbles: transition.releaseBubbles.map((bubble) => {
+        const isSelected = bubble.id === selectedBubbleId;
+        const swapStaggerIndex = isSelected
+          ? selectedStaggerIndex
+          : (staggerIndexById.get(bubble.id) ?? 0);
+        return {
+          ...bubble,
+          isLensFireSelectedBubble: isSelected,
+          swapState: 'fade',
+          swapStaggerIndex,
+          targetScale: isSelected
+            ? computeLensFirePunctureScale(bubble, transition, now)
+            : 0.2,
+          targetWidth: isSelected
+            ? computeLensFirePunctureWidth(bubble, transition, swapStaggerIndex, now)
+            : bubble.baseSize,
+          isExpanded: false,
+          expandedExtraSourceWidth: 0,
+          promotedVisualScale: 1,
+        };
+      }),
+      children: [],
+      childZone: null,
+      hoveredId: null,
+      hoveredChildId: null,
+      orb: {
+        id: 'orb',
+        targetScale: 1,
+        targetX: transition.demotedCenterStartX ?? 0,
+        targetY: transition.demotedCenterStartY ?? 0,
+      },
+      panOffset: transition.panOffset,
+    };
+  }
   const promotedBubble = findPromotedReleaseBubble(transition);
   const promotedMotion = computePromotedSwapMotion(transition, promotedBubble, now);
   return {
@@ -2108,12 +4630,14 @@ function computeSwapTransitionScene(now) {
         ? interpolate(
             bubble.targetWidth ?? bubble.baseSize,
             bubble.baseSize,
-            easeInOutCubic(promotedMotion?.progress ?? 0),
+            easeSmoothConnect(promotedMotion?.progress ?? 0),
           )
         : (bubble.targetWidth ?? bubble.baseSize),
       isExpanded: false,
       expandedExtraSourceWidth: 0,
       promotedVisualScale: bubble.id === transition.selectedBubbleId ? (promotedMotion?.visualScale ?? transition.promotedVisualScaleStart) : 1,
+      promotedImageOpacity: bubble.id === transition.selectedBubbleId ? easeOutQuart(promotedMotion?.progress ?? 0) : 1,
+      promotedOpacity: bubble.id === transition.selectedBubbleId ? (promotedMotion?.opacity ?? 1) : 1,
     })),
     children: [],
     childZone: null,
@@ -2134,6 +4658,29 @@ function clearSwapLayer() {
 function syncSwapLayer(now) {
   if (!refs.swapLayer) return;
   clearSwapLayer();
+  const ghost = state.promotedHandoffGhost;
+  if (!ghost) return;
+  const elapsed = now - ghost.startedAt;
+  const fadeProgress = clamp((elapsed - SWAP_PROMOTED_HANDOFF_DELAY_MS) / SWAP_PROMOTED_HANDOFF_FADE_MS, 0, 1);
+  const opacity = 1 - easeInQuart(fadeProgress);
+  if (elapsed >= SWAP_PROMOTED_HANDOFF_DELAY_MS + SWAP_PROMOTED_HANDOFF_FADE_MS) {
+    state.promotedHandoffGhost = null;
+    return;
+  }
+  const node = createSwapPromotedNode();
+  node.style.setProperty('--swap-center-x', `${format(ghost.centerX ?? 0)}px`);
+  node.style.setProperty('--swap-center-y', `${format(ghost.centerY ?? 0)}px`);
+  node.style.setProperty('--swap-rim-drift', '0px');
+  node.style.setProperty('--swap-shell-scale', '1');
+  syncSwapOrbContent(node, ghost.content);
+  const visual = node.querySelector('.bubble2-swap-orb');
+  syncBubbleHomeOrbVisualStateClasses(visual, ghost.content);
+  applySwapOrbTheme(node, ghost.theme || ghost.content?.theme);
+  if (visual) {
+    visual.style.opacity = String(clamp(opacity, 0, 1));
+  }
+  refs.swapLayer.appendChild(node);
+  scheduleRender();
 }
 
 function computeShellBloomScale(elapsedMs, startScale) {
@@ -2150,7 +4697,7 @@ function createSwapPromotedNode() {
   const wrapper = document.createElement('div');
   wrapper.className = 'bubble2-swap-node bubble2-swap-promoted';
   wrapper.innerHTML = `
-    <div class="bubble2-swap-orb bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected">
+    <div class="bubble2-swap-orb bubble2-orb-visual">
       ${renderBubbleOrbShellMarkup()}
     </div>
   `;
@@ -2161,7 +4708,7 @@ function createSwapDemotedNode() {
   const wrapper = document.createElement('div');
   wrapper.className = 'bubble2-swap-node bubble2-swap-demoted';
   wrapper.innerHTML = `
-    <div class="bubble2-swap-demoted-shell bubble2-orb-visual g-celestial-orb-visual g-stage-selected-host selected">
+    <div class="bubble2-swap-demoted-shell bubble2-orb-visual">
       ${renderBubbleOrbShellMarkup()}
     </div>
   `;
@@ -2175,7 +4722,13 @@ function applySwapOrbTheme(node, theme) {
 
 function syncSwapOrbContent(node, content) {
   if (!node || !content) return;
-  if (content.kind === 'agent-orb') {
+  const promotedImageSize = Number(content.homePromotedImageSize);
+  if (Number.isFinite(promotedImageSize) && promotedImageSize > 0) {
+    node.style.setProperty('--swap-icon-size', `${promotedImageSize}px`);
+  } else {
+    node.style.removeProperty('--swap-icon-size');
+  }
+  if (content.kind === 'agent-orb' && !hasCustomAgentOrbImage(content)) {
     syncAiOrbCenterIcon(node, {
       animate: false,
       id: content.iconId,
@@ -2308,8 +4861,8 @@ function resolveBubbleOrbFieldLayout(bubbles, orbNode, iterations = BUBBLE_LAYOU
 }
 
 function measurePillExtraWidth(bubble) {
-  const titleWidth = measureTextWidth(bubble.pillTitle || '', '600 18px "DM Sans"');
-  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', '400 16px "DM Sans"');
+  const titleWidth = measureTextWidth(bubble.pillTitle || '', `600 ${PILL_TITLE_FONT_SIZE}px "DM Sans"`);
+  const subtitleWidth = measureTextWidth(bubble.pillSubtitle || '', `400 ${PILL_SUBTITLE_FONT_SIZE}px "DM Sans"`);
   const leftPadding = bubble.pillTextLeftPadding ?? PILL_TEXT_LEFT_PADDING;
   const rightPadding = getPillTextRightPadding(bubble);
   return Math.ceil(Math.max(titleWidth, subtitleWidth) + leftPadding + rightPadding + 10);
@@ -2373,6 +4926,9 @@ function enrichBubbleMetrics(bubble) {
 }
 
 function createBubbleGraphic(bubble) {
+  if (bubble.graphicKind === 'interrupt-control') {
+    return createHtmlNode(renderInterruptControlSvg(bubble.controlIcon));
+  }
   if (bubble.graphicKind === 'emoji') {
     const emoji = document.createElement('span');
     emoji.className = 'bubble2-icon-emoji';
@@ -2592,6 +5148,7 @@ function syncChildMenuState(nextHoveredBubbleId) {
     state.childMenuParentId = nextHoveredBubbleId;
     state.childMenuPointerLock = null;
     state.hoveredChildBubble = null;
+    playSimEarcon('chip-reveal');
     scheduleRender();
   }, CHILD_MENU_HOLD_MS);
 
@@ -2927,6 +5484,14 @@ function easeOutQuart(value) {
   return 1 - (inverse * inverse * inverse * inverse);
 }
 
+function easeInQuart(value) {
+  return value * value * value * value;
+}
+
+function easeSmoothConnect(value) {
+  return cubicBezierAt(clamp(value, 0, 1), 0.645, 0.045, 0.355, 1);
+}
+
 function easeInOutCubic(value) {
   if (value < 0.5) return 4 * value * value * value;
   const inverse = (-2 * value) + 2;
@@ -2938,6 +5503,27 @@ function easeOutBackSoft(value) {
   const c3 = c1 + 1;
   const x = value - 1;
   return 1 + (c3 * x * x * x) + (c1 * x * x);
+}
+
+function cubicBezierAt(x, x1, y1, x2, y2) {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let lower = 0;
+  let upper = 1;
+  let t = x;
+  for (let i = 0; i < 8; i += 1) {
+    const currentX = cubicBezierPoint(t, x1, x2);
+    if (Math.abs(currentX - x) < 0.0005) break;
+    if (currentX < x) lower = t;
+    else upper = t;
+    t = (lower + upper) / 2;
+  }
+  return cubicBezierPoint(t, y1, y2);
+}
+
+function cubicBezierPoint(t, p1, p2) {
+  const inverse = 1 - t;
+  return (3 * inverse * inverse * t * p1) + (3 * inverse * t * t * p2) + (t * t * t);
 }
 
 function interpolate(start, end, progress) {

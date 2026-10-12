@@ -4,9 +4,17 @@ import { celestialSelectedPresetForRenderShape } from './celestial-selected-pres
 import { applySelectedChromePreset, hexToCssColor } from './celestial-selection-chrome.js';
 import { clamp } from '../utils.js';
 
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 export function createMorphRender(ctx) {
   const { DROPS, C, constants, callbacks, state, layout, bridges } = ctx;
   const { CARD_P, CARD_MEDIA_STACK_GAP, BOTTOM_ALIGN_REF_H, TS } = constants;
+  const ACTION_ROW_HEIGHT = 64;
+  const ACTION_ROW_GAP = 12;
+  const ACTION_ROW_TOTAL_HEIGHT = ACTION_ROW_HEIGHT + ACTION_ROW_GAP;
   const uiFadeTimers = state.uiFadeTimers;
   let richHideTimer = null;
   let thinkingVisualEnterTimer = null;
@@ -47,6 +55,12 @@ export function createMorphRender(ctx) {
     state.prototypeSelectionMotionFrame = null;
   }
 
+  function clearPrototypeSelectionChromeSyncFrame() {
+    if (!state.prototypeSelectionChromeSyncFrame) return;
+    cancelAnimationFrame(state.prototypeSelectionChromeSyncFrame);
+    state.prototypeSelectionChromeSyncFrame = null;
+  }
+
   function derivePrototypeListInitials(label = '') {
     const words = String(label || '').trim().split(/\s+/).filter(Boolean);
     if (!words.length) return '•';
@@ -70,38 +84,54 @@ export function createMorphRender(ctx) {
   }
 
   function prototypeListEntriesFromContent(contentData = {}) {
-    const icon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
     const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
     const shape = String(scenario?.shape || 'list');
     const blobTopCore = callbacks.stageSelectedBlobTopCoreColorForShape?.(scenario, shape) || '#8fb2ef';
     const blobTopEdge = callbacks.stageSelectedBlobTopEdgeColorForShape?.(scenario, shape) || '#8a72eb';
     const blobBottomCore = callbacks.stageSelectedBlobBottomCoreColorForShape?.(scenario, shape) || '#a8bbf0';
     const blobBottomEdge = callbacks.stageSelectedBlobBottomEdgeColorForShape?.(scenario, shape) || '#572fff';
+    const iconTypography = callbacks.getScenarioTypography?.(scenario, shape)?.icon || {};
+    const mediaSize = Number(iconTypography.size);
     const sourceItems = Array.isArray(contentData?.listItems) && contentData.listItems.length
       ? contentData.listItems
       : [
-        { label: String(contentData?.primary || '').trim(), icon: contentData?.listChipIcons?.primary },
-        { label: String(contentData?.secondary || '').trim(), icon: contentData?.listChipIcons?.secondary },
-        { label: String(contentData?.detail || '').trim(), icon: contentData?.listChipIcons?.detail },
+        { primary: String(contentData?.primary || '').trim(), secondary: '', icon: contentData?.listChipIcons?.primary },
+        { primary: String(contentData?.secondary || '').trim(), secondary: '', icon: contentData?.listChipIcons?.secondary },
+        { primary: String(contentData?.detail || '').trim(), secondary: '', icon: contentData?.listChipIcons?.detail },
       ];
+    const listChipIconFallbacks = [
+      contentData?.listChipIcons?.primary,
+      contentData?.listChipIcons?.secondary,
+      contentData?.listChipIcons?.detail,
+    ];
+    const stageIcon = contentData?.icon || callbacks.createIcon?.('none', '') || { kind: 'none', value: '' };
+    const hasIconValue = (value) => value?.kind !== 'none' && String(value?.value || '').trim();
     const fallbackLabels = ['Hiro Tanaka', 'Mina Park', 'Sofia Chen'];
     return sourceItems.map((entry, index) => {
-      const label = String(entry?.label || '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
-      const slotIcon = entry?.icon || { kind: 'none', value: '' };
-      const resolvedIcon = slotIcon?.kind !== 'none' && String(slotIcon?.value || '').trim() ? slotIcon : icon;
+      const primary = String(entry?.primary ?? entry?.label ?? '').trim() || fallbackLabels[index] || `List item ${index + 1}`;
+      const secondary = String(entry?.secondary || '').trim();
+      const itemIcon = entry?.icon || { kind: 'none', value: '' };
+      const fallbackIcon = listChipIconFallbacks[index] || { kind: 'none', value: '' };
+      const resolvedIcon = hasIconValue(itemIcon)
+        ? itemIcon
+        : hasIconValue(fallbackIcon)
+        ? fallbackIcon
+        : stageIcon;
       const baseEntry = resolvedIcon?.kind === 'image' && String(resolvedIcon?.value || '').trim()
         ? { avatar: String(resolvedIcon.value).trim(), initials: '' }
         : resolvedIcon?.kind === 'emoji' && String(resolvedIcon?.value || '').trim()
         ? { avatar: '', initials: String(resolvedIcon.value).trim() }
         : null;
       return ({
-        name: label,
+        name: primary,
+        subtitle: secondary,
         avatar: baseEntry?.avatar || '',
-        initials: baseEntry?.initials || derivePrototypeListInitials(label),
+        initials: baseEntry?.initials || derivePrototypeListInitials(primary),
         blobTopCore,
         blobTopEdge,
         blobBottomCore,
         blobBottomEdge,
+        mediaSize: Number.isFinite(mediaSize) ? mediaSize : null,
       });
     });
   }
@@ -132,36 +162,49 @@ export function createMorphRender(ctx) {
     if (!prototypeListRoot) return;
     clearPrototypeListCollapseTimer();
     clearPrototypeListSettleTimer();
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const stageId = String(scenario?.shape || 'list');
+    const pillListStyle = stageId === 'list-pill';
+    const stage = callbacks.stageById?.(stageId, scenario) || null;
+    const pillStageSize = pillListStyle
+      ? (callbacks.stageMainSize?.(stage, scenario) || { width: 300, height: 80 })
+      : null;
     const frameEl = document.getElementById('ui-frame') || document.getElementById('stage');
     const frameHeight = Math.max(240, Math.round(frameEl?.getBoundingClientRect?.().height || 420));
-    const pillHeight = 56;
+    const pillHeight = pillListStyle ? Math.max(40, Math.round(Number(pillStageSize?.height) || 80)) : 56;
     const bottomInset = 20;
     const hasOrb = listStageShowsOrb(contentData);
-    const orbClearance = 8;
+    const listSelectable = listStageAllowsSelection(contentData);
+    const orbClearance = 11;
+    const entries = prototypeListEntriesFromContent(contentData);
     let bottomY = Math.round((frameHeight / 2) - bottomInset - (pillHeight / 2));
     if (hasOrb) {
       const listGeo = state.lastMainGeo || SHAPES.list.main;
-      bottomY = Math.round((Number(listGeo?.ty) || -45) - orbClearance - (pillHeight / 2));
+      const orbTopY = Number(listGeo?.ty) || -45;
+      bottomY = Math.round(orbTopY - orbClearance - (pillHeight / 2));
     }
     const orbAnchor = getPrototypeThinkingOrbAnchor();
-    const entries = prototypeListEntriesFromContent(contentData);
-    const previousSelectedIndex = clamp(
-      Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
-      0,
-      Math.max(0, entries.length - 1),
-    );
-    const resolvedSelectedIndex = clamp(
-      Number.isFinite(selectedIndex) ? selectedIndex : state.prototypeListSelectedIndex,
-      0,
-      Math.max(0, entries.length - 1),
-    );
+    const previousSelectedIndex = listSelectable
+      ? clamp(
+        Number.isFinite(state.prototypeListSelectedIndex) ? state.prototypeListSelectedIndex : 0,
+        0,
+        Math.max(0, entries.length - 1),
+      )
+      : -1;
+    const resolvedSelectedIndex = listSelectable
+      ? clamp(
+        Number.isFinite(selectedIndex) ? selectedIndex : state.prototypeListSelectedIndex,
+        0,
+        Math.max(0, entries.length - 1),
+      )
+      : -1;
     const movingDown = resolvedSelectedIndex > previousSelectedIndex;
     const movingUp = resolvedSelectedIndex < previousSelectedIndex;
     const items = layoutDisambiguationPillItems(
       entries,
       resolvedSelectedIndex,
       'stack',
-      { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y }
+      { bottomY, gap: 8, startX: orbAnchor.x, startY: orbAnchor.y, itemHeight: pillHeight }
     ).map((item, index) => {
       let direction = 'bottom';
       if (movingDown) {
@@ -180,13 +223,21 @@ export function createMorphRender(ctx) {
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '1';
     prototypeListRoot.dataset.listListeningOrb = listStageShowsOrb(contentData) ? '1' : '';
+    prototypeListRoot.dataset.listSelectable = listSelectable ? '1' : '';
+    if (pillListStyle) {
+      prototypeListRoot.style.setProperty('--prototype-list-pill-width', `${Math.max(120, Math.round(Number(pillStageSize?.width) || 300))}px`);
+      prototypeListRoot.style.setProperty('--prototype-list-pill-height', `${pillHeight}px`);
+    } else {
+      prototypeListRoot.style.removeProperty('--prototype-list-pill-width');
+      prototypeListRoot.style.removeProperty('--prototype-list-pill-height');
+    }
     prototypeListRoot.innerHTML = renderDisambiguationPills({
       items,
       selectedIndex: resolvedSelectedIndex,
       rowDataAttr: 'data-prototype-list-pill',
-      clusterClass: 'g-disambiguation-pills prototype-disambiguation-pills',
+      clusterClass: `g-disambiguation-pills prototype-disambiguation-pills${pillListStyle ? ' prototype-disambiguation-pills--list-pill' : ''}`,
+      selectedChrome: false,
     });
-    applyPrototypeListSelectedChromePresets(items);
     syncPrototypeListPhase(entering ? 'entering' : 'settled');
     if (!entering) return;
     prototypeListSettleTimer = setTimeout(() => {
@@ -198,6 +249,7 @@ export function createMorphRender(ctx) {
 
   function updatePrototypeListSelectionInPlace(nextIndex) {
     if (!prototypeListRoot || prototypeListRoot.dataset.active !== '1') return false;
+    if (prototypeListRoot.dataset.listSelectable !== '1') return false;
     const cluster = prototypeListRoot.querySelector('.prototype-disambiguation-pills');
     if (!cluster) return false;
     const pills = Array.from(cluster.querySelectorAll('[data-prototype-list-pill]'));
@@ -218,11 +270,10 @@ export function createMorphRender(ctx) {
     const incomingDirection = movingDown ? 'top' : 'bottom';
     pills.forEach((pill, index) => {
       const chrome = pill.querySelector('.g-selection-chrome');
-      if (!chrome) return;
       if (index === previousSelectedIndex) {
         const existingTimer = state.prototypeListDeselectTimers.get(pill);
         if (existingTimer) clearTimeout(existingTimer);
-        chrome.dataset.stageDirection = outgoingDirection;
+        if (chrome) chrome.dataset.stageDirection = outgoingDirection;
         pill.classList.add('deselecting');
         pill.classList.remove('selected');
         const timerId = setTimeout(() => {
@@ -238,7 +289,7 @@ export function createMorphRender(ctx) {
           clearTimeout(existingTimer);
           state.prototypeListDeselectTimers.delete(pill);
         }
-        chrome.dataset.stageDirection = incomingDirection;
+        if (chrome) chrome.dataset.stageDirection = incomingDirection;
         pill.classList.remove('deselecting');
         pill.classList.add('selected');
         return;
@@ -249,7 +300,7 @@ export function createMorphRender(ctx) {
         state.prototypeListDeselectTimers.delete(pill);
       }
       pill.classList.remove('deselecting');
-      if (!pill.classList.contains('selected')) {
+      if (chrome && !pill.classList.contains('selected')) {
         chrome.dataset.stageDirection = 'bottom';
       }
     });
@@ -268,11 +319,13 @@ export function createMorphRender(ctx) {
     prototypeListRoot.dataset.collapsing = '';
     prototypeListRoot.dataset.active = '';
     prototypeListRoot.dataset.listListeningOrb = '';
+    prototypeListRoot.dataset.listSelectable = '';
     prototypeListRoot.innerHTML = '';
   }
 
   function movePrototypeListSelection(delta = 0) {
     if (!prototypeListRoot || prototypeListRoot.dataset.active !== '1') return false;
+    if (prototypeListRoot.dataset.listSelectable !== '1') return false;
     const contentData = state.prototypeListContent;
     if (!contentData) return false;
     const entries = prototypeListEntriesFromContent(contentData);
@@ -326,6 +379,12 @@ export function createMorphRender(ctx) {
     return !!callbacks.stageListListeningOrbForShape?.(scenario, shape);
   }
 
+  function listStageAllowsSelection(contentData = {}) {
+    const scenario = contentData?.scenario || callbacks.selectedScenario?.() || null;
+    const shape = String(scenario?.shape || 'list');
+    return callbacks.stageListSelectableForShape?.(scenario, shape) !== false;
+  }
+
   function inferPrototypeSelectionDirection(fromGeo, toGeo) {
     if (!fromGeo || !toGeo) return 'bottom';
     const fromX = Number(fromGeo.tx) || 0;
@@ -365,24 +424,56 @@ export function createMorphRender(ctx) {
     });
   }
 
-  function applyPrototypeListSelectedChromePresets(entries = []) {
-    if (!prototypeListRoot) return;
-    const activeScenario = state.prototypeListContent?.scenario || callbacks.selectedScenario?.() || null;
-    const shape = String(activeScenario?.shape || 'list');
-    const preset = celestialSelectedPresetForRenderShape('list');
-    const maskBlur = callbacks.stageSelectedMaskBlurForShape?.(activeScenario, shape) ?? preset.maskBlur;
-    const pills = Array.from(prototypeListRoot.querySelectorAll('[data-prototype-list-pill]'));
-    pills.forEach((pill, index) => {
-      const chrome = pill.querySelector('.g-selection-chrome');
-      if (!chrome) return;
-      const entry = entries[index] || {};
-      applySelectedChromePreset(chrome, pill, preset, {
-        blobTopCore: entry.blobTopCore,
-        blobTopEdge: entry.blobTopEdge,
-        blobBottomCore: entry.blobBottomCore,
-        blobBottomEdge: entry.blobBottomEdge,
-      }, null, { maskBlur });
+  function syncPrototypeSelectionChromeFrame(selectionOverlay, main, preset, colorOverrides, maskBlur) {
+    if (!selectionOverlay || !main || !preset) return;
+    const rect = main.getBoundingClientRect();
+    const computed = getComputedStyle(main);
+    applySelectedChromePreset(selectionOverlay, main, preset, colorOverrides, {
+      width: rect.width,
+      height: rect.height,
+      radius: Number.parseFloat(computed.borderRadius) || Math.min(rect.width, rect.height) / 2,
+    }, {
+      maskBlur,
     });
+  }
+
+  function inferPrototypeSelectionPresetKey(requestedShape, main) {
+    const shape = String(requestedShape || 'pill');
+    if (!main) return shape;
+    const rect = main.getBoundingClientRect();
+    const width = Number.parseFloat(main.style.width) || rect.width || 0;
+    const height = Number.parseFloat(main.style.height) || rect.height || 0;
+    if (width <= 0 || height <= 0) return shape;
+    const ratio = width / Math.max(1, height);
+    if (ratio >= 1.42 && height >= 120) return 'card';
+    if (ratio >= 2.2 && height <= 120) return 'pill';
+    if (Math.abs(width - height) <= 16 && Math.min(width, height) <= 132) return 'dot';
+    return shape;
+  }
+
+  function startPrototypeSelectionChromeSync(selectionOverlay, main, preset, colorOverrides, maskBlur) {
+    if (!selectionOverlay || !main || !preset) return;
+    clearPrototypeSelectionChromeSyncFrame();
+    let stableFrameCount = 0;
+    let lastSignature = '';
+    const deadline = performance.now() + Math.max(1400, (Number(state.currentTransitionAnimMs) || 0) + 500);
+    const syncForFrame = () => {
+      syncPrototypeSelectionChromeFrame(selectionOverlay, main, preset, colorOverrides, maskBlur);
+      const rect = main.getBoundingClientRect();
+      const signature = [
+        Math.round(rect.width * 10),
+        Math.round(rect.height * 10),
+        Math.round((Number.parseFloat(getComputedStyle(main).borderRadius) || 0) * 10),
+      ].join(':');
+      stableFrameCount = signature === lastSignature ? stableFrameCount + 1 : 0;
+      lastSignature = signature;
+      if (stableFrameCount >= 3 || performance.now() >= deadline) {
+        state.prototypeSelectionChromeSyncFrame = null;
+        return;
+      }
+      state.prototypeSelectionChromeSyncFrame = requestAnimationFrame(syncForFrame);
+    };
+    syncForFrame();
   }
 
   function syncPrototypeFigmaButtonDemo(stageId = null, scenario = null) {
@@ -425,12 +516,18 @@ export function createMorphRender(ctx) {
       || stageId
       || 'pill'
     );
-    const preset = celestialSelectedPresetForRenderShape(renderShape);
+    const presetKey = inferPrototypeSelectionPresetKey(renderShape, main);
+    const preset = celestialSelectedPresetForRenderShape(presetKey);
     main.classList.toggle('prototype-stage-selected', selected);
     if (selectionOverlay) {
       selectionOverlay.dataset.stageDirection = state.prototypeSelectionDirection || 'bottom';
+      selectionOverlay.dataset.renderShape = presetKey;
+      selectionOverlay.style.width = main.style.width || `${state.lastMainGeo?.w || 0}px`;
+      selectionOverlay.style.height = main.style.height || `${state.lastMainGeo?.h || 0}px`;
+      selectionOverlay.style.borderRadius = main.style.borderRadius || String(state.lastMainGeo?.br || '0px');
     }
     if (!selected) {
+      clearPrototypeSelectionChromeSyncFrame();
       main.style.removeProperty('--g-stage-selected-rgb');
       main.style.removeProperty('--g-stage-selected-secondary-rgb');
       main.style.removeProperty('--g-stage-selected-blob-top-core');
@@ -452,40 +549,68 @@ export function createMorphRender(ctx) {
     const blobBottomEdge = selectionOverride?.theme?.blobBottomEdge || callbacks.stageSelectedBlobBottomEdgeColorForShape?.(activeScenario, stageId) || preset.blobBottomEdge;
     const maskBlur = selectionOverride?.maskBlur ?? callbacks.stageSelectedMaskBlurForShape?.(activeScenario, stageId) ?? preset.maskBlur;
     if (!selectionOverlay) return;
-    applySelectedChromePreset(selectionOverlay, main, preset, {
+    const colorOverrides = {
       blobTopCore,
       blobTopEdge,
       blobBottomCore,
       blobBottomEdge,
-    }, {
-      width: Number.parseFloat(main.style.width) || state.lastMainGeo?.w || stage?.widthOverride || null,
-      height: Number.parseFloat(main.style.height) || state.lastMainGeo?.h || stage?.heightOverride || null,
-      radius: Number.parseFloat(main.style.borderRadius) || state.lastMainGeo?.br || null,
-    }, {
-      maskBlur,
-    });
+    };
+    syncPrototypeSelectionChromeFrame(selectionOverlay, main, preset, colorOverrides, maskBlur);
+    startPrototypeSelectionChromeSync(selectionOverlay, main, preset, colorOverrides, maskBlur);
     playPrototypeSelectionMotion(selectionOverlay, true);
+  }
+
+  function effectiveRadiusPx(radius, w, h) {
+    const value = Number.parseFloat(radius);
+    const cap = Math.min(Number(w), Number(h)) / 2;
+    if (!Number.isFinite(value) || !Number.isFinite(cap) || value <= cap) return radius;
+    return `${cap}px`;
+  }
+
+  // Pill-ish shapes carry an inline 999px radius. Interpolating 999px -> 30px keeps the
+  // corners visually unchanged until late in the morph, which reads as a delayed corner
+  // change, so snap to the already-rendered (clamped) radius before the transition starts.
+  function normalizeMainRadiusForMorph() {
+    const main = DROPS.main;
+    if (!main) return;
+    const cs = getComputedStyle(main);
+    const current = Number.parseFloat(cs.borderRadius);
+    const cap = Math.min(Number.parseFloat(cs.width), Number.parseFloat(cs.height)) / 2;
+    if (!Number.isFinite(current) || !Number.isFinite(cap) || current <= cap) return;
+    const prevTransition = main.style.transition;
+    main.style.transition = 'none';
+    main.style.borderRadius = `${cap}px`;
+    void main.offsetWidth;
+    main.style.transition = prevTransition;
   }
 
   function applyGeometry(shape, resolvedGeo, stageId = null, scenario = null) {
     const geo = resolvedGeo || SHAPES[shape] || SHAPES.card;
-    const mainRadius = stageId ? layout.stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
+    const rawMainRadius = stageId ? layout.stageCornerRadiusPx(stageId, geo.main.br) : geo.main.br;
+    const mainRadius = effectiveRadiusPx(rawMainRadius, geo.main.w, geo.main.h);
     const bottomAlignRef = callbacks.getBottomAlignRefHeight?.() || BOTTOM_ALIGN_REF_H;
     const useBottomAlign = !!callbacks.getCanvasSettings()?.bottomAlign;
     const activeScenario = scenario || callbacks.selectedScenario?.() || null;
     const activeStageId = stageId || activeScenario?.shape || null;
+    const activeStage = activeStageId ? callbacks.stageById?.(activeStageId, activeScenario) : null;
     const shouldShowListOrbShell = shape === 'list' && !!callbacks.stageListListeningOrbForShape?.(activeScenario, activeStageId);
-    const alignedStageHeight = useBottomAlign ? Math.max(bottomAlignRef, geo.main.h, SHAPES.dot.main.h) : geo.main.h;
+    const hasActionRow = stageShowsActionRow(stageId, activeScenario);
+    const alignedStageHeight = hasActionRow
+      ? Math.max(bottomAlignRef, SHAPES.dot.main.h)
+      : (useBottomAlign ? Math.max(bottomAlignRef, geo.main.h, SHAPES.dot.main.h) : geo.main.h);
     let appliedMainGeo = null;
     ['main', 'left', 'right'].forEach((k) => {
       const el = DROPS[k], s = geo[k];
-      const anchorHeight = (shape === 'idle' && k === 'main') ? SHAPES.dot.main.h : s.h;
-      const yOffset = useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0;
+      const anchorHeight = s.h;
+      const yOffset = hasActionRow && k === 'main'
+        ? ((alignedStageHeight - anchorHeight) / 2) - ACTION_ROW_TOTAL_HEIGHT
+        : (useBottomAlign ? ((alignedStageHeight - anchorHeight) / 2) : 0);
       const appliedTy = s.ty + yOffset;
       el.style.width = `${s.w}px`;
       el.style.height = `${s.h}px`;
       if (k === 'main') el.style.setProperty('--g-stage-h', `${s.h}px`);
       el.style.borderRadius = k === 'main' ? mainRadius : s.br;
+      if (k === 'main') el.classList.toggle('stage-shell-hidden', !!activeStage?.hideShell);
       el.style.transform = `translate(${s.tx}px,${appliedTy}px)`;
       const forcedVisible = k === 'main' && shouldShowListOrbShell;
       el.style.opacity = forcedVisible ? '1' : s.op;
@@ -542,9 +667,9 @@ export function createMorphRender(ctx) {
   }
 
   function isIconOnlyThumb(shape) {
-    if (state.thumbContentState.kind === 'image' && state.thumbContentState.value) return ['circle', 'magic', 'listening', 'agent-circle', 'dot', 'pill', 'skill-pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    if (state.thumbContentState.kind === 'image' && state.thumbContentState.value) return ['circle', 'magic', 'listening', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
     const icon = (C.thumbLabel.textContent || '').trim();
-    return !!icon && icon !== '···' && ['circle', 'magic', 'listening', 'agent-circle', 'dot', 'pill', 'skill-pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
+    return !!icon && icon !== '···' && ['circle', 'magic', 'listening', 'dot', 'pill', 'card', 'card-s', 'card-form', 'card-list', 'custom'].includes(shape);
   }
 
   function applyThumbVisualMode(shape) {
@@ -552,6 +677,7 @@ export function createMorphRender(ctx) {
     const homeEmpty = (shape === 'circle' || shape === 'listening') && !icon;
     const hasTextOrEmojiIcon = state.thumbContentState.kind === 'emoji' && !!icon;
     C.thumb.classList.toggle('thumb-empty', homeEmpty);
+    C.thumb.classList.toggle('timer-dot', shape === 'timer');
     const plain = hasTextOrEmojiIcon || isIconOnlyThumb(shape);
     C.thumb.classList.toggle('thumb-plain-icon', plain && !homeEmpty);
     if (!plain || homeEmpty) { C.thumb.style.fontSize = ''; C.thumb.style.color = ''; return; }
@@ -591,50 +717,108 @@ export function createMorphRender(ctx) {
     });
   }
 
+  function stageShowsActionRow(stageId = state.currentStageId, scenario = callbacks.selectedScenario?.()) {
+    const stage = callbacks.stageById?.(stageId, scenario);
+    const renderShape = callbacks.renderShapeForStageId?.(stageId, scenario) || stage?.renderShape || '';
+    return (renderShape === 'card' || renderShape === 'card-s')
+      && (callbacks.stageHasComponent?.(stage, 'action-row') || (stage?.components || []).includes('action-row'));
+  }
+
+  function syncActionCardLayers(shape, fadeInDelayMs = 0, fadeOutDelayMs = 0) {
+    const active = stageShowsActionRow();
+    const el = C.actionCardActions;
+    if (!el) return;
+    let visibleActionCount = el.querySelectorAll('.action-card-button:not([hidden])').length;
+    if (active) {
+      const main = state.lastMainGeo || {};
+      const actionTop = Number.isFinite(main.ty) && Number.isFinite(main.h)
+        ? Math.round(main.ty + main.h + 12)
+        : 142;
+      const buttons = el.querySelectorAll('.action-card-button');
+      const leftLabel = String(state.actionCardActionsState?.left ?? 'Snooze').trim();
+      const rightLabel = String(state.actionCardActionsState?.right ?? 'Join now →').trim();
+      if (buttons[0]) {
+        buttons[0].textContent = leftLabel;
+        buttons[0].hidden = !leftLabel;
+      }
+      if (buttons[1]) {
+        buttons[1].textContent = rightLabel;
+        buttons[1].hidden = !rightLabel;
+      }
+      visibleActionCount = Number(Boolean(leftLabel)) + Number(Boolean(rightLabel));
+      el.style.setProperty('--action-card-actions-y', `${actionTop}px`);
+      el.classList.toggle('is-single-action', visibleActionCount === 1);
+    }
+    el.classList.toggle('is-active', active && visibleActionCount > 0);
+    setOpacityWithDelay(el, active && visibleActionCount > 0 ? 1 : 0, fadeInDelayMs, fadeOutDelayMs);
+  }
+
   function applyCardMediaLayout(cardWidth, shape = 'card') {
     const images = normalizeStageImages(state.stageMediaState);
-    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape);
+    const mediaPadding = layout.cardImagePadding(shape);
+    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape, mediaPadding);
     const mediaHeight = layout.mediaStackHeight(mediaHeights);
     const typography = normalizeTypography(state.contentTypographyState, shape);
-    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => CARD_P + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
+    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => mediaPadding + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
     if (!images.length || !metrics.mediaHeight) return void hideAllStageMedia();
     ensureStageMediaEls(images.length).forEach((el, idx) => {
       const image = images[idx];
       const mediaHeightValue = metrics.mediaHeights[idx];
       const mediaTop = metrics.mediaTops[idx];
       if (!image || !mediaHeightValue || !Number.isFinite(mediaTop)) { el.style.display = 'none'; el.style.opacity = '0'; return; }
-      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${CARD_P}px,${mediaTop}px)`; el.style.opacity = '1';
+      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape, mediaPadding)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${mediaPadding}px,${mediaTop}px)`; el.style.opacity = '1';
     });
   }
 
   function applyOutgoingCardMediaLayout(imageValue, cardWidth, shape = 'card') {
     const images = normalizeStageImages(Array.isArray(imageValue) ? imageValue : (imageValue ? [imageValue] : []));
-    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape);
+    const mediaPadding = layout.cardImagePadding(shape);
+    const mediaHeights = layout.measureCardMediaHeights(images, cardWidth, shape, mediaPadding);
     const mediaHeight = layout.mediaStackHeight(mediaHeights);
     const typography = normalizeTypography(state.contentTypographyState, shape);
-    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => CARD_P + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
+    const metrics = shape === 'image' ? { mediaHeight, mediaHeights, mediaTops: mediaHeights.map((_, index) => mediaPadding + mediaHeights.slice(0, index).reduce((sum, h) => sum + h, 0) + CARD_MEDIA_STACK_GAP * index) } : (shape === 'card-s' ? layout.getCardSLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState) : layout.getCardLayoutMetrics(cardWidth, typography, C.det.textContent, images, C.prim.textContent, C.sec.textContent, state.thumbContentState));
     if (!images.length || !metrics.mediaHeight) return false;
     ensureStageMediaEls(images.length).forEach((el, idx) => {
       const image = images[idx], mediaHeightValue = metrics.mediaHeights[idx], mediaTop = metrics.mediaTops[idx];
       if (!image || !mediaHeightValue || !Number.isFinite(mediaTop)) { el.style.display = 'none'; el.style.opacity = '0'; return; }
-      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${CARD_P}px,${mediaTop}px)`; el.style.opacity = '0';
+      el.src = image.src; el.style.display = 'block'; el.style.width = `${layout.cardMediaWidth(cardWidth, shape, mediaPadding)}px`; el.style.height = `${mediaHeightValue}px`; el.style.transform = `translate(${mediaPadding}px,${mediaTop}px)`; el.style.opacity = '0';
     });
     return true;
   }
 
-  function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null) {
+  function isNudgePillStagePair(fromStageId = null, toStageId = null, fromShape = '', toShape = '') {
+    if (fromShape !== 'pill' || toShape !== 'pill') return false;
+    const fromId = String(fromStageId || '').trim().toLowerCase();
+    const toId = String(toStageId || '').trim().toLowerCase();
+    return isNudgeStageId(fromId) !== isNudgeStageId(toId);
+  }
+
+  function isNudgeToCardStagePair(fromStageId = null, toShape = '') {
+    const fromId = String(fromStageId || '').trim().toLowerCase();
+    return isNudgeStageId(fromId) && (toShape === 'card' || toShape === 'card-s');
+  }
+
+  function setUiMotionProfile(fromShape, toShape, fromGeo = null, toGeo = null, fromStageId = null, toStageId = null) {
     const root = document.documentElement;
     let transitionMs = bridges.transitionAnimMs(fromShape, toShape, callbacks.getAnimDuration(), fromGeo, toGeo);
     const homeLikeShape = fromShape === 'circle' || fromShape === 'listening' || toShape === 'circle' || toShape === 'listening';
     const thinkingLikeShape = fromShape === 'ai' || fromShape === 'magic' || toShape === 'ai' || toShape === 'magic';
     const isHomeThinkingPair = homeLikeShape && thinkingLikeShape;
-    if (isHomeThinkingPair) {
+    if (fromShape === 'listening' && (toShape === 'magic' || toShape === 'ai')) {
+      transitionMs = 450;
+    } else if (isHomeThinkingPair) {
       transitionMs = clamp(Math.round(transitionMs * 1.45), 520, 1200);
     }
     const geometryEase = 'var(--motion-ease)';
     const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
     const toCardLike = toShape === 'card' || toShape === 'card-s';
+    const collapsingToDot = toShape === 'dot'
+      && ['pill', 'card', 'card-s', 'image'].includes(fromShape);
+    const shouldCrossfadePillContent = isNudgePillStagePair(fromStageId, toStageId, fromShape, toShape);
+    const shouldCrossfadeNudgeToCardContent = isNudgeToCardStagePair(fromStageId, toShape);
+    const shouldCrossfadeContent = shouldCrossfadePillContent || shouldCrossfadeNudgeToCardContent;
     let contentFadeMs = 260, detailFadeMs = 260, mediaFadeMs = 260, thumbFadeMs = 280, contentMoveMs = transitionMs, primarySizeAnimMs = transitionMs, textSizeAnimMs = transitionMs, secondaryInAdvanceMs = 0, detailInAdvanceMs = 0;
+    let borderRadiusAnimMs = transitionMs;
     if ((fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill')) { primarySizeAnimMs = clamp(Math.round(transitionMs * 1.2), 420, 900); textSizeAnimMs = clamp(Math.round(transitionMs * 1.08), 360, 820); }
     if (fromShape === 'pill' && toCardLike) { secondaryInAdvanceMs = 60; detailInAdvanceMs = 200; }
     if (fromShape === 'dot' && toCardLike) contentMoveMs = 0;
@@ -642,14 +826,35 @@ export function createMorphRender(ctx) {
     if (fromCardLike && toShape === 'dot') { contentFadeMs = 200; detailFadeMs = 200; }
     if (fromCardLike && toShape === 'pill') mediaFadeMs = transitionMs;
     if ((fromShape === 'idle' && toShape === 'dot') || (fromShape === 'dot' && toShape === 'idle')) thumbFadeMs = 200;
+    if (collapsingToDot) {
+      borderRadiusAnimMs = Math.min(140, transitionMs);
+    }
+    if (shouldCrossfadeContent) {
+      contentMoveMs = 0;
+      primarySizeAnimMs = 0;
+      textSizeAnimMs = 0;
+      contentFadeMs = 180;
+      detailFadeMs = 180;
+    }
+    state.contentCrossfadeMode = shouldCrossfadeContent ? 'nudge-content' : '';
     state.contentDelayProfile = { secondaryInAdvanceMs, detailInAdvanceMs };
     state.currentContentFadeMs = contentFadeMs; state.currentDetailFadeMs = detailFadeMs; state.currentMediaFadeMs = mediaFadeMs; state.currentTransitionAnimMs = transitionMs;
-    [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', transitionMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
+    [['--anim-w', transitionMs], ['--anim-h', transitionMs], ['--anim-br', borderRadiusAnimMs], ['--anim-tx', transitionMs], ['--anim-t', transitionMs]].forEach(([k, v]) => root.style.setProperty(k, `${v}ms ${geometryEase}`));
     root.style.setProperty('--content-fade-ms', `${contentFadeMs}ms`); root.style.setProperty('--detail-fade-ms', `${detailFadeMs}ms`); root.style.setProperty('--media-fade-ms', `${mediaFadeMs}ms`); root.style.setProperty('--thumb-fade-ms', `${thumbFadeMs}ms`); root.style.setProperty('--content-move-t', `${contentMoveMs}ms ${geometryEase}`); root.style.setProperty('--primary-size-anim-ms', `${primarySizeAnimMs}ms`); root.style.setProperty('--text-size-anim-ms', `${textSizeAnimMs}ms`);
   }
 
   function applyContentPositions(shape, w, h, fadeInDelayMs = 0, fadeOutDelayMs = 0, fromShape = shape, fromWidth = w, fromHeight = h, outgoingMedia = null, outgoingTypography = null) {
     const pos = layout.contentPos(shape, w, h);
+    const shouldCrossfadeContent = state.contentCrossfadeMode === 'nudge-content';
+    const targetStageId = String(state.currentStageId || '').trim().toLowerCase();
+    const shouldRestoreThumbAtEnd = shouldCrossfadeContent && !isNudgeStageId(targetStageId);
+    if (shouldCrossfadeContent) {
+      fadeInDelayMs = Math.max(fadeInDelayMs, 34);
+      [C.thumb, C.prim, C.sec, C.div].forEach((el) => {
+        if (!el) return;
+        el.style.opacity = '0';
+      });
+    }
     C.thumb.style.cssText += `width:${pos.thumb.w}px;height:${pos.thumb.h}px;border-radius:${pos.thumb.br};transform:translate(${pos.thumb.x}px,${pos.thumb.y}px);`;
     applyThumbVisualMode(shape);
     let thumbOpacity = pos.thumb.op;
@@ -657,8 +862,13 @@ export function createMorphRender(ctx) {
     else if (shape === 'dot' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
     else if (shape === 'dot' && fromShape === 'split') thumbOpacity = 0;
     else if (shape === 'magic' && state.thumbContentState.kind === 'none') thumbOpacity = 0;
-    else if (shape === 'agent-circle') thumbOpacity = 0;
-    setOpacityWithDelay(C.thumb, thumbOpacity, fadeInDelayMs, fadeOutDelayMs);
+    else if (shouldCrossfadeContent) thumbOpacity = 0;
+    setOpacityWithDelay(
+      C.thumb,
+      shouldRestoreThumbAtEnd ? pos.thumb.op : thumbOpacity,
+      fadeInDelayMs,
+      fadeOutDelayMs,
+    );
     const setEl = (el, p, customInDelayMs = fadeInDelayMs) => {
       el.style.transform = p.cx ? `translate(${p.x}px,${p.y}px) translate(-50%,-50%)` : `translate(${p.x}px,${p.y}px)`;
       setOpacityWithDelay(el, p.op, customInDelayMs, fadeOutDelayMs);
@@ -671,7 +881,7 @@ export function createMorphRender(ctx) {
     setEl(C.prim, pos.prim);
     setEl(C.sec, pos.sec, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.secondaryInAdvanceMs || 0)));
     setEl(C.det, pos.det, Math.max(0, fadeInDelayMs - (state.contentDelayProfile.detailInAdvanceMs || 0)));
-    if (shape === 'ai' || shape === 'magic' || shape === 'agent-circle') {
+    if (shape === 'ai' || shape === 'magic') {
       C.prim.textContent = '';
       C.sec.textContent = '';
       C.det.textContent = '';
@@ -681,6 +891,7 @@ export function createMorphRender(ctx) {
         el.style.opacity = '0';
       });
       hideAllStageMedia();
+      syncActionCardLayers(shape, 0, 0);
       if (!document.body.classList.contains('glass-flow-active')) {
         hideRich();
       }
@@ -704,6 +915,7 @@ export function createMorphRender(ctx) {
       el.style.textOverflow = mainLineWidth ? 'ellipsis' : '';
       el.style.whiteSpace = mainLineWidth ? 'nowrap' : '';
     });
+    syncActionCardLayers(shape, fadeInDelayMs, fadeOutDelayMs);
     if (shape === 'card' || shape === 'card-s') { applyCardDetailLayout(w); applyCardMediaLayout(w, shape); }
     else if (shape === 'image') { resetDetailInlineLayout(); C.det.style.opacity = '0'; C.div.style.opacity = '0'; C.thumb.style.opacity = '0'; C.prim.style.opacity = '0'; C.sec.style.opacity = '0'; applyCardMediaLayout(w, 'image'); }
     else {
@@ -728,6 +940,13 @@ export function createMorphRender(ctx) {
     C.div.style.transform = `translate(${pos.div.x}px,${pos.div.y}px)`;
     C.div.style.width = `${pos.div.dw || 0}px`;
     C.div.style.height = `${pos.div.dh || 1}px`;
+    C.div.style.transition = shouldCrossfadeContent
+      ? `transform 0ms linear, width 0ms linear, height 0ms linear, opacity ${state.currentContentFadeMs}ms var(--motion-ease), background 220ms var(--motion-ease)`
+      : '';
+    const currentScenario = callbacks.selectedScenario?.();
+    C.div.style.background = isNudgeStageId(currentScenario?.shape)
+      ? (callbacks.stageNudgeDividerColorForShape?.(currentScenario, currentScenario.shape) || '#ffffff')
+      : '';
     setOpacityWithDelay(C.div, pos.div.op, fadeInDelayMs, fadeOutDelayMs);
   }
 
@@ -738,6 +957,12 @@ export function createMorphRender(ctx) {
     if (data.detail !== undefined) C.det.textContent = data.detail;
     if (data.images !== undefined) layout.setStageMedia(data.images);
     else if (data.image !== undefined) layout.setStageMedia(data.image ? [data.image] : []);
+    if (data.actionCardActions && stageShowsActionRow()) {
+      state.actionCardActionsState = {
+        left: String(data.actionCardActions?.left ?? 'Snooze'),
+        right: String(data.actionCardActions?.right ?? 'Join now →'),
+      };
+    }
     if (data.typography !== undefined) layout.setContentTypography(data.typography, state.currentShape);
   }
 
@@ -771,12 +996,13 @@ export function createMorphRender(ctx) {
     clearUiFadeTimers();
     DROPS.main.classList.remove('orb-thinking-bridge');
     const fromShape = state.currentShape;
+    const fromStageId = state.currentStageId;
     const prevStageMedia = Array.isArray(state.stageMediaState) ? state.stageMediaState.map((item) => ({ ...item })) : [];
     const prevCardTypography = fromShape === 'card' ? normalizeTypography(state.contentTypographyState, 'card') : null;
     const prevGeo = bridges.getCurrentMainGeometry();
     const nextGeo = layout.resolveGeometryForContent(shape, contentData, customGeo, stageId);
     state.prototypeSelectionDirection = inferPrototypeSelectionDirection(prevGeo, nextGeo.main);
-    setUiMotionProfile(fromShape, shape, prevGeo, nextGeo);
+    setUiMotionProfile(fromShape, shape, prevGeo, nextGeo, fromStageId, stageId);
     const prevArea = Math.max(1, prevGeo.w * prevGeo.h);
     const nextArea = Math.max(1, nextGeo.main.w * nextGeo.main.h);
     const autoInDelay = fromShape === 'dot' && shape === 'pill' ? 180 : (fromShape === 'idle' && shape === 'dot') ? 0 : (fromShape === 'dot' && (shape === 'card' || shape === 'card-s')) ? 200 : (nextArea > prevArea * 1.08 ? 300 : 0);
@@ -792,17 +1018,19 @@ export function createMorphRender(ctx) {
     const fadeInDelayMs = uiFadeDelayMs === null ? autoInDelay : uiFadeDelayMs;
     const fadeOutDelayMs = uiFadeDelayMs === null ? autoOutDelay : 0;
     state.currentShape = shape;
+    state.currentStageId = stageId || null;
     document.body.dataset.currentShape = shape;
+    normalizeMainRadiusForMorph();
     applyGeometry(shape, nextGeo, stageId, contentData?.scenario || null);
-    const orbVisualShape = (value) => value === 'magic' || value === 'ai' || value === 'agent-circle';
+    const orbVisualShape = (value) => value === 'magic' || value === 'ai';
     const thinkingVisualShape = orbVisualShape(shape);
     const enteringThinking = thinkingVisualShape && !orbVisualShape(fromShape);
     const listeningToThinking = enteringThinking && fromShape === 'listening';
     DROPS.main.style.setProperty('--thinking-entry-delay', enteringThinking ? (listeningToThinking ? '140ms' : '300ms') : '0ms');
     DROPS.main.style.setProperty('--thinking-shell-delay', enteringThinking ? (listeningToThinking ? '180ms' : '300ms') : '0ms');
     DROPS.main.classList.toggle('home-blur', shape === 'magic');
-    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic' || shape === 'agent-circle')
-      && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic' || fromShape === 'agent-circle');
+    const enteringHomeLike = (shape === 'circle' || shape === 'listening' || shape === 'magic')
+      && !(fromShape === 'circle' || fromShape === 'listening' || fromShape === 'magic');
     const goingHome = enteringHomeLike;
     if (goingHome) {
       DROPS.main.style.setProperty('--home-glow-delay', `${Math.max(0, state.currentTransitionAnimMs - 500)}ms`);
@@ -815,7 +1043,7 @@ export function createMorphRender(ctx) {
     }
     DROPS.main.classList.toggle('magic-glow', thinkingVisualShape);
     DROPS.main.classList.toggle('listening-orb', shape === 'listening');
-    if (contentData) applyContent(contentData);
+    if (contentData && shape !== 'list') applyContent(contentData);
     applyContentPositions(shape, nextGeo.main.w, nextGeo.main.h, fadeInDelayMs, fadeOutDelayMs, fromShape, prevGeo.w, prevGeo.h, prevStageMedia, prevCardTypography);
     if (shape === 'list') {
       hideRich();

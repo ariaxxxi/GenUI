@@ -10,14 +10,139 @@
 <link rel="stylesheet" href="src/styles/bubble-page.css"/>
 </head>
 <body class="bubble2-page">
-  <main class="bubble2-stage" aria-label="Bubble 2 app cluster demo">
+  <main class="bubble2-stage" data-bubble2-stage aria-label="Bubble 2 app cluster demo">
+    <div class="bubble2-stage-media" aria-hidden="true">
+      <div class="bubble2-stage-image" data-bubble2-bg-image></div>
+      <video class="bubble2-stage-video" data-bubble2-bg-video muted loop playsinline preload="metadata"></video>
+    </div>
     <aside class="bubble2-sidebar" aria-label="Bubble content sets">
-      <div class="bubble2-sidebar-card">
+      <div class="bubble2-sidebar-card" data-bubble2-control-panel>
         <p class="bubble2-sidebar-eyebrow">Content Sets</p>
         <div class="bubble2-set-switcher" data-bubble2-set-panel role="tablist" aria-label="Bubble content set switcher"></div>
+        <div class="bubble2-control-group" data-bubble2-row-settings hidden>
+          <p class="bubble2-sidebar-eyebrow">Row Settings</p>
+          <label class="bubble2-toggle-row" for="bubble2-row-hide-stars-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Hide Stars</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-row-hide-stars-toggle" type="checkbox" data-bubble2-row-hide-stars-toggle aria-label="Hide Stars from the Row agent switcher"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Press Scope</p>
+          <label class="bubble2-toggle-row" for="bubble2-viewport-pan-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Viewport Anywhere</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-viewport-pan-toggle" type="checkbox" data-bubble2-viewport-pan-toggle aria-label="Allow Bubble Home press and pan from anywhere in the viewport except the control panel"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+        <div class="bubble2-control-group" data-bubble2-lens-concept-settings hidden>
+          <p class="bubble2-sidebar-eyebrow">Lens Concept</p>
+          <label class="bubble2-toggle-row" for="bubble2-lens-switch-hide-content-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Hide Switch Content</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-lens-switch-hide-content-toggle" type="checkbox" data-bubble2-lens-switch-hide-content-toggle aria-label="Hide lens icons and text while switching lenses"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Gesture Control</p>
+          <label class="bubble2-toggle-row" for="bubble2-hand-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Webcam Pinch</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-hand-toggle" type="checkbox" data-bubble2-hand-toggle aria-label="Use webcam hand pinch as pointer control"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+          <div class="bubble2-hand-status" data-bubble2-hand-state>off</div>
+          <div class="bubble2-hand-ratio-head">
+            <label class="bubble2-video-progress-label" for="bubble2-hand-ratio">Movement ratio</label>
+            <span class="bubble2-hand-ratio-value" data-bubble2-hand-ratio-state>1.00x</span>
+          </div>
+          <input id="bubble2-hand-ratio" class="bubble2-video-progress" type="range" min="25" max="200" step="5" value="100" data-bubble2-hand-ratio/>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Canvas</p>
+          <label class="bubble2-toggle-row" for="bubble2-canvasless-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Remove Canvas</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-canvasless-toggle" type="checkbox" data-bubble2-canvasless-toggle aria-label="Remove the Bubble Home canvas frame and make the viewport black"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="bubble2-video-progress-label" for="bubble2-canvas-x">Canvas X position</label>
+          <input id="bubble2-canvas-x" class="bubble2-video-progress" type="range" min="-1000" max="1000" step="1" value="0" data-bubble2-canvas-x/>
+          <div class="bubble2-upload-state" data-bubble2-canvas-x-state>0px</div>
+          <label class="bubble2-video-progress-label" for="bubble2-canvas-y">Canvas Y position</label>
+          <input id="bubble2-canvas-y" class="bubble2-video-progress" type="range" min="-240" max="240" step="1" value="0" data-bubble2-canvas-y/>
+          <div class="bubble2-upload-state" data-bubble2-canvas-y-state>0px</div>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Home Orb</p>
+          <button class="bubble2-ghost-btn bubble2-home-orb-btn" type="button" data-bubble2-home-orb-toggle>Dismiss orb</button>
+          <button class="bubble2-ghost-btn bubble2-home-orb-btn" type="button" data-bubble2-orb-reset>Reset orb</button>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Background Image</p>
+          <label class="bubble2-toggle-row" for="bubble2-bg-image-toggle">
+            <span class="bubble2-toggle-copy">
+              <span class="bubble2-toggle-title">Use Image</span>
+            </span>
+            <span class="bubble2-toggle-switch">
+              <input id="bubble2-bg-image-toggle" type="checkbox" data-bubble2-bg-image-toggle aria-label="Use background image on the bubble page"/>
+              <span class="bubble2-toggle-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+          <div class="bubble2-upload-row">
+            <label class="bubble2-upload-btn" for="bubble2-bg-image-upload">
+              Upload
+              <input id="bubble2-bg-image-upload" type="file" accept="image/*" data-bubble2-bg-image-upload/>
+            </label>
+            <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-image-reset>Reset</button>
+          </div>
+          <div class="bubble2-upload-state" data-bubble2-bg-image-state>park image</div>
+          <label class="bubble2-video-progress-label" for="bubble2-bg-image-alpha">Image alpha</label>
+          <input id="bubble2-bg-image-alpha" class="bubble2-video-progress" type="range" min="0" max="100" step="1" value="80" data-bubble2-bg-image-alpha/>
+        </div>
+        <div class="bubble2-control-group">
+          <p class="bubble2-sidebar-eyebrow">Background Video</p>
+          <div class="bubble2-upload-row">
+            <label class="bubble2-upload-btn" for="bubble2-bg-video-upload">
+              Upload
+              <input id="bubble2-bg-video-upload" type="file" accept="video/*" data-bubble2-bg-video-upload/>
+            </label>
+            <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-video-reset>Reset</button>
+          </div>
+          <div class="bubble2-upload-state" data-bubble2-bg-video-state>empty</div>
+          <div class="bubble2-video-controls is-hidden" data-bubble2-bg-video-controls>
+            <button class="bubble2-ghost-btn" type="button" data-bubble2-bg-video-play-toggle>Play</button>
+            <label class="bubble2-video-progress-label" for="bubble2-bg-video-progress">Video progress</label>
+            <input id="bubble2-bg-video-progress" class="bubble2-video-progress" type="range" min="0" max="1000" step="1" value="0" data-bubble2-bg-video-progress/>
+            <label class="bubble2-video-progress-label" for="bubble2-bg-video-alpha">Video alpha</label>
+            <input id="bubble2-bg-video-alpha" class="bubble2-video-progress" type="range" min="0" max="100" step="1" value="80" data-bubble2-bg-video-alpha/>
+            <label class="bubble2-video-progress-label" for="bubble2-bg-video-x">Video X position</label>
+            <input id="bubble2-bg-video-x" class="bubble2-video-progress" type="range" min="-1000" max="1000" step="1" value="0" data-bubble2-bg-video-x/>
+          </div>
+        </div>
       </div>
     </aside>
     <section class="bubble2-canvas" data-bubble2-shell>
+      <div class="bubble2-canvas-banner is-hidden" data-bubble2-canvas-banner aria-hidden="true">Set default agent</div>
+      <div class="bubble2-lens-toast is-hidden" data-bubble2-lens-toast aria-live="polite" aria-atomic="true"></div>
       <div class="bubble2-anchor">
         <div class="bubble2-pan-layer" data-bubble2-pan-layer></div>
       </div>

@@ -1,4 +1,5 @@
 import { DEMO_LIST, clearListPills, collapseListStack, demoListRenderContent, selectListItem } from '../../shared/list-demo.js';
+import { playSimEarcon } from '../../sim-panel.js';
 
 export function initManualDemo({
   document,
@@ -14,6 +15,8 @@ export function initManualDemo({
   stopSiriOrb,
   startSiriOrb,
   showAiIdle,
+  enterPrototypeListening = null,
+  exitPrototypeListening = null,
   renderShapeForStageId,
   clearSplitTimers,
   scheduleSplitTimer,
@@ -42,7 +45,14 @@ export function initManualDemo({
     left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   };
+  const PROTOTYPE_EMPTY_GEO = {
+    main: { ...PROTOTYPE_THINKING_GEO.main, op: 0 },
+    left: { ...PROTOTYPE_THINKING_GEO.left, op: 0 },
+    right: { ...PROTOTYPE_THINKING_GEO.right, op: 0 },
+  };
   const LIST_PILL_W = 420;
+  const isPrototypeNormalStage = (shape) => !['magic', 'listening', 'ai', 'idle', 'split'].includes(String(shape || ''));
+
   function resetSplitState() {
     clearSplitTimers();
     morphApi.setSplitBridgeTimer(null);
@@ -183,8 +193,8 @@ export function initManualDemo({
     stopSiriOrb();
     hideRich();
     document.getElementById('drop-main').classList.remove('ai-mode');
-    morphTo('list', demoListRenderContent(items));
-    updateActive('list');
+    morphTo('list', demoListRenderContent(items), null, 'list-pill');
+    updateActive('list-pill');
   }
 
   function manualShape(shape) {
@@ -194,19 +204,22 @@ export function initManualDemo({
     document.getElementById('stage').classList.remove('flow-active');
     document.getElementById('input-area')?.classList.remove('hidden');
     const currentShape = getCurrentShape();
+    const shouldPlaySpread = currentShape === 'magic' && isPrototypeNormalStage(shape);
     const leavingSplit = currentShape === 'split' && shape !== 'split';
     const leavingList = currentShape === 'list' && shape !== 'list';
+    if (shouldPlaySpread) playSimEarcon('spread');
     if (!leavingList) clearListPills();
     if (shape === 'split') return void morphTo('split', { icon: '', primary: '', secondary: '', detail: '' });
     if (!leavingSplit && currentShape === 'split') resetSplitState();
-    if (shape === 'list') {
+    if (shape === 'list' || shape === 'list-pill') {
       morphToList(DEMO_LIST);
-      updateActive('list');
+      updateActive('list-pill');
       return;
     }
     if (shape === 'listening') {
       stopSiriOrb();
       morphTo('listening', { icon: '', primary: '', secondary: '', detail: '' });
+      if (typeof enterPrototypeListening === 'function') enterPrototypeListening();
       updateActive('listening');
       return;
     }
@@ -221,9 +234,15 @@ export function initManualDemo({
       return;
     }
     if (shape === 'idle') {
-      if (currentShape === 'circle') return void morphApi.bridgeHomeToThinking('idle');
+      if (currentShape === 'circle') {
+        return void morphApi.bridgeHomeToThinking(
+          'idle',
+          { icon: '', primary: '', secondary: '', detail: '' },
+          PROTOTYPE_EMPTY_GEO,
+        );
+      }
       stopSiriOrb();
-      morphTo('ai', { icon: '', primary: '', secondary: '', detail: '' });
+      morphTo('idle', { icon: '', primary: '', secondary: '', detail: '' }, PROTOTYPE_EMPTY_GEO);
       C.thumb.style.opacity = '0';
       document.getElementById('drop-main').classList.add('ai-mode');
       showAiIdle();
@@ -234,6 +253,7 @@ export function initManualDemo({
       morphTo('magic', { icon: '', primary: '', secondary: '', detail: '' }, PROTOTYPE_THINKING_GEO);
       return;
     }
+    if (typeof exitPrototypeListening === 'function') exitPrototypeListening(shape);
     stopSiriOrb();
     if (SCENARIO_SHAPES.includes(shape)) {
       const scenario = selectedScenario();

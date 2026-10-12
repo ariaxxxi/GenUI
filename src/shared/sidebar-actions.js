@@ -63,6 +63,12 @@ export function createSidebarActions(ctx, refs) {
     if (value === 'pill') {
       return { renderShape: 'pill', name: 'Pill Stage', cornerRadius: 60, iconTextGap: 8, iconLeftPadding: 16, components: ['icon', 'primary', 'secondary'] };
     }
+    if (value === 'list-pill') {
+      return { renderShape: 'list', name: 'List-Pill Stage', cornerRadius: 60, iconTextGap: null, iconLeftPadding: null, components: ['icon', 'primary', 'secondary'] };
+    }
+    if (value === 'nudge') {
+      return { renderShape: 'pill', name: 'Nudge Stage', cornerRadius: 60, heightOverride: 60, iconTextGap: null, iconLeftPadding: null, components: ['primary', 'secondary'] };
+    }
     if (value === 'blank') {
       return { renderShape: 'card', name: 'Blank Stage', cornerRadius: 30, iconTextGap: null, iconLeftPadding: null, components: [] };
     }
@@ -70,27 +76,49 @@ export function createSidebarActions(ctx, refs) {
   }
 
   function addStage(kind = 'card') {
+    const stageKind = String(kind || '').toLowerCase();
     const template = stageTemplateFromKind(kind);
     const newStage = ctx.normalizeStage({
-      id: ctx.stageId(),
+      id: stageKind === 'nudge' ? `${stageKind}-${ctx.stageId()}` : ctx.stageId(),
       name: template.name,
       preset: false,
       renderShape: template.renderShape,
       cornerRadius: template.cornerRadius,
       widthOverride: null,
-      heightOverride: null,
+      heightOverride: template.heightOverride ?? null,
       iconTextGap: template.iconTextGap,
       iconLeftPadding: template.iconLeftPadding,
       phoneBgBlur: false,
       listListeningOrb: false,
+      listSelectable: true,
       selected: false,
+      hideShell: template.hideShell === true,
       accentColor: '#90acff',
       secondaryAccentColor: '#9761ff',
       components: template.components,
     });
     ctx.setStageLibrary([...ctx.getStageLibrary(), newStage]);
     ctx.persistStageLibrary();
-    commitScenarioChange((scenario) => { scenario.shape = newStage.id; return scenario; });
+    commitScenarioChange((scenario) => {
+      scenario.shape = newStage.id;
+      if (stageKind === 'nudge') {
+        scenario.content = scenario.content || {};
+        scenario.content.typographyByShape = { ...(scenario.content.typographyByShape || {}) };
+        scenario.content.typographyByShape[newStage.id] = {
+          ...(scenario.content.typographyByShape[newStage.id] || {}),
+          primary: {
+            ...(scenario.content.typographyByShape[newStage.id]?.primary || {}),
+            size: 24,
+          },
+        };
+        scenario.content.sizeByShape = { ...(scenario.content.sizeByShape || {}) };
+        scenario.content.sizeByShape[newStage.id] = {
+          ...(scenario.content.sizeByShape[newStage.id] || {}),
+          heightOverride: 60,
+        };
+      }
+      return scenario;
+    });
   }
 
   function duplicateCurrentStage() {
@@ -150,6 +178,11 @@ export function createSidebarActions(ctx, refs) {
       draft.content.secondaryAccentColorByShape = { ...(draft.content.secondaryAccentColorByShape || {}) };
       if (draft.content.secondaryAccentColorByShape[sourceShape]) {
         draft.content.secondaryAccentColorByShape[newStage.id] = draft.content.secondaryAccentColorByShape[sourceShape];
+      }
+
+      draft.content.dividerColorByShape = { ...(draft.content.dividerColorByShape || {}) };
+      if (draft.content.dividerColorByShape[sourceShape]) {
+        draft.content.dividerColorByShape[newStage.id] = draft.content.dividerColorByShape[sourceShape];
       }
 
       draft.content.selectedBlobTopCoreColorByShape = { ...(draft.content.selectedBlobTopCoreColorByShape || {}) };

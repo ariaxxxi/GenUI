@@ -80,6 +80,14 @@
   background: transparent;
   border: none;
 }
+#c-thumb.timer-dot {
+  background: rgb(255,56,56);
+  border: none;
+}
+#c-thumb.timer-dot #c-thumb-label,
+#c-thumb.timer-dot #c-thumb-img {
+  display: none;
+}
 #c-thumb-img {
   display: none;
   width: 100%;
@@ -178,10 +186,13 @@
     font-size var(--text-size-anim-ms, var(--anim-t)),
     color 220ms var(--motion-ease);
 }
+body[data-current-shape="pill"] #c-secondary {
+  font-weight: 400;
+}
 #c-detail {
   position: absolute; z-index: 3;
   font-family: 'DM Sans', sans-serif; font-size: 24px; font-weight: 300;
-  color: rgba(255,255,255,0.26); white-space: pre-wrap; word-break: break-word; line-height: 1.2;
+  color: rgba(255,255,255,0.26); white-space: pre-wrap; word-break: break-word; line-height: 1.4;
   transition:
     transform var(--content-move-t, var(--anim-t)),
     opacity var(--detail-fade-ms, var(--content-fade-ms, 260ms)) var(--motion-ease),

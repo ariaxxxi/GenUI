@@ -1,3 +1,8 @@
+function isNudgeStageId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return id === 'nudge' || id.startsWith('nudge-');
+}
+
 export function createSidebarRender(ctx, refs) {
   let scenarioClickTimer = null;
 
@@ -30,7 +35,32 @@ export function createSidebarRender(ctx, refs) {
   }
 
   function stageComponentLabel(type) {
-    return type === 'intent-header' ? 'intent header' : type;
+    const label = type === 'action-row' ? 'actions' : (type === 'intent-header' ? 'intent header' : String(type || ''));
+    return label ? label[0].toUpperCase() + label.slice(1) : label;
+  }
+
+  function syncRangeProgress(input) {
+    if (!input || input.type !== 'range') return;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const value = Number(input.value || 0);
+    const progress = max > min ? ctx.clamp(((value - min) / (max - min)) * 100, 0, 100) : 0;
+    input.style.setProperty('--range-progress', `${progress}%`);
+  }
+
+  function setSlider(input, value, valueEl, suffix = 'px') {
+    if (!input) return;
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const step = Number(input.step || 1);
+    let numeric = Number.isFinite(Number(value)) ? Number(value) : min;
+    if (Number.isFinite(step) && step > 0) numeric = Math.round(numeric / step) * step;
+    const bounded = ctx.clamp(numeric, min, max);
+    input.value = String(bounded);
+    input.disabled = false;
+    const displayValue = Number.isInteger(bounded) ? String(bounded) : String(Number(bounded.toFixed(1)));
+    if (valueEl) valueEl.textContent = suffix ? `${displayValue}${suffix}` : displayValue;
+    syncRangeProgress(input);
   }
 
   function renderScenarioList() {
@@ -90,8 +120,9 @@ export function createSidebarRender(ctx, refs) {
     const renderShape = String(stage?.renderShape || '');
     const counts = ctx.stageComponentCounts(stage);
     ctx.STAGE_COMPONENT_TYPES.forEach((type) => {
+      if (type === 'action-row' && renderShape !== 'card' && renderShape !== 'card-s') return;
       const row = document.createElement('div');
-      const isSingleToggle = ['icon', 'primary', 'secondary', 'detail', 'intent-header'].includes(type);
+      const isSingleToggle = ['icon', 'primary', 'secondary', 'detail', 'intent-header', 'action-row'].includes(type);
       row.className = 'stage-comp-row' + (isSingleToggle ? ' toggle' : '');
       if (isSingleToggle) {
         row.innerHTML = `<span class="stage-comp-label">${stageComponentLabel(type)}</span><input class="stage-comp-check" type="checkbox" data-stage-comp-toggle="${type}" ${counts[type] > 0 ? 'checked' : ''}/>`;
@@ -106,7 +137,7 @@ export function createSidebarRender(ctx, refs) {
       const listItemCount = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(ctx.selectedScenario(), stage.id).length : 0;
       const row = document.createElement('div');
       row.className = 'stage-comp-row';
-      row.innerHTML = `<span class="stage-comp-label">items</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="remove">-</button><span class="stage-comp-count">${listItemCount}</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="add">+</button>`;
+      row.innerHTML = `<span class="stage-comp-label">Items</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="remove">-</button><span class="stage-comp-count">${listItemCount}</span><button type="button" class="stage-comp-btn" data-stage-list-count-action="add">+</button>`;
       const removeBtn = row.querySelector('[data-stage-list-count-action="remove"]');
       const addBtn = row.querySelector('[data-stage-list-count-action="add"]');
       if (removeBtn) removeBtn.disabled = listItemCount <= 1;
@@ -117,6 +148,11 @@ export function createSidebarRender(ctx, refs) {
       orbRow.className = 'stage-comp-row toggle';
       orbRow.innerHTML = `<span class="stage-comp-label">bottom orb</span><input class="stage-comp-check" type="checkbox" data-stage-list-orb-toggle="1" ${stage?.listListeningOrb ? 'checked' : ''}/>`;
       list.appendChild(orbRow);
+
+      const selectableRow = document.createElement('div');
+      selectableRow.className = 'stage-comp-row toggle';
+      selectableRow.innerHTML = `<span class="stage-comp-label">selectable</span><input class="stage-comp-check" type="checkbox" data-stage-list-selectable-toggle="1" ${stage?.listSelectable !== false ? 'checked' : ''}/>`;
+      list.appendChild(selectableRow);
     }
     ctx.UI.stageComponentControls.appendChild(list);
   }
@@ -143,12 +179,25 @@ export function createSidebarRender(ctx, refs) {
       ? ctx.stageSelectedMaskBlurForShape(scenario, scenario?.shape)
       : '';
     const renderShape = ctx.stageRenderShapeForShape ? ctx.stageRenderShapeForShape(scenario, scenario?.shape) : String(stage?.renderShape || '');
+    const isNudgeStage = isNudgeStageId(stage?.id);
+    const nudgeDividerColor = ctx.stageNudgeDividerColorForShape
+      ? ctx.stageNudgeDividerColorForShape(scenario, scenario?.shape)
+      : '#ffffff';
     const isCardLike = renderShape === 'card' || renderShape === 'card-s';
-    if (ctx.UI.stageRadiusInput) ctx.UI.stageRadiusInput.value = Number.isFinite(stage?.cornerRadius) ? String(stage.cornerRadius) : '';
-    if (ctx.UI.stageWidthInput) ctx.UI.stageWidthInput.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '';
-    if (ctx.UI.stageHeightInput) ctx.UI.stageHeightInput.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '';
-    if (ctx.UI.stageGapInput) ctx.UI.stageGapInput.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '';
-    if (ctx.UI.stageIconPadInput) ctx.UI.stageIconPadInput.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '';
+    const hasCardMediaPadding = isCardLike || renderShape === 'image';
+    const cardImagePadding = ctx.stageCardImagePaddingForShape ? ctx.stageCardImagePaddingForShape(scenario, scenario?.shape) : 24;
+    const mainSize = ctx.stageMainSize ? ctx.stageMainSize(stage, scenario) : {};
+    const effectiveWidth = Number.isFinite(sizeOverride?.widthOverride) ? sizeOverride.widthOverride : mainSize.width;
+    const effectiveHeight = Number.isFinite(sizeOverride?.heightOverride) ? sizeOverride.heightOverride : mainSize.height;
+    const effectiveIconGap = ctx.stageIconTextGap ? ctx.stageIconTextGap(stage?.id, renderShape) : stage?.iconTextGap;
+    const effectiveIconPad = ctx.stageIconLeftPadding ? ctx.stageIconLeftPadding(stage?.id, renderShape) : stage?.iconLeftPadding;
+    setSlider(ctx.UI.stageRadiusInput, Number.isFinite(stage?.cornerRadius) ? stage.cornerRadius : 0, ctx.UI.stageRadiusVal);
+    setSlider(ctx.UI.stageWidthInput, effectiveWidth, ctx.UI.stageWidthVal);
+    setSlider(ctx.UI.stageHeightInput, effectiveHeight, ctx.UI.stageHeightVal);
+    setSlider(ctx.UI.stageImagePaddingInput, cardImagePadding, ctx.UI.stageImagePaddingVal);
+    if (ctx.UI.stageImagePaddingField) ctx.UI.stageImagePaddingField.classList.toggle('hidden', !hasCardMediaPadding);
+    setSlider(ctx.UI.stageGapInput, Number.isFinite(effectiveIconGap) ? effectiveIconGap : 8, ctx.UI.stageGapVal);
+    setSlider(ctx.UI.stageIconPadInput, Number.isFinite(effectiveIconPad) ? effectiveIconPad : 16, ctx.UI.stageIconPadVal);
     if (ctx.UI.stageCardSRow) ctx.UI.stageCardSRow.classList.toggle('hidden', !isCardLike);
     if (ctx.UI.stageListCountRow) ctx.UI.stageListCountRow.classList.add('hidden');
     if (ctx.UI.stageListListeningOrbRow) ctx.UI.stageListListeningOrbRow.classList.add('hidden');
@@ -166,7 +215,16 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageCardSToggle.checked = renderShape === 'card-s';
       ctx.UI.stageCardSToggle.disabled = !stage || !isCardLike;
     }
-    if (ctx.UI.stageSelectedToggle) ctx.UI.stageSelectedToggle.checked = !!stageSelected;
+    if (ctx.UI.stageCelestialStyleSection) ctx.UI.stageCelestialStyleSection.classList.toggle('hidden', !stageSelected);
+    if (ctx.UI.stageShellHiddenToggle) {
+      ctx.UI.stageShellHiddenToggle.checked = !!stage?.hideShell;
+      ctx.UI.stageShellHiddenToggle.disabled = !stage;
+    }
+    if (ctx.UI.stageNudgeStyleSection) ctx.UI.stageNudgeStyleSection.classList.toggle('hidden', !isNudgeStage);
+    if (ctx.UI.stageNudgeDividerColor) {
+      ctx.UI.stageNudgeDividerColor.value = String(nudgeDividerColor || '#ffffff');
+      ctx.UI.stageNudgeDividerColor.disabled = !stage || !isNudgeStage;
+    }
     if (ctx.UI.stageBlobTopCoreColor) {
       ctx.UI.stageBlobTopCoreColor.value = String(stageBlobTopCoreColor || '#90acff');
       ctx.UI.stageBlobTopCoreColor.disabled = !stage;
@@ -183,10 +241,8 @@ export function createSidebarRender(ctx, refs) {
       ctx.UI.stageBlobBottomEdgeColor.value = String(stageBlobBottomEdgeColor || '#9761ff');
       ctx.UI.stageBlobBottomEdgeColor.disabled = !stage;
     }
-    if (ctx.UI.stageMaskBlurInput) {
-      ctx.UI.stageMaskBlurInput.value = Number.isFinite(stageMaskBlur) ? String(stageMaskBlur) : '';
-      ctx.UI.stageMaskBlurInput.disabled = !stage;
-    }
+    setSlider(ctx.UI.stageMaskBlurInput, Number.isFinite(stageMaskBlur) ? stageMaskBlur : 30, ctx.UI.stageMaskBlurVal);
+    if (ctx.UI.stageMaskBlurInput) ctx.UI.stageMaskBlurInput.disabled = !stage;
     if (ctx.UI.stageComponentsPanel) ctx.UI.stageComponentsPanel.classList.remove('hidden');
     if (ctx.UI.stageDuplicate) ctx.UI.stageDuplicate.disabled = !stage;
     if (ctx.UI.stageDelete) ctx.UI.stageDelete.disabled = !stage;
@@ -220,7 +276,8 @@ export function createSidebarRender(ctx, refs) {
     const items = ctx.stageListItemsForShape ? ctx.stageListItemsForShape(scenario, scenario?.shape) : [];
     if (preview) preview.textContent = `${items.length} chip${items.length === 1 ? '' : 's'}`;
     items.forEach((item, index) => {
-      const labelId = `scenario-list-item-label-${index}`;
+      const primaryId = `scenario-list-item-primary-${index}`;
+      const secondaryId = `scenario-list-item-secondary-${index}`;
       const iconInputId = `scenario-list-item-icon-input-${index}`;
       const iconUploadId = `scenario-list-item-icon-upload-${index}`;
       const icon = item?.icon || ctx.createIcon('none', '');
@@ -231,10 +288,11 @@ export function createSidebarRender(ctx, refs) {
         ? 'emoji'
         : 'default';
       const row = document.createElement('div');
-      row.className = 'sb-row tight';
+      row.className = 'sb-row tight list-item-container';
       row.innerHTML = `
-        <label class="sb-lbl" for="${labelId}">Chip ${index + 1}</label>
-        <input id="${labelId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-label-index="${index}" value="${String(item?.label || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
+        <label class="sb-lbl" for="${primaryId}">Row ${index + 1}</label>
+        <input id="${primaryId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-primary-index="${index}" value="${String(item?.primary || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" placeholder="Primary text"/>
+        <input id="${secondaryId}" class="sb-input" type="text" autocomplete="off" spellcheck="false" data-list-item-secondary-index="${index}" value="${String(item?.secondary || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" placeholder="Secondary text"/>
         <div class="icon-upload-row">
           <input id="${iconInputId}" class="sb-input" type="text" maxlength="4" autocomplete="off" spellcheck="false" placeholder="Emoji or glyph" data-list-item-icon-input-index="${index}" value="${String(iconValue || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}"/>
           <label class="sb-mini-btn upload-btn" for="${iconUploadId}">PNG<input id="${iconUploadId}" data-list-item-icon-upload-index="${index}" type="file" accept="image/png,image/gif"/></label>
@@ -254,15 +312,21 @@ export function createSidebarRender(ctx, refs) {
     const hasIcon = ctx.stageHasComponent(stage, 'icon');
     const hasImage = ctx.stageHasComponent(stage, 'image');
     const hasIntentHeader = ctx.stageHasComponent(stage, 'intent-header');
+    const hasActionRow = ctx.stageHasComponent(stage, 'action-row') && (renderShape === 'card' || renderShape === 'card-s');
     if (ctx.UI.scenarioTriggers) ctx.UI.scenarioTriggers.value = (scenario?.triggers || []).join(', ');
     const stageIcon = ctx.stageIconForShape(scenario, scenario?.shape);
     const stageText = ctx.stageTextForShape(scenario, scenario?.shape);
+    const actionCardActions = scenario?.content?.actionCardActionsByShape?.[scenario?.shape] || { left: 'Snooze', right: 'Join now →' };
+    const actionCardLeft = actionCardActions.left ?? 'Snooze';
+    const actionCardRight = actionCardActions.right ?? 'Join now →';
     const typography = ctx.getScenarioTypography(scenario, scenario?.shape);
     if (ctx.UI.scenarioIconInput) ctx.UI.scenarioIconInput.value = stageIcon.kind === 'emoji' ? stageIcon.value : '';
-    if (ctx.UI.scenarioIconMode) ctx.UI.scenarioIconMode.textContent = stageIcon.kind === 'image' ? 'png/gif' : (stageIcon.kind || 'none');
     if (ctx.UI.scenarioPrimary) ctx.UI.scenarioPrimary.value = stageText.primary;
     if (ctx.UI.scenarioSecondary) ctx.UI.scenarioSecondary.value = stageText.secondary;
     if (ctx.UI.scenarioDetail) ctx.UI.scenarioDetail.value = stageText.detail;
+    if (ctx.UI.scenarioActionCardLeft) ctx.UI.scenarioActionCardLeft.value = actionCardLeft;
+    if (ctx.UI.scenarioActionCardRight) ctx.UI.scenarioActionCardRight.value = actionCardRight;
+    if (ctx.UI.actionCardPreviewText) ctx.UI.actionCardPreviewText.textContent = [actionCardLeft, actionCardRight].filter(label => String(label).trim()).join(' / ');
     if (ctx.UI.scenarioIntentHeader) ctx.UI.scenarioIntentHeader.value = stageText.intentHeader || '';
     if (ctx.UI.scenarioIconSize) ctx.UI.scenarioIconSize.value = String(typography.icon.size);
     if (ctx.UI.scenarioIconColor) ctx.UI.scenarioIconColor.value = typography.icon.color;
@@ -280,6 +344,7 @@ export function createSidebarRender(ctx, refs) {
     if (ctx.UI.editorPrimary) ctx.UI.editorPrimary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('primary'));
     if (ctx.UI.editorSecondary) ctx.UI.editorSecondary.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('secondary'));
     if (ctx.UI.editorDetail) ctx.UI.editorDetail.classList.toggle('hidden', renderShape === 'list' || !visibleTextFields.has('detail'));
+    if (ctx.UI.editorActionCard) ctx.UI.editorActionCard.classList.toggle('hidden', !hasActionRow);
     if (ctx.UI.editorIntentHeader) ctx.UI.editorIntentHeader.classList.toggle('hidden', !hasIntentHeader);
     if (ctx.UI.editorMedia) ctx.UI.editorMedia.classList.toggle('hidden', !hasImage);
     renderScenarioListItemsEditor(scenario, renderShape);

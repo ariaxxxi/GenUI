@@ -321,27 +321,16 @@ function armAiWakeListening(options = {}) {
 }
 
 function updateActive(shape) {
+  const displayShape = shape === "list" ? "list-pill" : shape;
   window.currentShape = shape;
   syncHomeContextTextClasses(shape);
   document.querySelectorAll(".sb-shape-btn").forEach((b) => {
-    if (b.dataset.shape) b.classList.toggle("active", b.dataset.shape === shape);
+    if (b.dataset.shape) b.classList.toggle("active", b.dataset.shape === displayShape);
   });
   const prompt = document.getElementById("home-start-prompt");
   if (!prompt) return;
   const positionListeningPrompt = (hasText) => {
-    if (shape !== "listening" || !hasText) {
-      prompt.style.top = "";
-      prompt.style.bottom = "";
-      return;
-    }
-    const stage = document.getElementById("stage");
-    const main = document.getElementById("drop-main");
-    if (!stage || !main) return;
-    const stageRect = stage.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const promptH = prompt.offsetHeight || 24;
-    prompt.style.top = `${Math.max(8, Math.round(mainRect.top - stageRect.top - promptH - 12))}px`;
-    prompt.style.bottom = "auto";
+    prompt.classList.toggle("is-transcript", shape === "listening" && hasText);
   };
   const updatePromptText = () => {
     prompt.textContent = shape === "listening" ? String(listeningPromptText || "").trim() : "";
@@ -389,7 +378,7 @@ const morph = initMorph({
   },
 });
 const sidebar = initSidebar({
-  UI, RESPONSE_MODE, AI_STAGE_OVERRIDE, clamp, selectedScenario, stageById, availableScenarioShapes, visibleScenarioStages, persistScenarios, persistStageLibrary, persistCanvasSettings, persistResponseMode, persistAiStageOverride, previewScenario, applyCanvasSettings, applyStagePhoneBlur, applyResponseModeUi, hideRich: morph.hideRich, hideIntentHeader: shell.hideIntentHeader, getScenarioTypography: morph.getScenarioTypography, createScenario, stageComponentCounts, STAGE_COMPONENT_TYPES, builtinStageById, scenarioStageSizeOverride, stageVisibleEditorFields, stageHasComponent, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, normalizeTriggers, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeTypographyByShape, normalizeStageSizeByShape, normalizeImagesByShape, normalizeScenario, normalizeStage, stageId, getScenarioLibrary: () => scenarioLibrary, setScenarioLibrary: (value) => { setScenarioLibraryState(value); }, getStageLibrary: () => stageLibrary, setStageLibrary: (value) => { stageLibrary = value; }, getSelectedScenarioId: () => selectedScenarioId, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, getResponseMode: () => responseMode, getAiStageOverride: () => aiStageOverride,
+  UI, RESPONSE_MODE, AI_STAGE_OVERRIDE, clamp, selectedScenario, stageById, availableScenarioShapes, visibleScenarioStages, persistScenarios, persistStageLibrary, persistCanvasSettings, persistResponseMode, persistAiStageOverride, previewScenario, applyCanvasSettings, applyStagePhoneBlur, applyResponseModeUi, hideRich: morph.hideRich, hideIntentHeader: shell.hideIntentHeader, getScenarioTypography: morph.getScenarioTypography, createScenario, stageComponentCounts, STAGE_COMPONENT_TYPES, builtinStageById, scenarioStageSizeOverride, stageMainSize, stageIconTextGap, stageIconLeftPadding, stageVisibleEditorFields, stageHasComponent, stageTextForShape, stageIconForShape, stageListChipIconsForShape, stageListItemsForShape, stageImagesForShape, stageRenderShapeForShape, stageSelectedForShape, stageAccentColorForShape, stageSecondaryAccentColorForShape, normalizeTriggers, normalizeIconByShape, normalizeListChipIconsByShape, normalizeListItemsByShape, createIcon, createDefaultListItem, normalizeStageTextByShape, normalizeTypographyByShape, normalizeStageSizeByShape, normalizeImagesByShape, normalizeScenario, normalizeStage, stageId, getScenarioLibrary: () => scenarioLibrary, setScenarioLibrary: (value) => { setScenarioLibraryState(value); }, getStageLibrary: () => stageLibrary, setStageLibrary: (value) => { stageLibrary = value; }, getSelectedScenarioId: () => selectedScenarioId, setSelectedScenarioId: (value) => { selectedScenarioId = value; }, getResponseMode: () => responseMode, getAiStageOverride: () => aiStageOverride,
 });
 let actions = null;
 const voice = initVoiceEngine({
@@ -483,8 +472,7 @@ initEditorBindings({ document, UI, PAGE_MODE_OVERRIDE, RESPONSE_MODE, AI_STAGE_O
 input?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
-    if (messageFlow.isActive()) void messageFlow.handleInputSubmit(input.value);
-    else actions.handleSend();
+    actions.handleSend();
   }
   if (e.key === "Escape" && messageFlow.isActive()) {
     e.preventDefault();
@@ -607,7 +595,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.key === "9") demo.manualShape("magic");
-  if (e.key === "5") demo.manualShape("list");
+  if (e.key === "5") demo.manualShape("list-pill");
   if (e.key === "6") demo.manualShape("split");
   if (e.key === "0") armAiWakeListening();
   if (e.key === "Escape") {

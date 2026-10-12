@@ -17,6 +17,7 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     contentTypographyState: defaultTypographyForShape('pill'),
     contentDelayProfile: { secondaryInAdvanceMs: 0, detailInAdvanceMs: 0 },
     stageMediaState: [],
+    actionCardActionsState: { left: 'Snooze', right: 'Join now →' },
     uiFadeTimers: [],
     currentContentFadeMs: 260,
     currentDetailFadeMs: 260,
@@ -24,6 +25,7 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     currentTransitionAnimMs: 450,
     prototypeSelectionDirection: 'bottom',
     prototypeSelectionMotionFrame: null,
+    currentStageId: null,
   };
 
   const constants = { P:20, PILL_NO_ICON_P:32, PILL_ICON_P:16, CARD_P:24, BOTTOM_ALIGN_REF_H:420, CARD_MEDIA_BOTTOM_P:30, CARD_DIVIDER_GAP:10, CARD_PRIMARY_GAP:14, CARD_PRIMARY_TO_SECONDARY_GAP:8, CARD_SECONDARY_TO_DETAIL_GAP:8, CARD_DETAIL_TO_MEDIA_GAP:24, CARD_MEDIA_STACK_GAP:8, TS:60, TBR:'30px', GAP:8 };
@@ -45,6 +47,9 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     if (!inGlassFlow && homeLikeShape && thinkingLikeTarget) {
       return void bridges.bridgeHomeToThinking(shape, contentData, customGeo, stageId);
     }
+    if (inAiIdleState && shape === 'magic') {
+      return void render.morphCore(shape, contentData, customGeo, false, null, stageId);
+    }
     if ((state.currentShape === 'ai' || inAiIdleState) && shape !== 'ai' && shape !== 'idle') {
       if (shape === 'circle' || shape === 'listening') return void bridges.bridgeThinkingToHome(contentData, customGeo, stageId);
       return void bridges.bridgeFromThinkingToTarget(shape, contentData, customGeo, stageId);
@@ -54,6 +59,7 @@ export function initMorph({ DROPS, C, detailMeasureEl, callbacks }) {
     if (shape === 'split' && state.currentShape !== 'split') return void bridges.bridgeToSplitViaDot();
     render.morphCore(shape, contentData, customGeo, false, null, stageId);
   }
+  runtime.morphTo = morphTo;
 
   return {
     ...layout,

@@ -1,4 +1,11 @@
-import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId, syncAiOrbCenterIcon, syncAiOrbCenterImage } from '../../shared/ai-orb-icon.js';
+import { AI_ORB_ICON_OPTIONS, loadAiOrbIconId, persistAiOrbIconId } from '../../shared/ai-orb-icon.js';
+import { loadThinkingThumbnails, persistThinkingThumbnails } from '../../app-state.js';
+import {
+  renderThinkingOrbStreamMarkup,
+  setThinkingOrbStreamVisible,
+  syncThinkingOrbStreamIcon,
+  syncThinkingOrbStreamText,
+} from '../../shared/thinking-orb-stream.js';
 
 export function initManualBindings({
   document,
@@ -20,14 +27,16 @@ export function initManualBindings({
   normalizeTypographyByShape,
   normalizeStageSizeByShape,
   normalizeImagesByShape,
-  scenarioStageSizeOverride,
-  stageSelectedMaskBlurForShape,
   stageListItemsForShape,
   STAGE_COMPONENT_TYPES,
   clamp,
   canvasSettings,
   setCanvasSettings,
   persistCanvasSettings,
+  persistBackgroundImageStorage,
+  persistBackgroundVideoStorage,
+  clearBackgroundImageStorage,
+  clearBackgroundVideoStorage,
   persistScenarios,
   responseMode,
   setResponseMode,
@@ -72,6 +81,19 @@ export function initManualBindings({
   setPrototypeAiDebugState,
   getPrototypeAiDebugState,
 }) {
+  const syncRangeProgress = (rangeInput) => {
+    if (!rangeInput || rangeInput.type !== 'range') return;
+    const min = Number(rangeInput.min || 0);
+    const max = Number(rangeInput.max || 100);
+    const value = Number(rangeInput.value || 0);
+    const progress = max > min ? clamp(((value - min) / (max - min)) * 100, 0, 100) : 0;
+    rangeInput.style.setProperty('--range-progress', `${progress}%`);
+  };
+  Array.from(document.querySelectorAll('#left-sidebar input[type="range"], #sidebar input[type="range"]')).forEach((rangeInput) => {
+    syncRangeProgress(rangeInput);
+    rangeInput.addEventListener('input', () => syncRangeProgress(rangeInput));
+  });
+
   const isEditableTarget = (target) => {
     const el = target instanceof Element ? target : null;
     if (!el) return false;
@@ -85,85 +107,21 @@ export function initManualBindings({
   const sendBtn = document.getElementById('send-btn');
   let stageShapeClickTimer = null;
   const THINKING_VERBS = [
-    'Waffling',
-    'Spiraling',
-    'Levitating',
-    'Hallucinating',
-    'Overthinking',
-    'Reticulating',
-    'Triangulating',
-    'Meandering',
-    'Philosophizing',
-    'Untangling',
-    'Daydreaming',
-    'Cogitating',
-    'Extrapolating',
-    'Ruminating',
-    'Vibing',
-    'Catastrophizing',
-    'Manifesting',
-    'Yapping',
+    'Reasoning',
+    'Thinking',
+    'Searching',
+    'Finalizing',
   ];
+  const BLUE_AGENT_ASSET = 'assets/agents/Blue.png';
+  const GREEN_AGENT_ASSET = 'assets/agents/green.png';
+  const ORANGE_AGENT_ASSET = 'assets/agents/orange.png';
+  const YELLOW_AGENT_ASSET = 'assets/agents/yellow.png';
   const PROTOTYPE_SKILLS = [
-    {
-      id: 'doc-writing',
-      label: 'Writing Agent',
-      emoji: '📝',
-      theme: { blobTopCore: 'rgb(126 186 255)', blobTopEdge: 'rgb(92 132 255)', blobBottomCore: 'rgb(197 223 255)', blobBottomEdge: 'rgb(74 102 212)' },
-      phrases: [
-        'Outlining the big idea',
-        'Finding the cleaner headline',
-        'Tightening the messy sentence',
-        'Smoothing the intro paragraph',
-        'Pulling out the key point',
-        'Reshaping the closing line',
-        'Cutting the extra fluff',
-        'Making the structure clearer',
-        'Rewriting for warmer tone',
-        'Sharpening the summary',
-      ],
-    },
-    {
-      id: 'budget',
-      label: 'Budget Agent',
-      emoji: '💸',
-      theme: { blobTopCore: 'rgb(121 255 168)', blobTopEdge: 'rgb(78 214 127)', blobBottomCore: 'rgb(214 255 143)', blobBottomEdge: 'rgb(92 184 74)' },
-      phrases: [
-        'Checking the monthly burn',
-        'Looking for hidden subscriptions',
-        'Balancing bills against fun',
-        'Reworking the grocery cap',
-        'Setting aside travel money',
-        'Pressure-testing the weekend spend',
-        'Comparing fixed and flexible costs',
-        'Searching for the easy save',
-        'Trimming the impulse bucket',
-        'Finding room for a treat',
-      ],
-    },
-    {
-      id: 'wine-pairing-expert',
-      label: 'Wine Agent',
-      emoji: '🍷',
-      theme: { blobTopCore: 'rgb(188 66 120)', blobTopEdge: 'rgb(118 28 88)', blobBottomCore: 'rgb(244 146 188)', blobBottomEdge: 'rgb(90 20 68)' },
-      phrases: [
-        'Matching acidity to the dish',
-        'Softening the tannin choice',
-        'Leaning into brighter fruit',
-        'Comparing light and bold pours',
-        'Balancing spice with sweetness',
-        'Picking the cleaner finish',
-        'Choosing a better dinner bottle',
-        'Checking the texture pairing',
-        'Finding the safer crowd pleaser',
-        'Saving the richer red for later',
-      ],
-    },
     {
       id: 'trip-planner',
       label: 'Travel Agent',
-      emoji: '✈️',
-      theme: { blobTopCore: 'rgb(115 204 255)', blobTopEdge: 'rgb(73 147 255)', blobBottomCore: 'rgb(209 241 255)', blobBottomEdge: 'rgb(74 110 224)' },
+      src: BLUE_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(177 222 255)', blobTopEdge: 'rgb(90 164 255)', blobBottomCore: 'rgb(210 232 255)', blobBottomEdge: 'rgb(48 108 226)' },
       phrases: [
         'Comparing the morning flights',
         'Moving the hotel closer in',
@@ -178,10 +136,28 @@ export function initManualBindings({
       ],
     },
     {
+      id: 'doc-writing',
+      label: 'Writing Agent',
+      src: YELLOW_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(255 243 158)', blobTopEdge: 'rgb(255 212 72)', blobBottomCore: 'rgb(255 249 208)', blobBottomEdge: 'rgb(222 176 34)' },
+      phrases: [
+        'Outlining the big idea',
+        'Finding the cleaner headline',
+        'Tightening the messy sentence',
+        'Smoothing the intro paragraph',
+        'Pulling out the key point',
+        'Reshaping the closing line',
+        'Cutting the extra fluff',
+        'Making the structure clearer',
+        'Rewriting for warmer tone',
+        'Sharpening the summary',
+      ],
+    },
+    {
       id: 'fitness-coach',
       label: 'Fitness Agent',
-      emoji: '🏃',
-      theme: { blobTopCore: 'rgb(118 255 199)', blobTopEdge: 'rgb(72 210 165)', blobBottomCore: 'rgb(187 255 229)', blobBottomEdge: 'rgb(54 145 118)' },
+      src: GREEN_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(146 255 191)', blobTopEdge: 'rgb(82 214 134)', blobBottomCore: 'rgb(210 255 176)', blobBottomEdge: 'rgb(82 176 84)' },
       phrases: [
         'Adjusting the recovery day',
         'Turning down the injury risk',
@@ -196,21 +172,21 @@ export function initManualBindings({
       ],
     },
     {
-      id: 'meal-planner',
-      label: 'Meal Agent',
-      emoji: '🍱',
-      theme: { blobTopCore: 'rgb(255 182 108)', blobTopEdge: 'rgb(255 123 86)', blobBottomCore: 'rgb(255 227 146)', blobBottomEdge: 'rgb(210 108 56)' },
+      id: 'budget',
+      label: 'Budget Agent',
+      src: ORANGE_AGENT_ASSET,
+      theme: { blobTopCore: 'rgb(255 204 152)', blobTopEdge: 'rgb(255 144 76)', blobBottomCore: 'rgb(255 228 194)', blobBottomEdge: 'rgb(215 109 39)' },
       phrases: [
-        'Using up what is in the fridge',
-        'Balancing quick and cozy dinners',
-        'Planning leftovers on purpose',
-        'Pairing the sides more cleanly',
-        'Checking the protein spread',
-        'Making lunch easier tomorrow',
-        'Keeping prep time reasonable',
-        'Turning one base into two meals',
-        'Finding a lighter dinner option',
-        'Saving the easiest dish for late',
+        'Checking the monthly burn',
+        'Looking for hidden subscriptions',
+        'Balancing bills against fun',
+        'Reworking the grocery cap',
+        'Setting aside travel money',
+        'Pressure-testing the weekend spend',
+        'Comparing fixed and flexible costs',
+        'Searching for the easy save',
+        'Trimming the impulse bucket',
+        'Finding room for a treat',
       ],
     },
   ];
@@ -254,107 +230,76 @@ export function initManualBindings({
   ];
   const multiAgentRow = document.getElementById('prototype-multi-agent-row');
   const thinkingStateRow = document.getElementById('prototype-thinking-state-row');
+  const thinkingPauseRow = document.getElementById('prototype-thinking-pause-row');
   const thinkingCopyRow = document.getElementById('prototype-thinking-copy-row');
+  const thinkingThumbnailRow = document.getElementById('prototype-thinking-thumbnail-row');
+  const thinkingThumbnailLibraryRow = document.getElementById('prototype-thinking-thumbnail-library-row');
   const thinkingStateButtons = Array.from(document.querySelectorAll('[data-thinking-state]'));
-  const thinkingStream = document.getElementById('prototype-thinking-stream');
+  const thinkingOrb = document.getElementById('siri-orb');
+  const stageThumb = document.getElementById('c-thumb');
+  const stageThumbImg = document.getElementById('c-thumb-img');
+  const stageThumbLabel = document.getElementById('c-thumb-label');
+  let thinkingStream = document.getElementById('prototype-thinking-stream');
+  if (thinkingStream && !thinkingStream.classList.contains('g-thinking-orb-stream')) {
+    thinkingStream.outerHTML = renderThinkingOrbStreamMarkup({
+      id: 'prototype-thinking-stream',
+      textId: 'prototype-thinking-stream-text',
+      hidden: true,
+    });
+    thinkingStream = document.getElementById('prototype-thinking-stream');
+  }
+  const thinkingStreamIcon = thinkingStream?.querySelector?.('[data-thinking-orb-stream-icon]');
   const thinkingStreamText = document.getElementById('prototype-thinking-stream-text');
+  const thinkingPauseBtn = document.getElementById('prototype-thinking-pause');
+  const thinkingResumeBtn = document.getElementById('prototype-thinking-resume');
   const thinkingCopyInput = document.getElementById('prototype-thinking-copy-input');
   const thinkingCopyFireBtn = document.getElementById('prototype-thinking-copy-fire');
-  const DEBUG_FAMILY_SHAPES = new Set(['magic', 'skill-pill', 'agent-circle']);
+  const thinkingCopyLoopBtn = document.getElementById('prototype-thinking-copy-loop');
+  const thinkingThumbnailPreview = document.getElementById('prototype-thinking-thumbnail-preview');
+  const thinkingThumbnailUpload = document.getElementById('prototype-thinking-thumbnail-upload');
+  const thinkingThumbnailPasteBtn = document.getElementById('prototype-thinking-thumbnail-paste');
+  const thinkingThumbnailLibrary = document.getElementById('prototype-thinking-thumbnail-library');
+  const thinkingThumbnailStatus = document.getElementById('prototype-thinking-thumbnail-status');
+  const DEBUG_FAMILY_SHAPES = new Set(['magic']);
   const thinkingDebugState = {
     mode: 'thinking',
     familyActive: getPrototypeAiDebugState?.()?.active === true,
+    paused: false,
+    minimized: false,
     activeSkillId: PROTOTYPE_SKILLS[0]?.id || '',
     activeAppId: PROTOTYPE_APPS[0]?.id || '',
-    pendingSkillTransitionText: '',
-    pendingAppVisualSync: null,
-    pendingAppTransitionText: '',
-    pendingAgentVisualSync: null,
-    pendingAgentTransitionText: '',
+    pendingCustomText: '',
+    customText: '',
+    playbackMode: 'loop',
     streamToken: 0,
+    textSwapTimer: null,
     currentText: '',
-    currentCursor: null,
+    expandedPillWidth: 80,
     verbIndex: 0,
     skillPhraseIndexById: Object.create(null),
   };
+  let thinkingThumbnailState = loadThinkingThumbnails();
+  let thinkingMinimizeExpandTimer = null;
+  let thinkingMinimizePhaseTimer = null;
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const currentPrototypeShape = () => String(document.body?.dataset?.currentShape || '').trim().toLowerCase();
+  const getThinkingMinimizePhase = () => String(document.body?.dataset?.thinkingDebugMinimizePhase || '').trim().toLowerCase();
+  const isThinkingCirclePhase = (shape = currentPrototypeShape()) => {
+    const phase = getThinkingMinimizePhase();
+    return shape === 'listening'
+      || thinkingDebugState.minimized
+      || phase === 'collapsing-circle'
+      || phase === 'expanding-circle';
+  };
   const isDebugFamilyShape = (shape = currentPrototypeShape()) => DEBUG_FAMILY_SHAPES.has(String(shape || '').trim().toLowerCase());
-  const agentDebugTypography = {
-    icon: { size: 40, color: '#ffffff' },
-    primary: { size: 28, color: '#ffffff' },
-    secondary: { size: 24, color: '#d4d4d4' },
-    detail: { size: 24, color: '#a3a3a3' },
-    intentHeader: { size: 18, color: '#a0a0a0' },
-  };
-  const skillChipTypography = {
-    icon: { size: 28, color: '#ffffff' },
-    primary: { size: 20, color: '#ffffff' },
-    secondary: { size: 20, color: '#d4d4d4' },
-    detail: { size: 20, color: '#a3a3a3' },
-    intentHeader: { size: 18, color: '#a0a0a0' },
-  };
-  const skillChipMeasureCanvas = document.createElement('canvas');
-  const skillChipMeasureContext = skillChipMeasureCanvas.getContext('2d');
   const aiAgentSequence = Object.keys(AI_ORB_ICON_OPTIONS);
   const prototypeAppSequence = PROTOTYPE_APPS.map((item) => item.id);
   const getSkillById = (id) => PROTOTYPE_SKILLS.find((item) => item.id === id) || PROTOTYPE_SKILLS[0];
   const getAppById = (id) => PROTOTYPE_APPS.find((item) => item.id === id) || PROTOTYPE_APPS[0];
   const getSkillTransitionText = (skill) => {
-    const baseLabel = String(skill?.label || 'Skill').replace(/\s+Agent$/i, '').trim() || 'Skill';
+    const baseLabel = String(skill?.label || 'Domain').replace(/\s+Agent$/i, '').trim() || 'Domain';
     return `Using ${baseLabel} skill`;
-  };
-  const getSkillRenderContent = (skill) => ({
-    icon: createIcon('emoji', skill?.emoji || '✨'),
-    primary: skill?.label || 'Skill Agent',
-    secondary: '',
-    detail: '',
-    typography: skillChipTypography,
-  });
-  const getAgentRenderContent = (agentId = loadAiOrbIconId()) => {
-    const option = AI_ORB_ICON_OPTIONS[agentId] || AI_ORB_ICON_OPTIONS[loadAiOrbIconId()];
-    return {
-      icon: createIcon('image', option?.src || ''),
-      primary: '',
-      secondary: '',
-      detail: '',
-      typography: agentDebugTypography,
-    };
-  };
-  const getAppRenderContent = (app = getAppById()) => ({
-    icon: createIcon('image', app?.src || ''),
-    primary: '',
-    secondary: '',
-    detail: '',
-    typography: agentDebugTypography,
-  });
-  const measureSkillChipLabelWidth = (label) => {
-    const text = String(label || '').trim();
-    if (!text) return 0;
-    if (skillChipMeasureContext) {
-      skillChipMeasureContext.font = "600 20px 'DM Sans', sans-serif";
-      return Math.ceil(skillChipMeasureContext.measureText(text).width);
-    }
-    return text.length * 12;
-  };
-  const getSkillChipGeometry = (skill) => {
-    const labelWidth = measureSkillChipLabelWidth(skill?.label || 'Skill Agent');
-    const chipHeight = 68;
-    const leftPad = 18;
-    const iconSize = 36;
-    const iconGap = 10;
-    const rightPad = 22;
-    const minWidth = 164;
-    const maxWidth = 320;
-    const width = clamp(leftPad + iconSize + iconGap + labelWidth + rightPad, minWidth, maxWidth);
-    const radius = Math.round(chipHeight / 2);
-    const chipCenterY = -20;
-    return {
-      main: { w: width, h: chipHeight, br: `${radius}px`, tx: -(width / 2), ty: chipCenterY - (chipHeight / 2), op: 1 },
-      left: { w: 100, h: 100, br: '50px', tx: -(width / 2), ty: chipCenterY - 50, op: 0 },
-      right: { w: 100, h: 100, br: '50px', tx: (width / 2) - 100, ty: chipCenterY - 50, op: 0 },
-    };
   };
   const getAgentIndex = (id) => Math.max(0, aiAgentSequence.indexOf(String(id || '').trim().toLowerCase()));
   const getAgentSwitchDirection = (fromId, toId) => {
@@ -390,69 +335,419 @@ export function initManualBindings({
     const source = pool.length ? pool : items;
     return source[Math.floor(Math.random() * source.length)] || items[0] || null;
   };
-  const createPixelCursor = () => {
-    const px = document.createElement('span');
-    px.className = 'pixel-cursor';
-    for (let i = 0; i < 16; i += 1) {
-      const dot = document.createElement('span');
-      px.appendChild(dot);
+  const getPrototypeThinkingStreamVisual = () => {
+    const selectedThumbnail = thinkingThumbnailState.library.find((item) => item.id === thinkingThumbnailState.selectedId);
+    if (thinkingDebugState.mode === 'thinking' && selectedThumbnail) {
+      return {
+        src: selectedThumbnail.src,
+        alt: selectedThumbnail.name || 'Custom thinking thumbnail',
+      };
     }
-    return px;
+    if (thinkingDebugState.mode === 'thinking' && thinkingThumbnailState.selectedId !== 'auto') {
+      const preset = AI_ORB_ICON_OPTIONS[thinkingThumbnailState.selectedId];
+      if (preset) return { src: preset.src, alt: `${preset.label} thumbnail` };
+    }
+    if (thinkingDebugState.mode === 'skill') {
+      const skill = getSkillById(thinkingDebugState.activeSkillId);
+      return {
+        src: skill?.src || '',
+        alt: skill?.label ? `${skill.label} icon` : '',
+      };
+    }
+    if (thinkingDebugState.mode === 'app') {
+      const app = getAppById(thinkingDebugState.activeAppId);
+      return {
+        src: app?.src || '',
+        alt: app?.label ? `${app.label} app icon` : '',
+      };
+    }
+    const option = AI_ORB_ICON_OPTIONS[loadAiOrbIconId()] || AI_ORB_ICON_OPTIONS.chatgpt;
+    return {
+      src: option?.src || '',
+      alt: option?.label ? `${option.label} orb icon` : '',
+    };
   };
-  const removeThinkingCursor = () => {
-    if (!thinkingDebugState.currentCursor) return;
-    thinkingDebugState.currentCursor.remove();
-    thinkingDebugState.currentCursor = null;
+  const syncPrototypeThinkingStreamIcon = ({ animate = false, switchDirection = '', motion = 'crossfade' } = {}) => {
+    const visual = getPrototypeThinkingStreamVisual();
+    syncThinkingOrbStreamIcon(thinkingStreamIcon, {
+      src: visual.src,
+      alt: visual.alt,
+      animate,
+      switchDirection,
+      motion,
+    });
+    syncPrototypeStageThinkingIcon();
+  };
+  const thumbnailPresets = () => ([
+    { id: 'auto', label: 'Auto', src: AI_ORB_ICON_OPTIONS[loadAiOrbIconId()]?.src || AI_ORB_ICON_OPTIONS.bixby.src },
+    ...Object.values(AI_ORB_ICON_OPTIONS).map((item) => ({ id: item.id, label: item.label, src: item.src })),
+  ]);
+  const persistThinkingThumbnailState = () => persistThinkingThumbnails(thinkingThumbnailState);
+  const setThinkingThumbnailStatus = (message = '') => {
+    if (thinkingThumbnailStatus) thinkingThumbnailStatus.textContent = message;
+  };
+  const renderThinkingThumbnailLibrary = () => {
+    if (!thinkingThumbnailLibrary) return;
+    const entries = [
+      ...thumbnailPresets().map((item) => ({ ...item, builtin: true })),
+      ...thinkingThumbnailState.library,
+    ];
+    thinkingThumbnailLibrary.replaceChildren(...entries.map((item) => {
+      const button = document.createElement('button');
+      button.className = 'prototype-thumbnail-card';
+      button.type = 'button';
+      button.dataset.thumbnailId = item.id;
+      button.classList.toggle('active', item.id === thinkingThumbnailState.selectedId);
+      button.setAttribute('aria-pressed', item.id === thinkingThumbnailState.selectedId ? 'true' : 'false');
+      button.title = item.label || item.name || 'Custom thumbnail';
+      const image = document.createElement('img');
+      image.src = item.src;
+      image.alt = '';
+      const label = document.createElement('span');
+      label.textContent = item.label || item.name || 'Custom';
+      button.append(image, label);
+      return button;
+    }));
+    const selected = entries.find((item) => item.id === thinkingThumbnailState.selectedId) || entries[0];
+    if (thinkingThumbnailPreview) {
+      thinkingThumbnailPreview.src = selected?.src || '';
+      thinkingThumbnailPreview.alt = selected?.label || selected?.name || 'Selected thinking thumbnail';
+    }
+  };
+  const selectThinkingThumbnail = (id) => {
+    thinkingThumbnailState.selectedId = id === 'auto' || AI_ORB_ICON_OPTIONS[id] || thinkingThumbnailState.library.some((item) => item.id === id)
+      ? id
+      : 'auto';
+    persistThinkingThumbnailState();
+    renderThinkingThumbnailLibrary();
+    syncPrototypeThinkingStreamIcon({ animate: true });
+  };
+  const addThinkingThumbnailFile = (file) => {
+    if (!file || !String(file.type || '').startsWith('image/')) {
+      setThinkingThumbnailStatus('Choose an image file.');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setThinkingThumbnailStatus('Images must be 4 MB or smaller.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      const src = String(reader.result || '');
+      if (!src.startsWith('data:image/')) return;
+      const id = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      thinkingThumbnailState = {
+        selectedId: id,
+        library: [...thinkingThumbnailState.library, {
+          id,
+          name: String(file.name || 'Pasted image').replace(/\.[^.]+$/, '').slice(0, 32) || 'Custom image',
+          src,
+        }].slice(-24),
+      };
+      persistThinkingThumbnailState();
+      renderThinkingThumbnailLibrary();
+      syncPrototypeThinkingStreamIcon({ animate: true });
+      setThinkingThumbnailStatus('Added to your thumbnail library.');
+    });
+    reader.readAsDataURL(file);
+  };
+  const pasteThinkingThumbnail = async () => {
+    if (!navigator.clipboard?.read) {
+      setThinkingThumbnailStatus('Paste an image here with ⌘V / Ctrl+V.');
+      return;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((value) => value.startsWith('image/'));
+        if (type) return addThinkingThumbnailFile(await item.getType(type));
+      }
+      setThinkingThumbnailStatus('No image found on the clipboard.');
+    } catch {
+      setThinkingThumbnailStatus('Clipboard access was not allowed. Paste with ⌘V / Ctrl+V instead.');
+    }
+  };
+  const syncPrototypeStageThinkingIcon = () => {
+    const visual = getPrototypeThinkingStreamVisual();
+    if (!stageThumb || !stageThumbImg) return;
+    const shape = currentPrototypeShape();
+    if (shape !== 'listening' && shape !== 'magic') return;
+    const iconSize = 46;
+    const collapsed = isThinkingCirclePhase(shape);
+    const x = collapsed ? Math.round((80 - iconSize) / 2) : 14;
+    const y = Math.round((80 - iconSize) / 2);
+    stageThumb.classList.add('thumb-image', 'thumb-plain-icon');
+    stageThumb.classList.remove('thumb-empty');
+    stageThumb.style.width = `${iconSize}px`;
+    stageThumb.style.height = `${iconSize}px`;
+    stageThumb.style.borderRadius = '999px';
+    stageThumb.style.transform = `translate(${x}px,${y}px)`;
+    stageThumb.style.opacity = '1';
+    stageThumb.style.pointerEvents = 'none';
+    if (stageThumbLabel) stageThumbLabel.textContent = '';
+    if (visual.src && stageThumbImg.getAttribute('src') !== visual.src) stageThumbImg.src = visual.src;
+    stageThumbImg.alt = visual.alt || '';
+    stageThumbImg.style.width = `${iconSize}px`;
+    stageThumbImg.style.height = `${iconSize}px`;
+  };
+  const parseTranslateY = (el) => {
+    const transform = getComputedStyle(el).transform;
+    if (!transform || transform === 'none') return -60;
+    const m2d = transform.match(/^matrix\(([^)]+)\)$/);
+    if (m2d) {
+      const parts = m2d[1].split(',').map((v) => parseFloat(v.trim()));
+      return Number.isFinite(parts[5]) ? parts[5] : -60;
+    }
+    const m3d = transform.match(/^matrix3d\(([^)]+)\)$/);
+    if (m3d) {
+      const parts = m3d[1].split(',').map((v) => parseFloat(v.trim()));
+      return Number.isFinite(parts[13]) ? parts[13] : -60;
+    }
+    return -60;
+  };
+  const syncPrototypeThinkingContainerGeometry = (pillWidth = 80) => {
+    const main = document.getElementById('drop-main');
+    const shape = currentPrototypeShape();
+    if (!main || (shape !== 'listening' && shape !== 'magic')) return;
+    const collapsed = isThinkingCirclePhase(shape);
+    const requestedWidth = Math.max(80, Math.round(Number(pillWidth) || 80));
+    if (!collapsed) thinkingDebugState.expandedPillWidth = requestedWidth;
+    const width = collapsed ? 80 : requestedWidth;
+    const y = parseTranslateY(main);
+    const scale = shape === 'magic' && thinkingDebugState.minimized ? 0.2 : 1;
+    const tx = -width / 2;
+    main.style.width = `${width}px`;
+    main.style.height = '80px';
+    main.style.setProperty('--g-stage-h', '80px');
+    main.style.borderRadius = '999px';
+    main.style.transformOrigin = '50% 100%';
+    main.style.transform = `translate(${tx}px, ${y}px) scale(${scale})`;
+  };
+  const syncPrototypeThinkingStreamMetrics = (text) => {
+    if (!thinkingStream || !thinkingStreamText) return;
+    const metrics = syncThinkingOrbStreamText(thinkingStream, thinkingStreamText, text || 'Thinking', {
+      metrics: {
+        iconSize: 46,
+        gap: 10,
+        paddingX: { left: 14, right: 20 },
+        minWidth: 80,
+      },
+      font: '500 20px "DM Sans", sans-serif',
+      setText: false,
+    });
+    thinkingDebugState.expandedPillWidth = metrics.pillWidth || 80;
+    syncPrototypeThinkingContainerGeometry(metrics.pillWidth || 80);
+    syncPrototypeStageThinkingIcon();
+  };
+  const syncPrototypeThinkingStreamShape = () => {
+    if (!thinkingStream) return;
+    const shape = currentPrototypeShape();
+    const collapsed = isThinkingCirclePhase(shape);
+    thinkingStream.classList.toggle('is-collapsed-stream', collapsed);
+    if (shape === 'magic') {
+      syncPrototypeThinkingContainerGeometry(collapsed ? 80 : thinkingDebugState.expandedPillWidth || 80);
+      syncPrototypeStageThinkingIcon();
+    }
+    if (shape === 'listening') {
+      syncPrototypeThinkingStreamIcon();
+      syncPrototypeThinkingStreamMetrics(thinkingDebugState.currentText || 'Thinking');
+      syncPrototypeStageThinkingIcon();
+      setThinkingOrbStreamVisible(thinkingStream, true);
+    }
   };
   const setThinkingStreamVisible = (visible) => {
     if (!thinkingStream) return;
-    thinkingStream.classList.toggle('hidden', !visible);
+    setThinkingOrbStreamVisible(thinkingStream, visible);
+  };
+  const setThinkingStreamPausedStyle = (paused) => {
+    if (!thinkingStream) return;
+    thinkingStream.classList.toggle('is-paused-debug', !!paused);
   };
   const clearThinkingStream = () => {
-    removeThinkingCursor();
     thinkingDebugState.currentText = '';
     if (thinkingStreamText) thinkingStreamText.textContent = '';
+    setThinkingStreamPausedStyle(false);
+  };
+  const isThinkingMinimizable = (shape = currentPrototypeShape()) => (
+    thinkingDebugState.familyActive
+    && String(shape || '').trim().toLowerCase() === 'magic'
+    && thinkingDebugState.mode === 'thinking'
+  );
+  const syncThinkingOrbToggleUi = () => {
+    const enabled = isThinkingMinimizable();
+    if (!enabled) {
+      thinkingDebugState.minimized = false;
+      document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+      if (thinkingMinimizeExpandTimer) {
+        clearTimeout(thinkingMinimizeExpandTimer);
+        thinkingMinimizeExpandTimer = null;
+      }
+      if (thinkingMinimizePhaseTimer) {
+        clearTimeout(thinkingMinimizePhaseTimer);
+        thinkingMinimizePhaseTimer = null;
+      }
+    }
+    if (thinkingDebugState.minimized) document.body?.setAttribute('data-thinking-debug-minimized', 'true');
+    else document.body?.removeAttribute('data-thinking-debug-minimized');
+    syncPrototypeThinkingStreamShape();
+    if (!(thinkingOrb instanceof HTMLElement)) return;
+    if (!enabled) {
+      thinkingOrb.tabIndex = -1;
+      thinkingOrb.removeAttribute('role');
+      thinkingOrb.removeAttribute('aria-label');
+      thinkingOrb.removeAttribute('aria-pressed');
+      thinkingOrb.removeAttribute('title');
+      return;
+    }
+    const nextLabel = thinkingDebugState.minimized ? 'Expand thinking orb' : 'Minimize thinking orb';
+    thinkingOrb.tabIndex = 0;
+    thinkingOrb.setAttribute('role', 'button');
+    thinkingOrb.setAttribute('aria-label', nextLabel);
+    thinkingOrb.setAttribute('aria-pressed', thinkingDebugState.minimized ? 'true' : 'false');
+    thinkingOrb.setAttribute('title', nextLabel);
+  };
+  const setThinkingDebugMinimized = (minimized) => {
+    const canMinimize = isThinkingMinimizable();
+    const next = Boolean(minimized) && canMinimize;
+    if (thinkingMinimizeExpandTimer) {
+      clearTimeout(thinkingMinimizeExpandTimer);
+      thinkingMinimizeExpandTimer = null;
+    }
+    if (thinkingMinimizePhaseTimer) {
+      clearTimeout(thinkingMinimizePhaseTimer);
+      thinkingMinimizePhaseTimer = null;
+    }
+    if (!canMinimize && !thinkingDebugState.minimized && !getThinkingMinimizePhase()) {
+      syncThinkingOrbToggleUi();
+      return;
+    }
+    if (next) {
+      if (thinkingDebugState.minimized) {
+        syncThinkingOrbToggleUi();
+        return;
+      }
+      thinkingDebugState.minimized = true;
+      document.body?.setAttribute('data-thinking-debug-minimize-phase', 'collapsing-circle');
+      syncThinkingOrbToggleUi();
+      thinkingMinimizePhaseTimer = setTimeout(() => {
+        thinkingMinimizePhaseTimer = null;
+        document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+        syncThinkingOrbToggleUi();
+      }, 1200);
+      return;
+    }
+    if (!thinkingDebugState.minimized && getThinkingMinimizePhase() !== 'collapsing-circle') {
+      document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+      syncThinkingOrbToggleUi();
+      return;
+    }
+    thinkingDebugState.minimized = false;
+    document.body?.setAttribute('data-thinking-debug-minimize-phase', 'expanding-circle');
+    syncThinkingOrbToggleUi();
+    thinkingMinimizeExpandTimer = setTimeout(() => {
+      thinkingMinimizeExpandTimer = null;
+      document.body?.removeAttribute('data-thinking-debug-minimize-phase');
+      syncThinkingOrbToggleUi();
+    }, 1000);
+  };
+  const toggleThinkingDebugMinimized = () => {
+    if (!isThinkingMinimizable()) return;
+    setThinkingDebugMinimized(!thinkingDebugState.minimized);
   };
   const syncPrototypeDebugState = () => {
+    if (thinkingDebugState.familyActive) {
+      document.body?.setAttribute('data-thinking-debug-family-active', 'true');
+      document.body?.setAttribute('data-thinking-debug-mode', thinkingDebugState.mode || 'thinking');
+    } else {
+      document.body?.removeAttribute('data-thinking-debug-family-active');
+      document.body?.removeAttribute('data-thinking-debug-mode');
+    }
     setPrototypeAiDebugState?.({
       active: thinkingDebugState.familyActive,
       mode: thinkingDebugState.mode,
     });
+    syncThinkingOrbToggleUi();
   };
   const setThinkingFamilyActive = (active) => {
     thinkingDebugState.familyActive = !!active;
     syncPrototypeDebugState();
   };
-  const playSkillChipSquash = () => {
-    const main = document.getElementById('drop-main');
-    if (!main) return;
-    if (main._prototypeSkillChipSquashAnim) {
-      main._prototypeSkillChipSquashAnim.cancel();
-      main._prototypeSkillChipSquashAnim = null;
+  const syncThinkingPauseButtons = () => {
+    const inDebugFamily = isDebugFamilyShape();
+    if (thinkingPauseBtn) {
+      thinkingPauseBtn.disabled = !inDebugFamily || thinkingDebugState.paused;
+      thinkingPauseBtn.setAttribute('aria-pressed', thinkingDebugState.paused ? 'true' : 'false');
     }
-    main.style.transformOrigin = '50% 50%';
-    main.style.scale = '1 1';
-    const anim = main.animate([
-      { scale: '1 1', offset: 0 },
-      { scale: '0.965 1', offset: 0.3 },
-      { scale: '1.012 1', offset: 0.68 },
-      { scale: '1 1', offset: 1 },
+    if (thinkingResumeBtn) {
+      thinkingResumeBtn.disabled = !thinkingDebugState.paused;
+      thinkingResumeBtn.setAttribute('aria-pressed', thinkingDebugState.paused ? 'true' : 'false');
+    }
+  };
+  const setThinkingDebugPaused = (paused) => {
+    thinkingDebugState.paused = !!paused;
+    if (thinkingDebugState.paused) document.body?.setAttribute('data-thinking-debug-paused', 'true');
+    else document.body?.removeAttribute('data-thinking-debug-paused');
+    setThinkingStreamPausedStyle(thinkingDebugState.paused);
+    syncThinkingPauseButtons();
+  };
+  const cancelThinkingStreamPlayback = () => {
+    thinkingDebugState.streamToken += 1;
+    if (thinkingDebugState.textSwapTimer) {
+      clearTimeout(thinkingDebugState.textSwapTimer);
+      thinkingDebugState.textSwapTimer = null;
+    }
+    thinkingStream?.classList.remove('is-text-transitioning');
+  };
+  const setThinkingStreamText = (text, { pausedStyle = false, visible = true } = {}) => {
+    const value = String(text || '');
+    thinkingDebugState.currentText = value;
+    syncPrototypeThinkingStreamIcon();
+    syncPrototypeThinkingStreamMetrics(value || 'Thinking');
+    if (thinkingStreamText) thinkingStreamText.textContent = value;
+    setThinkingStreamVisible(visible && !!value);
+    setThinkingStreamPausedStyle(pausedStyle);
+  };
+  const getPausedThinkingText = () => 'Session paused';
+  const playPauseOrbBounce = () => {
+    const orb = document.querySelector('#siri-orb');
+    if (!(orb instanceof HTMLElement)) return;
+    if (orb._prototypePauseBounceAnim) {
+      orb._prototypePauseBounceAnim.cancel();
+      orb._prototypePauseBounceAnim = null;
+    }
+    orb.style.transformOrigin = '50% 50%';
+    const anim = orb.animate([
+      { transform: 'scale(1)', offset: 0 },
+      { transform: 'scale(0.93)', offset: 0.28 },
+      { transform: 'scale(1.018)', offset: 0.7 },
+      { transform: 'scale(1)', offset: 1 },
     ], {
-      duration: 1180,
-      easing: 'cubic-bezier(0.28, 0.08, 0.18, 1)',
+      duration: 460,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
       fill: 'none',
     });
-    main._prototypeSkillChipSquashAnim = anim;
+    orb._prototypePauseBounceAnim = anim;
     const clear = () => {
-      if (main._prototypeSkillChipSquashAnim !== anim) return;
-      main._prototypeSkillChipSquashAnim = null;
-      main.style.scale = '1 1';
+      if (orb._prototypePauseBounceAnim !== anim) return;
+      orb._prototypePauseBounceAnim = null;
     };
     anim.onfinish = clear;
     anim.oncancel = clear;
   };
+  const renderPausedThinkingStream = ({ animate = false } = {}) => {
+    cancelThinkingStreamPlayback();
+    const pausedText = getPausedThinkingText();
+    if (!animate) {
+      setThinkingStreamText(pausedText, {
+        pausedStyle: false,
+        visible: true,
+      });
+      return;
+    }
+    void transitionThinkingText(pausedText, { allowWhilePaused: true });
+  };
   const stopThinkingStream = () => {
-    thinkingDebugState.streamToken += 1;
+    cancelThinkingStreamPlayback();
     clearThinkingStream();
     setThinkingStreamVisible(false);
   };
@@ -460,72 +755,59 @@ export function initManualBindings({
     await sleep(ms);
     return token === thinkingDebugState.streamToken;
   };
-  const tokenizeThinkingText = (text) => {
-    const tokens = [];
-    let idx = 0;
-    while (idx < text.length) {
-      const len = Math.random() < 0.4 ? 1 : Math.random() < 0.6 ? 2 : Math.random() < 0.7 ? 3 : 4;
-      tokens.push(text.slice(idx, idx + len));
-      idx += len;
+  const showThinkingTextCrossfade = async (text, token, { animate = true } = {}) => {
+    const value = String(text || '').trim();
+    if (!value || !thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
+    if (thinkingDebugState.textSwapTimer) {
+      clearTimeout(thinkingDebugState.textSwapTimer);
+      thinkingDebugState.textSwapTimer = null;
     }
-    return tokens;
-  };
-  const typeThinkingText = async (text, token) => {
-    if (!thinkingStreamText || token !== thinkingDebugState.streamToken) return false;
-    removeThinkingCursor();
-    const px = createPixelCursor();
-    let settled = '';
-    const tokens = tokenizeThinkingText(text);
-    for (const tokenText of tokens) {
-      const cycles = 2 + Math.floor(Math.random() * 3);
-      for (let cycle = 0; cycle < cycles; cycle += 1) {
-        if (token !== thinkingDebugState.streamToken) {
-          removeThinkingCursor();
-          return false;
-        }
-        Array.from(px.children).forEach((dot) => {
-          dot.style.opacity = Math.random() < 0.5 ? '1' : '0.08';
-        });
-        await sleep(21);
-      }
-      settled += tokenText;
-      thinkingDebugState.currentText = settled;
-      thinkingStreamText.textContent = settled;
-      thinkingStreamText.appendChild(px);
-      thinkingDebugState.currentCursor = px;
-      await sleep(6);
+    syncPrototypeThinkingStreamIcon();
+    syncPrototypeThinkingStreamMetrics(value);
+    setThinkingStreamVisible(true);
+    setThinkingStreamPausedStyle(false);
+    if (!animate || !thinkingDebugState.currentText || thinkingDebugState.currentText === value) {
+      thinkingDebugState.currentText = value;
+      thinkingStreamText.textContent = value;
+      thinkingStream?.classList.remove('is-text-transitioning');
+      return token === thinkingDebugState.streamToken;
     }
-    removeThinkingCursor();
+    thinkingStream?.classList.add('is-text-transitioning');
+    await new Promise((resolve) => {
+      thinkingDebugState.textSwapTimer = setTimeout(resolve, 140);
+    });
+    thinkingDebugState.textSwapTimer = null;
+    if (token !== thinkingDebugState.streamToken) return false;
+    thinkingDebugState.currentText = value;
+    thinkingStreamText.textContent = value;
+    requestAnimationFrame(() => {
+      if (token !== thinkingDebugState.streamToken) return;
+      thinkingStream?.classList.remove('is-text-transitioning');
+    });
     return token === thinkingDebugState.streamToken;
   };
-  const deleteThinkingText = async (token) => {
-    if (!thinkingStreamText) return false;
-    let settled = thinkingDebugState.currentText;
-    while (settled.length > 0) {
-      if (token !== thinkingDebugState.streamToken) return false;
-      settled = settled.slice(0, -1);
-      thinkingDebugState.currentText = settled;
-      thinkingStreamText.textContent = settled;
-      await sleep(21 + (Math.random() * 14));
-    }
+  const playThinkingTextOnce = async (text, { holdMs = 2200, clearAfter = true } = {}) => {
+    const value = String(text || '').trim();
+    if (!value || thinkingDebugState.paused) return false;
+    const token = ++thinkingDebugState.streamToken;
+    setThinkingStreamVisible(true);
+    setThinkingStreamPausedStyle(false);
+    const typed = await showThinkingTextCrossfade(value, token);
+    if (!typed) return false;
+    if (!clearAfter) return token === thinkingDebugState.streamToken;
+    if (!(await waitForStream(holdMs, token))) return false;
+    setThinkingStreamVisible(false);
     return token === thinkingDebugState.streamToken;
   };
   const runThinkingTextLoop = async ({ initialText = '', items = [], indexKey = null, holdMs = 2200, shouldContinue, nextText = null }) => {
+    if (thinkingDebugState.paused) return;
     const token = ++thinkingDebugState.streamToken;
     setThinkingStreamVisible(true);
-    removeThinkingCursor();
-    if (thinkingDebugState.currentText) {
-      const cleared = await deleteThinkingText(token);
-      if (!cleared) return;
-      if (!(await waitForStream(200, token))) return;
-    }
+    setThinkingStreamPausedStyle(false);
     if (initialText) {
-      const initialTyped = await typeThinkingText(initialText, token);
+      const initialTyped = await showThinkingTextCrossfade(initialText, token);
       if (!initialTyped) return;
-      if (!(await waitForStream(3000, token))) return;
-      const initialDeleted = await deleteThinkingText(token);
-      if (!initialDeleted) return;
-      if (!(await waitForStream(200, token))) return;
+      if (!(await waitForStream(1200, token))) return;
     }
     while (token === thinkingDebugState.streamToken && shouldContinue()) {
       const text = typeof nextText === 'function'
@@ -535,12 +817,9 @@ export function initManualBindings({
           : '';
       if (!text) return;
       if (indexKey) thinkingDebugState[indexKey] = (thinkingDebugState[indexKey] || 0) + 1;
-      const typed = await typeThinkingText(text, token);
+      const typed = await showThinkingTextCrossfade(text, token);
       if (!typed) return;
       if (!(await waitForStream(holdMs, token))) return;
-      const deleted = await deleteThinkingText(token);
-      if (!deleted) return;
-      if (!(await waitForStream(200, token))) return;
     }
   };
   const runThinkingVerbLoop = async () => runThinkingTextLoop({
@@ -554,7 +833,7 @@ export function initManualBindings({
     await runThinkingTextLoop({
       initialText: transitionText,
       holdMs: 2200,
-      shouldContinue: () => currentPrototypeShape() === 'skill-pill' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
+      shouldContinue: () => currentPrototypeShape() === 'magic' && thinkingDebugState.mode === 'skill' && thinkingDebugState.activeSkillId === skill.id,
       nextText: () => {
         const phrases = skill.phrases || [];
         if (!phrases.length) return '';
@@ -564,58 +843,21 @@ export function initManualBindings({
       },
     });
   };
-  const queuePendingSkillTransitionText = (text = '') => {
-    thinkingDebugState.pendingSkillTransitionText = String(text || '').trim();
-  };
-  const flushPendingSkillTransitionText = () => {
-    const text = String(thinkingDebugState.pendingSkillTransitionText || '').trim();
-    thinkingDebugState.pendingSkillTransitionText = '';
-    return text;
-  };
-  const queuePendingAppVisualSync = (app, switchDirection) => {
-    thinkingDebugState.pendingAppVisualSync = app?.src ? {
-      src: app.src,
-      alt: `${app.label} app icon`,
-      theme: app.theme,
-      switchDirection,
-    } : null;
-  };
-  const queuePendingAppTransitionText = (text = '') => {
-    thinkingDebugState.pendingAppTransitionText = String(text || '').trim();
-  };
-  const flushPendingAppVisualSync = () => {
-    const pending = thinkingDebugState.pendingAppVisualSync;
-    if (!pending?.src) return false;
-    thinkingDebugState.pendingAppVisualSync = null;
-    syncAiOrbCenterImage(document, {
-      animate: true,
-      src: pending.src,
-      alt: pending.alt,
-      theme: pending.theme,
-      switchDirection: pending.switchDirection,
-      switchMotion: 'swipe',
-    });
-    return true;
-  };
-  const flushPendingAppTransitionText = () => {
-    const text = String(thinkingDebugState.pendingAppTransitionText || '').trim();
-    thinkingDebugState.pendingAppTransitionText = '';
-    if (!text) return false;
-    void transitionThinkingText(text);
-    return true;
-  };
-  const transitionThinkingText = async (text) => {
+  const transitionThinkingText = async (text, { allowWhilePaused = false } = {}) => {
     const value = String(text || '').trim();
-    if (!value) return;
+    if (!value || (thinkingDebugState.paused && !allowWhilePaused)) return false;
     const token = ++thinkingDebugState.streamToken;
-    setThinkingStreamVisible(true);
-    removeThinkingCursor();
-    if (thinkingDebugState.currentText) {
-      const deleted = await deleteThinkingText(token);
-      if (!deleted) return;
-      if (!(await waitForStream(200, token))) return;
-    }
-    await typeThinkingText(value, token);
+    return showThinkingTextCrossfade(value, token);
+  };
+  const playPausedThinkingTransition = async (text, { holdMs = 1200 } = {}) => {
+    const value = String(text || '').trim();
+    if (!value || !thinkingDebugState.paused) return false;
+    const typed = await transitionThinkingText(value, { allowWhilePaused: true });
+    if (!typed) return false;
+    const token = thinkingDebugState.streamToken;
+    if (!(await waitForStream(holdMs, token))) return false;
+    if (!thinkingDebugState.paused) return false;
+    return transitionThinkingText(getPausedThinkingText(), { allowWhilePaused: true });
   };
   const syncThinkingStateButtons = () => {
     thinkingStateButtons.forEach((button) => {
@@ -623,8 +865,14 @@ export function initManualBindings({
     });
   };
   const syncThinkingCopyFireButton = () => {
-    if (!thinkingCopyFireBtn) return;
-    thinkingCopyFireBtn.disabled = !String(thinkingCopyInput?.value || '').trim();
+    if (thinkingCopyFireBtn) {
+      thinkingCopyFireBtn.disabled = !String(thinkingCopyInput?.value || '').trim();
+    }
+    if (thinkingCopyLoopBtn) {
+      const customPlaybackActive = thinkingDebugState.playbackMode === 'custom';
+      thinkingCopyLoopBtn.disabled = !customPlaybackActive;
+      thinkingCopyLoopBtn.setAttribute('aria-pressed', customPlaybackActive ? 'true' : 'false');
+    }
   };
   const setSkillSelectionOverride = (skill) => {
     setPrototypeSelectionOverride?.(skill ? {
@@ -633,63 +881,49 @@ export function initManualBindings({
       theme: skill.theme,
     } : null);
   };
-  const queuePendingAgentVisualSync = (agentId, switchDirection) => {
-    thinkingDebugState.pendingAgentVisualSync = agentId ? { agentId, switchDirection } : null;
-  };
-  const queuePendingAgentTransitionText = (text = '') => {
-    thinkingDebugState.pendingAgentTransitionText = String(text || '').trim();
-  };
-  const flushPendingAgentVisualSync = () => {
-    const pending = thinkingDebugState.pendingAgentVisualSync;
-    if (!pending?.agentId) return false;
-    thinkingDebugState.pendingAgentVisualSync = null;
-    syncAiOrbCenterIcon(document, {
-      animate: true,
-      id: pending.agentId,
-      switchDirection: pending.switchDirection,
-      switchMotion: 'swipe',
-    });
-    return true;
-  };
-  const flushPendingAgentTransitionText = () => {
-    const text = String(thinkingDebugState.pendingAgentTransitionText || '').trim();
-    thinkingDebugState.pendingAgentTransitionText = '';
-    if (!text) return false;
-    void transitionThinkingText(text);
-    return true;
-  };
-  const syncAgentOrbVisual = (agentId, { animate = false, switchDirection = '' } = {}) => {
-    const run = () => syncAiOrbCenterIcon(document, {
-      animate,
-      id: agentId,
-      switchDirection,
-      switchMotion: 'swipe',
-    });
-    if (!animate) {
-      run();
+  const resumeThinkingPlaybackForCurrentMode = () => {
+    if (thinkingDebugState.paused || !isDebugFamilyShape()) return;
+    if (thinkingDebugState.playbackMode === 'custom' && thinkingDebugState.customText) {
+      cancelThinkingStreamPlayback();
+      setThinkingStreamText(thinkingDebugState.customText, { visible: true });
       return;
     }
-    requestAnimationFrame(() => requestAnimationFrame(run));
-  };
-  const syncAppOrbVisual = (app, { animate = false, switchDirection = '' } = {}) => {
-    const run = () => syncAiOrbCenterImage(document, {
-      animate,
-      src: app?.src || '',
-      alt: app?.label ? `${app.label} app icon` : '',
-      theme: app?.theme || null,
-      switchDirection,
-      switchMotion: 'swipe',
-    });
-    if (!animate) {
-      run();
+    if (thinkingDebugState.mode === 'thinking') {
+      void runThinkingVerbLoop();
       return;
     }
-    requestAnimationFrame(() => requestAnimationFrame(run));
+    if (thinkingDebugState.mode === 'skill') {
+      void runSkillPhraseLoop(getSkillById(thinkingDebugState.activeSkillId), { transitionText: '' });
+      return;
+    }
+    stopThinkingStream();
+  };
+  const pausePrototypeThinkingDebug = () => {
+    if (!isDebugFamilyShape() || thinkingDebugState.paused) return;
+    setThinkingDebugPaused(true);
+    playPauseOrbBounce();
+    renderPausedThinkingStream({ animate: true });
+  };
+  const resumePrototypeThinkingDebug = async () => {
+    if (!thinkingDebugState.paused) return;
+    setThinkingDebugPaused(false);
+    const pendingText = String(thinkingDebugState.pendingCustomText || '').trim();
+    thinkingDebugState.pendingCustomText = '';
+    if (pendingText) {
+      const played = await playThinkingTextOnce(pendingText, {
+        holdMs: 2200,
+        clearAfter: true,
+      });
+      if (!played || thinkingDebugState.paused) return;
+    }
+    resumeThinkingPlaybackForCurrentMode();
   };
   const renderPrototypeDebugMode = ({ reroll = false, explicitAgentId = null, forceRemorph = false } = {}) => {
     const shape = currentPrototypeShape();
     const activeAgentId = loadAiOrbIconId();
+    const isPaused = thinkingDebugState.paused;
     syncThinkingStateButtons();
+    syncThinkingPauseButtons();
     if (thinkingDebugState.mode === 'thinking') {
       setThinkingFamilyActive(true);
       setSkillSelectionOverride(null);
@@ -697,7 +931,16 @@ export function initManualBindings({
         manualShape('magic');
         return;
       }
-      syncAiOrbCenterIcon(document, { animate: false, id: activeAgentId });
+      syncPrototypeThinkingStreamIcon();
+      if (isPaused) {
+        renderPausedThinkingStream();
+        return;
+      }
+      if (thinkingDebugState.playbackMode === 'custom' && thinkingDebugState.customText) {
+        cancelThinkingStreamPlayback();
+        setThinkingStreamText(thinkingDebugState.customText, { visible: true });
+        return;
+      }
       void runThinkingVerbLoop();
       return;
     }
@@ -706,16 +949,21 @@ export function initManualBindings({
         ? pickDifferentEntry(PROTOTYPE_SKILLS, thinkingDebugState.activeSkillId)
         : getSkillById(thinkingDebugState.activeSkillId);
       if (!nextSkill) return;
-      const skillTransitionText = getSkillTransitionText(nextSkill);
+      const skillTransitionText = isPaused ? '' : getSkillTransitionText(nextSkill);
       thinkingDebugState.activeSkillId = nextSkill.id;
       setThinkingFamilyActive(true);
       setSkillSelectionOverride(nextSkill);
-      queuePendingSkillTransitionText(skillTransitionText);
-      if (shape !== 'skill-pill' || reroll || forceRemorph) {
-        morphTo('skill-pill', getSkillRenderContent(nextSkill), getSkillChipGeometry(nextSkill));
+      if (shape !== 'magic') {
+        manualShape('magic');
+        return;
       }
-      if (reroll && shape === 'skill-pill' && !forceRemorph) {
-        playSkillChipSquash();
+      syncPrototypeThinkingStreamIcon({
+        animate: reroll || forceRemorph,
+        switchDirection: reroll ? 'right' : '',
+      });
+      if (isPaused) {
+        renderPausedThinkingStream();
+        return;
       }
       void runSkillPhraseLoop(nextSkill, {
         transitionText: skillTransitionText,
@@ -732,21 +980,16 @@ export function initManualBindings({
       const transitionLabel = `Launching ${nextApp.label}`;
       thinkingDebugState.activeAppId = nextApp.id;
       setThinkingFamilyActive(true);
-      stopThinkingStream();
+      if (isPaused) cancelThinkingStreamPlayback();
+      else stopThinkingStream();
       setSkillSelectionOverride(null);
-      if (shape !== 'agent-circle' || forceRemorph) {
-        queuePendingAppVisualSync(nextApp, switchDirection);
-        queuePendingAppTransitionText(transitionLabel);
-        morphTo('agent-circle', getAppRenderContent(nextApp));
-      } else {
-        queuePendingAppVisualSync(null, '');
-        queuePendingAppTransitionText('');
-        syncAppOrbVisual(nextApp, {
-          animate: true,
-          switchDirection,
-        });
-        void transitionThinkingText(transitionLabel);
+      if (shape !== 'magic') {
+        manualShape('magic');
+        return;
       }
+      syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
+      if (isPaused) renderPausedThinkingStream();
+      else void transitionThinkingText(transitionLabel);
       return;
     }
     const nextAgentId = explicitAgentId || (
@@ -758,114 +1001,86 @@ export function initManualBindings({
     if (!nextAgent) return;
     const switchDirection = getAgentSwitchDirection(activeAgentId, nextAgent.id);
     const switchingAgent = nextAgent.id !== activeAgentId;
-    const transitionLabel = switchingAgent ? `Switching to ${nextAgent.label}` : '';
+    const transitionLabel = switchingAgent ? `Switch to ${nextAgent.label}` : '';
     persistAiOrbIconId(nextAgent.id);
     setThinkingFamilyActive(true);
-    stopThinkingStream();
+    if (isPaused) cancelThinkingStreamPlayback();
+    else stopThinkingStream();
     setSkillSelectionOverride(null);
-    if (shape !== 'agent-circle' || forceRemorph) {
-      queuePendingAgentVisualSync(switchingAgent ? nextAgent.id : null, switchDirection);
-      queuePendingAgentTransitionText(transitionLabel);
-      morphTo('agent-circle', getAgentRenderContent(nextAgent.id));
-    } else {
-      queuePendingAgentVisualSync(null, '');
-      queuePendingAgentTransitionText('');
-      syncAiOrbCenterIcon(document, {
-        animate: switchingAgent,
-        id: nextAgent.id,
-        switchDirection,
-        switchMotion: 'swipe',
-      });
-      if (transitionLabel) void transitionThinkingText(transitionLabel);
+    if (shape !== 'magic') {
+      manualShape('magic');
+      return;
     }
+    syncPrototypeThinkingStreamIcon({
+      animate: switchingAgent || forceRemorph,
+      switchDirection,
+    });
+    if (isPaused) {
+      if (transitionLabel) void playPausedThinkingTransition(transitionLabel);
+      else renderPausedThinkingStream();
+    }
+    else if (transitionLabel) void transitionThinkingText(transitionLabel);
     syncAiOrbIconButtons();
   };
   const switchAgentByStep = (step) => {
     const shape = currentPrototypeShape();
-    if (shape !== 'listening' && shape !== 'agent-circle' && shape !== 'magic') return false;
+    if (shape !== 'listening' && shape !== 'magic') return false;
     if (shape === 'magic' && thinkingDebugState.mode !== 'thinking') return false;
     const currentId = loadAiOrbIconId();
     const nextId = cycleAgentId(currentId, step);
     if (!nextId || nextId === currentId) return false;
-    if (shape === 'agent-circle') {
-      thinkingDebugState.mode = 'agent';
-      renderPrototypeDebugMode({ explicitAgentId: nextId });
-      return true;
-    }
-    if (shape === 'magic') {
-      const switchDirection = step > 0 ? 'right' : 'left';
-      persistAiOrbIconId(nextId);
-      syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection, switchMotion: 'swipe' });
-      syncAiOrbIconButtons();
-      return true;
-    }
     const switchDirection = step > 0 ? 'right' : 'left';
     persistAiOrbIconId(nextId);
-    syncAiOrbCenterIcon(document, { animate: true, id: nextId, switchDirection });
+    syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
     syncAiOrbIconButtons();
     return true;
   };
   const syncPrototypeAiDebugPanels = () => {
     const shape = currentPrototypeShape();
     const inDebugFamily = isDebugFamilyShape(shape);
+    syncPrototypeThinkingStreamShape();
     setThinkingFamilyActive(inDebugFamily);
-    multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'agent-circle' && thinkingDebugState.mode === 'agent'));
+    multiAgentRow?.classList.toggle('hidden', shape !== 'listening' && !(shape === 'magic' && thinkingDebugState.mode === 'agent'));
     thinkingStateRow?.classList.toggle('hidden', !inDebugFamily);
+    thinkingPauseRow?.classList.toggle('hidden', !inDebugFamily);
     thinkingCopyRow?.classList.toggle('hidden', !inDebugFamily);
+    thinkingThumbnailRow?.classList.toggle('hidden', !inDebugFamily);
+    thinkingThumbnailLibraryRow?.classList.toggle('hidden', !inDebugFamily);
+    syncThinkingPauseButtons();
     if (shape === 'magic') {
       setSkillSelectionOverride(null);
       if (thinkingDebugState.mode !== 'thinking') {
         renderPrototypeDebugMode({ forceRemorph: true });
         return;
       }
-      syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
-      void runThinkingVerbLoop();
-      return;
-    }
-    if (shape === 'skill-pill') {
-      const activeSkill = getSkillById(thinkingDebugState.activeSkillId);
-      setSkillSelectionOverride(activeSkill);
-      syncThinkingStateButtons();
-      void runSkillPhraseLoop(activeSkill, {
-        transitionText: flushPendingSkillTransitionText(),
-      });
-      return;
-    }
-    if (shape === 'agent-circle') {
-      setSkillSelectionOverride(null);
-      if (thinkingDebugState.mode === 'app') {
-        const activeApp = getAppById(thinkingDebugState.activeAppId);
-        const flushedVisual = flushPendingAppVisualSync();
-        const flushedText = flushPendingAppTransitionText();
-        if (!flushedVisual) {
-          syncAppOrbVisual(activeApp, { animate: false });
-        }
-        if (!flushedText) {
-          if (thinkingDebugState.currentText) setThinkingStreamVisible(true);
-          else stopThinkingStream();
-        }
+      syncPrototypeThinkingStreamIcon();
+      if (thinkingDebugState.paused) {
+        renderPausedThinkingStream();
         syncThinkingStateButtons();
         return;
       }
-      const flushedVisual = flushPendingAgentVisualSync();
-      const flushedText = flushPendingAgentTransitionText();
-      if (!flushedVisual) {
-        syncAgentOrbVisual(loadAiOrbIconId(), { animate: false });
+      if (thinkingDebugState.playbackMode === 'custom' && thinkingDebugState.customText) {
+        cancelThinkingStreamPlayback();
+        setThinkingStreamText(thinkingDebugState.customText, { visible: true });
+        syncThinkingStateButtons();
+        return;
       }
-      if (!flushedText) {
-        if (thinkingDebugState.currentText) setThinkingStreamVisible(true);
-        else stopThinkingStream();
-      }
+      void runThinkingVerbLoop();
+      return;
+    }
+    if (shape === 'listening') {
+      setThinkingDebugPaused(false);
+      thinkingDebugState.currentText = '';
+      if (thinkingStreamText) thinkingStreamText.textContent = '';
+      syncPrototypeThinkingStreamShape();
       syncThinkingStateButtons();
       return;
     }
     if (!inDebugFamily) {
+      setThinkingDebugPaused(false);
+      thinkingDebugState.pendingCustomText = '';
       setSkillSelectionOverride(null);
-      queuePendingSkillTransitionText('');
-      queuePendingAppVisualSync(null, '');
-      queuePendingAppTransitionText('');
       stopThinkingStream();
-      syncAiOrbCenterIcon(document, { animate: false, id: loadAiOrbIconId() });
       syncThinkingStateButtons();
     }
   };
@@ -888,7 +1103,7 @@ export function initManualBindings({
     if (!stage) return;
     const parsed = parseInt(String(rawValue || '').trim(), 10);
     if (!Number.isFinite(parsed)) return;
-    const nextRadius = clamp(parsed, 0, 120);
+    const nextRadius = clamp(Math.round(parsed / 10) * 10, 0, 100);
     commitStageChange(stage.id, (draft) => { draft.cornerRadius = nextRadius; });
   };
 
@@ -906,10 +1121,23 @@ export function initManualBindings({
     }
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
-    const bounded = clamp(parsed, 40, 1400);
+    const bounded = clamp(Math.round(parsed / 10) * 10, 40, 420);
     commitScenarioChange((draftScenario) => {
       draftScenario.content.sizeByShape = normalizeStageSizeByShape(draftScenario.content.sizeByShape, draftScenario.shape, draftScenario.content);
       draftScenario.content.sizeByShape[draftScenario.shape][key] = bounded;
+    });
+  };
+
+  const commitStageImagePadding = (rawValue) => {
+    const scenario = selectedScenario();
+    if (!scenario) return;
+    const value = String(rawValue || '').trim();
+    const parsed = value ? parseInt(value, 10) : 24;
+    if (!Number.isFinite(parsed)) return;
+    const bounded = clamp(parsed, 0, 30);
+    commitScenarioChange((draftScenario) => {
+      draftScenario.content.cardImagePaddingByShape = draftScenario.content.cardImagePaddingByShape || {};
+      draftScenario.content.cardImagePaddingByShape[draftScenario.shape] = bounded;
     });
   };
 
@@ -920,7 +1148,7 @@ export function initManualBindings({
     if (!value) return void commitStageChange(stage.id, (draft) => { draft.iconTextGap = null; });
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
-    commitStageChange(stage.id, (draft) => { draft.iconTextGap = clamp(parsed, 0, 80); });
+    commitStageChange(stage.id, (draft) => { draft.iconTextGap = clamp(parsed, 0, 30); });
   };
 
   const commitStageIconPadOverride = (rawValue) => {
@@ -930,27 +1158,43 @@ export function initManualBindings({
     if (!value) return void commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = null; });
     const parsed = parseInt(value, 10);
     if (!Number.isFinite(parsed)) return;
-    commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = clamp(parsed, 0, 120); });
+    commitStageChange(stage.id, (draft) => { draft.iconLeftPadding = clamp(parsed, 0, 30); });
   };
 
   const commitStageSelectedMaskBlur = (rawValue) => {
     const scenario = selectedScenario();
     if (!scenario) return;
-    const value = String(rawValue || '').trim();
-    if (!value) {
-      commitScenarioChange((draft) => {
-        draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
-        delete draft.content.selectedMaskBlurByShape[draft.shape];
-      });
-      return;
-    }
-    const parsed = Number.parseFloat(value);
+    const parsed = Number.parseFloat(String(rawValue || '').trim());
     if (!Number.isFinite(parsed)) return;
-    const bounded = clamp(parsed, 0, 120);
+    const bounded = clamp(parsed, 0, 30);
     commitScenarioChange((draft) => {
       draft.content.selectedMaskBlurByShape = { ...(draft.content.selectedMaskBlurByShape || {}) };
       draft.content.selectedMaskBlurByShape[draft.shape] = bounded;
     });
+  };
+
+  const toggleToolPanels = () => {
+    const hidden = !document.body?.classList.contains('tool-panels-hidden');
+    document.body?.classList.toggle('tool-panels-hidden', hidden);
+    [document.getElementById('left-sidebar'), document.getElementById('sidebar')]
+      .filter(Boolean)
+      .forEach((panel) => panel.setAttribute('aria-hidden', hidden ? 'true' : 'false'));
+  };
+
+  const toggleBackgroundVideoPlayback = () => {
+    if (!canvasSettings().backgroundVideo?.src) return false;
+    const nextPaused = !canvasSettings().backgroundVideoPaused;
+    setCanvasSettings({ ...canvasSettings(), backgroundVideoPaused: nextPaused, backgroundMediaKind: 'video' });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: nextPaused,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
+    });
+    applyCanvasSettings();
+    return true;
   };
 
   input.addEventListener('input', () => sendBtn.classList.toggle('active', input.value.trim().length > 0));
@@ -967,15 +1211,34 @@ export function initManualBindings({
 
   document.addEventListener('keydown', (e) => {
     if (isEditableTarget(e.target) || document.activeElement?.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+    if (e.repeat) return;
+    if (e.key.toLowerCase() === 'h') {
+      e.preventDefault();
+      toggleToolPanels();
+      return;
+    }
+    if (e.key.toLowerCase() === 'p' && toggleBackgroundVideoPlayback()) {
+      e.preventDefault();
+      return;
+    }
     if (flight.handleKeyDown(e)) return;
-    if (selectedScenario()?.shape === 'list' && e.key === 'ArrowUp') {
+    const activeStageShape = selectedScenario()?.shape;
+    const activeRenderShape = activeStageShape ? stageById(activeStageShape, selectedScenario())?.renderShape : '';
+    const activeStage = activeStageShape ? stageById(activeStageShape, selectedScenario()) : null;
+    const listSelectable = activeStage?.listSelectable !== false;
+    if (activeRenderShape === 'list' && listSelectable && e.key === 'ArrowUp') {
       e.preventDefault();
       movePrototypeListSelection?.(-1);
       return;
     }
-    if (selectedScenario()?.shape === 'list' && e.key === 'ArrowDown') {
+    if (activeRenderShape === 'list' && listSelectable && e.key === 'ArrowDown') {
       e.preventDefault();
       movePrototypeListSelection?.(1);
+      return;
+    }
+    if (e.key.toLowerCase() === 'm' && isThinkingMinimizable()) {
+      e.preventDefault();
+      toggleThinkingDebugMinimized();
       return;
     }
     if (e.key === 'ArrowRight' && switchAgentByStep(1)) {
@@ -990,7 +1253,7 @@ export function initManualBindings({
     if (e.key === '2') manualShape('dot');
     if (e.key === '3') manualShape('pill');
     if (e.key === '4') manualShape('card');
-    if (e.key === '5') manualShape('list');
+    if (e.key === '5') manualShape('list-pill');
     if (e.key === '8') manualShape('ai');
     if (e.key === '6') manualShape('split');
     if (e.key === '7') openCustom();
@@ -1045,11 +1308,6 @@ export function initManualBindings({
     const currentId = loadAiOrbIconId();
     const iconId = String(button.dataset.aiOrbIcon || '').trim().toLowerCase();
     if (!iconId) return;
-    if (currentPrototypeShape() === 'agent-circle') {
-      thinkingDebugState.mode = 'agent';
-      renderPrototypeDebugMode({ explicitAgentId: iconId });
-      return;
-    }
     persistAiOrbIconId(iconId);
     const currentIndex = getAgentIndex(currentId);
     const nextIndex = getAgentIndex(iconId);
@@ -1058,10 +1316,27 @@ export function initManualBindings({
       : ((nextIndex - currentIndex + aiAgentSequence.length) % aiAgentSequence.length) <= ((currentIndex - nextIndex + aiAgentSequence.length) % aiAgentSequence.length)
         ? 'right'
         : 'left';
-    syncAiOrbCenterIcon(document, { animate: true, id: iconId, switchDirection });
+    if (currentPrototypeShape() === 'magic') {
+      thinkingDebugState.mode = 'thinking';
+    }
+    syncPrototypeThinkingStreamIcon({ animate: true, switchDirection });
     syncAiOrbIconButtons();
   }));
   syncAiOrbIconButtons();
+  syncThinkingPauseButtons();
+  thinkingOrb?.addEventListener('click', (e) => {
+    if (!isThinkingMinimizable()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleThinkingDebugMinimized();
+  });
+  thinkingOrb?.addEventListener('keydown', (e) => {
+    if (!isThinkingMinimizable()) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleThinkingDebugMinimized();
+  });
 
   thinkingStateButtons.forEach((button) => button.addEventListener('click', () => {
     const nextMode = String(button.dataset.thinkingState || '').trim().toLowerCase();
@@ -1086,12 +1361,36 @@ export function initManualBindings({
       renderPrototypeDebugMode({ reroll: true });
     }
   }));
+  thinkingPauseBtn?.addEventListener('click', pausePrototypeThinkingDebug);
+  thinkingResumeBtn?.addEventListener('click', () => {
+    void resumePrototypeThinkingDebug();
+  });
   const fireCustomThinkingText = () => {
     const text = String(thinkingCopyInput?.value || '').trim();
     if (!text || !isDebugFamilyShape()) return;
+    thinkingDebugState.customText = text;
+    thinkingDebugState.playbackMode = 'custom';
+    if (thinkingDebugState.paused) {
+      thinkingDebugState.pendingCustomText = text;
+      if (thinkingCopyInput) thinkingCopyInput.value = '';
+      syncThinkingCopyFireButton();
+      return;
+    }
     void transitionThinkingText(text);
     if (thinkingCopyInput) thinkingCopyInput.value = '';
     syncThinkingCopyFireButton();
+  };
+  const resumeDefaultThinkingLoop = () => {
+    if (thinkingDebugState.playbackMode !== 'custom') return;
+    thinkingDebugState.playbackMode = 'loop';
+    thinkingDebugState.customText = '';
+    thinkingDebugState.pendingCustomText = '';
+    syncThinkingCopyFireButton();
+    if (thinkingDebugState.paused) {
+      renderPausedThinkingStream();
+      return;
+    }
+    resumeThinkingPlaybackForCurrentMode();
   };
   thinkingCopyInput?.addEventListener('input', syncThinkingCopyFireButton);
   thinkingCopyInput?.addEventListener('keydown', (e) => {
@@ -1100,7 +1399,34 @@ export function initManualBindings({
     fireCustomThinkingText();
   });
   thinkingCopyFireBtn?.addEventListener('click', fireCustomThinkingText);
+  thinkingCopyLoopBtn?.addEventListener('click', resumeDefaultThinkingLoop);
   syncThinkingCopyFireButton();
+  renderThinkingThumbnailLibrary();
+  thinkingThumbnailLibrary?.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-thumbnail-id]') : null;
+    if (button) selectThinkingThumbnail(button.dataset.thumbnailId || 'auto');
+  });
+  thinkingThumbnailUpload?.addEventListener('change', () => {
+    const file = thinkingThumbnailUpload.files?.[0];
+    if (file) addThinkingThumbnailFile(file);
+    thinkingThumbnailUpload.value = '';
+  });
+  thinkingThumbnailPasteBtn?.addEventListener('click', () => {
+    void pasteThinkingThumbnail();
+  });
+  thinkingThumbnailLibrary?.addEventListener('paste', (event) => {
+    const file = Array.from(event.clipboardData?.files || []).find((item) => item.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    addThinkingThumbnailFile(file);
+  });
+  document.addEventListener('paste', (event) => {
+    if (!isDebugFamilyShape() || isEditableTarget(event.target)) return;
+    const file = Array.from(event.clipboardData?.files || []).find((item) => item.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    addThinkingThumbnailFile(file);
+  });
 
   new MutationObserver(syncPrototypeAiDebugPanels).observe(document.body, {
     attributes: true,
@@ -1108,8 +1434,190 @@ export function initManualBindings({
   });
   syncPrototypeAiDebugPanels();
 
+  const revokeBackgroundVideoObjectUrl = (video) => {
+    const objectUrl = typeof video?.objectUrl === 'string' ? video.objectUrl : '';
+    if (!objectUrl || !objectUrl.startsWith('blob:')) return;
+    try {
+      URL.revokeObjectURL(objectUrl);
+    } catch {}
+  };
+  const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+
   const updateCanvas = (updates) => { setCanvasSettings({ ...canvasSettings(), ...updates }); persistCanvasSettings(); applyCanvasSettings(); };
   UI.bgToggle.addEventListener('change', () => updateCanvas({ backgroundEnabled: UI.bgToggle.checked }));
+  UI.bgImageSelect?.addEventListener('change', () => {
+    updateCanvas({
+      backgroundImage: UI.bgImageSelect.value,
+      backgroundEnabled: true,
+      backgroundMediaKind: 'image',
+    });
+    clearBackgroundImageStorage?.();
+  });
+  UI.bgImageUpload?.addEventListener('click', (e) => { e.target.value = ''; });
+  UI.bgImageUpload?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) return void (e.target.value = '');
+    const dataUrl = await readFileAsDataUrl(file).catch(() => '');
+    if (!dataUrl) return;
+    updateCanvas({
+      backgroundImage: dataUrl,
+      backgroundImageAlpha: canvasSettings().backgroundImageAlpha ?? 0.9,
+      backgroundEnabled: true,
+      backgroundMediaKind: 'image',
+    });
+    persistBackgroundImageStorage?.({
+      src: dataUrl,
+      name: String(file.name || 'uploaded image'),
+      alpha: clamp(Number(canvasSettings().backgroundImageAlpha ?? 0.9), 0, 1),
+    });
+    e.target.value = '';
+  });
+  UI.bgImageReset?.addEventListener('click', () => {
+    updateCanvas({
+      backgroundImage: UI.bgImageSelect?.value || 'assets/bg/white wall.jpg',
+      backgroundImageAlpha: canvasSettings().backgroundImageAlpha ?? 0.9,
+      backgroundEnabled: true,
+      backgroundMediaKind: 'image',
+    });
+    clearBackgroundImageStorage?.();
+    if (UI.bgImageUpload) UI.bgImageUpload.value = '';
+  });
+  UI.bgImageAlpha?.addEventListener('input', (e) => {
+    const alpha = clamp((Number(e.target.value) || 0) / 100, 0, 1);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundImageAlpha: alpha,
+      backgroundMediaKind: canvasSettings().backgroundMediaKind === 'video' ? 'video' : 'image',
+    });
+    persistCanvasSettings();
+    if (String(canvasSettings().backgroundImage || '').startsWith('data:')) {
+      persistBackgroundImageStorage?.({
+        alpha,
+      });
+    }
+    applyCanvasSettings();
+  });
+  UI.bgImageBlur?.addEventListener('input', (e) => {
+    const blur = clamp(Number(e.target.value) || 0, 0, 60);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundImageBlur: blur,
+    });
+    persistCanvasSettings();
+    applyCanvasSettings();
+  });
+  UI.bgVideoUpload?.addEventListener('click', (e) => { e.target.value = ''; });
+  UI.bgVideoUpload?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!String(file.type || '').startsWith('video/')) return void (e.target.value = '');
+    const previousVideo = canvasSettings().backgroundVideo;
+    const objectUrl = URL.createObjectURL(file);
+    revokeBackgroundVideoObjectUrl(previousVideo);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundEnabled: true,
+      backgroundMediaKind: 'video',
+      backgroundVideoPaused: false,
+      backgroundVideoProgress: 0,
+      backgroundVideoAlpha: canvasSettings().backgroundVideoAlpha ?? 0.8,
+      backgroundVideoY: canvasSettings().backgroundVideoY ?? 0,
+      backgroundVideo: {
+        src: objectUrl,
+        objectUrl,
+        name: String(file.name || ''),
+        type: String(file.type || ''),
+      },
+    });
+    persistCanvasSettings();
+    applyCanvasSettings();
+    e.target.value = '';
+    const dataUrl = await readFileAsDataUrl(file).catch(() => '');
+    if (!dataUrl || canvasSettings().backgroundVideo?.objectUrl !== objectUrl) return;
+    persistBackgroundVideoStorage?.({
+      src: dataUrl,
+      name: String(file.name || 'uploaded video'),
+      type: String(file.type || ''),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
+    });
+  });
+  UI.bgVideoReset?.addEventListener('click', async () => {
+    revokeBackgroundVideoObjectUrl(canvasSettings().backgroundVideo);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'image',
+      backgroundVideoPaused: false,
+      backgroundVideoProgress: 0,
+      backgroundVideoAlpha: 0.8,
+      backgroundVideoY: 0,
+      backgroundVideo: null,
+    });
+    persistCanvasSettings();
+    await clearBackgroundVideoStorage?.();
+    applyCanvasSettings();
+    if (UI.bgVideoUpload) UI.bgVideoUpload.value = '';
+  });
+  UI.bgVideoPlayToggle?.addEventListener('click', toggleBackgroundVideoPlayback);
+  UI.bgVideoProgress?.addEventListener('input', (e) => {
+    const ratio = clamp((Number(e.target.value) || 0) / 1000, 0, 1);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'video',
+      backgroundVideoProgress: ratio,
+    });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: ratio,
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
+    });
+    applyCanvasSettings();
+  });
+  UI.bgVideoAlpha?.addEventListener('input', (e) => {
+    const alpha = clamp((Number(e.target.value) || 0) / 100, 0, 1);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'video',
+      backgroundVideoAlpha: alpha,
+    });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha,
+      y: clamp(Number(canvasSettings().backgroundVideoY) || 0, -500, 500),
+    });
+    applyCanvasSettings();
+  });
+  UI.bgVideoY?.addEventListener('input', (e) => {
+    const y = clamp(Number(e.target.value) || 0, -500, 500);
+    setCanvasSettings({
+      ...canvasSettings(),
+      backgroundMediaKind: 'video',
+      backgroundVideoY: y,
+    });
+    persistCanvasSettings();
+    persistBackgroundVideoStorage?.({
+      ...(canvasSettings().backgroundVideo || {}),
+      paused: canvasSettings().backgroundVideoPaused === true,
+      progress: clamp(Number(canvasSettings().backgroundVideoProgress) || 0, 0, 1),
+      alpha: clamp(Number(canvasSettings().backgroundVideoAlpha ?? 0.8), 0, 1),
+      y,
+    });
+    applyCanvasSettings();
+  });
   UI.floatToggle.addEventListener('change', () => updateCanvas({ floatingEnabled: UI.floatToggle.checked }));
   UI.alignBottomToggle.addEventListener('change', () => {
     updateCanvas({ bottomAlign: UI.alignBottomToggle.checked });
@@ -1232,6 +1740,16 @@ export function initManualBindings({
   commitTextField('secondary', UI.scenarioSecondary);
   commitTextField('detail', UI.scenarioDetail);
   if (UI.scenarioIntentHeader) commitTextField('intentHeader', UI.scenarioIntentHeader);
+  const commitActionCardField = (field, el) => el?.addEventListener('input', (e) => commitScenarioChange((scenario) => {
+    scenario.content.actionCardActionsByShape = scenario.content.actionCardActionsByShape || {};
+    const current = scenario.content.actionCardActionsByShape[scenario.shape] || { left: 'Snooze', right: 'Join now →' };
+    scenario.content.actionCardActionsByShape[scenario.shape] = {
+      ...current,
+      [field]: e.target.value,
+    };
+  }));
+  commitActionCardField('left', UI.scenarioActionCardLeft);
+  commitActionCardField('right', UI.scenarioActionCardRight);
   const selectScenarioShape = (shape) => {
     if (!availableScenarioShapes().includes(shape)) return;
     if (selectedScenario()?.shape === shape) return;
@@ -1311,6 +1829,7 @@ export function initManualBindings({
   }
 
   UI.scenarioList?.addEventListener('dblclick', (e) => {
+    e.preventDefault();
     const button = e.target.closest('.scenario-item');
     if (!button) return;
     const scenarioId = String(button.dataset.scenarioId || '');
@@ -1324,6 +1843,7 @@ export function initManualBindings({
         setScenarioLibrary(getScenarioLibrary().map((item) => (
           item.id === scenarioId ? { ...item, name: nextValue } : item
         )));
+        persistScenarios();
         renderScenarioUi();
       },
     });
@@ -1351,49 +1871,16 @@ export function initManualBindings({
   UI.stageAdd.addEventListener('click', () => {
     const kind = String(UI.stageAddKind?.value || 'card');
     addStage(kind);
+    UI.stageAdd.blur();
   });
   UI.stageDuplicate?.addEventListener('click', () => duplicateCurrentStage());
   UI.stageDelete.addEventListener('click', () => deleteCurrentStage());
-  UI.stageRadiusInput.addEventListener('change', (e) => commitStageRadius(e.target.value));
-  UI.stageRadiusInput.addEventListener('blur', (e) => {
-    const value = String(e.target.value || '').trim();
-    if (!value) {
-      const stage = stageById(selectedScenario()?.shape);
-      e.target.value = stage ? String(stage.cornerRadius) : '';
-      return;
-    }
-    commitStageRadius(value);
-  });
-  UI.stageWidthInput.addEventListener('change', (e) => commitStageSizeOverride('width', e.target.value));
-  UI.stageWidthInput.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(sizeOverride?.widthOverride) ? String(sizeOverride.widthOverride) : '');
-    commitStageSizeOverride('width', value);
-  });
-  UI.stageHeightInput.addEventListener('change', (e) => commitStageSizeOverride('height', e.target.value));
-  UI.stageHeightInput.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const sizeOverride = scenarioStageSizeOverride(scenario, scenario?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(sizeOverride?.heightOverride) ? String(sizeOverride.heightOverride) : '');
-    commitStageSizeOverride('height', value);
-  });
-  UI.stageGapInput.addEventListener('change', (e) => commitStageGapOverride(e.target.value));
-  UI.stageGapInput.addEventListener('blur', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(stage?.iconTextGap) ? String(stage.iconTextGap) : '');
-    commitStageGapOverride(value);
-  });
-  UI.stageIconPadInput.addEventListener('change', (e) => commitStageIconPadOverride(e.target.value));
-  UI.stageIconPadInput.addEventListener('blur', (e) => {
-    const stage = stageById(selectedScenario()?.shape);
-    const value = String(e.target.value || '').trim();
-    if (!value) return void (e.target.value = Number.isFinite(stage?.iconLeftPadding) ? String(stage.iconLeftPadding) : '');
-    commitStageIconPadOverride(value);
-  });
+  UI.stageRadiusInput.addEventListener('input', (e) => commitStageRadius(e.target.value));
+  UI.stageWidthInput.addEventListener('input', (e) => commitStageSizeOverride('width', e.target.value));
+  UI.stageHeightInput.addEventListener('input', (e) => commitStageSizeOverride('height', e.target.value));
+  UI.stageImagePaddingInput?.addEventListener('input', (e) => commitStageImagePadding(e.target.value));
+  UI.stageGapInput.addEventListener('input', (e) => commitStageGapOverride(e.target.value));
+  UI.stageIconPadInput.addEventListener('input', (e) => commitStageIconPadOverride(e.target.value));
   UI.stageCardSToggle?.addEventListener('change', (e) => {
     const scenario = selectedScenario();
     const stage = stageById(scenario?.shape, scenario);
@@ -1408,12 +1895,24 @@ export function initManualBindings({
     if (!stage) return;
     commitStageChange(stage.id, (draft) => { draft.listListeningOrb = e.target.checked; });
   });
-  UI.stageSelectedToggle?.addEventListener('change', (e) => {
+  UI.stageListSelectableToggle?.addEventListener('change', (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    commitStageChange(stage.id, (draft) => { draft.listSelectable = e.target.checked; });
+  });
+  UI.stageShellHiddenToggle?.addEventListener('change', (e) => {
+    const stage = stageById(selectedScenario()?.shape);
+    if (!stage) return;
+    commitStageChange(stage.id, (draft) => {
+      draft.hideShell = e.target.checked;
+    });
+  });
+  UI.stageNudgeDividerColor?.addEventListener('input', (e) => {
     const scenario = selectedScenario();
     if (!scenario) return;
     commitScenarioChange((draft) => {
-      draft.content.selectedByShape = { ...(draft.content.selectedByShape || {}) };
-      draft.content.selectedByShape[draft.shape] = e.target.checked;
+      draft.content.dividerColorByShape = { ...(draft.content.dividerColorByShape || {}) };
+      draft.content.dividerColorByShape[draft.shape] = String(e.target.value || '#ffffff');
     });
   });
   UI.stageBlobTopCoreColor?.addEventListener('input', (e) => {
@@ -1448,16 +1947,7 @@ export function initManualBindings({
       draft.content.selectedBlobBottomEdgeColorByShape[draft.shape] = String(e.target.value || '#9761ff');
     });
   });
-  UI.stageMaskBlurInput?.addEventListener('change', (e) => commitStageSelectedMaskBlur(e.target.value));
-  UI.stageMaskBlurInput?.addEventListener('blur', (e) => {
-    const scenario = selectedScenario();
-    const value = String(e.target.value || '').trim();
-    if (!value) {
-      e.target.value = scenario ? String(stageSelectedMaskBlurForShape(scenario, scenario.shape)) : '';
-      return;
-    }
-    commitStageSelectedMaskBlur(value);
-  });
+  UI.stageMaskBlurInput?.addEventListener('input', (e) => commitStageSelectedMaskBlur(e.target.value));
   UI.stageListCountDec?.addEventListener('click', () => {
     const scenario = selectedScenario();
     if (!scenario || stageById(scenario.shape, scenario)?.renderShape !== 'list') return;
@@ -1517,10 +2007,19 @@ export function initManualBindings({
       });
       return;
     }
+    const selectableToggle = e.target.closest('[data-stage-list-selectable-toggle]');
+    if (selectableToggle) {
+      const stage = stageById(selectedScenario()?.shape);
+      if (!stage || stage.renderShape !== 'list') return;
+      commitStageChange(stage.id, (draft) => {
+        draft.listSelectable = selectableToggle.checked;
+      });
+      return;
+    }
     const checkbox = e.target.closest('[data-stage-comp-toggle]');
     if (!checkbox) return;
     const type = String(checkbox.dataset.stageCompToggle || '');
-    if (!['icon', 'primary', 'secondary', 'detail', 'intent-header'].includes(type)) return;
+    if (!['icon', 'primary', 'secondary', 'detail', 'intent-header', 'action-row'].includes(type)) return;
     const stage = stageById(selectedScenario()?.shape);
     if (!stage) return;
     commitStageChange(stage.id, (draft) => {
@@ -1556,13 +2055,24 @@ export function initManualBindings({
   });
   UI.scenarioIconUpload.addEventListener('click', (e) => { e.target.value = ''; });
   UI.scenarioListItemsEditor?.addEventListener('input', (e) => {
-    const labelInput = e.target.closest('[data-list-item-label-index]');
-    if (labelInput) {
-      const index = parseInt(labelInput.dataset.listItemLabelIndex || '-1', 10);
+    const primaryInput = e.target.closest('[data-list-item-primary-index]');
+    if (primaryInput) {
+      const index = parseInt(primaryInput.dataset.listItemPrimaryIndex || '-1', 10);
       if (index >= 0) {
         return commitListItems((items) => {
           if (!items[index]) return items;
-          items[index] = { ...items[index], label: labelInput.value };
+          items[index] = { ...items[index], primary: primaryInput.value };
+          return items;
+        });
+      }
+    }
+    const secondaryInput = e.target.closest('[data-list-item-secondary-index]');
+    if (secondaryInput) {
+      const index = parseInt(secondaryInput.dataset.listItemSecondaryIndex || '-1', 10);
+      if (index >= 0) {
+        return commitListItems((items) => {
+          if (!items[index]) return items;
+          items[index] = { ...items[index], secondary: secondaryInput.value };
           return items;
         });
       }

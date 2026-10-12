@@ -3,7 +3,7 @@ import { SHAPES } from '../shapes.js';
 const EMPTY_CONTENT = { icon:'', primary:'', secondary:'', detail:'' };
 
 export function createMorphBridges(ctx) {
-  const { DROPS, C, callbacks, state, runtime } = ctx;
+  const { DROPS, C, callbacks, state, runtime, layout } = ctx;
   const splitTimers = state.splitTimers;
   const clamp = callbacks.clamp;
 
@@ -12,11 +12,12 @@ export function createMorphBridges(ctx) {
   const listPhaseTwoStartMs = () => 100;
   const thinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.55), 220, 420);
   const homeThinkingBridgeMs = () => clamp(Math.round(callbacks.getAnimDuration() * 0.48), 180, 320);
-  const cardHeightForTransition = (fromShape, toShape, fromGeo, toGeo) => fromShape === 'card' && Number.isFinite(fromGeo?.h) ? fromGeo.h : toShape === 'card' && Number.isFinite(toGeo?.main?.h) ? toGeo.main.h : SHAPES.card.main.h;
+  const isCardLikeShape = (shape) => shape === 'card' || shape === 'card-s';
+  const cardHeightForTransition = (fromShape, toShape, fromGeo, toGeo) => isCardLikeShape(fromShape) && Number.isFinite(fromGeo?.h) ? fromGeo.h : isCardLikeShape(toShape) && Number.isFinite(toGeo?.main?.h) ? toGeo.main.h : SHAPES.card.main.h;
   const cardDurationBonusMs = (cardHeight) => clamp(Math.round(((Number.isFinite(cardHeight) ? cardHeight : SHAPES.card.main.h) / 580) * 200), 0, 360);
   function transitionAnimMs(fromShape, toShape, baseMs = callbacks.getAnimDuration(), fromGeo = null, toGeo = null) {
-    const fromCardLike = fromShape === 'card' || fromShape === 'card-s';
-    const toCardLike = toShape === 'card' || toShape === 'card-s';
+    const fromCardLike = isCardLikeShape(fromShape);
+    const toCardLike = isCardLikeShape(toShape);
     const isDotPillPair = (fromShape === 'dot' && toShape === 'pill') || (fromShape === 'pill' && toShape === 'dot');
     const isPillCardPair = (fromShape === 'pill' && toCardLike) || (fromCardLike && toShape === 'pill');
     const isDotCardPair = (fromShape === 'dot' && toCardLike) || (fromCardLike && toShape === 'dot');
@@ -87,23 +88,89 @@ export function createMorphBridges(ctx) {
     }, splitBridgeMs());
   }
 
+  function seedListPillBaseListGeometry() {
+    if (state.currentShape !== 'list') return false;
+    if (String(state.currentStageId || '') !== 'list-pill') return false;
+    const main = DROPS.main;
+    const listGeo = SHAPES.list.main;
+    if (!main || !listGeo) return false;
+    const currentGeo = state.lastMainGeo || listGeo;
+    const currentCenterX = (Number(currentGeo.tx) || 0) + ((Number(currentGeo.w) || 0) / 2);
+    const currentBottomY = (Number(currentGeo.ty) || 0) + (Number(currentGeo.h) || 0);
+    const seededTx = Math.round(currentCenterX - (listGeo.w / 2));
+    const seededTy = Math.round(currentBottomY - listGeo.h);
+    main.style.transition = 'none';
+    main.style.width = `${listGeo.w}px`;
+    main.style.height = `${listGeo.h}px`;
+    main.style.setProperty('--g-stage-h', `${listGeo.h}px`);
+    main.style.borderRadius = String(listGeo.br || '25px');
+    main.style.transform = `translate(${seededTx}px,${seededTy}px)`;
+    main.style.opacity = '1';
+    main.style.pointerEvents = 'auto';
+    const listThumb = layout?.contentPos?.('list', listGeo.w, listGeo.h)?.thumb || null;
+    if (C.thumb && listThumb) {
+      C.thumb.style.transition = 'none';
+      C.thumb.style.width = `${listThumb.w}px`;
+      C.thumb.style.height = `${listThumb.h}px`;
+      C.thumb.style.borderRadius = String(listThumb.br || '30px');
+      C.thumb.style.transform = `translate(${listThumb.x}px,${listThumb.y}px)`;
+    }
+    state.lastMainGeo = {
+      ...listGeo,
+      tx: seededTx,
+      ty: seededTy,
+      op: 1,
+    };
+    return true;
+  }
+
+  function queueSeededListPillBaseMorph(shape, contentData, customGeo, stageId = null, uiFadeDelayMs = null, skipActiveUpdate = false) {
+    if (!seedListPillBaseListGeometry()) return false;
+    const main = DROPS.main;
+    if (!main) return false;
+    void main.offsetWidth;
+    requestAnimationFrame(() => {
+      main.style.removeProperty('transition');
+      C.thumb?.style.removeProperty('transition');
+      void main.offsetWidth;
+      requestAnimationFrame(() => {
+        runtime.morphCore(shape, contentData, customGeo, skipActiveUpdate, uiFadeDelayMs, stageId);
+      });
+    });
+    return true;
+  }
+
   function bridgeFromListToTarget(shape, contentData, customGeo, stageId = null) {
     callbacks.collapseListStack(listBridgeMs());
-    callbacks.updateActive('list');
+    callbacks.updateActive('list-pill');
     state.listBridgeTimer = setTimeout(() => {
       state.listBridgeTimer = null;
       if (shape === 'listening') {
+        if (queueSeededListPillBaseMorph('listening', contentData, customGeo, stageId, 0)) {
+          callbacks.updateActive('listening');
+          return;
+        }
         runtime.morphCore('listening', contentData, customGeo, false, 0, stageId);
         callbacks.updateActive('listening');
         return;
       }
       if (shape === 'idle') {
-        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        if (queueSeededListPillBaseMorph('idle', EMPTY_CONTENT, null, null, 0, true)) {
+          callbacks.showAiIdle();
+          callbacks.updateActive('idle');
+          return;
+        }
+        runtime.morphCore('idle', EMPTY_CONTENT, null, true, 0);
         callbacks.showAiIdle();
         callbacks.updateActive('idle');
         return;
       }
       if (shape === 'ai') {
+        if (queueSeededListPillBaseMorph('ai', EMPTY_CONTENT, null, null, 0, true)) {
+          callbacks.startSiriOrb(true);
+          callbacks.updateActive('ai');
+          return;
+        }
         runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
         callbacks.startSiriOrb(true);
         callbacks.updateActive('ai');
@@ -111,9 +178,11 @@ export function createMorphBridges(ctx) {
       }
       if (shape === 'magic') {
         callbacks.stopSiriOrb({ keepAiMode: true });
+        if (queueSeededListPillBaseMorph('magic', contentData, customGeo, stageId, 0)) return;
         runtime.morphCore('magic', contentData, customGeo, false, 0, stageId);
         return;
       }
+      if (queueSeededListPillBaseMorph(shape, contentData, customGeo, stageId)) return;
       if (shape === 'pill') return void runtime.morphCore('pill', contentData, customGeo, false, null, stageId);
       runtime.morphCore(shape, contentData, customGeo, false, null, stageId);
     }, listPhaseTwoStartMs());
@@ -140,7 +209,7 @@ export function createMorphBridges(ctx) {
       state.thinkingBridgeTimer = null;
       DROPS.main.classList.remove('orb-thinking-bridge');
       if (targetShape === 'idle') {
-        runtime.morphCore('ai', EMPTY_CONTENT, null, true, 0);
+        runtime.morphCore('idle', EMPTY_CONTENT, customGeo, true, 0);
         callbacks.showAiIdle();
         callbacks.updateActive('idle');
         return;
@@ -197,7 +266,7 @@ export function createMorphBridges(ctx) {
   function deformationIntensity(fromShape, toShape, fromMain, toMain) {
     const maxSide = Math.max(fromMain.w, fromMain.h, toMain.w, toMain.h);
     if (shouldUseStrongDeform(fromShape, toShape)) return 1;
-    if (String(fromShape).startsWith('card') || String(toShape).startsWith('card')) return 0.35;
+    if (isCardLikeShape(fromShape) || isCardLikeShape(toShape)) return 0.35;
     if (maxSide >= 320 || fromMain.h >= 220 || toMain.h >= 220) return 0.35;
     if (maxSide <= 160) return 0.9;
     return 0.6;

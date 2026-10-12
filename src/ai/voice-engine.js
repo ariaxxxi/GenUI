@@ -1,4 +1,4 @@
-export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz }) {
+export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGlassState, onTranscriptUpdate, shouldKeepCommandListening, shouldShowCommandViz, shouldFilterTtsEcho }) {
   const voiceEngine = { recognition:null, supported:false, active:false, mode:'off', restartOnEnd:false, audioCtx:null, analyser:null, micStream:null, vizRaf:null };
   const VIZ_FADE_IN_MS = 320;
   const VIZ_NOISE_FLOOR = 0.08;
@@ -113,6 +113,9 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function applyVoiceVisualization(level, actionBtns) {
+    /* The Echo visual drives its own mouth geometry from the same mic level,
+       independently of whether the classic orb is on screen. */
+    window.GenUiEchoAi?.setVoiceLevel?.(level);
     const field = getComposePulseField();
     const state = getGlassUi?.()?.state;
     const composeState = getGlassState?.()?.COMPOSE;
@@ -165,6 +168,7 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function resetVizStyles({ clearDropMain = true, clearOrb = true } = {}) {
+    window.GenUiEchoAi?.setVoiceLevel?.(0);
     document.getElementById('home-glow-layer')?.style.setProperty('box-shadow', '');
     const orb = getListeningOrb();
     if (orb && clearOrb) {
@@ -207,7 +211,8 @@ export function initVoiceEngine({ document, input, addSimLog, getGlassUi, getGla
   }
 
   function onVoiceResult(transcript, isFinal) {
-    if (shouldIgnoreAsTtsEcho(transcript)) return;
+    const filterTtsEcho = typeof shouldFilterTtsEcho === 'function' ? shouldFilterTtsEcho() !== false : true;
+    if (filterTtsEcho && shouldIgnoreAsTtsEcho(transcript)) return;
     if (input) input.value = transcript;
     onTranscriptUpdate(transcript, isFinal);
   }

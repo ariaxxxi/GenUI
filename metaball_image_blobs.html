@@ -1,0 +1,1083 @@
+<h2 class="sr-only">Animated image metaballs with editable images, sizes, merge softness, and float amount.</h2>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,700&display=swap');
+:root{
+  --mb-bg:#09090f;
+  --mb-ink:#f5f0e8;
+  --mb-muted:#b7b0a5;
+  --mb-line:rgba(245,240,232,.14);
+  --mb-panel:rgba(14,14,22,.82);
+  --mb-panel-strong:rgba(22,22,32,.92);
+  --mb-accent:#ffffff;
+  --mb-radius:8px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--mb-bg);color:var(--mb-ink)}
+body{font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+#mb-shell{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 320px;
+  width:100%;
+  min-height:100vh;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255,178,89,.16), transparent 32%),
+    radial-gradient(circle at 84% 82%, rgba(46,230,176,.12), transparent 34%),
+    #09090f;
+}
+#mb-stage{position:relative;min-height:100vh;overflow:hidden}
+#mb-stage::after{
+  content:"";
+  pointer-events:none;
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(90deg, transparent 0, transparent 72%, rgba(9,9,15,.34) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px);
+  mix-blend-mode:screen;
+}
+#mb-wrap{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#ebebeb;
+  touch-action:none;
+  cursor:grab;
+}
+#mb-wrap:active{cursor:grabbing}
+#mb-canvas{display:block;width:100%;height:100%}
+#mb-panel{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  max-height:100vh;
+  min-height:100vh;
+  overflow-y:auto;
+  padding:24px 24px;
+  border-left:1px solid var(--mb-line);
+  background:linear-gradient(180deg,var(--mb-panel-strong),var(--mb-panel));
+  box-shadow:-24px 0 70px rgba(0,0,0,.34);
+  backdrop-filter:blur(18px);
+  scrollbar-color:rgba(255,207,122,.48) rgba(255,255,255,.06);
+}
+#mb-title{display:flex;flex-direction:column;gap:8px}
+#mb-kicker{
+  color:#ffcf7a;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+#mb-title h1{
+  margin:0;
+  font-family:"Fraunces",Georgia,serif;
+  font-size:clamp(34px,3.7vw,50px);
+  line-height:.93;
+  letter-spacing:0;
+}
+#mb-hint{
+  max-width:25rem;
+  color:var(--mb-muted);
+  font-size:13px;
+  line-height:1.5;
+}
+#mb-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#mb-bar{flex-wrap:wrap;justify-content:flex-start}
+#mb-bar button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:38px;
+  padding:0 14px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:var(--mb-radius);
+  background:rgba(255,255,255,.08);
+  color:var(--mb-ink);
+  font:700 12px/1 "DM Sans",ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:transform .18s ease,border-color .18s ease,background .18s ease;
+}
+#mb-bar button:hover{transform:translateY(-1px);border-color:rgba(255,207,122,.56);background:rgba(255,207,122,.12)}
+#mb-bar button:active{transform:translateY(0)}
+#mb-bar button:disabled{opacity:.38;pointer-events:none}
+#mb-grid{display:flex;flex-direction:column;gap:10px;margin-top:2px}
+.ctl-section{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:6px;
+  color:#ffcf7a;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.ctl{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  padding:10px 12px;
+  border:1px solid var(--mb-line);
+  border-radius:var(--mb-radius);
+  background:rgba(255,255,255,.045);
+}
+.ctl-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--mb-muted);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.03em;
+}
+.ctl-name{display:inline-flex;align-items:center;gap:8px}
+.ctl-swatch{width:8px;height:8px;border-radius:999px;background:var(--swatch,#ff4d6d);box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+.ctl-val{color:var(--mb-ink);font-weight:700;font-variant-numeric:tabular-nums}
+.bubble-ctl{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid var(--mb-line);
+  border-radius:var(--mb-radius);
+  background:rgba(255,255,255,.045);
+  transition:border-color .18s ease,background .18s ease;
+}
+.bubble-ctl[data-active="true"]{
+  border-color:rgba(255,207,122,.62);
+  background:rgba(255,207,122,.08);
+}
+.bubble-slot-tray{display:flex;flex-wrap:wrap;gap:6px}
+.bubble-slot-add{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:32px;
+  padding:0 11px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:6px;
+  background:rgba(255,255,255,.07);
+  color:var(--mb-ink);
+  font:700 9px/1 "DM Sans",ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.bubble-slot-add[data-enabled="true"]{
+  border-color:rgba(255,207,122,.5);
+  background:rgba(255,207,122,.1);
+}
+.bubble-ctl > .ctl{
+  border:0;
+  border-bottom:1px solid var(--mb-line);
+  border-radius:0;
+  background:transparent;
+}
+.bubble-ctl > .image-ctl{
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.image-ctl{
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:9px;
+  border:1px solid var(--mb-line);
+  border-radius:var(--mb-radius);
+  background:rgba(255,255,255,.045);
+  cursor:pointer;
+  transition:border-color .18s ease,background .18s ease;
+}
+.image-preview{
+  width:44px;
+  height:44px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:6px;
+  object-fit:cover;
+  background:#161622;
+}
+.image-meta{display:flex;min-width:0;flex-direction:column;gap:3px}
+.image-name{color:var(--mb-ink);font-size:12px;font-weight:700}
+.image-state{
+  overflow:hidden;
+  color:var(--mb-muted);
+  font-size:10px;
+  line-height:1.25;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.image-actions{display:flex;gap:5px}
+.image-action{
+  display:inline-flex;
+  height:32px;
+  align-items:center;
+  justify-content:center;
+  padding:0 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:6px;
+  background:rgba(255,255,255,.07);
+  color:var(--mb-ink);
+  font:700 9px/1 "DM Sans",ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:border-color .18s ease,background .18s ease,transform .18s ease;
+}
+.image-action:hover{border-color:rgba(255,207,122,.56);background:rgba(255,207,122,.12);transform:translateY(-1px)}
+.image-action:active{transform:translateY(0)}
+.image-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+#mb-clipboard-hint{color:var(--mb-muted);font-size:10px;line-height:1.45}
+.ctl input[type=color]{
+  width:100%;
+  height:30px;
+  padding:0;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:6px;
+  background:transparent;
+  cursor:pointer;
+}
+.ctl input[type=range]{
+  width:100%;
+  accent-color:var(--mb-accent);
+  cursor:pointer;
+}
+#mb-fallback{display:flex;align-items:center;justify-content:center;height:100%;color:#cfc9e6;font-size:14px;padding:1rem;text-align:center}
+@media (max-width: 860px){
+  #mb-shell{grid-template-columns:1fr;min-height:100svh}
+  #mb-stage{min-height:62svh}
+  #mb-panel{
+    max-height:none;
+    min-height:auto;
+    overflow:visible;
+    border-left:0;
+    border-top:1px solid var(--mb-line);
+    box-shadow:0 -18px 60px rgba(0,0,0,.34);
+  }
+  #mb-title h1{font-size:38px}
+  #mb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width: 560px){
+  #mb-stage{min-height:54svh}
+  #mb-panel{padding:22px 16px}
+  #mb-grid{grid-template-columns:1fr}
+  #mb-bar{align-items:flex-start;flex-direction:column}
+}
+</style>
+
+<main id="mb-shell">
+  <section id="mb-stage" aria-label="Interactive metaball canvas">
+    <div id="mb-wrap"><canvas id="mb-canvas"></canvas></div>
+  </section>
+
+  <aside id="mb-panel" aria-label="Metaball controls">
+    <div id="mb-title">
+      <span id="mb-kicker">Image Field</span>
+      <h1>Metaball Lab</h1>
+      <span id="mb-hint"><i class="ti ti-hand-finger" style="font-size:16px;vertical-align:-2px;margin-right:4px" aria-hidden="true"></i>Drag blobs together and tune how the pictures merge through the field.</span>
+    </div>
+
+    <div id="mb-bar">
+      <button id="mb-play" aria-label="Play bubble animation">Play</button>
+      <button id="mb-add" aria-label="Add a bubble">+ Add</button>
+      <button id="mb-remove" aria-label="Remove selected bubble">- Remove</button>
+    </div>
+
+    <div id="mb-grid">
+      <label class="ctl" for="c-bg"><span class="ctl-head">Background</span><input type="color" id="c-bg" value="#ebebeb"></label>
+      <div class="ctl"><span class="ctl-head">Merge softness <span class="ctl-val" id="v-merge">0%</span></span><input type="range" id="s-merge" min="0" max="100" step="1" value="0"></div>
+      <div class="ctl"><span class="ctl-head">Float amount <span class="ctl-val" id="v-float">2 px</span></span><input type="range" id="s-float" min="0" max="16" step="1" value="2"></div>
+      <div class="ctl-section" id="mb-size-heading">Bubble setup</div>
+      <div class="ctl"><span class="ctl-head"><span class="ctl-name"><span class="ctl-swatch" style="--swatch:#ffb259"></span>Bubble 1</span><span class="ctl-val" id="v-size-0">110 px</span></span><input type="range" id="s-size-0" min="22" max="110" step="1" value="110"></div>
+      <div class="ctl"><span class="ctl-head"><span class="ctl-name"><span class="ctl-swatch" style="--swatch:#6fd0e8"></span>Bubble 2</span><span class="ctl-val" id="v-size-1">75 px</span></span><input type="range" id="s-size-1" min="22" max="110" step="1" value="75"></div>
+      <div class="ctl"><span class="ctl-head"><span class="ctl-name"><span class="ctl-swatch" style="--swatch:#8cc657"></span>Bubble 3</span><span class="ctl-val" id="v-size-2">57 px</span></span><input type="range" id="s-size-2" min="22" max="110" step="1" value="57"></div>
+      <div class="ctl"><span class="ctl-head"><span class="ctl-name"><span class="ctl-swatch" style="--swatch:#2ee6b0"></span>Bubble 4</span><span class="ctl-val" id="v-size-3">74 px</span></span><input type="range" id="s-size-3" min="22" max="110" step="1" value="74"></div>
+      <div class="ctl"><span class="ctl-head"><span class="ctl-name"><span class="ctl-swatch" style="--swatch:#ff5a3c"></span>Bubble 5</span><span class="ctl-val" id="v-size-4">52 px</span></span><input type="range" id="s-size-4" min="22" max="110" step="1" value="52"></div>
+      <div class="ctl-section" id="mb-image-heading">Bubble images</div>
+      <div class="image-ctl" data-image-row="0" data-active="true">
+        <img class="image-preview" id="preview-0" alt="">
+        <span class="image-meta"><span class="image-name">Bubble 1</span><span class="image-state" id="image-state-0">Default image</span></span>
+        <span class="image-actions">
+          <button class="image-action" type="button" data-upload="0" aria-label="Upload image for bubble 1" title="Upload image">File</button>
+          <button class="image-action" type="button" data-paste="0" aria-label="Paste image into bubble 1" title="Paste from clipboard">Paste</button>
+        </span>
+        <input class="image-input" id="image-input-0" type="file" accept="image/*">
+      </div>
+      <div class="image-ctl" data-image-row="1">
+        <img class="image-preview" id="preview-1" alt="">
+        <span class="image-meta"><span class="image-name">Bubble 2</span><span class="image-state" id="image-state-1">Default image</span></span>
+        <span class="image-actions">
+          <button class="image-action" type="button" data-upload="1" aria-label="Upload image for bubble 2" title="Upload image">File</button>
+          <button class="image-action" type="button" data-paste="1" aria-label="Paste image into bubble 2" title="Paste from clipboard">Paste</button>
+        </span>
+        <input class="image-input" id="image-input-1" type="file" accept="image/*">
+      </div>
+      <div class="image-ctl" data-image-row="2">
+        <img class="image-preview" id="preview-2" alt="">
+        <span class="image-meta"><span class="image-name">Bubble 3</span><span class="image-state" id="image-state-2">Default image</span></span>
+        <span class="image-actions">
+          <button class="image-action" type="button" data-upload="2" aria-label="Upload image for bubble 3" title="Upload image">File</button>
+          <button class="image-action" type="button" data-paste="2" aria-label="Paste image into bubble 3" title="Paste from clipboard">Paste</button>
+        </span>
+        <input class="image-input" id="image-input-2" type="file" accept="image/*">
+      </div>
+      <div class="image-ctl" data-image-row="3">
+        <img class="image-preview" id="preview-3" alt="">
+        <span class="image-meta"><span class="image-name">Bubble 4</span><span class="image-state" id="image-state-3">Default image</span></span>
+        <span class="image-actions">
+          <button class="image-action" type="button" data-upload="3" aria-label="Upload image for bubble 4" title="Upload image">File</button>
+          <button class="image-action" type="button" data-paste="3" aria-label="Paste image into bubble 4" title="Paste from clipboard">Paste</button>
+        </span>
+        <input class="image-input" id="image-input-3" type="file" accept="image/*">
+      </div>
+      <div class="image-ctl" data-image-row="4">
+        <img class="image-preview" id="preview-4" alt="">
+        <span class="image-meta"><span class="image-name">Bubble 5</span><span class="image-state" id="image-state-4">Default image</span></span>
+        <span class="image-actions">
+          <button class="image-action" type="button" data-upload="4" aria-label="Upload image for bubble 5" title="Upload image">File</button>
+          <button class="image-action" type="button" data-paste="4" aria-label="Paste image into bubble 5" title="Paste from clipboard">Paste</button>
+        </span>
+        <input class="image-input" id="image-input-4" type="file" accept="image/*">
+      </div>
+      <div id="mb-clipboard-hint" role="status" aria-live="polite">Select a bubble, then paste an image with Cmd/Ctrl + V.</div>
+    </div>
+  </aside>
+</main>
+
+<script>
+(function(){
+  const wrap = document.getElementById('mb-wrap');
+  const canvas = document.getElementById('mb-canvas');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if(!gl){ wrap.innerHTML = '<div id="mb-fallback">WebGL is not available in this view, so the metaball field can\u2019t render.</div>'; return; }
+
+  const MAX_BALLS = Math.min(8, gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS));
+  const DEFAULT_BALLS = 5;
+  const savedSlots = JSON.parse(localStorage.getItem('metaball-active-slots') || 'null');
+  const activeSlots = Array.from({length:MAX_BALLS}, (_, i)=>savedSlots ? !!savedSlots[i] : i<DEFAULT_BALLS);
+  if(!activeSlots.some(Boolean)) activeSlots[0] = true;
+  const SCENES = [
+    "<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><linearGradient id='a' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23241b54'/><stop offset='.55' stop-color='%23e85a7f'/><stop offset='1' stop-color='%23ffb259'/></linearGradient></defs><rect width='256' height='256' fill='url(%23a)'/><circle cx='128' cy='170' r='42' fill='%23ffe6ad'/></svg>",
+    "<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><linearGradient id='a' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23a7ebff'/><stop offset='.42' stop-color='%231f86c4'/><stop offset='1' stop-color='%23062f5a'/></linearGradient></defs><rect width='256' height='256' fill='url(%23a)'/><ellipse cx='128' cy='150' rx='170' ry='16' fill='%236fd0e8' opacity='.45'/><ellipse cx='128' cy='200' rx='170' ry='20' fill='%233aa0cf' opacity='.45'/></svg>",
+    "<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><linearGradient id='a' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23cdeeff'/><stop offset='.45' stop-color='%238cc657'/><stop offset='1' stop-color='%231f4417'/></linearGradient></defs><rect width='256' height='256' fill='url(%23a)'/><circle cx='190' cy='64' r='26' fill='%23fff3c4'/><ellipse cx='80' cy='210' rx='120' ry='60' fill='%23356b22'/><ellipse cx='200' cy='230' rx='110' ry='55' fill='%23234d18'/></svg>",
+    "<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><radialGradient id='a' cx='.5' cy='.68' r='.85'><stop offset='0' stop-color='%232ee6b0'/><stop offset='.5' stop-color='%232a5fd0'/><stop offset='1' stop-color='%230a0e33'/></radialGradient></defs><rect width='256' height='256' fill='url(%23a)'/><path d='M0 150 Q70 90 130 140 T256 120' stroke='%237ff0d2' stroke-width='10' fill='none' opacity='.5'/></svg>",
+    "<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><radialGradient id='a' cx='.5' cy='.5' r='.72'><stop offset='0' stop-color='%23ffd24d'/><stop offset='.45' stop-color='%23ff5a3c'/><stop offset='1' stop-color='%233a0d2e'/></radialGradient></defs><rect width='256' height='256' fill='url(%23a)'/><circle cx='100' cy='110' r='20' fill='%23ffe9a3' opacity='.6'/></svg>"
+  ];
+
+  const vsrc = 'attribute vec2 a; void main(){ gl_Position = vec4(a,0.0,1.0); }';
+  const fsrc = [
+    'precision highp float;',
+    'uniform vec2 u_res;',
+    'uniform vec3 u_balls['+MAX_BALLS+'];',
+    'uniform float u_active['+MAX_BALLS+'];',
+    'uniform vec3 u_bg;',
+    'uniform float u_thresh;',
+    'uniform float u_swap;',
+    'uniform float u_dpr;',
+    'uniform sampler2D u_tex['+MAX_BALLS+'];',
+    'float fieldAt(vec2 q){',
+    '  float sumField=0.0; float maxField=0.0;',
+    '  for(int i=0;i<'+MAX_BALLS+';i++){',
+    '    vec2 d=q-u_balls[i].xy; float r=u_balls[i].z;',
+    '    float contribution=u_active[i]*(r*r)/(dot(d,d)+4.0);',
+    '    sumField += contribution; maxField=max(maxField,contribution);',
+    '  }',
+    '  return maxField + u_thresh*(sumField-maxField);',
+    '}',
+    'void main(){',
+    '  vec2 p = gl_FragCoord.xy;',
+    '  float field = fieldAt(p);',
+    '  vec3 acc = vec3(0.0); float wsum = 0.0; float edgeBand=0.0;',
+    '  for(int i=0;i<'+MAX_BALLS+';i++){',
+    '    vec2 c = u_balls[i].xy; float r = max(u_balls[i].z, 1.0);',
+    '    vec2 d = p - c;',
+    '    float w = u_active[i]*(r*r)/(dot(d,d)+4.0);',
+    '    vec2 uv = (p - c)/(2.0*r) + 0.5;',
+    '    float blurAmount=1.0-smoothstep(0.0,0.3,clamp(uv.y,0.0,1.0));',
+    '    edgeBand=max(edgeBand,min(1.0,w)*blurAmount*20.0*u_dpr/r);',
+    '    vec3 tc = texture2D(u_tex[i],clamp(uv,0.0,1.0)).rgb;',
+    '    if(i==0){ tc = mix(tc,texture2D(u_tex[7],clamp(uv,0.0,1.0)).rgb,u_swap); }',
+    '    acc += tc*w; wsum += w;',
+    '  }',
+    '  float inside = edgeBand>0.0 ? smoothstep(1.0-edgeBand,1.0+edgeBand,field) : step(1.0,field);',
+    '  vec3 imgCol = acc/max(wsum, 1e-4);',
+    '  vec3 col = u_bg;',
+    '  col = mix(col, imgCol, inside);',
+    '  gl_FragColor = vec4(col, 1.0);',
+    '}'
+  ].join('\n');
+
+  function compile(t,s){ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh); if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(sh)); return sh; }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, vsrc));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fsrc));
+  gl.linkProgram(prog); gl.useProgram(prog);
+
+  const vb = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+  const aLoc = gl.getAttribLocation(prog,'a');
+  gl.enableVertexAttribArray(aLoc);
+  gl.vertexAttribPointer(aLoc,2,gl.FLOAT,false,0,0);
+
+  const U = {
+    res: gl.getUniformLocation(prog,'u_res'),
+    bg: gl.getUniformLocation(prog,'u_bg'),
+    thresh: gl.getUniformLocation(prog,'u_thresh'),
+    swap: gl.getUniformLocation(prog,'u_swap'),
+    dpr: gl.getUniformLocation(prog,'u_dpr'),
+    balls: [],
+    active: []
+  };
+  for(let i=0;i<MAX_BALLS;i++){
+    U.balls.push(gl.getUniformLocation(prog,'u_balls['+i+']'));
+    U.active.push(gl.getUniformLocation(prog,'u_active['+i+']'));
+  }
+
+  const textures = [];
+  const imageLoadVersion = Array(MAX_BALLS).fill(0);
+  const bubbleColors = ['#ffb259','#6fd0e8','#8cc657','#2ee6b0','#ff5a3c','#c58cff','#ff8fb8','#d7e76c'];
+  const defaultRadii = [110,75,57,74,52,60,60,60];
+  const savedRadii = JSON.parse(localStorage.getItem('metaball-radii') || 'null');
+  const initialRadii = defaultRadii.map((size,index)=>{
+    const saved = savedRadii && +savedRadii[index];
+    return Number.isFinite(saved) ? Math.max(22,Math.min(110,saved)) : size;
+  });
+
+  function createBubbleControls(index){
+    const sizeControl = document.createElement('div');
+    sizeControl.className = 'ctl';
+    sizeControl.dataset.sizeRow = index;
+    sizeControl.innerHTML = '<span class="ctl-head"><span class="ctl-name"><span class="ctl-swatch" style="--swatch:'+bubbleColors[index]+'"></span>Bubble '+(index+1)+'</span><span class="ctl-val" id="v-size-'+index+'">'+initialRadii[index]+' px</span></span><input type="range" id="s-size-'+index+'" min="22" max="110" step="1" value="'+initialRadii[index]+'">';
+    document.getElementById('mb-image-heading').before(sizeControl);
+
+    const imageControl = document.createElement('div');
+    imageControl.className = 'image-ctl';
+    imageControl.dataset.imageRow = index;
+    imageControl.innerHTML = '<img class="image-preview" id="preview-'+index+'" alt=""><span class="image-meta"><span class="image-name">Bubble '+(index+1)+'</span><span class="image-state" id="image-state-'+index+'">Default image</span></span><span class="image-actions"><button class="image-action" type="button" data-upload="'+index+'" aria-label="Upload image for bubble '+(index+1)+'" title="Upload image">File</button><button class="image-action" type="button" data-paste="'+index+'" aria-label="Paste image into bubble '+(index+1)+'" title="Paste from clipboard">Paste</button></span><input class="image-input" id="image-input-'+index+'" data-input="'+index+'" type="file" accept="image/*">';
+    document.getElementById('mb-clipboard-hint').before(imageControl);
+  }
+
+  for(let i=0;i<DEFAULT_BALLS;i++){
+    const slider = document.getElementById('s-size-'+i);
+    slider.value = initialRadii[i];
+    document.getElementById('v-size-'+i).textContent = initialRadii[i]+' px';
+    slider.closest('.ctl').dataset.sizeRow = i;
+    document.getElementById('image-input-'+i).dataset.input = i;
+  }
+  for(let i=DEFAULT_BALLS;i<MAX_BALLS;i++) createBubbleControls(i);
+
+  const bubbleControls = document.createDocumentFragment();
+  for(let i=0;i<MAX_BALLS;i++){
+    const group = document.createElement('div');
+    group.className = 'bubble-ctl';
+    group.dataset.bubbleControl = i;
+    group.append(
+      document.querySelector('[data-size-row="'+i+'"]'),
+      document.querySelector('[data-image-row="'+i+'"]')
+    );
+    bubbleControls.append(group);
+  }
+  const slotTray = document.createElement('div');
+  slotTray.className = 'bubble-slot-tray';
+  slotTray.id = 'mb-slot-tray';
+  for(let i=0;i<MAX_BALLS;i++){
+    const button = document.createElement('button');
+    button.className = 'bubble-slot-add';
+    button.type = 'button';
+    button.dataset.addSlot = i;
+    button.innerHTML = '<span class="ctl-swatch" style="--swatch:'+bubbleColors[i]+'"></span> Bubble '+(i+1);
+    slotTray.append(button);
+  }
+  document.getElementById('mb-size-heading').after(bubbleControls);
+  document.getElementById('mb-size-heading').after(slotTray);
+  document.getElementById('mb-image-heading').remove();
+
+  const imageDb = openImageDb();
+
+  function openImageDb(){
+    if(!window.indexedDB) return Promise.reject(new Error('IndexedDB unavailable'));
+    return new Promise((resolve, reject)=>{
+      const request = indexedDB.open('metaball-lab', 1);
+      request.onupgradeneeded = ()=>{
+        const db = request.result;
+        if(!db.objectStoreNames.contains('bubble-images')){
+          db.createObjectStore('bubble-images', {keyPath:'bubble'});
+        }
+      };
+      request.onsuccess = ()=>resolve(request.result);
+      request.onerror = ()=>reject(request.error);
+    });
+  }
+
+  async function saveBubbleImage(unit, blob, label){
+    const db = await imageDb;
+    return new Promise((resolve, reject)=>{
+      const transaction = db.transaction('bubble-images', 'readwrite');
+      transaction.objectStore('bubble-images').put({bubble:unit, blob:blob, label:label});
+      transaction.oncomplete = resolve;
+      transaction.onerror = ()=>reject(transaction.error);
+    });
+  }
+
+  async function deleteBubbleImage(unit){
+    const db = await imageDb;
+    return new Promise((resolve, reject)=>{
+      const transaction = db.transaction('bubble-images', 'readwrite');
+      transaction.objectStore('bubble-images').delete(unit);
+      transaction.oncomplete = resolve;
+      transaction.onerror = ()=>reject(transaction.error);
+    });
+  }
+
+  async function restoreBubbleImages(){
+    const db = await imageDb;
+    const records = await new Promise((resolve, reject)=>{
+      const request = db.transaction('bubble-images', 'readonly').objectStore('bubble-images').getAll();
+      request.onsuccess = ()=>resolve(request.result);
+      request.onerror = ()=>reject(request.error);
+    });
+    records.forEach(record=>{
+      loadImageBlob(record.bubble, record.blob, record.label || 'Saved image', false);
+    });
+  }
+
+  function applyProgressiveBlur(source){
+    const size=source.width;
+    const levels=[];
+    for(let blur=0;blur<=10;blur+=2){
+      const level=document.createElement('canvas');
+      level.width=size; level.height=size;
+      const context=level.getContext('2d');
+      if(blur){
+        context.filter='blur('+blur+'px)';
+        context.drawImage(source,0,0);
+      }else{
+        context.drawImage(source,0,0);
+      }
+      levels.push(level);
+    }
+
+    const output=document.createElement('canvas');
+    output.width=size; output.height=size;
+    const context=output.getContext('2d');
+    context.drawImage(source,0,0);
+    for(let y=Math.floor(size*.7);y<size;y++){
+      const progress=(y/(size-1)-.7)/.3;
+      const eased=progress*progress*(3-2*progress);
+      const level=eased*(levels.length-1);
+      const lower=Math.floor(level);
+      const upper=Math.min(levels.length-1,lower+1);
+      const mix=level-lower;
+      context.globalAlpha=1;
+      context.drawImage(levels[lower],0,y,size,1,0,y,size,1);
+      if(mix>0){
+        context.globalAlpha=mix;
+        context.drawImage(levels[upper],0,y,size,1,0,y,size,1);
+      }
+    }
+    context.globalAlpha=1;
+    return output;
+  }
+
+  function uploadTexture(unit, img, label){
+    const size = 512;
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const cx = cv.getContext('2d');
+    const scale = Math.max(size/img.naturalWidth, size/img.naturalHeight);
+    const width = img.naturalWidth*scale;
+    const height = img.naturalHeight*scale;
+    const backdropScale = 1.3;
+
+    cx.save();
+    cx.filter = 'blur(32px)';
+    cx.globalAlpha = .92;
+    cx.drawImage(
+      img,
+      (size-width*backdropScale)/2,
+      (size-height*backdropScale)/2,
+      width*backdropScale,
+      height*backdropScale
+    );
+    cx.restore();
+    cx.drawImage(img, (size-width)/2, (size-height)/2, width, height);
+    const processed=applyProgressiveBlur(cv);
+    gl.activeTexture(gl.TEXTURE0+unit);
+    gl.bindTexture(gl.TEXTURE_2D, textures[unit]);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,processed);
+    document.getElementById('preview-'+unit).src = processed.toDataURL('image/jpeg', .82);
+    document.getElementById('image-state-'+unit).textContent = label;
+  }
+
+  function loadImageSource(unit, src, label, revoke, onLoaded){
+    const version = ++imageLoadVersion[unit];
+    const img = new Image();
+    img.onload = function(){
+      if(version!==imageLoadVersion[unit]){
+        if(revoke) URL.revokeObjectURL(src);
+        return;
+      }
+      uploadTexture(unit, img, label);
+      if(onLoaded) onLoaded();
+      if(revoke) URL.revokeObjectURL(src);
+    };
+    img.onerror = function(){
+      document.getElementById('mb-clipboard-hint').textContent = 'That image could not be loaded.';
+      if(revoke) URL.revokeObjectURL(src);
+    };
+    img.src = src;
+  }
+
+  function loadImageBlob(unit, blob, label, persist){
+    if(!blob || !blob.type.startsWith('image/')) return false;
+    loadImageSource(unit, URL.createObjectURL(blob), label, true, ()=>{
+      if(persist===false) return;
+      saveBubbleImage(unit, blob, label).catch(()=>{
+        const hint = document.getElementById('mb-clipboard-hint');
+        if(hint) hint.textContent = 'Image loaded, but this browser could not save it for refresh.';
+      });
+    });
+    return true;
+  }
+
+  for(let i=0;i<MAX_BALLS;i++){
+    const tex = gl.createTexture();
+    textures.push(tex);
+    gl.activeTexture(gl.TEXTURE0+i);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([18,18,28,255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.uniform1i(gl.getUniformLocation(prog,'u_tex['+i+']'), i);
+    loadImageSource(i, 'data:image/svg+xml;charset=utf-8,' + SCENES[i%SCENES.length], 'Default image');
+  }
+  restoreBubbleImages().catch(()=>{
+    const hint = document.getElementById('mb-clipboard-hint');
+    if(hint) hint.textContent = 'Saved images are unavailable in this browser.';
+  });
+
+  function hex(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16)/255, parseInt(h.substr(2,2),16)/255, parseInt(h.substr(4,2),16)/255]; }
+
+  const radii = initialRadii.slice(0, MAX_BALLS);
+  const homeFrac = [[0.265,0.215],[0.24,0.79],[0.51,0.505],[0.77,0.785],[0.895,0.475],[0.36,0.36],[0.65,0.28],[0.62,0.69]];
+  const savedPositions = JSON.parse(localStorage.getItem('metaball-positions') || 'null');
+  let dpr=1, W=0, H=0;
+  let balls = [];
+
+  function clampBall(b){
+    b.hx = Math.max(b.r, Math.min(W-b.r, b.hx));
+    b.hy = Math.max(b.r, Math.min(H-b.r, b.hy));
+  }
+
+  function createBall(index){
+    return {
+      r:radii[index], hx:0, hy:0, dx:0, dy:0,
+      fx:0.28+Math.random()*0.34,
+      fy:0.24+Math.random()*0.34,
+      phx:Math.random()*Math.PI*2,
+      phy:Math.random()*Math.PI*2
+    };
+  }
+  function initBalls(){
+    balls = Array.from({length:MAX_BALLS}, (_, i)=>createBall(i));
+    placeHomes();
+    restorePositions();
+  }
+  function placeBallHome(index){
+    const layoutW = Math.min(W, 1080);
+    const layoutH = Math.min(H, 1160);
+    const layoutX = (W-layoutW)/2;
+    const layoutY = (H-layoutH)/2;
+    const b = balls[index];
+    b.hx = layoutX + homeFrac[index][0]*layoutW;
+    b.hy = layoutY + homeFrac[index][1]*layoutH;
+    clampBall(b);
+  }
+  function placeHomes(){
+    for(let i=0;i<MAX_BALLS;i++){
+      placeBallHome(i);
+    }
+  }
+  function restorePositions(){
+    if(!Array.isArray(savedPositions)) return;
+    for(let i=0;i<Math.min(MAX_BALLS,savedPositions.length);i++){
+      const position=savedPositions[i];
+      if(!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) continue;
+      balls[i].hx=position.x*W;
+      balls[i].hy=position.y*H;
+      clampBall(balls[i]);
+    }
+  }
+  function savePositions(){
+    if(!W || !H || !balls.length) return;
+    localStorage.setItem('metaball-positions',JSON.stringify(
+      balls.map(b=>({x:b.hx/W,y:b.hy/H}))
+    ));
+  }
+  function saveRadii(){
+    localStorage.setItem('metaball-radii',JSON.stringify(radii));
+  }
+  function resize(){
+    const oldW=W, oldH=H;
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    W = wrap.clientWidth; H = wrap.clientHeight;
+    canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
+    gl.viewport(0,0,canvas.width,canvas.height);
+    if(!balls.length) initBalls();
+    else{
+      for(let i=0;i<MAX_BALLS;i++){
+        if(oldW && oldH){
+          balls[i].hx=balls[i].hx/oldW*W;
+          balls[i].hy=balls[i].hy/oldH*H;
+        }
+        clampBall(balls[i]);
+      }
+    }
+  }
+
+  let drag=-1, offX=0, offY=0, activeBubble=0;
+  let flowOverride=false, flowRunning=false, flowToken=0, flowMerge=0, swapMix=0;
+  const flowWeight = Array(MAX_BALLS).fill(0);
+  const flowScale = Array(MAX_BALLS).fill(1);
+  const flowX = Array(MAX_BALLS).fill(0);
+  const flowY = Array(MAX_BALLS).fill(0);
+  const playButton = document.getElementById('mb-play');
+
+  function flowEase(value){
+    const x1=.35, y1=.23, x2=.13, y2=.98;
+    let lo=0, hi=1, t=value;
+    for(let i=0;i<14;i++){
+      t=(lo+hi)/2;
+      const mt=1-t;
+      const x=3*mt*mt*t*x1+3*mt*t*t*x2+t*t*t;
+      if(x<value) lo=t; else hi=t;
+    }
+    const mt=1-t;
+    return 3*mt*mt*t*y1+3*mt*t*t*y2+t*t*t;
+  }
+  function waitFlow(ms, token){
+    return new Promise(resolve=>{
+      const start=performance.now();
+      function tick(now){
+        if(token!==flowToken || now-start>=ms) return resolve();
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+  function tweenFlow(ms, token, update){
+    return new Promise(resolve=>{
+      const start=performance.now();
+      function tick(now){
+        if(token!==flowToken) return resolve();
+        const raw=Math.min(1,(now-start)/ms);
+        update(flowEase(raw), raw);
+        if(raw<1) requestAnimationFrame(tick); else resolve();
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+  function cancelFlow(){
+    flowToken++;
+    flowOverride=false;
+    flowRunning=false;
+    flowMerge=0;
+    swapMix=0;
+    playButton.disabled=false;
+    playButton.textContent='Play';
+  }
+  function setFlowStart(){
+    flowOverride=true;
+    flowMerge=0;
+    swapMix=0;
+    for(let i=0;i<MAX_BALLS;i++){
+      flowX[i]=balls[i].hx;
+      flowY[i]=balls[i].hy;
+      flowWeight[i]=i<5 ? 1 : 0;
+      flowScale[i]=i<5 ? 1 : .12;
+    }
+  }
+  async function runFlow(){
+    const token=++flowToken;
+    flowRunning=true;
+    playButton.disabled=true;
+    playButton.textContent='Playing';
+    setFlowStart();
+    await waitFlow(2000,token);
+
+    await Promise.all([1,2,3,4].map(async(index,order)=>{
+      await waitFlow(order*95,token);
+      await tweenFlow(460,token,p=>{
+        flowWeight[index]=1-p;
+        flowScale[index]=1-p*.88;
+      });
+    }));
+    if(token!==flowToken) return;
+    await waitFlow(1000,token);
+
+    await Promise.all([5,6].map(async(index,order)=>{
+      await waitFlow(order*130,token);
+      await tweenFlow(540,token,p=>{
+        flowWeight[index]=p;
+        flowScale[index]=.12+p*.88;
+      });
+    }));
+    if(token!==flowToken) return;
+    await waitFlow(1000,token);
+
+    const start5={x:flowX[5],y:flowY[5]};
+    const start6={x:flowX[6],y:flowY[6]};
+    flowMerge=.42;
+    await tweenFlow(1120,token,(p,raw)=>{
+      flowX[5]=start5.x+(balls[0].hx+42-start5.x)*p;
+      flowY[5]=start5.y+(balls[0].hy-24-start5.y)*p;
+      flowX[6]=start6.x+(balls[0].hx-38-start6.x)*p;
+      flowY[6]=start6.y+(balls[0].hy+34-start6.y)*p;
+      flowScale[0]=1+Math.sin(Math.PI*Math.min(1,raw/.82))*.08;
+      swapMix=flowEase(Math.max(0,Math.min(1,(raw-.48)/.3)));
+      const absorb=Math.max(0,Math.min(1,(raw-.73)/.27));
+      flowWeight[5]=1-absorb;
+      flowWeight[6]=1-absorb;
+      flowScale[5]=1-absorb*.78;
+      flowScale[6]=1-absorb*.78;
+    });
+    if(token!==flowToken) return;
+    flowScale[0]=1;
+    flowWeight[5]=0;
+    flowWeight[6]=0;
+    flowMerge=0;
+    swapMix=1;
+    await waitFlow(1000,token);
+
+    await Promise.all([1,2,3,4].map(async(index,order)=>{
+      flowScale[index]=.12;
+      await waitFlow(order*115,token);
+      await tweenFlow(520,token,p=>{
+        flowWeight[index]=p;
+        flowScale[index]=.12+p*.88;
+      });
+    }));
+    if(token!==flowToken) return;
+    await waitFlow(1000,token);
+    if(token!==flowToken) return;
+    flowRunning=false;
+    playButton.disabled=false;
+    playButton.textContent='Play';
+  }
+
+  function selectBubble(index){
+    if(!activeSlots[index]) return;
+    activeBubble = index;
+    document.querySelectorAll('[data-bubble-control]').forEach(group=>{
+      group.dataset.active = String(+group.dataset.bubbleControl===index);
+    });
+  }
+  function saveActiveSlots(){
+    localStorage.setItem('metaball-active-slots', JSON.stringify(activeSlots));
+  }
+  function syncBubbleControls(){
+    let count = 0;
+    for(let i=0;i<MAX_BALLS;i++){
+      if(activeSlots[i]) count++;
+      document.querySelector('[data-bubble-control="'+i+'"]').hidden = !activeSlots[i];
+      document.querySelector('[data-add-slot="'+i+'"]').dataset.enabled = String(activeSlots[i]);
+    }
+    document.getElementById('mb-add').disabled = count>=MAX_BALLS;
+    document.getElementById('mb-remove').disabled = count<=1;
+  }
+  function ptr(e){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+  wrap.addEventListener('pointerdown', function(e){
+    if(flowOverride) cancelFlow();
+    const p = ptr(e); let pick=-1, best=1e9;
+    for(let i=0;i<MAX_BALLS;i++){
+      if(!activeSlots[i]) continue;
+      const b=balls[i]; const dx=p.x-b.dx, dy=p.y-b.dy; const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<b.r+14 && d<best){best=d;pick=i;}
+    }
+    if(pick>=0){ drag=pick; selectBubble(pick); offX=p.x-balls[pick].hx; offY=p.y-balls[pick].hy; wrap.setPointerCapture(e.pointerId); e.preventDefault(); }
+  });
+  wrap.addEventListener('pointermove', function(e){
+    if(drag<0) return; const p=ptr(e); const b=balls[drag];
+    b.hx = Math.max(b.r, Math.min(W-b.r, p.x-offX));
+    b.hy = Math.max(b.r, Math.min(H-b.r, p.y-offY));
+  });
+  function release(){
+    if(drag>=0) savePositions();
+    drag=-1;
+  }
+  wrap.addEventListener('pointerup', release);
+  wrap.addEventListener('pointercancel', release);
+  playButton.addEventListener('click', runFlow);
+  document.getElementById('mb-add').addEventListener('click', ()=>{
+    cancelFlow();
+    const index = activeSlots.findIndex(active=>!active);
+    addBubble(index);
+  });
+  function addBubble(index){
+    if(index<0 || activeSlots[index]) return;
+    cancelFlow();
+    activeSlots[index] = true;
+    balls[index] = createBall(index);
+    placeBallHome(index);
+    savePositions();
+    saveActiveSlots();
+    syncBubbleControls();
+    selectBubble(index);
+  }
+  document.querySelectorAll('[data-add-slot]').forEach(button=>{
+    button.addEventListener('click', event=>{
+      event.stopPropagation();
+      const index = +button.dataset.addSlot;
+      if(activeSlots[index]) selectBubble(index);
+      else addBubble(index);
+    });
+  });
+  document.getElementById('mb-remove').addEventListener('click', ()=>{
+    cancelFlow();
+    if(activeSlots.filter(Boolean).length<=1) return;
+    const removed = activeBubble;
+    activeSlots[removed] = false;
+    imageLoadVersion[removed]++;
+    deleteBubbleImage(removed).catch(()=>{});
+    loadImageSource(removed, 'data:image/svg+xml;charset=utf-8,' + SCENES[removed%SCENES.length], 'Default image');
+    saveActiveSlots();
+    syncBubbleControls();
+    selectBubble(activeSlots.findIndex(Boolean));
+  });
+
+  const state = { bg:hex('#ebebeb'), thresh:0, floatAmt:2 };
+  function bindColor(id,key){ const el=document.getElementById(id); el.addEventListener('input',()=>state[key]=hex(el.value)); }
+  bindColor('c-bg','bg');
+  const sMrg=document.getElementById('s-merge'), vMrg=document.getElementById('v-merge');
+  function setMerge(){ const s=+sMrg.value/100; state.thresh=s*s*0.42; vMrg.textContent=sMrg.value+'%'; }
+  sMrg.addEventListener('input', setMerge); setMerge();
+  const sFlt=document.getElementById('s-float'), vFlt=document.getElementById('v-float');
+  sFlt.addEventListener('input',()=>{ state.floatAmt=+sFlt.value; vFlt.textContent=sFlt.value+' px'; });
+  for(let i=0;i<MAX_BALLS;i++){
+    const slider = document.getElementById('s-size-'+i);
+    const value = document.getElementById('v-size-'+i);
+    slider.addEventListener('input', ()=>{
+      const size = +slider.value;
+      radii[i] = size;
+      saveRadii();
+      value.textContent = size+' px';
+      if(balls[i]){
+        balls[i].r = size;
+        clampBall(balls[i]);
+        savePositions();
+      }
+    });
+  }
+
+  const clipboardHint = document.getElementById('mb-clipboard-hint');
+  document.querySelectorAll('[data-bubble-control]').forEach(group=>{
+    group.addEventListener('click', ()=>selectBubble(+group.dataset.bubbleControl));
+  });
+  document.querySelectorAll('[data-upload]').forEach(button=>{
+    button.addEventListener('click', event=>{
+      event.stopPropagation();
+      const index = +button.dataset.upload;
+      selectBubble(index);
+      document.getElementById('image-input-'+index).click();
+    });
+  });
+  document.querySelectorAll('.image-input').forEach(input=>{
+    input.addEventListener('change', ()=>{
+      const index = +input.dataset.input;
+      const file = input.files && input.files[0];
+      if(file && loadImageBlob(index, file, file.name)){
+        selectBubble(index);
+        clipboardHint.textContent = 'Bubble '+(index+1)+' updated from file.';
+      }
+      input.value = '';
+    });
+  });
+  syncBubbleControls();
+  selectBubble(activeSlots.findIndex(Boolean));
+
+  async function readClipboardInto(index){
+    selectBubble(index);
+    if(!navigator.clipboard || !navigator.clipboard.read){
+      clipboardHint.textContent = 'Clipboard access is unavailable here. Use Cmd/Ctrl + V instead.';
+      return;
+    }
+    try{
+      const items = await navigator.clipboard.read();
+      for(const item of items){
+        const type = item.types.find(value=>value.startsWith('image/'));
+        if(type){
+          loadImageBlob(index, await item.getType(type), 'Clipboard image');
+          clipboardHint.textContent = 'Bubble '+(index+1)+' updated from clipboard.';
+          return;
+        }
+      }
+      clipboardHint.textContent = 'The clipboard does not contain an image.';
+    }catch(error){
+      clipboardHint.textContent = 'Clipboard permission was blocked. Use Cmd/Ctrl + V instead.';
+    }
+  }
+  document.querySelectorAll('[data-paste]').forEach(button=>{
+    button.addEventListener('click', event=>{
+      event.stopPropagation();
+      readClipboardInto(+button.dataset.paste);
+    });
+  });
+  document.addEventListener('paste', event=>{
+    const items = Array.from((event.clipboardData && event.clipboardData.items) || []);
+    const imageItem = items.find(item=>item.type.startsWith('image/'));
+    if(!imageItem) return;
+    const file = imageItem.getAsFile();
+    if(loadImageBlob(activeBubble, file, 'Pasted image')){
+      event.preventDefault();
+      clipboardHint.textContent = 'Bubble '+(activeBubble+1)+' updated from paste.';
+    }
+  });
+
+  function frame(now){
+    const t = now*0.001;
+    const amp = flowRunning ? 0 : state.floatAmt;
+    for(let i=0;i<MAX_BALLS;i++){
+      const b=balls[i];
+      const visible = flowOverride ? flowWeight[i] : (activeSlots[i] ? 1 : 0);
+      if(visible<=0) continue;
+      const x = flowOverride ? flowX[i] : b.hx;
+      const y = flowOverride ? flowY[i] : b.hy;
+      b.dx = x + Math.sin(t*b.fx + b.phx)*amp;
+      b.dy = y + Math.cos(t*b.fy + b.phy)*amp;
+    }
+    gl.uniform2f(U.res, canvas.width, canvas.height);
+    gl.uniform3fv(U.bg, state.bg);
+    gl.uniform1f(U.thresh, flowOverride ? flowMerge : state.thresh);
+    gl.uniform1f(U.swap, swapMix);
+    gl.uniform1f(U.dpr, dpr);
+    for(let i=0;i<MAX_BALLS;i++){
+      const b=balls[i];
+      const weight = flowOverride ? flowWeight[i] : (activeSlots[i] ? 1 : 0);
+      const scale = flowOverride ? flowScale[i] : 1;
+      gl.uniform1f(U.active[i], weight);
+      gl.uniform3f(U.balls[i], b.dx*dpr, (H-b.dy)*dpr, Math.max(1,b.r*scale)*dpr);
+    }
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  }
+
+  if(window.ResizeObserver){ new ResizeObserver(resize).observe(wrap); }
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>

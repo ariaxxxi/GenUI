@@ -1,5 +1,162 @@
 # Completed Handoff
 
+## 2026-05-05 - Prototype listening transcript prompt
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a prototype-local listening transcript prompt above the shared orb, wired prototype voice-engine transcript updates into it so `/prototype` listening now mirrors AI Mode’s live dictated text pattern, and clears that prompt automatically when leaving the `listening` shape.
+- Files changed: `index.html`, `src/tool/index-app.js`, `src/styles/editor-layout.css`, `README.md`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/index-app.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final prompt placement, long-transcript truncation, and browser speech-recognition behavior still need a human check on `/prototype`.
+
+## 2026-05-04 - Prototype thinking minimize toggle
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a prototype-local minimize toggle for debug `thinking` mode so clicking the shared orb or pressing `m` now shrinks it to `0.4` from a bottom-center anchor, fades the thinking stream out without unmounting it, restores on second toggle, and automatically clears the minimized state when leaving `thinking` mode.
+- Files changed: `src/tool/modules/manual-bindings.js`, `src/styles/ai-decorative.css`, `src/styles/editor-layout.css`, `README.md`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final minimized-orb anchor feel and paused+minimized interaction still need a human check on `/prototype`.
+
+## 2026-05-01 - Prototype thinking domain rename and Bubble-aligned imagery
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: changed the prototype thinking debug control label from `skill` to `domain`, kept the internal `skill` / `skill-pill` routing intact, replaced the old emoji-based prototype skill roster with the four Bubble Home domain agents using the same `Blue`, `yellow`, `green`, and `orange` image assets and aligned theme colors, kept the transition stream copy as `Using XX skill`, and updated the prototype-facing docs to explain the user-facing rename.
+- Files changed: `index.html`, `src/tool/modules/manual-bindings.js`, `README.md`, `docs/FRONTEND.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final `/prototype` domain-chip image fit and copy feel still need a human check.
+
+## 2026-04-30 - Bubble interrupt set
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a third Bubble Home set named `interrupt` as a 3-bubble control set with a stateful `Pause`/`Play` primary control plus `End` and `Add`, kept the shared set-aware control-default and left/right orb-cycling helpers, gave those control bubbles a single domain-style shell path, added an idle home-orb stream loop for `Reasoning`, `Thinking`, and `Taking action` that fades out on long-press reveal, and made `Pause` settle the current home orb back home while the field fades away, then hold `Session paused` until `Play` is fired to resume the loop.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final 3-bubble `interrupt` spacing, shell feel, and pause/end/add interaction timing still need a human check on `/bubble`.
+
+## 2026-04-30 - Prototype debug pause and resume controls
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added prototype-only `Pause` and `Resume` playback controls for the thinking-family debug states, including static paused labels, queued custom text while paused, and a paused Celestial-orb settle treatment that keeps agent/skill/app switching interactive.
+- Files changed: `index.html`, `src/tool/modules/manual-bindings.js`, `src/styles/ai-decorative.css`, `src/styles/editor-layout.css`, `src/styles/editor-sidebar.css`, `docs/FRONTEND.md`, `README.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/tool/modules/manual-bindings.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final paused-orb motion feel, queued custom-text resume behavior, and cross-mode timing still need a human check on `/prototype`.
+
+## 2026-04-30 - Bubble orb arrow-switch transition text
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a Bubble Home-local orb stream layer that reuses the prototype chunked type/delete transition-text treatment, so left/right keyboard switching now shows a transient `Switch to {agent name}` label above the orb before clearing itself.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final stream timing, placement, and repeat-key behavior still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble orb delayed-swipe rollback
+
+- Completion status: completed with static verification.
+- Summary: removed the delayed two-`requestAnimationFrame` Bubble Home orb switch workaround after tracing that it allowed a normal render to push the target content into the orb before the swipe began, which is why the visual jumped instead of animating.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+
+## 2026-04-30 - Bubble orb swipe timing alignment
+
+- Completion status: completed with static verification.
+- Summary: aligned Bubble Home keyboard-driven orb switching with the prototype listening-stage timing by deferring the animated orb sync by two animation frames before starting the shared swipe motion, fixing the direct-jump behavior.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+
+## 2026-04-30 - Bubble agent-set sequence init-order fix
+
+- Completion status: completed with static verification.
+- Summary: moved the Bubble Home `agent`-set keyboard sequence constant below `AGENT_BUBBLES_CONFIG` so the page no longer throws `Cannot access 'AGENT_BUBBLES_CONFIG' before initialization` at startup.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+
+## 2026-04-30 - Bubble agent-set arrow cycling
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: changed Bubble Home left/right keyboard behavior so the `agent` tab now cycles the home orb through the ordered `agent` set bubble content using the existing shared swipe animation path instead of the old three-icon orb sequence.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final sequence order and swipe feel still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble agent-tab control defaults
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added set-specific Bubble Home control defaults so the `agent` tab now turns both toggles on by default, while the `app` tab keeps both toggles off by default.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final set-switch feel and toggle sync still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble canvas-removal toggle
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a Bubble Home control-panel toggle that removes the visible `420px` canvas frame and switches the viewport background to pure black without changing the existing Bubble Home geometry or interaction logic.
+- Files changed: `bubble.html`, `src/styles/bubble-page.css`, `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final canvasless framing and panel contrast still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble press-scope toggle
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: added a Bubble Home control-panel toggle that switches press/pan start between canvas-only and viewport-anywhere modes, with the control panel excluded from viewport-start behavior.
+- Files changed: `bubble.html`, `src/styles/bubble-page.css`, `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final control-panel exclusion and viewport-start feel still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble Claude scale parity with Spotify slot
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: confirmed the requested app-slot mapping was already in place for the Bubble Home `agent` set, then removed Claude’s local `imageScale: 0.82` override so it matches the Spotify slot’s full-scale image behavior instead of rendering smaller inside the same slot.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so if Claude still looks smaller on `/bubble`, the remaining cause would be padding baked into `assets/agents/Claude-ai-icon.png`.
+
+## 2026-04-30 - Bubble domain pill gap reduction
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: reduced the domain-agent image-to-text gap by `4px` in the Bubble Home `agent` set by moving the pill copy block left from `-8px` to `-12px` on the four domain pills.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final domain pill gap still needs a human check on `/bubble`.
+
+## 2026-04-30 - Bubble domain layout, shell-color, and uncropped-image cleanup
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: restored strict app-slot layout inheritance for the Bubble Home `agent` set, rethemed the four domain shells to match their blue/green/orange/yellow artwork, and disabled circular masking for those domain images in both the field bubble and promoted home orb.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final shell-color feel and uncropped domain-image framing still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble domain agent image replacement
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: replaced the Travel, Fitness, Budget, and Writing emoji graphics in the Bubble Home `agent` set with the requested `assets/agents` images while preserving the existing pill-expansion and promotion behavior.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final contained-image scale and home-orb appearance still need a human check on `/bubble`.
+
+## 2026-04-30 - Bubble pill title and subtitle size increase
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: increased Bubble Home top-level pill copy to `20px` titles and `18px` subtitles, and updated the pill width measurement plus CSS fallbacks so the render and sizing paths stay aligned.
+- Files changed: `src/bubble-page.js`, `src/styles/bubble-page.css`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final pill fit still needs a human check on `/bubble`.
+
+## 2026-04-30 - Bubble Claude and ChatGPT slot swap
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: swapped the Claude and ChatGPT inherited slot positions inside the Bubble Home `agent` set without changing any other agent bubble content or interactions.
+- Files changed: `src/bubble-page.js`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final visual balance still needs a human check on `/bubble`.
+
+## 2026-04-30 - Bubble agent set app-layout inheritance
+
+- Completion status: completed with static verification; manual browser pass still recommended.
+- Summary: removed the custom `agent`-set slot geometry overrides and made the retained agent bubbles inherit the `app` set slot positions plus default field sizing, so both sets now share the same layout and depth-scaling logic.
+- Files changed: `src/bubble-page.js`, `docs/product-specs/bubble-home.md`, `docs/exec-plans/active/current.md`, `docs/exec-plans/completed/handoff.md`
+- Validation performed: `node --check src/bubble-page.js`; `git diff --check`
+- Remaining caveats: I did not run an interactive browser pass in this turn, so the final visual balance of Claude and the four domain pills still needs a human check on `/bubble`.
+
 ## 2026-04-30 - Bubble agent pill gap reduction
 
 - Completion status: completed with static verification; manual browser pass still recommended.

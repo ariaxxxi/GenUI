@@ -466,7 +466,13 @@ const MIME = {
 };
 
 function safePath(urlPath) {
-  const clean = urlPath.split('?')[0].split('#')[0] || '/';
+  const rawClean = urlPath.split('?')[0].split('#')[0] || '/';
+  let clean = rawClean;
+  try {
+    clean = decodeURIComponent(rawClean);
+  } catch {
+    clean = rawClean;
+  }
   const target = clean === '/'
     ? '/index.html'
     : (clean === '/prototype'

@@ -77,6 +77,10 @@ export function createSidebarBindings(ctx, refs) {
     if (intentPreview) intentPreview.textContent = stageText.intentHeader || '—';
     if (intentSizePreview) intentSizePreview.textContent = `${typography.intentHeader.size}px`;
     if (intentColorPreview) intentColorPreview.style.background = typography.intentHeader.color || '#a0a0a0';
+    const nudgeDividerPreview = document.getElementById('layer-preview-nudge-divider-color');
+    if (nudgeDividerPreview && ctx.stageNudgeDividerColorForShape) {
+      nudgeDividerPreview.style.background = ctx.stageNudgeDividerColorForShape(scenario, scenario.shape) || '#ffffff';
+    }
   }
 
   function initSidebarCollapsibleSections() {

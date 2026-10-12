@@ -1,6 +1,6 @@
 import { speakAiText, stopAiSpeech } from './ai/tts-player.js';
 
-export function addSimLog(text, type = 'system') {
+function appendSimLogEntry(text, type = 'system') {
   const log = document.getElementById('sim-log');
   if (!log || !text) return;
   const entries = log.querySelectorAll('.slog');
@@ -9,7 +9,34 @@ export function addSimLog(text, type = 'system') {
   el.className = `slog slog-${type}`;
   el.textContent = text;
   log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
+  const chat = log.parentElement;
+  if (chat) chat.scrollTop = chat.scrollHeight;
+}
+
+function clearLiveAi() {
+  const out = document.getElementById('sim-voice-out');
+  const txt = document.getElementById('sim-voice-text');
+  if (!out || !txt) return;
+  out.classList.remove('visible', 'typing');
+  txt.textContent = '';
+  delete txt.dataset.rawText;
+}
+
+function commitLiveAi() {
+  const out = document.getElementById('sim-voice-out');
+  const txt = document.getElementById('sim-voice-text');
+  const text = String(txt?.dataset?.rawText || '').trim();
+  if (!out?.classList.contains('visible') || out.classList.contains('typing') || !text) {
+    clearLiveAi();
+    return;
+  }
+  appendSimLogEntry(text, 'voice');
+  clearLiveAi();
+}
+
+export function addSimLog(text, type = 'system') {
+  commitLiveAi();
+  appendSimLogEntry(text, type);
 }
 
 export function setSimVoice(text) {
@@ -17,12 +44,17 @@ export function setSimVoice(text) {
   const txt = document.getElementById('sim-voice-text');
   if (!out || !txt) return;
   if (text) {
-    txt.textContent = `"${text}"`;
+    const nextText = String(text).trim();
+    const previousText = String(txt.dataset.rawText || '').trim();
+    if (previousText && previousText !== nextText) commitLiveAi();
+    txt.textContent = nextText;
+    txt.dataset.rawText = nextText;
     out.classList.add('visible');
-    void speakAiText(text);
+    out.classList.toggle('typing', nextText === '...');
+    out.parentElement.scrollTop = out.parentElement.scrollHeight;
+    if (nextText !== '...') void speakAiText(nextText);
   } else {
-    out.classList.remove('visible');
-    txt.textContent = '';
+    commitLiveAi();
     stopAiSpeech();
   }
 }
@@ -46,15 +78,18 @@ export function setSimInputState({ label, placeholder, hint = '', dictating = fa
 
 export function addChatBubble(role, text) {
   if (!text) return;
-  addSimLog(text, role === 'user' ? 'user' : 'voice');
   if (role === 'ai') setSimVoice(text);
+  else addSimLog(text, 'user');
 }
 
 export function showTypingBubble() {
   setSimVoice('...');
 }
 
-export function hideTypingBubble() {}
+export function hideTypingBubble() {
+  const out = document.getElementById('sim-voice-out');
+  if (out?.classList.contains('typing')) clearLiveAi();
+}
 
 let earconCtx = null;
 let _hoverClickBuffer = null;
@@ -84,8 +119,9 @@ async function loadHoverClickBuffer() {
 export function playSimEarcon(type = 'sent') {
   const ctx = getEarconCtx();
   if (!ctx) return;
+  const resolvedType = type === 'spread' ? 'disambiguate-reveal' : type;
 
-  if (type === 'hover') {
+  if (resolvedType === 'hover') {
     // Apple-like scroll tick — ultra-short sine tap, crisp and neutral
     const t = ctx.currentTime;
     const master = ctx.createGain();
@@ -125,7 +161,7 @@ export function playSimEarcon(type = 'sent') {
 
   const now = ctx.currentTime + 0.01;
 
-  if (type === 'sent') {
+  if (resolvedType === 'sent') {
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
     master.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
@@ -150,7 +186,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'disambiguate-reveal') {
+  if (resolvedType === 'disambiguate-reveal') {
     // Magical scatter whoosh — pills flying out from center
     const t = ctx.currentTime;
 
@@ -198,7 +234,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'chip-reveal') {
+  if (resolvedType === 'chip-reveal') {
     // Magical reveal — pure tonal chord bloom, no noise
     const t = ctx.currentTime;
 
@@ -248,7 +284,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'magic-pulse') {
+  if (resolvedType === 'magic-pulse') {
     // Deep resonant bloom — like a spell being cast, soft and weighty
     const t = ctx.currentTime;
 
@@ -299,7 +335,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'chip-reveal-2') {
+  if (resolvedType === 'chip-reveal-2') {
     // Same as chip-reveal but a perfect fourth higher
     const t = ctx.currentTime;
     const notes = [
@@ -343,7 +379,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'chip') {
+  if (resolvedType === 'chip') {
     // Apple-style selection tap — clean sine fundamental + soft harmonic, glassy decay
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);
@@ -375,7 +411,7 @@ export function playSimEarcon(type = 'sent') {
     return;
   }
 
-  if (type === 'button') {
+  if (resolvedType === 'button') {
     // Confident two-tone confirm click
     const master = ctx.createGain();
     master.gain.setValueAtTime(0.0001, now);

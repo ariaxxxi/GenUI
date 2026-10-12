@@ -77,7 +77,7 @@ export function initInputActions({
   async function processRequest(userText, options = {}) {
     const bypassCanProcessGate = options?.bypassCanProcessGate === true;
     if (!bypassCanProcessGate && typeof canProcessRequest === "function" && !canProcessRequest()) return false;
-    if (messageFlow.isActive()) return messageFlow.processRequest?.(userText);
+    if (messageFlow.isActive()) return messageFlow.handleInputSubmit?.(userText);
     if (flightFlow.isActive()) return flightFlow.handleUserInput(userText);
     if (coffeeFlow?.isActive?.()) return coffeeFlow.handleInputSubmit?.(userText);
     if (isMessageIntent(userText)) return startMessageFlowWithText(userText);

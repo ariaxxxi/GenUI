@@ -1,5 +1,5 @@
-const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list', 'pill', 'card', 'card-s', 'image'];
-const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header'];
+const DEFAULT_SCENARIO_SHAPES = ['idle', 'dot', 'list-pill', 'pill', 'card', 'card-s', 'image'];
+const DEFAULT_STAGE_COMPONENT_TYPES = ['icon', 'primary', 'secondary', 'detail', 'image', 'intent-header', 'action-row'];
 export const TYPOGRAPHY_LAYERS = ['icon', 'primary', 'secondary', 'detail', 'intentHeader'];
 
 const shapeHelperConfig = {
@@ -84,15 +84,15 @@ export const SHAPES = {
     left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
     right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
   },
-  'agent-circle': {
-    main: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 1 },
-    left: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
-    right: { w: 80, h: 80, br: '40px', tx: -40, ty: -60, op: 0 },
-  },
   dot: {
-    main: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 1 },
-    left: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
-    right: { w: 100, h: 100, br: '50px', tx: -50, ty: -50, op: 0 },
+    main: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 1 },
+    left: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
+    right: { w: 100, h: 100, br: '999px', tx: -50, ty: -50, op: 0 },
+  },
+  timer: {
+    main: { w: 96, h: 32, br: '0px', tx: -48, ty: -16, op: 1 },
+    left: { w: 0, h: 0, br: '0px', tx: 0, ty: 0, op: 0 },
+    right: { w: 0, h: 0, br: '0px', tx: 0, ty: 0, op: 0 },
   },
   list: {
     main: { w: 50, h: 50, br: '25px', tx: -25, ty: -45, op: 0 },
@@ -103,11 +103,6 @@ export const SHAPES = {
     main: { w: 420, h: 100, br: '60px', tx: -210, ty: -50, op: 1 },
     left: { w: 100, h: 100, br: '50px', tx: -210, ty: -50, op: 0 },
     right: { w: 100, h: 100, br: '50px', tx: 60, ty: -50, op: 0 },
-  },
-  'skill-pill': {
-    main: { w: 220, h: 68, br: '34px', tx: -110, ty: -54, op: 1 },
-    left: { w: 100, h: 100, br: '50px', tx: -110, ty: -70, op: 0 },
-    right: { w: 100, h: 100, br: '50px', tx: 10, ty: -70, op: 0 },
   },
   split: {
     main: { w: 96, h: 96, br: '48px', tx: -48, ty: -48, op: 0 },
@@ -149,7 +144,7 @@ export const SHAPES = {
 export function defaultTypographyForShape(shape = 'pill') {
   return {
     icon: { size: (shape === 'card' || shape === 'card-s') ? 48 : (shape === 'dot' ? 42 : 40), color: '#ffffff' },
-    primary: { size: shape === 'card' ? 28 : 28, color: '#ffffff' },
+    primary: { size: shape === 'timer' ? 24 : 28, color: '#ffffff' },
     secondary: { size: 24, color: '#d4d4d4' },
     detail: { size: 24, color: '#a3a3a3' },
     intentHeader: { size: 18, color: '#a0a0a0' },
@@ -223,15 +218,21 @@ export function normalizeStage(raw, fallback) {
   const listListeningOrb = raw?.listListeningOrb === undefined
     ? !!fallbackStage.listListeningOrb
     : raw?.listListeningOrb === true;
+  const listSelectable = raw?.listSelectable === undefined
+    ? fallbackStage.listSelectable !== false
+    : raw?.listSelectable !== false;
   const selected = raw?.selected === undefined
     ? !!fallbackStage.selected
     : raw?.selected === true;
+  const hideShell = raw?.hideShell === undefined
+    ? !!fallbackStage.hideShell
+    : raw?.hideShell === true;
   const accentColor = normalizeHexColor(raw?.accentColor, fallbackStage.accentColor || '#90acff');
   const secondaryAccentColor = normalizeHexColor(raw?.secondaryAccentColor, fallbackStage.secondaryAccentColor || '#9761ff');
   const components = Array.isArray(raw?.components)
     ? raw.components.map((item) => String(item || '')).filter((item) => stageComponentTypes().includes(item))
     : [...(fallbackStage.components || [])];
-  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, listListeningOrb, selected, accentColor, secondaryAccentColor, components };
+  return { id, name, preset, renderShape, cornerRadius, widthOverride, heightOverride, iconTextGap, iconLeftPadding, phoneBgBlur, listListeningOrb, listSelectable, selected, hideShell, accentColor, secondaryAccentColor, components };
 }
 
 export function normalizeStageImage(value) {
